@@ -384,13 +384,38 @@
     return;
     }
     container.innerHTML = filtered.slice(0, 50).map(trx => `
-    <div class="card mb-2" onclick="showTransactionDetail(${trx.id})">
+    <div class="card mb-2">
     <div class="card-body p-3">
-    <div class="d-flex justify-content-between">
-    <div><i class="${trx.category.icon} me-2"></i>${trx.category.name}</div>
-    <span class="${trx.type === 'income' ? 'text-success' : 'text-danger'} fw-bold">${trx.formatted_amount}</span>
-    </div>
+    <div class="d-flex justify-content-between align-items-start">
+    <div class="flex-grow-1" onclick="showTransactionDetail(${trx.id})">
+    <div class="d-flex align-items-center">
+    <i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>
+    <div>
+    <div class="fw-semibold">${trx.category.name}</div>
     <small class="text-muted">${trx.wallet.name} · ${formatDate(trx.transaction_date)}</small>
+    </div>
+    </div>
+    </div>
+    <div class="d-flex align-items-center">
+    <span class="${trx.type === 'income' ? 'text-success' : 'text-danger'} fw-bold me-2">
+    ${trx.formatted_amount}
+    </span>
+    <div class="dropdown">
+    <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
+    <i class="bi bi-three-dots-vertical"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="#" onclick="editTransaction(${trx.id})">
+    <i class="bi bi-pencil me-2"></i>Edit
+    </a></li>
+    <li><a class="dropdown-item text-danger" href="#" onclick="deleteTransaction(${trx.id})">
+    <i class="bi bi-trash me-2"></i>Hapus
+    </a></li>
+    </ul>
+    </div>
+    </div>
+    </div>
+    ${trx.description ? `<small class="text-muted d-block mt-1">${trx.description}</small>` : ''}
     </div>
     </div>
     `).join('');
