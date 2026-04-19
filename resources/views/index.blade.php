@@ -68,6 +68,43 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="walletModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Tambah Dompet</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="walletForm">
+          <div class="mb-3">
+            <label class="form-label">Nama Dompet</label>
+            <input type="text" class="form-control" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Mata Uang</label>
+            <select class="form-select currency-select" name="currency" id="modal-wallet-currency">
+              <option value="">Memuat data...</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Saldo Awal</label>
+            <input type="number" class="form-control" name="initial_balance" step="0.01" min="0" value="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Deskripsi (Opsional)</label>
+            <input type="text" class="form-control" name="description">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-primary" onclick="saveWallet()">Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -78,6 +115,7 @@
   const state = {
     wallets: [],
     categories: [],
+    currencies: [],
     recentTransactions: [],
     totalBalance: 0,
     currentWalletId: null
@@ -95,7 +133,8 @@
       // Load data yang diperlukan
       await Promise.all([
       loadWallets(),
-      loadCategories()
+      loadCategories(),
+      loadCurrencies(),
       ]);
 
       // Render UI berdasarkan apakah user punya wallet
@@ -150,6 +189,49 @@
     }
   }
 
+  async function loadCurrencies() {
+    try {
+      const response = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
+      state.currencies = response.data || [];
+      populateCurrencyDropdowns();
+    } catch (error) {
+      console.error('Gagal load currencies:', error);
+      // Fallback default
+      const defaultHtml = '<option value="IDR">Indonesian Rupiah (Rp)</option>';
+      document.querySelectorAll('.currency-select').forEach(select => {
+      select.innerHTML = defaultHtml;
+      });
+    }
+  }
+
+  function populateCurrencyDropdowns() {
+    // Untuk form first wallet
+    const firstWalletSelect = document.getElementById('first-wallet-currency');
+    if (firstWalletSelect) {
+      populateSelectWithCurrencies(firstWalletSelect, 'IDR');
+    }
+
+    // Untuk modal tambah dompet (jika ada)
+    const modalWalletSelect = document.getElementById('modal-wallet-currency');
+    if (modalWalletSelect) {
+      populateSelectWithCurrencies(modalWalletSelect, 'IDR');
+    }
+  }
+
+  function populateSelectWithCurrencies(selectElement, defaultCode = 'IDR') {
+    selectElement.innerHTML = '<option value="">Pilih Mata Uang</option>';
+
+    state.currencies.forEach(curr => {
+    const option = document.createElement('option');
+    option.value = curr.code;
+    option.textContent = `${curr.name} (${curr.symbol || curr.code})`;
+    if (curr.code === defaultCode) {
+    option.selected = true;
+    }
+    selectElement.appendChild(option);
+    });
+  }
+
   // ======================== RENDERING ========================
   function renderMainContent() {
     const container = document.getElementById('main-content');
@@ -192,9 +274,8 @@
     </div>
     <div class="mb-3">
     <label class="form-label">Mata Uang</label>
-    <select class="form-select" name="currency">
-    <option value="IDR" selected>Rupiah (IDR)</option>
-    <option value="USD">US Dollar (USD)</option>
+    <select class="form-select" name="currency" id="first-wallet-currency">
+    <option value="">Memuat data...</option>
     </select>
     </div>
     <div class="mb-3">
@@ -556,10 +637,41 @@
     }
 
     function showAddWalletModal() {
-    // Implementasi modal tambah dompet (mirip dengan first wallet tapi dalam modal)
-    // Untuk sederhana, kita bisa gunakan prompt atau buat modal terpisah
-    // Untuk demo ini, kita arahkan untuk buat dompet via halaman terpisah atau gunakan fungsi yang sudah ada
-    alert('Fitur tambah dompet dalam pengembangan. Untuk saat ini, silakan buat dompet baru melalui halaman ini.');
+    // Reset form
+    document.getElementById('walletForm').reset();
+
+    // Isi dropdown mata uang jika belum terisi
+    const currencySelect = document.getElementById('modal-wallet-currency');
+    if (currencySelect && state.currencies.length > 0) {
+    populateSelectWithCurrencies(currencySelect, 'IDR');
+    }
+
+    new bootstrap.Modal(document.getElementById('walletModal')).show();
+    }
+
+    async function saveWallet() {
+    const form = document.getElementById('walletForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+    tgApp.showLoading('Menyimpan...');
+    await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets', {
+    method: 'POST',
+    body: JSON.stringify(data)
+    });
+
+    tgApp.hideLoading();
+    tgApp.showToast('Dompet berhasil dibuat');
+    bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
+
+    // Refresh data
+    await loadWallets();
+    renderMainContent();
+    } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal membuat dompet', 'danger');
+    }
     }
 
     // ======================== FULL TRANSACTIONS (TAB) ========================

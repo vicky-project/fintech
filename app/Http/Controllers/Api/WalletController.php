@@ -19,6 +19,7 @@ class WalletController extends Controller
     $wallets = $request->user()
     ->wallets()
     ->where('is_active', true)
+    ->with('currencyDetails')
     ->orderBy('name')
     ->get()
     ->map(function ($wallet) {
@@ -27,7 +28,12 @@ class WalletController extends Controller
         'name' => $wallet->name,
         'balance' => $wallet->getBalanceFloat(),
         'formatted_balance' => $wallet->getFormattedBalance(),
-        'currency' => $wallet->currency,
+        'currency' => [
+          'code' => $wallet->currency,
+          'name' => $wallet->currencyDetails->name ?? $wallet->currency,
+          'symbol' => $wallet->currencyDetails->symbol ?? $wallet->currency,
+          'precision' => $wallet->currencyDetails->precision ?? 2,
+        ],
         'description' => $wallet->description,
         'is_active' => $wallet->is_active,
       ];
@@ -36,6 +42,33 @@ class WalletController extends Controller
     return response()->json([
       'success' => true,
       'data' => $wallets
+    ]);
+  }
+
+  public function show(Wallet $wallet): JsonResponse
+  {
+    if ($wallet->user_id !== request()->user()->id) {
+      return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $wallet->load('currencyDetails');
+
+    return response()->json([
+      'success' => true,
+      'data' => [
+        'id' => $wallet->id,
+        'name' => $wallet->name,
+        'balance' => $wallet->getBalanceFloat(),
+        'formatted_balance' => $wallet->getFormattedBalance(),
+        'currency' => [
+          'code' => $wallet->currency,
+          'name' => $wallet->currencyDetails->name ?? $wallet->currency,
+          'symbol' => $wallet->currencyDetails->symbol ?? $wallet->currency,
+          'precision' => $wallet->currencyDetails->precision ?? 2,
+        ],
+        'description' => $wallet->description,
+        'transaction_count' => $wallet->transactions()->count(),
+      ]
     ]);
   }
 
@@ -86,29 +119,6 @@ class WalletController extends Controller
         'message' => 'Gagal membuat dompet: ' . $e->getMessage()
       ], 500);
     }
-  }
-
-  /**
-  * Display the specified wallet.
-  */
-  public function show(Wallet $wallet): JsonResponse
-  {
-    if ($wallet->user_id !== request()->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
-    }
-
-    return response()->json([
-      'success' => true,
-      'data' => [
-        'id' => $wallet->id,
-        'name' => $wallet->name,
-        'balance' => $wallet->getBalanceFloat(),
-        'formatted_balance' => $wallet->getFormattedBalance(),
-        'currency' => $wallet->currency,
-        'description' => $wallet->description,
-        'transaction_count' => $wallet->transactions()->count(),
-      ]
-    ]);
   }
 
   /**

@@ -16,6 +16,7 @@
   "require": {
     "php": "^8.2",
     "joshbrw/laravel-module-installer": "^1.0",
+    "nnjeim/world": "^1.1",
     "elegantly/laravel-money": "^2.4",
     "vicky-project/telegram-module": "^1.1"
   },

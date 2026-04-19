@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Elegantly\Money\MoneyCast;
 use Brick\Money\Money;
 use Modules\Telegram\Models\TelegramUser;
+use Nnjeim\World\Models\Currency;
 
 class Wallet extends Model
 {
@@ -40,6 +41,15 @@ class Wallet extends Model
     return $this->hasMany(Transaction::class);
   }
 
+  /**
+  * Relasi ke tabel world_currencies
+  * Kolom 'currency' di wallets merujuk ke 'code' di world_currencies
+  */
+  public function currencyDetails(): BelongsTo
+  {
+    return $this->belongsTo(Currency::class, 'currency', 'code');
+  }
+
   public function deposit(Money $amount): void
   {
     if (!$amount->isPositiveOrZero()) {
@@ -68,6 +78,16 @@ class Wallet extends Model
 
   public function getFormattedBalance(): string
   {
+    // Bisa menggunakan locale berdasarkan currency
     return $this->balance->formatTo('id_ID');
+  }
+
+  /**
+  * Get formatted balance with proper currency symbol
+  */
+  public function getFormattedBalanceWithSymbol(): string
+  {
+    $symbol = $this->currencyDetails?->symbol ?? $this->currency;
+    return $symbol . ' ' . number_format($this->getBalanceFloat(), 2);
   }
 }

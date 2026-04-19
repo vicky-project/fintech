@@ -5,12 +5,16 @@ use Modules\FinTech\Http\Controllers\Api\WalletController;
 use Modules\FinTech\Http\Controllers\Api\TransactionController;
 use Modules\FinTech\Http\Controllers\Api\CategoryController;
 use Modules\FinTech\Http\Controllers\Api\ReportController;
+use Modules\FinTech\Http\Controllers\Api\CurrencyController;
 
 Route::middleware(['auth:sanctum'])->prefix('fintech')->group(function () {
+  // Currency routes
+  Route::get('currencies', [CurrencyController::class, 'index']);
+
   // Wallet routes
   Route::apiResource('wallets', WalletController::class);
 
-  // Category routes (read-only untuk user)
+  // Category routes
   Route::get('categories', [CategoryController::class, 'index']);
 
   // Transaction routes
