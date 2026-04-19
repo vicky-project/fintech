@@ -545,7 +545,7 @@
     function formatNumber(n) { return new Intl.NumberFormat('id-ID').format(n); }
     function formatDate(d) { return new Date(d).toLocaleDateString('id-ID', { day:'numeric', month:'short' }); }
     function populateSelectWithCurrencies(select, def) {
-    select.innerHTML = state.currencies.map(c => `<option value="${c.code}" ${c.code===def?'selected':''}>${c.name} (${c.symbol})</option>`).join('');
+    select.innerHTML = state.currencies.map(c => `<option value="${c.code}" ${c.code===(def.code || def)?'selected':''}>${c.name} (${c.symbol})</option>`).join('');
     }
     </script>
     @endpush
