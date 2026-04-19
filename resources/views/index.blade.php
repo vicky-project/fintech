@@ -48,7 +48,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
   const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
-  const tg = windowTelegramApp;
+  const tg = window.TelegramApp;
 
   // State management
   const state = {
