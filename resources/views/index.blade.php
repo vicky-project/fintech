@@ -540,7 +540,7 @@
     // ==================== UTILS ====================
     function getCurrencySymbol(code) {
     const c = state.currencies.find(c => c.code === code);
-    return c?.symbol || code;
+    return c?.symbol || code.symbol || code;
     }
     function formatNumber(n) { return new Intl.NumberFormat('id-ID').format(n); }
     function formatDate(d) { return new Date(d).toLocaleDateString('id-ID', { day:'numeric', month:'short' }); }
