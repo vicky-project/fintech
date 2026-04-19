@@ -394,7 +394,7 @@
     total = state.totalBalance;
     }
     const symbol = getCurrencySymbol(currency);
-    displayEl.textContent = `${symbol} ${formatNumber(total)}`;
+    displayEl.textContent = `${symbol.symbol} ${formatNumber(total)}`;
     }
 
     function renderWalletList() {
