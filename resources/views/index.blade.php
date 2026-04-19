@@ -30,7 +30,7 @@
   {{-- Floating Action Button (Quick Actions) --}}
   <div class="position-fixed bottom-0 end-0 mb-4 me-3" style="z-index: 1000; margin-bottom: 70px !important;">
     <div class="dropup">
-      <button id="fab-button" class="btn btn-primary rounded-circle shadow" style="width: 56px; height: 56px; opacity: 0.7;" data-bs-toggle="dropdown">
+      <button id="fab-button" class="btn btn-primary rounded-circle shadow" style="width: 56px; height: 56px; opacity: 0.4;" data-bs-toggle="dropdown">
         <i class="bi bi-plus-lg fs-3"></i>
       </button>
       <ul class="dropdown-menu dropdown-menu-end mb-2">
