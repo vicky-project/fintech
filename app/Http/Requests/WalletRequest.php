@@ -32,7 +32,9 @@ class WalletRequest extends FormRequest
         'exists:world_currencies,code',
       ],
       'initial_balance' => [
-        $wallet ? 'prohibited' : 'sometimes|numeric|min:0',
+        $wallet ? 'prohibited' : 'sometimes',
+        'numeric',
+        'min:0'
       ],
       'description' => 'nullable|string|max:255',
       'is_active' => 'sometimes|boolean',
