@@ -15,14 +15,14 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Tipe <span class="text-danger">*</span></label>
-            <select class="form-select" name="type" id="transaction-type" required>
+            <select class="form-select" name="type" required>
               <option value="income">Pemasukan</option>
               <option value="expense">Pengeluaran</option>
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Kategori <span class="text-danger">*</span></label>
-            <select class="form-select" name="category_id" id="transaction-category" required>
+            <select class="form-select" name="category_id" required>
               <option value="">Pilih Kategori</option>
             </select>
           </div>
@@ -49,10 +49,7 @@
 </div>
 
 <script>
-  // Simpan referensi ke fungsi asli jika diperlukan, tapi kita akan override langsung
-  const originalShowAddTransactionModal = window.showAddTransactionModal;
-
-  // Override fungsi global showAddTransactionModal
+  // Fungsi untuk membuka modal dan mengisi data awal
   window.showAddTransactionModal = function() {
     const form = document.getElementById('transactionForm');
     form.reset();
@@ -61,92 +58,63 @@
     // Isi dropdown dompet
     const walletSelect = document.querySelector('select[name="wallet_id"]');
     walletSelect.innerHTML = '<option value="">Pilih Dompet</option>';
-    if (typeof state !== 'undefined' && state.wallets) {
-      state.wallets.filter(w => w.is_active).forEach(wallet => {
-      const option = document.createElement('option');
-      option.value = wallet.id;
-      option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
-      walletSelect.appendChild(option);
-      });
-    }
+    state.wallets.filter(w => w.is_active).forEach(wallet => {
+    const option = document.createElement('option');
+    option.value = wallet.id;
+    option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
+    walletSelect.appendChild(option);
+    });
 
-    // Isi dropdown kategori awal (akan difilter setelahnya)
-    const categorySelect = document.getElementById('transaction-category');
+    // Isi dropdown kategori awal (akan difilter setelah tipe dipilih)
+    const categorySelect = document.querySelector('select[name="category_id"]');
     categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
-    if (typeof state !== 'undefined' && state.categories) {
-      // Render semua dulu, nanti difilter
-      state.categories.forEach(cat => {
-      const option = document.createElement('option');
-      option.value = cat.id;
-      option.textContent = cat.name;
-      option.dataset.type = cat.type;
-      categorySelect.appendChild(option);
-      });
-    }
 
     // Pasang event listener untuk filter kategori
-    const typeSelect = document.getElementById('transaction-type');
-
-    // Hapus listener lama jika ada (hindari duplikat)
+    const typeSelect = document.querySelector('select[name="type"]');
+    // Hapus listener lama jika ada
     typeSelect.removeEventListener('change', filterCategoriesByType);
     typeSelect.addEventListener('change', filterCategoriesByType);
 
-    // Panggil filter pertama kali
+    // Panggil filter untuk pertama kali
     filterCategoriesByType();
 
-    // Tampilkan modal
     new bootstrap.Modal(document.getElementById('transactionModal')).show();
   };
 
-  // Fungsi untuk memfilter kategori berdasarkan tipe transaksi
+  // Fungsi untuk memfilter kategori berdasarkan tipe transaksi yang dipilih
   function filterCategoriesByType() {
-    const typeSelect = document.getElementById('transaction-type');
-    const categorySelect = document.getElementById('transaction-category');
+    const typeSelect = document.querySelector('select[name="type"]');
+    const categorySelect = document.querySelector('select[name="category_id"]');
     if (!typeSelect || !categorySelect) return;
 
     const selectedType = typeSelect.value; // 'income' atau 'expense'
     const currentCategoryId = categorySelect.value;
 
-    // Simpan semua opsi yang ada
-    const allOptions = Array.from(categorySelect.options);
-
-    // Kosongkan select
-    categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
-
-    // Filter dan tambahkan opsi yang sesuai
-    let hasSelected = false;
-    allOptions.forEach(option => {
-    if (option.value === '') return; // Lewati placeholder
-
-    const catType = option.dataset.type;
-    let show = false;
-
+    // Filter kategori yang sesuai
+    const filtered = state.categories.filter(cat => {
     if (selectedType === 'income') {
-    show = (catType === 'income' || catType === 'both');
+    return cat.type === 'income' || cat.type === 'both';
     } else if (selectedType === 'expense') {
-    show = (catType === 'expense' || catType === 'both');
+    return cat.type === 'expense' || cat.type === 'both';
     }
-
-    if (show) {
-    const newOption = document.createElement('option');
-    newOption.value = option.value;
-    newOption.textContent = option.textContent;
-    newOption.dataset.type = catType;
-    if (option.value === currentCategoryId) {
-    newOption.selected = true;
-    hasSelected = true;
-    }
-    categorySelect.appendChild(newOption);
-    }
+    return true;
     });
 
-    // Jika kategori yang sebelumnya dipilih tidak ada di hasil filter, reset ke placeholder
-    if (!hasSelected && currentCategoryId) {
-      categorySelect.value = '';
+    // Render ulang opsi
+    categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
+    filtered.forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat.id;
+    option.textContent = cat.name;
+    if (cat.id == currentCategoryId) {
+    option.selected = true;
     }
+    categorySelect.appendChild(option);
+    });
   }
 
-  async function saveTransaction() {
+  // Fungsi untuk menyimpan transaksi
+  window.saveTransaction = async function() {
     const form = document.getElementById('transactionForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
@@ -170,7 +138,7 @@
       tgApp.showToast('Transaksi berhasil');
       bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
 
-      // Refresh tampilan sesuai halaman
+      // Refresh tampilan sesuai halaman aktif
       if (state.currentPage === 'home') {
         renderHomePage();
       } else if (state.currentPage === 'transactions') {
@@ -179,7 +147,7 @@
       }
     } catch (error) {
       tgApp.hideLoading();
-      tgApp.showToast(error.message || 'Gagal menyimpan', 'danger');
+      tgApp.showToast(error.message || 'Gagal menyimpan transaksi', 'danger');
     }
-  }
+  };
 </script>
