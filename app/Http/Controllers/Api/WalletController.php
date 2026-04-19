@@ -18,32 +18,40 @@ class WalletController extends Controller
   {
     $user = request()->user();
 
-    $wallets = Wallet::where('user_id', $user->id)
-    ->where('is_active', true)
-    ->with('currencyDetails')
-    ->orderBy('name')
-    ->get()
-    ->map(function ($wallet) {
-      return [
-        'id' => $wallet->id,
-        'name' => $wallet->name,
-        'balance' => $wallet->getBalanceFloat(),
-        'formatted_balance' => $wallet->getFormattedBalance(),
-        'currency' => [
-          'code' => $wallet->currency,
-          'name' => $wallet->currencyDetails->name ?? $wallet->currency,
-          'symbol' => $wallet->currencyDetails->symbol ?? $wallet->currency,
-          'precision' => $wallet->currencyDetails->precision ?? 2,
-        ],
-        'description' => $wallet->description,
-        'is_active' => $wallet->is_active,
-      ];
-    });
+    try {
+      $wallets = Wallet::where('user_id', $user->id)
+      ->where('is_active', true)
+      ->with('currencyDetails')
+      ->orderBy('name')
+      ->get()
+      ->map(function ($wallet) {
+        return [
+          'id' => $wallet->id,
+          'name' => $wallet->name,
+          'balance' => $wallet->getBalanceFloat(),
+          'formatted_balance' => $wallet->getFormattedBalance(),
+          'currency' => [
+            'code' => $wallet->currency,
+            'name' => $wallet->currencyDetails->name ?? $wallet->currency,
+            'symbol' => $wallet->currencyDetails->symbol ?? $wallet->currency,
+            'precision' => $wallet->currencyDetails->precision ?? 2,
+          ],
+          'description' => $wallet->description,
+          'is_active' => $wallet->is_active,
+        ];
+      });
 
-    return response()->json([
-      'success' => true,
-      'data' => $wallets
-    ]);
+      return response()->json([
+        'success' => true,
+        'data' => $wallets
+      ]);
+    } catch(\Exception $e) {
+      return response()->json([
+        'success' => false,
+        'message' => $e->getMessage(),
+        'error' => $e->getMessage()
+      ], 500);
+    }
   }
 
   /**
