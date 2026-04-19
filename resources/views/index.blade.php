@@ -535,7 +535,7 @@
 
     function getCurrencySymbol(code) {
     const currency = state.currencies.find(c => c.code === code);
-    alert(JSON.stringify(currency), code);
+    alert(currency + '\n' + code);
     return currency?.symbol || code;
     }
 
