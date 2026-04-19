@@ -3,13 +3,15 @@
 namespace Modules\FinTech\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Elegantly\Money\MoneyCast;
-use Brick\Money\Money;
+use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
 use Modules\FinTech\Enums\TransactionType;
 
 class Transaction extends Model
 {
+  use SoftDeletes;
+
   protected $table = 'fintech_transactions';
 
   protected $fillable = [
@@ -25,7 +27,7 @@ class Transaction extends Model
   protected function casts(): array
   {
     return [
-      'amount' => MoneyCast::of(),
+      'amount' => MoneyCastWithoutCurrency::class,
       'transaction_date' => 'date',
       'metadata' => 'array',
       'type' => TransactionType::class,

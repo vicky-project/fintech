@@ -8,15 +8,11 @@ use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Http\Requests\TransactionRequest;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Transaction;
-use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\TransactionType;
 use Brick\Money\Money;
 
 class TransactionController extends Controller
 {
-  /**
-  * Display a listing of transactions.
-  */
   public function index(): JsonResponse
   {
     $request = request();
@@ -29,22 +25,17 @@ class TransactionController extends Controller
     ]);
 
     $query = Transaction::with(['wallet', 'category'])
-    ->whereHas('wallet', function ($q) use ($request) {
-      $q->where('user_id', $request->user()->id);
-    });
+    ->whereHas('wallet', fn($q) => $q->where('user_id', $request->user()->id));
 
     if ($walletId = $request->input('wallet_id')) {
       $query->where('wallet_id', $walletId);
     }
-
     if ($type = $request->input('type')) {
       $query->where('type', $type);
     }
-
     if ($categoryId = $request->input('category_id')) {
       $query->where('category_id', $categoryId);
     }
-
     if ($month = $request->input('month')) {
       $query->whereYear('transaction_date', substr($month, 0, 4))
       ->whereMonth('transaction_date', substr($month, 5, 2));
@@ -54,51 +45,42 @@ class TransactionController extends Controller
     ->orderBy('id', 'desc')
     ->paginate($request->input('per_page', 20));
 
-    $transformedData = $transactions->through(function ($transaction) {
-      return [
-        'id' => $transaction->id,
-        'type' => $transaction->type->value,
-        'type_label' => $transaction->type->label(),
-        'type_icon' => $transaction->type->icon(),
-        'type_sign' => $transaction->type->sign(),
-        'category' => [
-          'id' => $transaction->category->id,
-          'name' => $transaction->category->name,
-          'icon' => $transaction->category->icon,
-          'color' => $transaction->category->color,
-        ],
-        'description' => $transaction->description,
-        'amount' => $transaction->getAmountFloat(),
-        'formatted_amount' => $transaction->getFormattedAmount(),
-        'transaction_date' => $transaction->transaction_date->toDateString(),
-        'wallet' => [
-          'id' => $transaction->wallet->id,
-          'name' => $transaction->wallet->name,
-        ],
-        'metadata' => $transaction->metadata,
-      ];
-    });
-
-    return response()->json([
-      'success' => true,
-      'data' => $transformedData
+    $transformed = $transactions->through(fn($trx) => [
+      'id' => $trx->id,
+      'type' => $trx->type->value,
+      'type_label' => $trx->type->label(),
+      'type_icon' => $trx->type->icon(),
+      'type_sign' => $trx->type->sign(),
+      'category' => [
+        'id' => $trx->category->id,
+        'name' => $trx->category->name,
+        'icon' => $trx->category->icon,
+        'color' => $trx->category->color,
+      ],
+      'description' => $trx->description,
+      'amount' => $trx->getAmountFloat(),
+      'formatted_amount' => $trx->getFormattedAmount(),
+      'transaction_date' => $trx->transaction_date->toDateString(),
+      'wallet' => [
+        'id' => $trx->wallet->id,
+        'name' => $trx->wallet->name,
+      ],
+      'metadata' => $trx->metadata,
     ]);
+
+    return response()->json(['success' => true, 'data' => $transformed]);
   }
 
-  /**
-  * Store a newly created transaction.
-  */
   public function store(TransactionRequest $request): JsonResponse
   {
     $wallet = Wallet::findOrFail($request->wallet_id);
-    $category = Category::findOrFail($request->category_id);
 
     try {
       $amount = Money::of($request->amount, $wallet->currency);
 
       DB::transaction(function () use ($wallet, $request, $amount) {
         $transaction = new Transaction($request->validated());
-        $transaction->amount = $amount;
+        $transaction->amount = $amount; // Custom cast akan menangani
         $transaction->save();
 
         if ($request->type === TransactionType::INCOME->value) {
@@ -122,9 +104,6 @@ class TransactionController extends Controller
     }
   }
 
-  /**
-  * Display the specified transaction.
-  */
   public function show(Transaction $transaction): JsonResponse
   {
     if ($transaction->wallet->user_id !== request()->user()->id) {
@@ -137,23 +116,140 @@ class TransactionController extends Controller
         'id' => $transaction->id,
         'type' => $transaction->type->value,
         'type_label' => $transaction->type->label(),
-        'type_icon' => $transaction->type->icon(),
         'category' => [
           'id' => $transaction->category->id,
           'name' => $transaction->category->name,
-          'icon' => $transaction->category->icon,
-          'color' => $transaction->category->color,
         ],
-        'description' => $transaction->description,
         'amount' => $transaction->getAmountFloat(),
         'formatted_amount' => $transaction->getFormattedAmount(),
         'transaction_date' => $transaction->transaction_date->toDateString(),
-        'wallet' => [
-          'id' => $transaction->wallet->id,
-          'name' => $transaction->wallet->name,
-        ],
-        'metadata' => $transaction->metadata,
+        'wallet' => ['id' => $transaction->wallet->id, 'name' => $transaction->wallet->name],
       ]
+    ]);
+  }
+
+  /**
+  * Soft delete transaksi.
+  */
+  public function destroy(Transaction $transaction): JsonResponse
+  {
+    if ($transaction->wallet->user_id !== request()->user()->id) {
+      return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    DB::transaction(function () use ($transaction) {
+      $wallet = $transaction->wallet;
+      $amount = $transaction->amount;
+
+      // Kembalikan saldo ke kondisi sebelum transaksi
+      if ($transaction->type === TransactionType::INCOME) {
+        // Jika tadinya pemasukan, kurangi saldo
+        $wallet->withdraw($amount);
+      } elseif ($transaction->type === TransactionType::EXPENSE) {
+        // Jika tadinya pengeluaran, tambah saldo
+        $wallet->deposit($amount);
+      }
+
+      $transaction->delete();
+    });
+
+    return response()->json([
+      'success' => true,
+      'message' => 'Transaksi dipindahkan ke tempat sampah'
+    ]);
+  }
+
+  /**
+  * Menampilkan transaksi yang telah dihapus (trash).
+  */
+  public function trashed(): JsonResponse
+  {
+    $request = request();
+    $query = Transaction::onlyTrashed()
+    ->with(['wallet',
+      'category'])
+    ->whereHas('wallet',
+      fn($q) => $q->where('user_id', $request->user()->id))
+    ->orderBy('deleted_at',
+      'desc');
+
+    $transactions = $query->paginate($request->input('per_page', 20));
+
+    $transformed = $transactions->through(fn($trx) => [
+      'id' => $trx->id,
+      'type' => $trx->type->value,
+      'type_label' => $trx->type->label(),
+      'category' => [
+        'id' => $trx->category->id,
+        'name' => $trx->category->name,
+        'icon' => $trx->category->icon,
+        'color' => $trx->category->color,
+      ],
+      'description' => $trx->description,
+      'amount' => $trx->getAmountFloat(),
+      'formatted_amount' => $trx->getFormattedAmount(),
+      'transaction_date' => $trx->transaction_date->toDateString(),
+      'deleted_at' => $trx->deleted_at->toDateTimeString(),
+      'wallet' => [
+        'id' => $trx->wallet->id,
+        'name' => $trx->wallet->name,
+      ],
+    ]);
+
+    return response()->json([
+      'success' => true,
+      'data' => $transformed
+    ]);
+  }
+
+  /**
+  * Memulihkan transaksi dari tempat sampah.
+  */
+  public function restore($id): JsonResponse
+  {
+    $transaction = Transaction::onlyTrashed()->findOrFail($id);
+
+    if ($transaction->wallet->user_id !== request()->user()->id) {
+      return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // Kembalikan saldo dompet sesuai tipe transaksi
+    DB::transaction(function () use ($transaction) {
+      $wallet = $transaction->wallet;
+      $amount = $transaction->amount;
+
+      if ($transaction->type === TransactionType::INCOME) {
+        $wallet->deposit($amount);
+      } elseif ($transaction->type === TransactionType::EXPENSE) {
+        $wallet->withdraw($amount);
+      }
+
+      $transaction->restore();
+    });
+
+    return response()->json([
+      'success' => true,
+      'message' => 'Transaksi berhasil dipulihkan'
+    ]);
+  }
+
+  /**
+  * Menghapus transaksi secara permanen.
+  */
+  public function forceDelete($id): JsonResponse
+  {
+    $transaction = Transaction::withTrashed()->findOrFail($id);
+
+    if ($transaction->wallet->user_id !== request()->user()->id) {
+      return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // Hapus permanen (tidak perlu ubah saldo karena saat soft delete saldo sudah disesuaikan)
+    $transaction->forceDelete();
+
+    return response()->json([
+      'success' => true,
+      'message' => 'Transaksi dihapus permanen'
     ]);
   }
 }

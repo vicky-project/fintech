@@ -18,6 +18,7 @@ return new class extends Migration
       $table->date('transaction_date');
       $table->json('metadata')->nullable(); // Untuk data tambahan (misal: transfer ke wallet_id lain)
       $table->timestamps();
+      $table->softDeletes();
 
       $table->index(['wallet_id', 'transaction_date']);
       $table->index(['category_id', 'transaction_date']);

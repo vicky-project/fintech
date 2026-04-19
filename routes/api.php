@@ -1,28 +1,48 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\FinTech\Http\Controllers\Api\WalletController;
-use Modules\FinTech\Http\Controllers\Api\TransactionController;
-use Modules\FinTech\Http\Controllers\Api\CategoryController;
-use Modules\FinTech\Http\Controllers\Api\ReportController;
-use Modules\FinTech\Http\Controllers\Api\CurrencyController;
+use Modules\FinTech\Http\Controllers\Api\ {
+  WalletController,
+  TransactionController,
+  CategoryController,
+  CurrencyController,
+  ReportController
+};
 
-Route::middleware(['auth:sanctum'])->prefix('fintech')->group(function () {
-  // Currency routes
-  Route::get('currencies', [CurrencyController::class, 'index']);
+/*
+|--------------------------------------------------------------------------
+| FinTech API Routes
+|--------------------------------------------------------------------------
+*/
 
-  // Wallet routes
-  Route::apiResource('wallets', WalletController::class);
+Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(function () {
 
-  // Category routes
-  Route::get('categories', [CategoryController::class, 'index']);
+  // ==================== WALLETS ====================
+  Route::apiResource('wallets', WalletController::class)->names('wallets');
 
-  // Transaction routes
-  Route::apiResource('transactions', TransactionController::class)->only(['index', 'store', 'show']);
+  // ==================== CATEGORIES ====================
+  Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
 
-  // Report routes
-  Route::prefix('reports')->group(function () {
-    Route::get('doughnut-weekly', [ReportController::class, 'doughnutWeekly']);
-    Route::get('bar-monthly', [ReportController::class, 'barMonthly']);
+  // ==================== CURRENCIES ====================
+  Route::get('currencies', [CurrencyController::class, 'index'])->name('currencies.index');
+
+  // ==================== TRANSACTIONS ====================
+  // Soft delete & trashed routes (diletakkan sebelum resource untuk menghindari konflik)
+  Route::get('transactions/trashed', [TransactionController::class, 'trashed'])->name('transactions.trashed');
+  Route::post('transactions/{id}/restore', [TransactionController::class, 'restore'])->name('transactions.restore');
+  Route::delete('transactions/{id}/force', [TransactionController::class, 'forceDelete'])->name('transactions.force-delete');
+
+  // Resource utama transaksi (hanya method yang dibutuhkan)
+  Route::apiResource('transactions', TransactionController::class)
+  ->only(['index', 'store', 'show', 'destroy'])
+  ->names('transactions');
+
+  // ==================== REPORTS ====================
+  Route::prefix('reports')->name('reports.')->group(function () {
+    Route::get('weekly', [ReportController::class, 'weekly'])->name('weekly');
+    Route::get('monthly', [ReportController::class, 'monthly'])->name('monthly');
+    Route::get('yearly', [ReportController::class, 'yearly'])->name('yearly');
+    Route::get('doughnut-weekly', [ReportController::class, 'doughnutWeekly'])->name('doughnut-weekly');
   });
+
 });
