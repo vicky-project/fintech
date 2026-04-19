@@ -1,4 +1,4 @@
-@extends('telegram::layouts.miniapp')
+@extends('telegram::layouts.mini-app')
 
 @section('title', 'FinTech - Dompet Digital')
 
