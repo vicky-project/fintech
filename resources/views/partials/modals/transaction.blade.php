@@ -103,7 +103,7 @@
 
       // Refresh tampilan sesuai halaman
       if (state.currentPage === 'home') {
-        renderMainContent();
+        renderHomePage();
       } else if (state.currentPage === 'transactions') {
         renderTransactionList();
         updateTransactionStats();

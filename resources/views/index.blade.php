@@ -307,7 +307,7 @@
     if (state.chartInstances.home) state.chartInstances.home.destroy();
     state.chartInstances.home = new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: data.colors }] } });
     } catch(error) {
-    alert(error.message);
+    tgApp.showToast('Gagal memuat grafik: ' + error.message, 'danger');
     }
     }
 
@@ -469,7 +469,7 @@
     });
     }
     } catch(error) {
-    alert(error.message);
+    tgApp.showToast('Gagal memuat grafik: ' + error.message, 'danger');
     }
     }
 

@@ -123,7 +123,7 @@
       if (state.currentPage === 'wallets') {
         renderWalletsList();
       } else if (state.currentPage === 'home') {
-        renderMainContent();
+        renderHomePage();
       }
     } catch (error) {
       tgApp.hideLoading();
