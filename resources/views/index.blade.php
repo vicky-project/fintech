@@ -291,7 +291,6 @@
     const primaryCurrency = state.wallets[0]?.currency || 'IDR';
     const currencySymbol = getCurrencySymbol(primaryCurrency);
     return `
-    <!-- Header Saldo Total -->
     <div class="card bg-gradient-primary text-white mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
     <h6 class="card-subtitle mb-2 opacity-75">Total Saldo</h6>
@@ -299,14 +298,12 @@
     <small>Semua Dompet Aktif</small>
     </div>
     </div>
-    <!-- Pilih Dompet -->
     <div class="mb-3">
     <label class="form-label fw-semibold">Dompet Aktif</label>
     <select class="form-select" id="wallet-selector">
     <option value="">Semua Dompet</option>
     </select>
     </div>
-    <!-- Tab Navigasi -->
     <ul class="nav nav-tabs mb-3" id="mainTab" role="tablist">
     <li class="nav-item" role="presentation">
     <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
@@ -331,11 +328,41 @@
     </ul>
     <div class="tab-content" id="mainTabContent">
     <div class="tab-pane fade show active" id="overview">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Pengeluaran Minggu Ini</h5>
+    <button class="btn btn-sm btn-outline-primary" onclick="loadDoughnutChart()">
+    <i class="bi bi-arrow-clockwise"></i>
+    </button>
     </div>
-    <!-- Transactions Tab -->
-    <div class="tab-pane fade" id="transactions"> -->
+    <div style="height: 200px;">
+    <canvas id="doughnutChart"></canvas>
+    </div>
+    <h5 class="mt-4">Transaksi Terbaru</h5>
+    <div id="recent-transactions-container"></div>
+    <div class="text-center mt-2">
+    <button class="btn btn-link" onclick="document.getElementById('transactions-tab').click()">
+    Lihat Semua <i class="bi bi-arrow-right"></i>
+    </button>
+    </div>
+    </div>
+    <div class="tab-pane fade" id="transactions">
+    <div class="d-flex justify-content-between mb-3">
+    <h5 class="mb-0">Riwayat Transaksi</h5>
+    <button class="btn btn-primary btn-sm" onclick="showAddTransactionModal()">
+    <i class="bi bi-plus-lg"></i> Tambah
+    </button>
+    </div>
+    <div id="full-transaction-list"></div>
+    <div id="transaction-pagination"></div>
     </div>
     <div class="tab-pane fade" id="wallets">
+    <div class="d-flex justify-content-between mb-3">
+    <h5 class="mb-0">Daftar Dompet</h5>
+    <button class="btn btn-outline-primary btn-sm" onclick="showAddWalletModal()">
+    <i class="bi bi-plus-lg"></i> Tambah
+    </button>
+    </div>
+    <div id="wallet-list-container"></div>
     </div>
     <div class="tab-pane fade" id="categories">
     <div class="d-flex justify-content-between mb-3">
