@@ -106,10 +106,10 @@
       // Navigasi ke halaman awal
       navigateTo('home');
 
+      alert('jalan');
       // Sembunyikan loading
       loadingOverlay.style.display = 'none';
     } catch (error) {
-      alert(error.message);
       console.error('Init error:', error);
 
       // Tampilkan pesan error di dalam overlay
