@@ -287,6 +287,7 @@
   function renderDashboard() {
     const primaryCurrency = state.wallets[0]?.currency || 'IDR';
     const currencySymbol = getCurrencySymbol(primaryCurrency);
+    alert(JSON.stringify(currencySymbol));
     return `
     <div class="card bg-gradient-primary text-white mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
