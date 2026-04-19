@@ -291,7 +291,7 @@
     <div class="card bg-gradient-primary text-white mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
     <h6 class="card-subtitle mb-2 opacity-75">Total Saldo</h6>
-    <h2 class="display-6 fw-bold" id="total-balance-display">${currencySymbol?.symbol} ${formatNumber(state.totalBalance)}</h2>
+    <h2 class="display-6 fw-bold" id="total-balance-display">${currencySymbol.symbol} ${formatNumber(state.totalBalance)}</h2>
     <small>Semua Dompet Aktif</small>
     </div>
     </div>
