@@ -299,12 +299,16 @@
     }
 
     async function loadHomeChart() {
+    try {
     const ctx = document.getElementById('homeChart')?.getContext('2d');
     if (!ctx) return;
     const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/reports/doughnut-weekly');
     const data = res.data;
     if (state.chartInstances.home) state.chartInstances.home.destroy();
     state.chartInstances.home = new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: data.colors }] } });
+    } catch(error) {
+    alert(error.message);
+    }
     }
 
     // ==================== TRANSACTIONS PAGE ====================
@@ -445,6 +449,7 @@
     }
 
     async function loadReportCharts() {
+    try {
     const period = document.querySelector('#reportTab .active')?.dataset.period || 'monthly';
     const walletId = document.getElementById('report-wallet')?.value || '';
     let url = `/api/fintech/reports/${period}`;
@@ -462,6 +467,9 @@
     { label: 'Pengeluaran', data: data.expense, backgroundColor: '#FF6384' }
     ]}
     });
+    }
+    } catch(error) {
+    alert(error.message);
     }
     }
 
