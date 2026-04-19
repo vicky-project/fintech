@@ -16,7 +16,9 @@ class WalletController extends Controller
   */
   public function index(): JsonResponse
   {
-    $wallets = Wallet::where('user_id', request()->user()->id)
+    $user = request()->user();
+
+    $wallets = Wallet::where('user_id', $user->id)
     ->where('is_active', true)
     ->with('currencyDetails')
     ->orderBy('name')
