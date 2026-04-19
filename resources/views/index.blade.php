@@ -29,30 +29,30 @@
       <div class="modal-body">
         <form id="transactionForm">
           <div class="mb-3">
-            <label class="form-label">Dompet</label>
+            <label class="form-label">Dompet <span class="text-danger">*</span></label>
             <select class="form-select" name="wallet_id" required>
               <option value="">Pilih Dompet</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Tipe</label>
+            <label class="form-label">Tipe <span class="text-danger">*</span></label>
             <select class="form-select" name="type" required>
               <option value="income">Pemasukan</option>
               <option value="expense">Pengeluaran</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Kategori</label>
+            <label class="form-label">Kategori <span class="text-danger">*</span></label>
             <select class="form-select" name="category_id" required>
               <option value="">Pilih Kategori</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Jumlah</label>
+            <label class="form-label">Jumlah <span class="text-danger">*</span></label>
             <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Tanggal</label>
+            <label class="form-label">Tanggal <span class="text-danger">*</span></label>
             <input type="date" class="form-control" name="transaction_date" required>
           </div>
           <div class="mb-3">
@@ -81,12 +81,12 @@
         <form id="walletForm">
           <input type="hidden" name="id" id="wallet-id">
           <div class="mb-3">
-            <label class="form-label">Nama Dompet</label>
+            <label class="form-label">Nama Dompet <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="name" id="wallet-name" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Mata Uang</label>
-            <select class="form-select" name="currency" id="wallet-currency">
+            <label class="form-label">Mata Uang <span class="text-danger">*</span></label>
+            <select class="form-select" name="currency" id="wallet-currency" required>
               <option value="">Memuat data...</option>
             </select>
             <small class="text-muted" id="currency-hint">Mata uang tidak dapat diubah setelah dompet dibuat.</small>
@@ -260,20 +260,22 @@
     <div class="mb-3">
     <label class="form-label">Nama Dompet <span class="text-danger">*</span></label>
     <input type="text" class="form-control" name="name" placeholder="Contoh: Dompet Utama, BCA, Cash" required>
+    <small class="text-muted">Beri nama yang mudah diingat.</small>
     </div>
     <div class="mb-3">
-    <label class="form-label">Mata Uang</label>
-    <select class="form-select" name="currency" id="first-wallet-currency">
+    <label class="form-label">Mata Uang <span class="text-danger">*</span></label>
+    <select class="form-select" name="currency" id="first-wallet-currency" required>
     <option value="">Memuat data...</option>
     </select>
     </div>
     <div class="mb-3">
     <label class="form-label">Saldo Awal</label>
     <input type="number" class="form-control" name="initial_balance" step="0.01" min="0" value="0">
+    <small class="text-muted">Isi jika sudah ada uang di dompet ini.</small>
     </div>
     <div class="mb-3">
     <label class="form-label">Deskripsi (Opsional)</label>
-    <input type="text" class="form-control" name="description">
+    <input type="text" class="form-control" name="description" placeholder="Catatan tambahan">
     </div>
     <button type="submit" class="btn btn-primary w-100">
     <i class="bi bi-check-lg me-1"></i>Buat Dompet
@@ -291,7 +293,7 @@
     <div class="card bg-gradient-primary text-white mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
     <h6 class="card-subtitle mb-2 opacity-75">Total Saldo</h6>
-    <h2 class="display-6 fw-bold" id="total-balance-display">${currencySymbol.symbol} ${formatNumber(state.totalBalance)}</h2>
+    <h2 class="display-6 fw-bold" id="total-balance-display">${currencySymbol} ${formatNumber(state.totalBalance)}</h2>
     <small>Semua Dompet Aktif</small>
     </div>
     </div>
@@ -394,7 +396,7 @@
     total = state.totalBalance;
     }
     const symbol = getCurrencySymbol(currency);
-    displayEl.textContent = `${symbol.symbol} ${formatNumber(total)}`;
+    displayEl.textContent = `${symbol} ${formatNumber(total)}`;
     }
 
     function renderWalletList() {
