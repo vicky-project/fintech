@@ -4,6 +4,8 @@ namespace Modules\FinTech\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\FinTech\Enums\CategoryType;
 
 class Category extends Model
 {
@@ -13,11 +15,19 @@ class Category extends Model
     'name',
     'icon',
     'color',
-    'is_active'
+    'type',
+    'parent_id',
+    'is_system',
+    'is_active',
+    'metadata'
   ];
 
   protected $casts = [
+    'type' => CategoryType::class,
+    // Casting ke Enum
+    'is_system' => 'boolean',
     'is_active' => 'boolean',
+    'metadata' => 'array',
   ];
 
   public function transactions(): HasMany
@@ -25,10 +35,36 @@ class Category extends Model
     return $this->hasMany(Transaction::class);
   }
 
-  /**
-  * Scope untuk kategori aktif
-  */
+  public function parent(): BelongsTo
+  {
+    return $this->belongsTo(Category::class, 'parent_id');
+  }
+
+  public function children(): HasMany
+  {
+    return $this->hasMany(Category::class, 'parent_id');
+  }
+
   public function scopeActive($query) {
     return $query->where('is_active', true);
+  }
+
+  public function scopeExpense($query) {
+    return $query->whereIn('type', [CategoryType::EXPENSE, CategoryType::BOTH]);
+  }
+
+  public function scopeIncome($query) {
+    return $query->whereIn('type', [CategoryType::INCOME, CategoryType::BOTH]);
+  }
+
+  // Helper method menggunakan Enum
+  public function isForIncome(): bool
+  {
+    return $this->type->isForIncome();
+  }
+
+  public function isForExpense(): bool
+  {
+    return $this->type->isForExpense();
   }
 }
