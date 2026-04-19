@@ -1,0 +1,11 @@
+{
+    "name": "FinTech",
+    "alias": "fintech",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\FinTech\\Providers\\FinTechServiceProvider"
+    ],
+    "files": []
+}
