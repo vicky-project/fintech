@@ -18,7 +18,7 @@
   <div id="main-content" style="display: none;"></div>
 </div>
 
-{{-- Modal Tambah Transaksi (Tetap sama seperti sebelumnya) --}}
+{{-- Modal Tambah Transaksi --}}
 <div class="modal fade" id="transactionModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -48,7 +48,7 @@
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Jumlah (Rp)</label>
+            <label class="form-label">Jumlah</label>
             <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required>
           </div>
           <div class="mb-3">
@@ -69,32 +69,41 @@
   </div>
 </div>
 
+{{-- Modal Tambah/Edit Dompet --}}
 <div class="modal fade" id="walletModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Tambah Dompet</h5>
+        <h5 class="modal-title" id="walletModalTitle">Tambah Dompet</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <form id="walletForm">
+          <input type="hidden" name="id" id="wallet-id">
           <div class="mb-3">
             <label class="form-label">Nama Dompet</label>
-            <input type="text" class="form-control" name="name" required>
+            <input type="text" class="form-control" name="name" id="wallet-name" required>
           </div>
           <div class="mb-3">
             <label class="form-label">Mata Uang</label>
-            <select class="form-select currency-select" name="currency" id="modal-wallet-currency">
+            <select class="form-select" name="currency" id="wallet-currency">
               <option value="">Memuat data...</option>
             </select>
+            <small class="text-muted" id="currency-hint">Mata uang tidak dapat diubah setelah dompet dibuat.</small>
           </div>
-          <div class="mb-3">
+          <div class="mb-3" id="initial-balance-group">
             <label class="form-label">Saldo Awal</label>
             <input type="number" class="form-control" name="initial_balance" step="0.01" min="0" value="0">
           </div>
           <div class="mb-3">
             <label class="form-label">Deskripsi (Opsional)</label>
-            <input type="text" class="form-control" name="description">
+            <input type="text" class="form-control" name="description" id="wallet-description">
+          </div>
+          <div class="mb-3" id="is-active-group" style="display: none;">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_active" id="wallet-is-active" value="1" checked>
+              <label class="form-check-label" for="wallet-is-active">Dompet Aktif</label>
+            </div>
           </div>
         </form>
       </div>
@@ -110,7 +119,7 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  const BASE_URL = '{{ rtrim(config("app.url"), "/") }}'; // Hapus trailing slash
+  const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
 
   // ======================== STATE MANAGEMENT ========================
   const state = {
@@ -120,7 +129,10 @@
     recentTransactions: [],
     totalBalance: 0,
     currentWalletId: null,
-    defaultCurrency: 'IDR'
+    defaultCurrency: 'IDR',
+    activeTab: 'overview',
+    fullTransactionPage: 1,
+    chartInstance: null
   };
 
   // ======================== INITIALIZATION ========================
@@ -131,15 +143,12 @@
   async function initializeApp() {
     try {
       tgApp.showLoading('Memuat data...');
-
       await Promise.all([
       loadWallets(),
       loadCategories(),
       loadCurrencies(),
       ]);
-
-      renderMainContent();
-
+      renderApp();
       tgApp.hideLoading();
       document.getElementById('loading-state').style.display = 'none';
       document.getElementById('main-content').style.display = 'block';
@@ -155,9 +164,7 @@
     try {
       const response = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
       state.wallets = response.data || [];
-
       state.totalBalance = state.wallets.reduce((sum, w) => sum + w.balance, 0);
-
       if (state.wallets.length > 0) {
         await loadRecentTransactions();
       }
@@ -177,23 +184,12 @@
     }
   }
 
-  async function loadRecentTransactions() {
-    try {
-      const response = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=5');
-      state.recentTransactions = response.data.data || [];
-    } catch (error) {
-      console.error('Gagal load transactions:', error);
-      state.recentTransactions = [];
-    }
-  }
-
   async function loadCurrencies() {
     try {
       const response = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
       state.currencies = response.data || [];
     } catch (error) {
       console.error('Gagal load currencies:', error);
-      // Fallback ke IDR saja
       state.currencies = [{
         code: 'IDR',
         name: 'Indonesian Rupiah',
@@ -203,46 +199,47 @@
     }
   }
 
-  // ======================== CURRENCY HELPERS ========================
-  function populateSelectWithCurrencies(selectElement, defaultCode = null) {
-    if (!selectElement) return;
-
-    selectElement.innerHTML = '<option value="">Pilih Mata Uang</option>';
-    const defaultCurrency = defaultCode || state.defaultCurrency;
-
-    state.currencies.forEach(curr => {
-    const option = document.createElement('option');
-    option.value = curr.code;
-    option.textContent = `${curr.name} (${curr.symbol || curr.code})`;
-    if (curr.code === defaultCurrency) {
-    option.selected = true;
+  async function loadRecentTransactions() {
+    try {
+      const response = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=5');
+      state.recentTransactions = response.data.data || [];
+    } catch (error) {
+      console.error('Gagal load recent transactions:', error);
+      state.recentTransactions = [];
     }
-    selectElement.appendChild(option);
-    });
   }
 
-  function getCurrencySymbol(code) {
-    const currency = state.currencies.find(c => c.code === code);
-    return currency?.symbol || code;
+  async function loadFullTransactions(page = 1) {
+    try {
+      let url = BASE_URL + `/api/fintech/transactions?page=${page}&per_page=10`;
+      if (state.currentWalletId) url += `&wallet_id=${state.currentWalletId}`;
+      const response = await tgApp.fetchWithAuth(url);
+      const data = response.data;
+      renderTransactionListToContainer(data.data, document.getElementById('full-transaction-list'));
+      tgApp.renderPagination('transaction-pagination', data.current_page, data.last_page, (newPage) => {
+      state.fullTransactionPage = newPage;
+      loadFullTransactions(newPage);
+      });
+    } catch (error) {
+      console.error('Gagal load full transactions:', error);
+    }
   }
 
-  // ======================== RENDERING ========================
-  function renderMainContent() {
+  // ======================== RENDER UTAMA ========================
+  function renderApp() {
     const container = document.getElementById('main-content');
-
     if (state.wallets.length === 0) {
       container.innerHTML = renderEmptyState();
-      // Setup form dan isi dropdown mata uang setelah HTML terpasang
-      document.getElementById('firstWalletForm').addEventListener('submit', handleCreateFirstWallet);
+      const form = document.getElementById('firstWalletForm');
+      if (form) form.addEventListener('submit', handleCreateFirstWallet);
       const currencySelect = document.getElementById('first-wallet-currency');
-      if (currencySelect) {
-        populateSelectWithCurrencies(currencySelect, 'IDR');
-      }
+      if (currencySelect) populateSelectWithCurrencies(currencySelect, 'IDR');
     } else {
       container.innerHTML = renderDashboard();
       setupWalletSelector();
       renderWalletList();
       renderRecentTransactions();
+      updateTotalBalanceDisplay();
       setTimeout(() => loadDoughnutChart(), 100);
     }
   }
@@ -254,7 +251,6 @@
     <h4 class="mt-3">Selamat Datang di FinTech!</h4>
     <p class="text-muted">Anda belum memiliki dompet. Yuk, buat dompet pertama Anda untuk mulai mencatat keuangan.</p>
     </div>
-
     <div class="card shadow-sm">
     <div class="card-header bg-primary text-white">
     <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Buat Dompet Pertama</h5>
@@ -264,7 +260,6 @@
     <div class="mb-3">
     <label class="form-label">Nama Dompet <span class="text-danger">*</span></label>
     <input type="text" class="form-control" name="name" placeholder="Contoh: Dompet Utama, BCA, Cash" required>
-    <small class="text-muted">Beri nama yang mudah diingat.</small>
     </div>
     <div class="mb-3">
     <label class="form-label">Mata Uang</label>
@@ -275,11 +270,10 @@
     <div class="mb-3">
     <label class="form-label">Saldo Awal</label>
     <input type="number" class="form-control" name="initial_balance" step="0.01" min="0" value="0">
-    <small class="text-muted">Isi jika sudah ada uang di dompet ini.</small>
     </div>
     <div class="mb-3">
     <label class="form-label">Deskripsi (Opsional)</label>
-    <input type="text" class="form-control" name="description" placeholder="Catatan tambahan">
+    <input type="text" class="form-control" name="description">
     </div>
     <button type="submit" class="btn btn-primary w-100">
     <i class="bi bi-check-lg me-1"></i>Buat Dompet
@@ -291,12 +285,9 @@
   }
 
   function renderDashboard() {
-    // Gunakan mata uang dari wallet pertama sebagai acuan tampilan total
     const primaryCurrency = state.wallets[0]?.currency || 'IDR';
     const currencySymbol = getCurrencySymbol(primaryCurrency);
-
     return `
-    <!-- Header Saldo Total -->
     <div class="card bg-gradient-primary text-white mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
     <h6 class="card-subtitle mb-2 opacity-75">Total Saldo</h6>
@@ -304,16 +295,12 @@
     <small>Semua Dompet Aktif</small>
     </div>
     </div>
-
-    <!-- Pilih Dompet -->
     <div class="mb-3">
     <label class="form-label fw-semibold">Dompet Aktif</label>
     <select class="form-select" id="wallet-selector">
     <option value="">Semua Dompet</option>
     </select>
     </div>
-
-    <!-- Tab Navigasi -->
     <ul class="nav nav-tabs mb-3" id="mainTab" role="tablist">
     <li class="nav-item" role="presentation">
     <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
@@ -331,21 +318,17 @@
     </button>
     </li>
     </ul>
-
-    <!-- Tab Content -->
     <div class="tab-content" id="mainTabContent">
-    <!-- Overview Tab -->
     <div class="tab-pane fade show active" id="overview">
     <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">Pengeluaran Minggu Ini</h5>
-    <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">
+    <button class="btn btn-sm btn-outline-primary" onclick="loadDoughnutChart()">
     <i class="bi bi-arrow-clockwise"></i>
     </button>
     </div>
     <div style="height: 200px;">
     <canvas id="doughnutChart"></canvas>
     </div>
-
     <h5 class="mt-4">Transaksi Terbaru</h5>
     <div id="recent-transactions-container"></div>
     <div class="text-center mt-2">
@@ -354,8 +337,6 @@
     </button>
     </div>
     </div>
-
-    <!-- Transactions Tab -->
     <div class="tab-pane fade" id="transactions">
     <div class="d-flex justify-content-between mb-3">
     <h5 class="mb-0">Riwayat Transaksi</h5>
@@ -366,8 +347,6 @@
     <div id="full-transaction-list"></div>
     <div id="transaction-pagination"></div>
     </div>
-
-    <!-- Wallets Tab -->
     <div class="tab-pane fade" id="wallets">
     <div class="d-flex justify-content-between mb-3">
     <h5 class="mb-0">Daftar Dompet</h5>
@@ -381,11 +360,10 @@
     `;
     }
 
-    // ======================== UI COMPONENT RENDERERS ========================
+    // ======================== UI HELPERS ========================
     function setupWalletSelector() {
     const selector = document.getElementById('wallet-selector');
     if (!selector) return;
-
     selector.innerHTML = '<option value="">Semua Dompet</option>';
     state.wallets.forEach(wallet => {
     const option = document.createElement('option');
@@ -393,7 +371,6 @@
     option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
     selector.appendChild(option);
     });
-
     selector.addEventListener('change', async (e) => {
     state.currentWalletId = e.target.value;
     await refreshTransactionData();
@@ -405,10 +382,8 @@
     function updateTotalBalanceDisplay() {
     const displayEl = document.getElementById('total-balance-display');
     if (!displayEl) return;
-
     let total = 0;
-    let currency = 'IDR';
-
+    let currency = state.wallets[0]?.currency || 'IDR';
     if (state.currentWalletId) {
     const wallet = state.wallets.find(w => w.id == state.currentWalletId);
     if (wallet) {
@@ -417,9 +392,7 @@
     }
     } else {
     total = state.totalBalance;
-    currency = state.wallets[0]?.currency || 'IDR';
     }
-
     const symbol = getCurrencySymbol(currency);
     displayEl.textContent = `${symbol} ${formatNumber(total)}`;
     }
@@ -427,12 +400,10 @@
     function renderWalletList() {
     const container = document.getElementById('wallet-list-container');
     if (!container) return;
-
     if (state.wallets.length === 0) {
     container.innerHTML = '<p class="text-muted text-center">Belum ada dompet</p>';
     return;
     }
-
     let html = '<div class="list-group">';
     state.wallets.forEach(wallet => {
     html += `
@@ -463,16 +434,14 @@
     }
 
     function renderTransactionListToContainer(transactions, container) {
-    if (transactions.length === 0) {
+    if (!transactions.length) {
     container.innerHTML = '<p class="text-muted text-center">Belum ada transaksi</p>';
     return;
     }
-
     let html = '<div class="list-group">';
     transactions.forEach(trx => {
     const sign = trx.type === 'income' ? '+' : '-';
     const amountClass = trx.type === 'income' ? 'text-success' : 'text-danger';
-
     html += `
     <div class="list-group-item">
     <div class="d-flex justify-content-between align-items-center">
@@ -483,9 +452,7 @@
     <div>
     <div class="fw-semibold">${trx.category.name}</div>
     <small class="text-muted">${trx.description || '-'}</small>
-    <div class="small text-muted">
-    ${formatDate(trx.transaction_date)} · ${trx.wallet.name}
-    </div>
+    <div class="small text-muted">${formatDate(trx.transaction_date)} · ${trx.wallet.name}</div>
     </div>
     </div>
     <div class="text-end">
@@ -499,31 +466,26 @@
     container.innerHTML = html;
     }
 
-    // ======================== CHART ========================
-    let doughnutChartInstance = null;
+    async function refreshTransactionData() {
+    await loadRecentTransactions();
+    renderRecentTransactions();
+    if (document.getElementById('full-transaction-list')) {
+    await loadFullTransactions(state.fullTransactionPage);
+    }
+    }
 
+    // ======================== CHART ========================
     async function loadDoughnutChart() {
     try {
     let url = BASE_URL + '/api/fintech/reports/doughnut-weekly';
-    if (state.currentWalletId) {
-    url += `?wallet_id=${state.currentWalletId}`;
-    }
-
+    if (state.currentWalletId) url += `?wallet_id=${state.currentWalletId}`;
     const response = await tgApp.fetchWithAuth(url);
     const chartData = response.data;
-
     const ctx = document.getElementById('doughnutChart')?.getContext('2d');
     if (!ctx) return;
-
-    if (doughnutChartInstance) {
-    doughnutChartInstance.destroy();
-    }
-
-    if (chartData.labels.length === 0) {
-    return;
-    }
-
-    doughnutChartInstance = new Chart(ctx, {
+    if (state.chartInstance) state.chartInstance.destroy();
+    if (!chartData.labels.length) return;
+    state.chartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
     labels: chartData.labels,
@@ -537,10 +499,7 @@
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-    legend: {
-    position: 'bottom',
-    labels: { boxWidth: 12 }
-    },
+    legend: { position: 'bottom', labels: { boxWidth: 12 } },
     tooltip: {
     callbacks: {
     label: (context) => {
@@ -559,9 +518,111 @@
     }
     }
 
-    // ======================== MODAL & FORM HANDLERS ========================
+    // ======================== CURRENCY HELPERS ========================
+    function populateSelectWithCurrencies(selectElement, defaultCode = 'IDR') {
+    if (!selectElement) return;
+    selectElement.innerHTML = '<option value="">Pilih Mata Uang</option>';
+    state.currencies.forEach(curr => {
+    const option = document.createElement('option');
+    option.value = curr.code;
+    option.textContent = `${curr.name} (${curr.symbol || curr.code})`;
+    if (curr.code === defaultCode) option.selected = true;
+    selectElement.appendChild(option);
+    });
+    }
+
+    function getCurrencySymbol(code) {
+    const currency = state.currencies.find(c => c.code === code);
+    return currency?.symbol || code;
+    }
+
+    // ======================== FORM HANDLERS ========================
+    function showAddWalletModal(wallet = null) {
+    const form = document.getElementById('walletForm');
+    form.reset();
+    const isEdit = !!wallet;
+    document.getElementById('walletModalTitle').textContent = isEdit ? 'Edit Dompet' : 'Tambah Dompet';
+    document.getElementById('wallet-id').value = wallet?.id || '';
+    document.getElementById('wallet-name').value = wallet?.name || '';
+    document.getElementById('wallet-description').value = wallet?.description || '';
+
+    const currencySelect = document.getElementById('wallet-currency');
+    populateSelectWithCurrencies(currencySelect, wallet?.currency || 'IDR');
+    currencySelect.disabled = isEdit;
+    document.getElementById('currency-hint').style.display = isEdit ? 'block' : 'none';
+
+    document.getElementById('initial-balance-group').style.display = isEdit ? 'none' : 'block';
+    document.getElementById('is-active-group').style.display = isEdit ? 'block' : 'none';
+    if (isEdit) {
+    document.getElementById('wallet-is-active').checked = wallet.is_active;
+    }
+    new bootstrap.Modal(document.getElementById('walletModal')).show();
+    }
+
+    async function saveWallet() {
+    const form = document.getElementById('walletForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const id = data.id;
+    const isEdit = !!id;
+
+    // Hapus field yang tidak diperlukan
+    if (isEdit) {
+    delete data.initial_balance;
+    delete data.currency;
+    data.is_active = data.is_active === '1';
+    } else {
+    delete data.id;
+    delete data.is_active;
+    }
+
+    // Validasi client-side nama duplikat (kecuali edit dengan nama sama)
+    if (!isEdit && state.wallets.some(w => w.name.toLowerCase() === data.name.toLowerCase())) {
+    tgApp.showToast('Nama dompet sudah digunakan', 'warning');
+    return;
+    }
+
+    try {
+    tgApp.showLoading('Menyimpan...');
+    const url = isEdit ? `${BASE_URL}/api/fintech/wallets/${id}` : `${BASE_URL}/api/fintech/wallets`;
+    const method = isEdit ? 'PUT' : 'POST';
+    await tgApp.fetchWithAuth(url, { method, body: JSON.stringify(data) });
+
+    await loadWallets();
+    tgApp.hideLoading();
+    tgApp.showToast(isEdit ? 'Dompet berhasil diperbarui' : 'Dompet berhasil dibuat');
+    bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
+    renderApp();
+    } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal menyimpan dompet', 'danger');
+    }
+    }
+
+    async function handleCreateFirstWallet(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    try {
+    tgApp.showLoading('Membuat dompet...');
+    await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets', {
+    method: 'POST',
+    body: JSON.stringify(data)
+    });
+    await loadWallets();
+    tgApp.hideLoading();
+    tgApp.showToast('Dompet berhasil dibuat!');
+    renderApp();
+    } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal membuat dompet', 'danger');
+    }
+    }
+
     function showAddTransactionModal() {
-    document.getElementById('transactionForm').reset();
+    const form = document.getElementById('transactionForm');
+    form.reset();
     document.querySelector('input[name="transaction_date"]').value = new Date().toISOString().split('T')[0];
 
     const walletSelect = document.querySelector('select[name="wallet_id"]');
@@ -589,33 +650,28 @@
     const form = document.getElementById('transactionForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-
     if (!data.wallet_id || !data.category_id || !data.amount) {
     tgApp.showToast('Harap isi semua field wajib', 'danger');
     return;
     }
-
     try {
     tgApp.showLoading('Menyimpan...');
     await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions', {
     method: 'POST',
     body: JSON.stringify(data)
     });
-
+    await loadWallets();
+    await loadRecentTransactions();
     tgApp.hideLoading();
     tgApp.showToast('Transaksi berhasil disimpan');
     bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
-
-    await loadWallets();
-    await loadRecentTransactions();
 
     updateTotalBalanceDisplay();
     setupWalletSelector();
     renderRecentTransactions();
     loadDoughnutChart();
-
     if (document.getElementById('full-transaction-list')) {
-    await loadFullTransactions();
+    await loadFullTransactions(state.fullTransactionPage);
     }
     } catch (error) {
     tgApp.hideLoading();
@@ -623,97 +679,7 @@
     }
     }
 
-    async function handleCreateFirstWallet(e) {
-    e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-    tgApp.showLoading('Membuat dompet...');
-    await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets', {
-    method: 'POST',
-    body: JSON.stringify(data)
-    });
-
-    tgApp.hideLoading();
-    tgApp.showToast('Dompet berhasil dibuat!');
-    window.location.reload();
-    } catch (error) {
-    tgApp.hideLoading();
-    tgApp.showToast(error.message || 'Gagal membuat dompet', 'danger');
-    }
-    }
-
-    function showAddWalletModal() {
-    document.getElementById('walletForm').reset();
-    const currencySelect = document.getElementById('modal-wallet-currency');
-    if (currencySelect) {
-    populateSelectWithCurrencies(currencySelect, 'IDR');
-    }
-    new bootstrap.Modal(document.getElementById('walletModal')).show();
-    }
-
-    async function saveWallet() {
-    const form = document.getElementById('walletForm');
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-    tgApp.showLoading('Menyimpan...');
-    await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets', {
-    method: 'POST',
-    body: JSON.stringify(data)
-    });
-
-    tgApp.hideLoading();
-    tgApp.showToast('Dompet berhasil dibuat');
-    bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
-
-    await loadWallets();
-    renderMainContent();
-    } catch (error) {
-    tgApp.hideLoading();
-    tgApp.showToast(error.message || 'Gagal membuat dompet', 'danger');
-    }
-    }
-
-    // ======================== FULL TRANSACTIONS (TAB) ========================
-    let currentTransactionPage = 1;
-
-    async function loadFullTransactions(page = 1) {
-    try {
-    let url = BASE_URL + `/api/fintech/transactions?page=${page}&per_page=10`;
-    if (state.currentWalletId) url += `&wallet_id=${state.currentWalletId}`;
-
-    const response = await tgApp.fetchWithAuth(url);
-    const data = response.data;
-
-    renderTransactionListToContainer(data.data, document.getElementById('full-transaction-list'));
-
-    tgApp.renderPagination(
-    'transaction-pagination',
-    data.current_page,
-    data.last_page,
-    (newPage) => {
-    currentTransactionPage = newPage;
-    loadFullTransactions(newPage);
-    }
-    );
-    } catch (error) {
-    console.error('Gagal load full transactions:', error);
-    }
-    }
-
-    async function refreshTransactionData() {
-    await loadRecentTransactions();
-    renderRecentTransactions();
-    if (document.getElementById('full-transaction-list')) {
-    await loadFullTransactions(currentTransactionPage);
-    }
-    }
-
-    // ======================== UTILITY FUNCTIONS ========================
+    // ======================== UTILITY ========================
     function formatNumber(num) {
     return new Intl.NumberFormat('id-ID').format(num);
     }
@@ -726,7 +692,7 @@
     // ======================== EVENT LISTENERS ========================
     document.addEventListener('shown.bs.tab', (e) => {
     if (e.target.id === 'transactions-tab') {
-    loadFullTransactions();
+    loadFullTransactions(state.fullTransactionPage);
     }
     });
     </script>
