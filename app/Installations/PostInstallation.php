@@ -12,10 +12,10 @@ class PostInstallation
       foreach ($modules as $modulename) {
         $module = Module::find($modulename);
         $module->enable();
-        dd($module);
       }
 
       Artisan::call("migrate");
+      dd($moduleName);
       Artisan::call("world:install");
     } catch (\Exception $e) {
       logger()->error(
