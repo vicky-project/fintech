@@ -106,9 +106,9 @@
       // Navigasi ke halaman awal
       navigateTo('home');
 
-      alert('jalan');
       // Sembunyikan loading
       loadingOverlay.style.display = 'none';
+      alert(loadingOverlay);
     } catch (error) {
       console.error('Init error:', error);
 
