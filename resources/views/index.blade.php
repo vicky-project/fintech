@@ -74,15 +74,60 @@
   });
 
   async function initializeApp() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const mainContent = document.getElementById('main-content');
+
     try {
-      await Promise.all([loadWallets(), loadCategories(), loadCurrencies()]);
-      if (state.wallets.length > 0) await loadAllTransactions();
+      // Tampilkan loading
+      loadingOverlay.style.display = 'flex';
+      loadingOverlay.innerHTML = `
+      <div class="text-center">
+      <div class="spinner-border text-primary mb-3" role="status"></div>
+      <p class="text-muted">Memuat data keuangan...</p>
+      </div>
+      `;
+
+      // Load data penting
+      await Promise.all([
+      loadWallets().catch(e => { throw new Error('Gagal memuat dompet: ' + e.message); }),
+      loadCategories().catch(e => { throw new Error('Gagal memuat kategori: ' + e.message); }),
+      loadCurrencies().catch(e => { throw new Error('Gagal memuat mata uang: ' + e.message); })
+      ]);
+
+      // Jika punya wallet, load transaksi
+      if (state.wallets.length > 0) {
+        await loadAllTransactions().catch(e => {
+        tgApp.showToast('Gagal memuat transaksi terbaru', 'warning');
+        state.allTransactions = [];
+        });
+      }
+
+      // Navigasi ke halaman awal
       navigateTo('home');
+
+      // Sembunyikan loading
+      loadingOverlay.style.display = 'none';
     } catch (error) {
-      tgApp.showToast('Gagal memuat aplikasi', 'danger');
-    } finally {
-      document.getElementById('loading-overlay').style.display = 'none';
+      console.error('Init error:', error);
+
+      // Tampilkan pesan error di dalam overlay
+      loadingOverlay.innerHTML = `
+      <div class="text-center p-4">
+      <i class="bi bi-exclamation-triangle text-danger display-4"></i>
+      <h5 class="mt-3">Gagal Memuat Aplikasi</h5>
+      <p class="text-muted">${error.message || 'Terjadi kesalahan tidak diketahui.'}</p>
+      <button class="btn btn-primary mt-2" onclick="retryInitialization()">
+      <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
+      </button>
+      </div>
+      `;
+      loadingOverlay.style.display = 'flex';
     }
+  }
+
+  // Fungsi untuk mencoba ulang inisialisasi
+  function retryInitialization() {
+    initializeApp();
   }
 
   function setupNavigation() {
@@ -93,25 +138,51 @@
 
   // ==================== DATA LOADING ====================
   async function loadWallets() {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
-    state.wallets = res.data || [];
-    state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
+    try {
+      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
+      state.wallets = res.data || [];
+      state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
+    } catch (error) {
+      console.error('loadWallets error:', error);
+      state.wallets = [];
+      state.totalBalance = 0;
+      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
+    }
   }
 
   async function loadCategories() {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/categories');
-    state.categories = res.data || [];
+    try {
+      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/categories');
+      state.categories = res.data || [];
+    } catch(error) {
+      console.error('loadCategories error:', error);
+      state.categories = [];
+      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
+    }
   }
 
   async function loadCurrencies() {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
-    state.currencies = res.data || [];
+    try {
+      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
+      state.currencies = res.data || [];
+    } catch(error) {
+      console.error('loadCurrencies error:', error);
+      state.currencies = [];
+      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
+    }
   }
 
   async function loadAllTransactions() {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=100');
-    state.allTransactions = res.data.data || [];
-    state.recentTransactions = state.allTransactions.slice(0, 5);
+    try {
+      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=100');
+      state.allTransactions = res.data.data || [];
+      state.recentTransactions = state.allTransactions.slice(0, 5);
+    } catch(error) {
+      console.error('loadAllTransactions error:', error);
+      state.allTransactions = [];
+      state.recentTransactions = [];
+      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
+    }
   }
 
   // ==================== NAVIGATION ====================
