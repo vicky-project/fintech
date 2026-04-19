@@ -37,7 +37,12 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->register(EventServiceProvider::class);
     $this->app->register(RouteServiceProvider::class);
 
+    $this->app->make("config")->set("world.migrations.countries.table_name", "world_countries");
+    $this->app->make("config")->set("world.migrations.states.table_name", "world_states");
     $this->app->make("config")->set("world.migrations.cities.table_name", "world_cities");
+    $this->app->make("config")->set("world.migrations.currencies.table_name", "world_currencies");
+    $this->app->make("config")->set("world.migrations.languages.table_name", "world_languages");
+    $this->app->make("config")->set("world.migrations.timezones.table_name", "world_timezones");
   }
 
   /**

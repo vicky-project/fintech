@@ -2,10 +2,10 @@
 
 namespace Modules\FinTech\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Modules\FinTech\Http\Requests\TransactionRequest;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Category;
@@ -17,8 +17,9 @@ class TransactionController extends Controller
   /**
   * Display a listing of transactions.
   */
-  public function index(Request $request): JsonResponse
+  public function index(): JsonResponse
   {
+    $request = request();
     $request->validate([
       'wallet_id' => 'nullable|exists:fintech_wallets,id',
       'type' => 'nullable|in:' . implode(',', TransactionType::values()),
@@ -87,38 +88,24 @@ class TransactionController extends Controller
   /**
   * Store a newly created transaction.
   */
-  public function store(Request $request): JsonResponse
+  public function store(TransactionRequest $request): JsonResponse
   {
-    $validated = $request->validate([
-      'wallet_id' => 'required|exists:fintech_wallets,id',
-      'category_id' => 'required|exists:fintech_categories,id',
-      'type' => 'required|in:' . implode(',', TransactionType::values()),
-      'amount' => 'required|numeric|min:0.01',
-      'description' => 'nullable|string',
-      'transaction_date' => 'required|date|before_or_equal:today'
-    ]);
-
-    $wallet = Wallet::findOrFail($validated['wallet_id']);
-    if ($wallet->user_id !== $request->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
-    }
-
-    $category = Category::findOrFail($validated['category_id']);
+    $wallet = Wallet::findOrFail($request->wallet_id);
+    $category = Category::findOrFail($request->category_id);
 
     try {
-      $amount = Money::of($validated['amount'], $wallet->currency);
+      $amount = Money::of($request->amount, $wallet->currency);
 
-      DB::transaction(function () use ($wallet, $validated, $amount) {
-        $transaction = new Transaction($validated);
+      DB::transaction(function () use ($wallet, $request, $amount) {
+        $transaction = new Transaction($request->validated());
         $transaction->amount = $amount;
         $transaction->save();
 
-        if ($validated['type'] === TransactionType::INCOME->value) {
+        if ($request->type === TransactionType::INCOME->value) {
           $wallet->deposit($amount);
-        } elseif ($validated['type'] === TransactionType::EXPENSE->value) {
+        } elseif ($request->type === TransactionType::EXPENSE->value) {
           $wallet->withdraw($amount);
         }
-        // Note: TRANSFER type will be handled separately
       });
 
       return response()->json([
