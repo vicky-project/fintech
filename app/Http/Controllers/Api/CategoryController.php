@@ -15,7 +15,7 @@ class CategoryController extends Controller
   {
     $categories = Category::active()
     ->orderBy('name')
-    ->get(['id', 'name', 'icon', 'color']);
+    ->get(['id', 'name', 'icon', 'color', 'type']);
 
     return response()->json([
       'success' => true,

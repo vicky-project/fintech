@@ -15,14 +15,14 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Tipe <span class="text-danger">*</span></label>
-            <select class="form-select" name="type" required>
+            <select class="form-select" name="type" id="transaction-type" required>
               <option value="income">Pemasukan</option>
               <option value="expense">Pengeluaran</option>
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Kategori <span class="text-danger">*</span></label>
-            <select class="form-select" name="category_id" required>
+            <select class="form-select" name="category_id" id="transaction-category" required>
               <option value="">Pilih Kategori</option>
             </select>
           </div>
@@ -49,7 +49,11 @@
 </div>
 
 <script>
-  function showAddTransactionModal() {
+  // Simpan referensi ke fungsi asli jika diperlukan, tapi kita akan override langsung
+  const originalShowAddTransactionModal = window.showAddTransactionModal;
+
+  // Override fungsi global showAddTransactionModal
+  window.showAddTransactionModal = function() {
     const form = document.getElementById('transactionForm');
     form.reset();
     document.querySelector('input[name="transaction_date"]').value = new Date().toISOString().split('T')[0];
@@ -57,24 +61,89 @@
     // Isi dropdown dompet
     const walletSelect = document.querySelector('select[name="wallet_id"]');
     walletSelect.innerHTML = '<option value="">Pilih Dompet</option>';
-    state.wallets.filter(w => w.is_active).forEach(wallet => {
-    const option = document.createElement('option');
-    option.value = wallet.id;
-    option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
-    walletSelect.appendChild(option);
-    });
+    if (typeof state !== 'undefined' && state.wallets) {
+      state.wallets.filter(w => w.is_active).forEach(wallet => {
+      const option = document.createElement('option');
+      option.value = wallet.id;
+      option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
+      walletSelect.appendChild(option);
+      });
+    }
 
-    // Isi dropdown kategori
-    const categorySelect = document.querySelector('select[name="category_id"]');
+    // Isi dropdown kategori awal (akan difilter setelahnya)
+    const categorySelect = document.getElementById('transaction-category');
     categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
-    state.categories.forEach(cat => {
-    const option = document.createElement('option');
-    option.value = cat.id;
-    option.textContent = cat.name;
-    categorySelect.appendChild(option);
+    if (typeof state !== 'undefined' && state.categories) {
+      // Render semua dulu, nanti difilter
+      state.categories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat.id;
+      option.textContent = cat.name;
+      option.dataset.type = cat.type;
+      categorySelect.appendChild(option);
+      });
+    }
+
+    // Pasang event listener untuk filter kategori
+    const typeSelect = document.getElementById('transaction-type');
+
+    // Hapus listener lama jika ada (hindari duplikat)
+    typeSelect.removeEventListener('change', filterCategoriesByType);
+    typeSelect.addEventListener('change', filterCategoriesByType);
+
+    // Panggil filter pertama kali
+    filterCategoriesByType();
+
+    // Tampilkan modal
+    new bootstrap.Modal(document.getElementById('transactionModal')).show();
+  };
+
+  // Fungsi untuk memfilter kategori berdasarkan tipe transaksi
+  function filterCategoriesByType() {
+    const typeSelect = document.getElementById('transaction-type');
+    const categorySelect = document.getElementById('transaction-category');
+    if (!typeSelect || !categorySelect) return;
+
+    const selectedType = typeSelect.value; // 'income' atau 'expense'
+    const currentCategoryId = categorySelect.value;
+
+    // Simpan semua opsi yang ada
+    const allOptions = Array.from(categorySelect.options);
+
+    // Kosongkan select
+    categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
+
+    // Filter dan tambahkan opsi yang sesuai
+    let hasSelected = false;
+    allOptions.forEach(option => {
+    if (option.value === '') return; // Lewati placeholder
+
+    const catType = option.dataset.type;
+    let show = false;
+
+    if (selectedType === 'income') {
+    show = (catType === 'income' || catType === 'both');
+    } else if (selectedType === 'expense') {
+    show = (catType === 'expense' || catType === 'both');
+    }
+
+    if (show) {
+    const newOption = document.createElement('option');
+    newOption.value = option.value;
+    newOption.textContent = option.textContent;
+    newOption.dataset.type = catType;
+    if (option.value === currentCategoryId) {
+    newOption.selected = true;
+    hasSelected = true;
+    }
+    categorySelect.appendChild(newOption);
+    }
     });
 
-    new bootstrap.Modal(document.getElementById('transactionModal')).show();
+    // Jika kategori yang sebelumnya dipilih tidak ada di hasil filter, reset ke placeholder
+    if (!hasSelected && currentCategoryId) {
+      categorySelect.value = '';
+    }
   }
 
   async function saveTransaction() {
