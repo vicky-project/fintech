@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 class PostInstallation
 {
   public function handle(string $moduleName) {
+    dd($moduleName);
     try {
       $modules = array_merge(["telegram"], [$moduleName]);
       foreach ($modules as $modulename) {
