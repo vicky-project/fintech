@@ -30,7 +30,7 @@
   {{-- Floating Action Button (Quick Actions) --}}
   <div class="position-fixed bottom-0 end-0 mb-4 me-3" style="z-index: 1000; margin-bottom: 70px !important;">
     <div class="dropup">
-      <button class="btn btn-primary rounded-circle shadow" style="width: 56px; height: 56px;" data-bs-toggle="dropdown">
+      <button id="fab-button" class="btn btn-primary rounded-circle shadow" style="width: 56px; height: 56px; opacity: 0.7;" data-bs-toggle="dropdown">
         <i class="bi bi-plus-lg fs-3"></i>
       </button>
       <ul class="dropdown-menu dropdown-menu-end mb-2">
@@ -75,6 +75,7 @@
   document.addEventListener('DOMContentLoaded', async () => {
   await initializeApp();
   setupNavigation();
+  setupFabOpacity();
   });
 
   async function initializeApp() {
@@ -134,6 +135,25 @@
   function setupNavigation() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+    });
+  }
+
+  // Setup FAB opacity on dropdown toggle
+  function setupFabOpacity() {
+    const fab = document.getElementById('fab-button');
+    if (!fab) return;
+
+    // Atur opacity awal
+    fab.style.opacity = '0.7';
+
+    // Event saat dropdown ditampilkan
+    fab.addEventListener('shown.bs.dropdown', () => {
+    fab.style.opacity = '1';
+    });
+
+    // Event saat dropdown disembunyikan
+    fab.addEventListener('hidden.bs.dropdown', () => {
+    fab.style.opacity = '0.7';
     });
   }
 
