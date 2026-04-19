@@ -534,7 +534,7 @@
     }
 
     function getCurrencySymbol(code) {
-    alert(code);
+    alert(JSON.stringify(code));
     const currency = state.currencies.find(c => c.code === code.toUpperCase());
     return currency?.symbol || code;
     }
