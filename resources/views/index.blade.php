@@ -48,6 +48,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
   const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
+  const tg = windowTelegramApp;
 
   // State management
   const state = {
@@ -97,7 +98,7 @@
       // Jika punya wallet, load transaksi
       if (state.wallets.length > 0) {
         await loadAllTransactions().catch(e => {
-        tgApp.showToast('Gagal memuat transaksi terbaru', 'warning');
+        tg.showToast('Gagal memuat transaksi terbaru', 'warning');
         state.allTransactions = [];
         });
       }
@@ -139,7 +140,7 @@
   // ==================== DATA LOADING ====================
   async function loadWallets() {
     try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
+      const res = await tg.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
       state.wallets = res.data || [];
       state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
     } catch (error) {
@@ -152,7 +153,7 @@
 
   async function loadCategories() {
     try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/categories');
+      const res = await tg.fetchWithAuth(BASE_URL + '/api/fintech/categories');
       state.categories = res.data || [];
     } catch(error) {
       console.error('loadCategories error:', error);
@@ -163,7 +164,7 @@
 
   async function loadCurrencies() {
     try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
+      const res = await tg.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
       state.currencies = res.data || [];
     } catch(error) {
       console.error('loadCurrencies error:', error);
@@ -174,7 +175,7 @@
 
   async function loadAllTransactions() {
     try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=100');
+      const res = await tg.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=100');
       state.allTransactions = res.data.data || [];
       state.recentTransactions = state.allTransactions.slice(0, 5);
     } catch(error) {
@@ -302,12 +303,12 @@
     try {
     const ctx = document.getElementById('homeChart')?.getContext('2d');
     if (!ctx) return;
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/reports/doughnut-weekly');
+    const res = await tg.fetchWithAuth(BASE_URL + '/api/fintech/reports/doughnut-weekly');
     const data = res.data;
     if (state.chartInstances.home) state.chartInstances.home.destroy();
     state.chartInstances.home = new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: data.colors }] } });
     } catch(error) {
-    tgApp.showToast('Gagal memuat grafik: ' + error.message, 'danger');
+    tg.showToast('Gagal memuat grafik: ' + error.message, 'danger');
     }
     }
 
@@ -455,7 +456,7 @@
     let url = `/api/fintech/reports/${period}`;
     if (walletId) url += `?wallet_id=${walletId}`;
 
-    const res = await tgApp.fetchWithAuth(BASE_URL + url);
+    const res = await tg.fetchWithAuth(BASE_URL + url);
     const data = res.data;
     const ctx = document.getElementById('reportBarChart')?.getContext('2d');
     if (ctx) {
@@ -469,7 +470,7 @@
     });
     }
     } catch(error) {
-    tgApp.showToast('Gagal memuat grafik: ' + error.message, 'danger');
+    tg.showToast('Gagal memuat grafik: ' + error.message, 'danger');
     }
     }
 
@@ -485,7 +486,7 @@
     </div>
     `;
     document.getElementById('main-content').innerHTML = html;
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions/trashed');
+    const res = await tg.fetchWithAuth(BASE_URL + '/api/fintech/transactions/trashed');
     const trashed = res.data.data || [];
     const container = document.getElementById('trash-list');
     container.innerHTML = trashed.length ? trashed.map(t => `
@@ -504,7 +505,7 @@
     }
 
     async function restoreTransaction(id) {
-    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/restore`, { method: 'POST' });
+    await tg.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/restore`, { method: 'POST' });
     await loadAllTransactions();
     await loadWallets();
     renderTrashPage();
@@ -512,7 +513,7 @@
 
     async function forceDeleteTransaction(id) {
     if (!confirm('Hapus permanen?')) return;
-    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/force`, { method: 'DELETE' });
+    await tg.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/force`, { method: 'DELETE' });
     renderTrashPage();
     }
 
