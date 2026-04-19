@@ -16,7 +16,6 @@ class PostInstallation
 
       Artisan::call("migrate");
       Artisan::call("world:install");
-      dd($moduleName);
     } catch (\Exception $e) {
       logger()->error(
         "Failed to run post installation of fintech module: " .
