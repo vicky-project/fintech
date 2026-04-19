@@ -6,8 +6,11 @@
 <div id="fintech-app">
   {{-- Loading overlay --}}
   <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75" style="z-index: 9999;">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Memuat...</span>
+    <div class="text-center">
+      <div class="spinner-border text-primary mb-3" role="status"></div>
+      <p class="text-muted">
+        Memuat data keuangan...
+      </p>
     </div>
   </div>
 
@@ -76,44 +79,29 @@
 
   async function initializeApp() {
     const loadingOverlay = document.getElementById('loading-overlay');
-    const mainContent = document.getElementById('main-content');
 
     try {
-      // Tampilkan loading
-      loadingOverlay.style.display = 'flex';
-      loadingOverlay.innerHTML = `
-      <div class="text-center">
-      <div class="spinner-border text-primary mb-3" role="status"></div>
-      <p class="text-muted">Memuat data keuangan...</p>
-      </div>
-      `;
-
-      // Load data penting
       await Promise.all([
       loadWallets().catch(e => { throw new Error('Gagal memuat dompet: ' + e.message); }),
       loadCategories().catch(e => { throw new Error('Gagal memuat kategori: ' + e.message); }),
       loadCurrencies().catch(e => { throw new Error('Gagal memuat mata uang: ' + e.message); })
       ]);
 
-      // Jika punya wallet, load transaksi
       if (state.wallets.length > 0) {
         await loadAllTransactions().catch(e => {
-        tg.showToast('Gagal memuat transaksi terbaru', 'warning');
+        tgApp.showToast('Gagal memuat transaksi terbaru', 'warning');
         state.allTransactions = [];
         });
       }
 
-      // Navigasi ke halaman awal
       navigateTo('home');
 
-      // Sembunyikan loading
-      loadingOverlay.style.display = 'none';
+      // Sembunyikan overlay dengan class d-none
       loadingOverlay.classList.add('d-none');
-      alert(loadingOverlay);
+
     } catch (error) {
       console.error('Init error:', error);
-
-      // Tampilkan pesan error di dalam overlay
+      // Tampilkan pesan error di overlay (tetap visible)
       loadingOverlay.innerHTML = `
       <div class="text-center p-4">
       <i class="bi bi-exclamation-triangle text-danger display-4"></i>
@@ -124,14 +112,22 @@
       </button>
       </div>
       `;
-      loadingOverlay.style.display = 'flex';
-    } finally {
-      loadingOverlay.style.display = 'none';
+
+      loadingOverlay.classList.remove('d-none');
     }
   }
 
   // Fungsi untuk mencoba ulang inisialisasi
   function retryInitialization() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    // Reset overlay ke tampilan loading spinner
+    loadingOverlay.innerHTML = `
+    <div class="text-center">
+    <div class="spinner-border text-primary mb-3" role="status"></div>
+    <p class="text-muted">Memuat data keuangan...</p>
+    </div>
+    `;
+    loadingOverlay.classList.remove('d-none');
     initializeApp();
   }
 
