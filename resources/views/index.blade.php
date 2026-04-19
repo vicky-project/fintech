@@ -110,7 +110,8 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  const BASE_URL = '{{ config("app.url") }}';
+  const BASE_URL = '{{ rtrim(config("app.url"), "/") }}'; // Hapus trailing slash
+
   // ======================== STATE MANAGEMENT ========================
   const state = {
     wallets: [],
@@ -118,7 +119,8 @@
     currencies: [],
     recentTransactions: [],
     totalBalance: 0,
-    currentWalletId: null
+    currentWalletId: null,
+    defaultCurrency: 'IDR'
   };
 
   // ======================== INITIALIZATION ========================
@@ -130,14 +132,12 @@
     try {
       tgApp.showLoading('Memuat data...');
 
-      // Load data yang diperlukan
       await Promise.all([
       loadWallets(),
       loadCategories(),
       loadCurrencies(),
       ]);
 
-      // Render UI berdasarkan apakah user punya wallet
       renderMainContent();
 
       tgApp.hideLoading();
@@ -156,10 +156,8 @@
       const response = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
       state.wallets = response.data || [];
 
-      // Hitung total saldo
       state.totalBalance = state.wallets.reduce((sum, w) => sum + w.balance, 0);
 
-      // Jika ada wallet, load transaksi terbaru
       if (state.wallets.length > 0) {
         await loadRecentTransactions();
       }
@@ -193,43 +191,39 @@
     try {
       const response = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
       state.currencies = response.data || [];
-      populateCurrencyDropdowns();
     } catch (error) {
       console.error('Gagal load currencies:', error);
-      // Fallback default
-      const defaultHtml = '<option value="IDR">Indonesian Rupiah (Rp)</option>';
-      document.querySelectorAll('.currency-select').forEach(select => {
-      select.innerHTML = defaultHtml;
-      });
+      // Fallback ke IDR saja
+      state.currencies = [{
+        code: 'IDR',
+        name: 'Indonesian Rupiah',
+        symbol: 'Rp'
+      }];
+      tgApp.showToast('Gagal memuat daftar mata uang, menggunakan default', 'warning');
     }
   }
 
-  function populateCurrencyDropdowns() {
-    // Untuk form first wallet
-    const firstWalletSelect = document.getElementById('first-wallet-currency');
-    if (firstWalletSelect) {
-      populateSelectWithCurrencies(firstWalletSelect, 'IDR');
-    }
+  // ======================== CURRENCY HELPERS ========================
+  function populateSelectWithCurrencies(selectElement, defaultCode = null) {
+    if (!selectElement) return;
 
-    // Untuk modal tambah dompet (jika ada)
-    const modalWalletSelect = document.getElementById('modal-wallet-currency');
-    if (modalWalletSelect) {
-      populateSelectWithCurrencies(modalWalletSelect, 'IDR');
-    }
-  }
-
-  function populateSelectWithCurrencies(selectElement, defaultCode = 'IDR') {
     selectElement.innerHTML = '<option value="">Pilih Mata Uang</option>';
+    const defaultCurrency = defaultCode || state.defaultCurrency;
 
     state.currencies.forEach(curr => {
     const option = document.createElement('option');
     option.value = curr.code;
     option.textContent = `${curr.name} (${curr.symbol || curr.code})`;
-    if (curr.code === defaultCode) {
+    if (curr.code === defaultCurrency) {
     option.selected = true;
     }
     selectElement.appendChild(option);
     });
+  }
+
+  function getCurrencySymbol(code) {
+    const currency = state.currencies.find(c => c.code === code);
+    return currency?.symbol || code;
   }
 
   // ======================== RENDERING ========================
@@ -237,18 +231,18 @@
     const container = document.getElementById('main-content');
 
     if (state.wallets.length === 0) {
-      // Tidak ada wallet: tampilkan form pembuatan wallet pertama
       container.innerHTML = renderEmptyState();
-      // Setup event listener untuk form
+      // Setup form dan isi dropdown mata uang setelah HTML terpasang
       document.getElementById('firstWalletForm').addEventListener('submit', handleCreateFirstWallet);
+      const currencySelect = document.getElementById('first-wallet-currency');
+      if (currencySelect) {
+        populateSelectWithCurrencies(currencySelect, 'IDR');
+      }
     } else {
-      // Ada wallet: tampilkan dashboard
       container.innerHTML = renderDashboard();
-      // Setup UI components
       setupWalletSelector();
       renderWalletList();
       renderRecentTransactions();
-      // Load chart setelah elemen ada
       setTimeout(() => loadDoughnutChart(), 100);
     }
   }
@@ -279,7 +273,7 @@
     </select>
     </div>
     <div class="mb-3">
-    <label class="form-label">Saldo Awal (Rp)</label>
+    <label class="form-label">Saldo Awal</label>
     <input type="number" class="form-control" name="initial_balance" step="0.01" min="0" value="0">
     <small class="text-muted">Isi jika sudah ada uang di dompet ini.</small>
     </div>
@@ -297,17 +291,21 @@
   }
 
   function renderDashboard() {
+    // Gunakan mata uang dari wallet pertama sebagai acuan tampilan total
+    const primaryCurrency = state.wallets[0]?.currency || 'IDR';
+    const currencySymbol = getCurrencySymbol(primaryCurrency);
+
     return `
-    {{-- Header Saldo Total --}}
+    <!-- Header Saldo Total -->
     <div class="card bg-gradient-primary text-white mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body">
     <h6 class="card-subtitle mb-2 opacity-75">Total Saldo</h6>
-    <h2 class="display-6 fw-bold" id="total-balance-display">Rp ${formatNumber(state.totalBalance)}</h2>
+    <h2 class="display-6 fw-bold" id="total-balance-display">${currencySymbol} ${formatNumber(state.totalBalance)}</h2>
     <small>Semua Dompet Aktif</small>
     </div>
     </div>
 
-    {{-- Pilih Dompet --}}
+    <!-- Pilih Dompet -->
     <div class="mb-3">
     <label class="form-label fw-semibold">Dompet Aktif</label>
     <select class="form-select" id="wallet-selector">
@@ -315,7 +313,7 @@
     </select>
     </div>
 
-    {{-- Tab Navigasi --}}
+    <!-- Tab Navigasi -->
     <ul class="nav nav-tabs mb-3" id="mainTab" role="tablist">
     <li class="nav-item" role="presentation">
     <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
@@ -334,9 +332,9 @@
     </li>
     </ul>
 
-    {{-- Tab Content --}}
+    <!-- Tab Content -->
     <div class="tab-content" id="mainTabContent">
-    {{-- Tab Ringkasan --}}
+    <!-- Overview Tab -->
     <div class="tab-pane fade show active" id="overview">
     <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">Pengeluaran Minggu Ini</h5>
@@ -357,7 +355,7 @@
     </div>
     </div>
 
-    {{-- Tab Transaksi (Full) --}}
+    <!-- Transactions Tab -->
     <div class="tab-pane fade" id="transactions">
     <div class="d-flex justify-content-between mb-3">
     <h5 class="mb-0">Riwayat Transaksi</h5>
@@ -369,7 +367,7 @@
     <div id="transaction-pagination"></div>
     </div>
 
-    {{-- Tab Dompet --}}
+    <!-- Wallets Tab -->
     <div class="tab-pane fade" id="wallets">
     <div class="d-flex justify-content-between mb-3">
     <h5 class="mb-0">Daftar Dompet</h5>
@@ -388,9 +386,7 @@
     const selector = document.getElementById('wallet-selector');
     if (!selector) return;
 
-    // Clear existing options except first
     selector.innerHTML = '<option value="">Semua Dompet</option>';
-
     state.wallets.forEach(wallet => {
     const option = document.createElement('option');
     option.value = wallet.id;
@@ -401,8 +397,31 @@
     selector.addEventListener('change', async (e) => {
     state.currentWalletId = e.target.value;
     await refreshTransactionData();
-    loadDoughnutChart(); // Refresh chart dengan filter wallet
+    loadDoughnutChart();
+    updateTotalBalanceDisplay();
     });
+    }
+
+    function updateTotalBalanceDisplay() {
+    const displayEl = document.getElementById('total-balance-display');
+    if (!displayEl) return;
+
+    let total = 0;
+    let currency = 'IDR';
+
+    if (state.currentWalletId) {
+    const wallet = state.wallets.find(w => w.id == state.currentWalletId);
+    if (wallet) {
+    total = wallet.balance;
+    currency = wallet.currency;
+    }
+    } else {
+    total = state.totalBalance;
+    currency = state.wallets[0]?.currency || 'IDR';
+    }
+
+    const symbol = getCurrencySymbol(currency);
+    displayEl.textContent = `${symbol} ${formatNumber(total)}`;
     }
 
     function renderWalletList() {
@@ -440,10 +459,10 @@
     function renderRecentTransactions() {
     const container = document.getElementById('recent-transactions-container');
     if (!container) return;
-    renderTransactionListToContainer(state.recentTransactions, container, false);
+    renderTransactionListToContainer(state.recentTransactions, container);
     }
 
-    function renderTransactionListToContainer(transactions, container, showPagination = false) {
+    function renderTransactionListToContainer(transactions, container) {
     if (transactions.length === 0) {
     container.innerHTML = '<p class="text-muted text-center">Belum ada transaksi</p>';
     return;
@@ -501,7 +520,6 @@
     }
 
     if (chartData.labels.length === 0) {
-    // Tidak ada data
     return;
     }
 
@@ -529,7 +547,7 @@
     const value = context.raw;
     const total = context.dataset.data.reduce((a, b) => a + b, 0);
     const percentage = ((value / total) * 100).toFixed(1);
-    return `${context.label}: Rp ${formatNumber(value)} (${percentage}%)`;
+    return `${context.label}: ${formatNumber(value)} (${percentage}%)`;
     }
     }
     }
@@ -543,11 +561,9 @@
 
     // ======================== MODAL & FORM HANDLERS ========================
     function showAddTransactionModal() {
-    // Reset form
     document.getElementById('transactionForm').reset();
     document.querySelector('input[name="transaction_date"]').value = new Date().toISOString().split('T')[0];
 
-    // Isi dropdown dompet
     const walletSelect = document.querySelector('select[name="wallet_id"]');
     walletSelect.innerHTML = '<option value="">Pilih Dompet</option>';
     state.wallets.filter(w => w.is_active).forEach(wallet => {
@@ -557,7 +573,6 @@
     walletSelect.appendChild(option);
     });
 
-    // Isi dropdown kategori
     const categorySelect = document.querySelector('select[name="category_id"]');
     categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
     state.categories.forEach(cat => {
@@ -575,7 +590,6 @@
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
-    // Validasi
     if (!data.wallet_id || !data.category_id || !data.amount) {
     tgApp.showToast('Harap isi semua field wajib', 'danger');
     return;
@@ -592,17 +606,14 @@
     tgApp.showToast('Transaksi berhasil disimpan');
     bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
 
-    // Refresh data
     await loadWallets();
     await loadRecentTransactions();
 
-    // Update UI
-    document.getElementById('total-balance-display').textContent = `Rp ${formatNumber(state.totalBalance)}`;
+    updateTotalBalanceDisplay();
     setupWalletSelector();
     renderRecentTransactions();
     loadDoughnutChart();
 
-    // Jika di tab transaksi full, refresh juga
     if (document.getElementById('full-transaction-list')) {
     await loadFullTransactions();
     }
@@ -627,8 +638,6 @@
 
     tgApp.hideLoading();
     tgApp.showToast('Dompet berhasil dibuat!');
-
-    // Reload halaman untuk menampilkan dashboard
     window.location.reload();
     } catch (error) {
     tgApp.hideLoading();
@@ -637,15 +646,11 @@
     }
 
     function showAddWalletModal() {
-    // Reset form
     document.getElementById('walletForm').reset();
-
-    // Isi dropdown mata uang jika belum terisi
     const currencySelect = document.getElementById('modal-wallet-currency');
-    if (currencySelect && state.currencies.length > 0) {
+    if (currencySelect) {
     populateSelectWithCurrencies(currencySelect, 'IDR');
     }
-
     new bootstrap.Modal(document.getElementById('walletModal')).show();
     }
 
@@ -665,7 +670,6 @@
     tgApp.showToast('Dompet berhasil dibuat');
     bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
 
-    // Refresh data
     await loadWallets();
     renderMainContent();
     } catch (error) {
@@ -685,9 +689,8 @@
     const response = await tgApp.fetchWithAuth(url);
     const data = response.data;
 
-    renderTransactionListToContainer(data.data, document.getElementById('full-transaction-list'), true);
+    renderTransactionListToContainer(data.data, document.getElementById('full-transaction-list'));
 
-    // Render pagination
     tgApp.renderPagination(
     'transaction-pagination',
     data.current_page,
@@ -720,14 +723,11 @@
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    // Event listener untuk tab transaksi full
-    document.addEventListener('DOMContentLoaded', () => {
-    // Delegate event untuk tab transaksi
+    // ======================== EVENT LISTENERS ========================
     document.addEventListener('shown.bs.tab', (e) => {
     if (e.target.id === 'transactions-tab') {
     loadFullTransactions();
     }
-    });
     });
     </script>
     @endpush
