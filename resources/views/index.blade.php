@@ -123,6 +123,8 @@
       </div>
       `;
       loadingOverlay.style.display = 'flex';
+    } finally {
+      loadingOverlay.style.display = 'none';
     }
   }
 
