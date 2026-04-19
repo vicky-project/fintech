@@ -10,7 +10,7 @@ return new class extends Migration
   {
     Schema::create('fintech_transactions', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('wallet_id')->constrained('wallets')->cascadeOnDelete();
+      $table->foreignId('wallet_id')->constrained('fintech_wallets')->cascadeOnDelete();
       $table->foreignId('category_id')->constrained('fintech_categories')->restrictOnDelete();
       $table->string('type');
       $table->bigInteger('amount');
