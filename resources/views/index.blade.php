@@ -108,6 +108,7 @@
 
       // Sembunyikan loading
       loadingOverlay.style.display = 'none';
+      loadingOverlay.classList.add('d-none');
       alert(loadingOverlay);
     } catch (error) {
       console.error('Init error:', error);
