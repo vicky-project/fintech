@@ -6,23 +6,26 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('transactions', function (Blueprint $table) {
-            $table->id();
-            
-            $table->timestamps();
-        });
-    }
+  public function up(): void
+  {
+    Schema::create('fintech_transactions', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('wallet_id')->constrained('wallets')->cascadeOnDelete();
+      $table->foreignId('category_id')->constrained('fintech_categories')->restrictOnDelete();
+      $table->string('type');
+      $table->bigInteger('amount');
+      $table->string('description')->nullable();
+      $table->date('transaction_date');
+      $table->json('metadata')->nullable(); // Untuk data tambahan (misal: transfer ke wallet_id lain)
+      $table->timestamps();
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('transactions');
-    }
+      $table->index(['wallet_id', 'transaction_date']);
+      $table->index(['category_id', 'transaction_date']);
+    });
+  }
+
+  public function down(): void
+  {
+    Schema::dropIfExists('fintech_transactions');
+  }
 };

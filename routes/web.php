@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Modules\FinTech\Http\Controllers\FinTechController;
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('finteches', FinTechController::class)->names('fintech');
+Route::prefix('apps')
+->name('apps.')
+->group(function () {
+  Route::view('fintech', 'fintech::index')->name('fintech');
 });

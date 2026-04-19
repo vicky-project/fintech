@@ -6,23 +6,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('wallets', function (Blueprint $table) {
-            $table->id();
-            
-            $table->timestamps();
-        });
+  public function up(): void
+  {
+    Schema::create('fintech_wallets', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('user_id')->constrained('telegram_users')->cascadeOnDelete();
+      $table->string('name'); // Nama dompet (contoh: "BCA", "Cash")
+      $table->bigInteger('balance')->default(0);
+        $table->string('currency', 10)->default('IDR');
+        $table->text('description')->nullable();
+        $table->boolean('is_active')->default(true);
+        $table->timestamps();
+
+        $table->index(['user_id', 'is_active']);
+      });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('wallets');
+      Schema::dropIfExists('fintech_wallets');
     }
-};
+  };
