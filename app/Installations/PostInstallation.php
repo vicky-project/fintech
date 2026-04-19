@@ -9,10 +9,10 @@ class PostInstallation
   public function handle(string $moduleName) {
     try {
       $modules = array_merge(["telegram"], [$moduleName]);
-      dd($modules);
       foreach ($modules as $modulename) {
         $module = Module::find($modulename);
         $module->enable();
+        dd($module);
       }
 
       Artisan::call("migrate");
