@@ -15,7 +15,17 @@
   </div>
 
   {{-- Main content area --}}
-  <div id="main-content" class="pb-5"></div>
+  <div id="main-content" class="pb-5" style="padding-bottom: 120px  !important"></div>
+
+  {{-- Footer --}}
+  <footer class="text-center text-muted small py-3 mt-auto" style="padding-bottom: 80px;">
+    <p class="mb-1">
+      FinTech — Catat keuangan, kendalikan masa depan.
+    </p>
+    <p class="mb-0">
+      &copy; {{ date('Y') }} FinTech App
+    </p>
+  </footer>
 
   {{-- Bottom Navigation --}}
   <nav class="navbar navbar-light bg-light fixed-bottom border-top">
