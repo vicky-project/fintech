@@ -126,7 +126,7 @@
       if (exists) {
         select.value = idStr;
       } else {
-        alert(`Wallet ID ${selectedId} tidak ditemukan dalam daftar.`);
+        console.warn(`Wallet ID ${selectedId} tidak ditemukan dalam daftar.`);
       }
     }
   }
@@ -162,14 +162,13 @@
       if (exists) {
         categorySelect.value = idStr;
       } else {
-        alert(`Category ID ${selectedCategoryId} tidak ditemukan untuk tipe ${selectedType}`);
+        console.warn(`Category ID ${selectedCategoryId} tidak ditemukan untuk tipe ${selectedType}`);
       }
     }
   }
 
   function populateEditForm(transaction) {
-    console.log('Populate edit form with:', transaction);
-
+    alert(JSON.stringify(transaction))
     document.getElementById('transaction-id').value = transaction.id;
     document.getElementById('transactionModalTitle').textContent = 'Edit Transaksi';
 
@@ -205,7 +204,6 @@
     editingTransactionId = id;
     pendingTransactionData = trx; // Simpan data untuk diisi nanti
 
-    // Tampilkan modal (event shown.bs.modal akan mengisi form)
     new bootstrap.Modal(document.getElementById('transactionModal')).show();
   };
 
