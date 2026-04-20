@@ -139,11 +139,11 @@
     const categorySelect = document.getElementById('category-select');
     if (!typeSelect || !categorySelect) return;
 
+    alert(categorySelect.value);
     const selectedType = typeSelect.value;
     const currentCategoryId = categorySelect.value;
 
     const filtered = state.categories.filter(cat => {
-    alert(selectedType);
     if (selectedType === 'income') {
     return cat.type === 'income' || cat.type === 'both';
     } else if (selectedType === 'expense') {
