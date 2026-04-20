@@ -380,7 +380,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <i class="bi bi-list-ul me-2"></i>
+    <i class="bi bi-list-ul"></i>
     <h5>Transaksi</h5>
     <div>
     <button class="btn btn-sm btn-outline-info me-1" onclick="showSuggestCategoryModal()" title="Usulkan Kategori Baru">
@@ -616,6 +616,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
+    <i class="bi bi-arrow-left-right"></i>
     <h5>Transfer</h5>
     <div>
     <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTransferTrash()">
