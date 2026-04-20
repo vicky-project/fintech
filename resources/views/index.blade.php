@@ -135,7 +135,7 @@
 
       await Promise.all([
       loadWallets().catch(e => { throw new Error('Gagal memuat dompet: ' + e.message); }),
-      await loadUserSettings().catch(e => console.warn(e));
+      await loadUserSettings().catch(e => console.warn(e)),
       loadCategories().catch(e => { throw new Error('Gagal memuat kategori: ' + e.message); }),
       loadCurrencies().catch(e => { throw new Error('Gagal memuat mata uang: ' + e.message); })
       ]);
