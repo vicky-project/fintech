@@ -36,7 +36,7 @@
       <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-bar-chart fs-5"></i></button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
-      <button class="btn nav-btn" data-page="insights"><i class="bi bi-graph-down fs-5"></i></button>
+      <button class="btn nav-btn" data-page="insights"><i class="bi bi-graph-up fs-5"></i></button>
     </div>
   </nav>
 
