@@ -418,6 +418,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex align-items-center mb-3">
+    <i class="bi bi-gear me-2"></i>
     <h5 class="mb-0">Pengaturan</h5>
     </div>
     <form id="settingsForm">
@@ -618,7 +619,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <div>
+    <div class="d-flex">
     <i class="bi bi-arrow-left-right me-2"></i>
     <h5>Transfer</h5>
     </div>
@@ -850,7 +851,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <div>
+    <div class="d-flex">
     <i class="bi bi-wallet2 me-2"></i>
     <h5>Dompet Saya</h5>
     </div>
@@ -882,6 +883,7 @@
     async function renderInsightsPage() {
     const html = `
     <div class="container py-3">
+    <i class="bi bi-graph-up me-2"></i>
     <h5 class="mb-3">Analisis Keuangan</h5>
     <div id="insights-content">
     <div class="text-center py-5">
@@ -1043,7 +1045,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <div>
+    <div class="d-flex">
     <i class="bi bi-bar-chart me-2"></i>
     <h5>Laporan Keuangan</h5>
     </div>
