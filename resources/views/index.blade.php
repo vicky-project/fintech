@@ -883,9 +883,11 @@
     async function renderInsightsPage() {
     const html = `
     <div class="container py-3">
-    <div class="d-flex justify-content-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex">
     <i class="bi bi-graph-up me-2"></i>
     <h5>Analisis Keuangan</h5>
+    </div>
     </div>
     <div id="insights-content">
     <div class="text-center py-5">
