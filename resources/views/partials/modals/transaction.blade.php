@@ -141,6 +141,7 @@
 
     const selectedType = typeSelect.value;
     const currentCategoryId = categorySelect.value;
+    alert(currentCategoryId || null + '\n' + selectedType);
 
     const filtered = state.categories.filter(cat => {
     if (selectedType === 'income') {
@@ -161,7 +162,6 @@
     }
     categorySelect.appendChild(option);
     });
-    alert(currentCategoryId);
   }
 
   // Simpan transaksi (tambah/edit)
