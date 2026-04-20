@@ -141,9 +141,9 @@
 
     const selectedType = typeSelect.value;
     const currentCategoryId = categorySelect.value;
-    alert(currentCategoryId || null + '\n' + selectedType);
 
     const filtered = state.categories.filter(cat => {
+    alert(selectedType);
     if (selectedType === 'income') {
     return cat.type === 'income' || cat.type === 'both';
     } else if (selectedType === 'expense') {
