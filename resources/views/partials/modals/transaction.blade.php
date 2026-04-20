@@ -150,7 +150,6 @@
     }
     return true;
     });
-    alert(JSON.stringify(filtered));
 
     categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
     filtered.forEach(cat => {
@@ -162,6 +161,7 @@
     }
     categorySelect.appendChild(option);
     });
+    alert(JSON.stringify(filtered), currentCategoryId);
   }
 
   // Simpan transaksi (tambah/edit)
