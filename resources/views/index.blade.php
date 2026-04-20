@@ -307,7 +307,7 @@
     return `
     <div class="d-flex justify-content-between align-items-center border-bottom py-2">
     <div><i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>${trx.category.name}</div>
-    <span class="${amountClass}">${sign}${trx.formatted_amount}</span>
+    <span class="${amountClass}" title="${trx.formatted_amount}">${sign}${formatNumberShort(trx.amount)}</span>
     </div>
     `;
     }).join('');
@@ -406,7 +406,7 @@
     ${trx.description ? `<small class="text-muted d-block mt-1">${trx.description}</small>` : ''}
     </div>
     <div class="d-flex align-items-center">
-    <span class="${amountClass} fw-bold me-2">${sign}${trx.formatted_amount}</span>
+    <span class="${amountClass} fw-bold me-2" title="${trx.formatted_amount}">${sign}${formatNumberShort(trx.amount)}</span>
     <div class="dropdown" onclick="event.stopPropagation()">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
     <i class="bi bi-three-dots-vertical"></i>
@@ -541,7 +541,7 @@
     <i class="bi bi-arrow-right me-2 text-primary"></i>
     <span>${t.from_wallet.name} → ${t.to_wallet.name}</span>
     </div>
-    <div class="text-primary fw-bold mb-1">↔ ${t.formatted_amount}</div>
+    <div class="text-primary fw-bold mb-1" title="${trx.formatted_amount}">↔ ${formatNumberShort(t.amount)}</div>
     <small class="text-muted">${formatDate(t.transfer_date)}</small>
     ${t.description ? `<div class="small text-muted mt-1">${t.description}</div>` : ''}
     </div>
@@ -784,6 +784,19 @@
 
     function populateSelectWithCurrencies(select, def) {
     select.innerHTML = state.currencies.map(c => `<option value="${c.code}" ${c.code === def ? 'selected' : ''}>${c.name} (${c.symbol})</option>`).join('');
+    }
+
+    function formatNumberShort(num) {
+    if (num >= 1_000_000_000) {
+    return (num / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (num >= 1_000_000) {
+    return (num / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'JT';
+    }
+    if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    return num.toString();
     }
     </script>
     @endpush
