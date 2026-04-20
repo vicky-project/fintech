@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\FinTech\Http\Controllers\Api\ {
+  HomeController,
   WalletController,
   TransactionController,
   TransferController,
@@ -18,6 +19,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
 */
 
 Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(function () {
+  Route::get('home-summary', [HomeController::class, 'index']);
 
   // ==================== WALLETS ====================
   Route::apiResource('wallets', WalletController::class)->names('wallets');
