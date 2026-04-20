@@ -9,6 +9,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
   InsightController,
   ReportController,
   SettingController,
+  StatementController,
   TransactionController,
   TransferController,
   WalletController
@@ -61,4 +62,10 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::put('settings', [SettingController::class, 'update']);
 
   Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
+
+  Route::prefix('statements')->group(function() {
+    Route::post('/upload', [StatementController::class, 'upload']);
+    Route::get('/{statement}/preview', [StatementController::class, 'preview']);
+    Route::get('/{statement}/import', [StatementController::class, 'import']);
+  });
 });

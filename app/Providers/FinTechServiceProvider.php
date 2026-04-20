@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Modules\FinTech\Services\BankParserManager;
 
 class FinTechServiceProvider extends ServiceProvider
 {
@@ -43,6 +44,11 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->make("config")->set("world.migrations.currencies.table_name", "world_currencies");
     $this->app->make("config")->set("world.migrations.languages.table_name", "world_languages");
     $this->app->make("config")->set("world.migrations.timezones.table_name", "world_timezones");
+
+    $this->app->singleton(BankParserManager::class, function($app) {
+      $manager = new BankParserManager();
+      return $manager;
+    });
   }
 
   /**

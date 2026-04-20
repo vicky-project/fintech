@@ -51,6 +51,9 @@
         <li><a class="dropdown-item" href="#" onclick="showAddTransactionModal()"><i class="bi bi-plus-circle me-2"></i>Tambah Transaksi</a></li>
         <li><a class="dropdown-item" href="#" onclick="showAddTransferModal()"><i class="bi bi-send me-2"></i>Transfer</a></li>
         <li><a class="dropdown-item" href="#" onclick="navigateToTrash()"><i class="bi bi-trash me-2"></i>Tempat Sampah</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showUploadStatementModal()">
+          <i class="bi bi-cloud-upload me-2"></i>Upload Statement
+        </a></li>
       </ul>
     </div>
   </div>
@@ -76,6 +79,7 @@
 @include('fintech::partials.modals.transaction')
 @include('fintech::partials.modals.transfer')
 @include('fintech::partials.modals.suggest-category')
+@include('fintech::partials.modals.upload-statement')
 @endsection
 
 @push('scripts')
