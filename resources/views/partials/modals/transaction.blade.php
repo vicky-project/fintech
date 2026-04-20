@@ -2,7 +2,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Tambah Transaksi</h5>
+        <h5 class="modal-title" id="transactionModalTitle">Tambah Transaksi</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -51,91 +51,90 @@
 </div>
 
 <script>
-  // State untuk menyimpan ID transaksi yang sedang diedit
+  // ==================== STATE MODAL ====================
   let editingTransactionId = null;
+  let pendingTransactionData = null; // Data transaksi yang akan diedit
 
-  // Fungsi untuk membuka modal tambah transaksi
-  window.showAddTransactionModal = function() {
-    editingTransactionId = null;
-    document.getElementById('transaction-id').value = '';
-    document.querySelector('#transactionModal .modal-title').textContent = 'Tambah Transaksi';
+  // ==================== EVENT LISTENER MODAL ====================
+  document.addEventListener('DOMContentLoaded', function() {
+  const modalEl = document.getElementById('transactionModal');
 
+  // Saat modal akan ditampilkan
+  modalEl.addEventListener('show.bs.modal', function() {
+  // Reset form jika tidak ada pending data (tambah baru)
+  if (!pendingTransactionData) {
+  resetTransactionForm();
+  }
+  });
+
+  // Saat modal sudah tampil sepenuhnya
+  modalEl.addEventListener('shown.bs.modal', function() {
+  if (pendingTransactionData) {
+  populateEditForm(pendingTransactionData);
+  pendingTransactionData = null;
+  }
+  });
+
+  // Saat modal ditutup, bersihkan state
+  modalEl.addEventListener('hidden.bs.modal', function() {
+  editingTransactionId = null;
+  pendingTransactionData = null;
+  document.getElementById('wallet-select').disabled = false;
+  resetTransactionForm();
+  });
+
+  // Event listener untuk filter kategori
+  const typeSelect = document.getElementById('type-select');
+  typeSelect.addEventListener('change', filterCategoriesByType);
+  });
+
+  // ==================== FUNGSI UTAMA ====================
+
+  // Reset form ke kondisi tambah baru
+  function resetTransactionForm() {
     const form = document.getElementById('transactionForm');
     form.reset();
+    document.getElementById('transaction-id').value = '';
+    document.getElementById('transactionModalTitle').textContent = 'Tambah Transaksi';
     document.getElementById('date-input').value = new Date().toISOString().split('T')[0];
+    document.getElementById('wallet-select').disabled = false;
 
-    // Aktifkan dropdown dompet
-    const walletSelect = document.getElementById('wallet-select');
-    walletSelect.disabled = false;
     populateWalletSelect();
-
-    // Reset kategori
-    const categorySelect = document.getElementById('category-select');
-    categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
-
-    // Pasang event listener tipe
-    const typeSelect = document.getElementById('type-select');
-    typeSelect.removeEventListener('change', filterCategoriesByType);
-    typeSelect.addEventListener('change', filterCategoriesByType);
     filterCategoriesByType();
+  }
 
-    new bootstrap.Modal(document.getElementById('transactionModal')).show();
-  };
-
-  // Fungsi untuk membuka modal edit transaksi
-  window.editTransaction = function(id) {
-    const trx = state.allTransactions.find(t => t.id === id);
-    if (!trx) {
-      tgApp.showToast('Transaksi tidak ditemukan', 'danger');
-      return;
+  // Isi dropdown dompet
+  function populateWalletSelect(selectedId = null) {
+    const select = document.getElementById('wallet-select');
+    select.innerHTML = '<option value="">Pilih Dompet</option>';
+    state.wallets.filter(w => w.is_active).forEach(wallet => {
+    const option = document.createElement('option');
+    option.value = wallet.id;
+    option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
+    if (selectedId && wallet.id == selectedId) {
+    option.selected = true;
     }
-
-    editingTransactionId = id;
-    document.getElementById('transaction-id').value = trx.id;
-    document.querySelector('#transactionModal .modal-title').textContent = 'Edit Transaksi';
-
-    // Isi form dengan data transaksi
-    document.getElementById('type-select').value = trx.type;
-    document.getElementById('amount-input').value = trx.amount;
-    document.getElementById('date-input').value = trx.transaction_date;
-    document.getElementById('desc-input').value = trx.description || '';
-
-    // Populate dompet dan disable (readonly)
-    const walletSelect = document.getElementById('wallet-select');
-    populateWalletSelect(trx.wallet_id);
-    walletSelect.disabled = true;
-
-    // Filter kategori dan langsung set nilai setelah opsi dibuat
-    filterCategoriesByType(() => {
-      const categorySelect = document.getElementById('category-select');
-      if (categorySelect) {
-        categorySelect.value = trx.category_id;
-      }
+    select.appendChild(option);
     });
+  }
 
-    new bootstrap.Modal(document.getElementById('transactionModal')).show();
-  };
-
-  // Fungsi filter kategori dengan callback opsional setelah render
-  function filterCategoriesByType(callback = null) {
+  // Filter kategori berdasarkan tipe yang dipilih
+  function filterCategoriesByType() {
     const typeSelect = document.getElementById('type-select');
     const categorySelect = document.getElementById('category-select');
     if (!typeSelect || !categorySelect) return;
 
     const selectedType = typeSelect.value;
-    // Simpan nilai yang mungkin sudah dipilih (tidak relevan untuk mode edit)
-    // const currentCategoryId = categorySelect.value;
+    const currentCategoryId = categorySelect.value;
 
     const filtered = state.categories.filter(cat => {
     if (selectedType === 'income') {
     return cat.type === 'income' || cat.type === 'both';
-    } else if (selectedType === 'expense') {
+    } else {
     return cat.type === 'expense' || cat.type === 'both';
     }
-    return true;
     });
 
-    // Render ulang opsi
     categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
     filtered.forEach(cat => {
     const option = document.createElement('option');
@@ -144,28 +143,60 @@
     categorySelect.appendChild(option);
     });
 
-    // Panggil callback setelah opsi selesai ditambahkan
-    if (callback) {
-      callback();
+    // Coba pulihkan pilihan sebelumnya jika masih ada
+    if (currentCategoryId) {
+      const exists = Array.from(categorySelect.options).some(opt => opt.value === currentCategoryId);
+      if (exists) {
+        categorySelect.value = currentCategoryId;
+      }
     }
   }
 
-  // Helper: isi dropdown dompet
-  function populateWalletSelect(selectedId = null) {
+  // Mengisi form dengan data transaksi (dipanggil setelah modal tampil)
+  function populateEditForm(transaction) {
+    document.getElementById('transaction-id').value = transaction.id;
+    document.getElementById('transactionModalTitle').textContent = 'Edit Transaksi';
+
+    // Isi field dasar
+    document.getElementById('type-select').value = transaction.type;
+    document.getElementById('amount-input').value = transaction.amount;
+    document.getElementById('date-input').value = transaction.transaction_date;
+    document.getElementById('desc-input').value = transaction.description || '';
+
+    // Dompet: populate dan disable
     const walletSelect = document.getElementById('wallet-select');
-    walletSelect.innerHTML = '<option value="">Pilih Dompet</option>';
-    state.wallets.filter(w => w.is_active).forEach(wallet => {
-    const option = document.createElement('option');
-    option.value = wallet.id;
-    option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
-    if (selectedId && wallet.id == selectedId) {
-    option.selected = true;
-    }
-    walletSelect.appendChild(option);
-    });
+    populateWalletSelect(transaction.wallet_id);
+    walletSelect.disabled = true;
+
+    // Filter kategori sesuai tipe, lalu set nilai kategori
+    filterCategoriesByType();
+    const categorySelect = document.getElementById('category-select');
+    categorySelect.value = transaction.category_id;
   }
 
-  // Simpan transaksi (tambah/edit)
+  // ==================== TAMBAH & EDIT ====================
+  window.showAddTransactionModal = function() {
+    editingTransactionId = null;
+    pendingTransactionData = null;
+    resetTransactionForm();
+    new bootstrap.Modal(document.getElementById('transactionModal')).show();
+  };
+
+  window.editTransaction = function(id) {
+    const trx = state.allTransactions.find(t => t.id === id);
+    if (!trx) {
+      tgApp.showToast('Transaksi tidak ditemukan', 'danger');
+      return;
+    }
+
+    editingTransactionId = id;
+    pendingTransactionData = trx; // Simpan data untuk diisi nanti
+
+    // Tampilkan modal (event shown.bs.modal akan mengisi form)
+    new bootstrap.Modal(document.getElementById('transactionModal')).show();
+  };
+
+  // ==================== SIMPAN ====================
   window.saveTransaction = async function() {
     const form = document.getElementById('transactionForm');
     const formData = new FormData(form);
@@ -185,23 +216,16 @@
       const url = isEdit ? `${BASE_URL}/api/fintech/transactions/${id}`: `${BASE_URL}/api/fintech/transactions`;
       const method = isEdit ? 'PUT': 'POST';
 
-      await tgApp.fetchWithAuth(url, {
-      method: method,
-      body: JSON.stringify(data)
-      });
+      await tgApp.fetchWithAuth(url, { method, body: JSON.stringify(data) });
 
       await loadWallets();
       await loadAllTransactions();
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil');
-      bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
 
-      // Reset state
-      editingTransactionId = null;
-      document.getElementById('wallet-select').disabled = false;
-      document.querySelector('#transactionModal .modal-title').textContent = 'Tambah Transaksi';
-      document.getElementById('transactionForm').reset();
+      const modal = bootstrap.Modal.getInstance(document.getElementById('transactionModal'));
+      modal.hide();
 
       // Refresh UI
       if (state.currentPage === 'home') {
@@ -215,16 +239,4 @@
       tgApp.showToast(error.message || 'Gagal menyimpan transaksi', 'danger');
     }
   };
-
-  // Reset modal setelah ditutup
-  document.addEventListener('DOMContentLoaded', () => {
-  const modal = document.getElementById('transactionModal');
-  modal.addEventListener('hidden.bs.modal', () => {
-  document.getElementById('transactionForm').reset();
-  document.getElementById('transaction-id').value = '';
-  document.getElementById('wallet-select').disabled = false;
-  document.querySelector('#transactionModal .modal-title').textContent = 'Tambah Transaksi';
-  editingTransactionId = null;
-  });
-  });
 </script>
