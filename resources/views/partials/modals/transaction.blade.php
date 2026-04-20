@@ -8,10 +8,11 @@
       <div class="modal-body">
         <form id="transactionForm">
           <input type="hidden" name="id" id="transaction-id">
+          <input type="hidden" name="wallet_id" id="wallet-id-hidden">
 
           <div class="mb-3">
             <label class="form-label">Dompet <span class="text-danger">*</span></label>
-            <select class="form-select" name="wallet_id" id="wallet-select" required>
+            <select class="form-select" id="wallet-select" required>
               <option value="">Pilih Dompet</option>
             </select>
           </div>
@@ -80,6 +81,7 @@
   editingTransactionId = null;
   pendingTransactionData = null;
   document.getElementById('wallet-select').disabled = false;
+  document.getElementById('wallet-id-hidden').value = '';
   resetTransactionForm();
   });
 
@@ -87,6 +89,10 @@
   const typeSelect = document.getElementById('type-select');
   typeSelect.addEventListener('change', function() {
   filterCategoriesByType();
+  });
+
+  document.getElementById('wallet-select').addEventListener('change', function() {
+  document.getElementById('wallet-id-hidden').value = this.value;
   });
   });
 
@@ -97,6 +103,7 @@
     const form = document.getElementById('transactionForm');
     form.reset();
     document.getElementById('transaction-id').value = '';
+    document.getElementById('wallet-id-hidden').value = '';
     document.getElementById('transactionModalTitle').textContent = 'Tambah Transaksi';
     document.getElementById('date-input').value = new Date().toISOString().split('T')[0];
     document.getElementById('wallet-select').disabled = false;
@@ -108,6 +115,7 @@
   // Isi dropdown dompet
   function populateWalletSelect(selectedId = null) {
     const select = document.getElementById('wallet-select');
+    const hiddenInput = document.getElementById('wallet-id-hidden');
     select.innerHTML = '<option value="">Pilih Dompet</option>';
 
     state.wallets.filter(w => w.is_active).forEach(wallet => {
@@ -121,12 +129,11 @@
     if (selectedId) {
       // Pastikan selectedId dalam bentuk string untuk perbandingan value
       const idStr = String(selectedId);
-      const exists = Array.from(select.options).some(opt => opt.value === idStr);
-      if (exists) {
-        select.value = idStr;
-      } else {
-        console.warn(`Wallet ID ${selectedId} tidak ditemukan dalam daftar.`);
-      }
+      select.value = idStr;
+      hiddenInput.value = idStr;
+    } else {
+      hiddenInput.value = "";
+      select.value = '';
     }
   }
 
@@ -167,7 +174,6 @@
   }
 
   function populateEditForm(transaction) {
-    alert(JSON.stringify(transaction))
     document.getElementById('transaction-id').value = transaction.id;
     document.getElementById('transactionModalTitle').textContent = 'Edit Transaksi';
 
@@ -178,8 +184,10 @@
 
     // Dompet
     const walletSelect = document.getElementById('wallet-select');
+    const hiddenWallet = document.getElementById('wallet-id-hidden');
     populateWalletSelect(transaction.wallet.id);
     walletSelect.disabled = true;
+    hiddenWallet.value = transaction.wallet.id;
 
     // Kategori
     filterCategoriesByType(transaction.category.id);
