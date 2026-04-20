@@ -46,6 +46,7 @@
       <ul class="dropdown-menu dropdown-menu-end mb-2">
         <li><a class="dropdown-item" href="#" onclick="showAddWalletModal()"><i class="bi bi-wallet me-2"></i>Tambah Dompet</a></li>
         <li><a class="dropdown-item" href="#" onclick="showAddTransactionModal()"><i class="bi bi-arrow-left-right me-2"></i>Tambah Transaksi</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showTransferModal()"><i class="bi bi-arrow-left-right me-2"></i>Transfer</a></li>
         <li><a class="dropdown-item" href="#" onclick="navigateToTrash()"><i class="bi bi-trash me-2"></i>Tempat Sampah</a></li>
       </ul>
     </div>
@@ -55,6 +56,8 @@
 {{-- Modals --}}
 @include('fintech::partials.modals.wallet')
 @include('fintech::partials.modals.transaction')
+@include('fintech::partials.modals.transfer')
+@include('fintech::partials.modals.suggest-category')
 @endsection
 
 @push('scripts')
@@ -348,6 +351,9 @@
     <div class="d-flex justify-content-between mb-3">
     <h5>Transaksi</h5>
     <div>
+    <button class="btn btn-sm btn-outline-info me-1" onclick="showSuggestCategoryModal()" title="Usulkan Kategori Baru">
+    <i class="bi bi-lightbulb"></i>
+    </button>
     <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()"><i class="bi bi-trash"></i></button>
     <button class="btn btn-sm btn-primary" onclick="showAddTransactionModal()"><i class="bi bi-plus"></i></button>
     </div>

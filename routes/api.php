@@ -31,6 +31,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::get('transactions/trashed', [TransactionController::class, 'trashed'])->name('transactions.trashed');
   Route::post('transactions/{id}/restore', [TransactionController::class, 'restore'])->name('transactions.restore');
   Route::delete('transactions/{id}/force', [TransactionController::class, 'forceDelete'])->name('transactions.force-delete');
+  Route::post('transfer', [TransactionController::class, 'transfer'])->name('transfer');
 
   // Resource utama transaksi (hanya method yang dibutuhkan)
   Route::apiResource('transactions', TransactionController::class)
@@ -45,4 +46,5 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
     Route::get('doughnut-weekly', [ReportController::class, 'doughnutWeekly'])->name('doughnut-weekly');
   });
 
+  Route::post('category-suggestions', [CategorySuggestionController::class, 'store']);
 });

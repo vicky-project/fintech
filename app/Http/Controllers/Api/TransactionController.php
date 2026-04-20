@@ -6,8 +6,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Http\Requests\TransactionRequest;
+use Modules\FinTech\Http\Requests\TransferRequest;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Transaction;
+use Modules\FinTech\Enums\CategoryType;
 use Modules\FinTech\Enums\TransactionType;
 use Brick\Money\Money;
 
@@ -312,5 +314,77 @@ class TransactionController extends Controller
       'success' => true,
       'message' => 'Transaksi dihapus permanen'
     ]);
+  }
+
+  public function transfer(TransferRequest $request): JsonResponse
+  {
+    $fromWallet = Wallet::findOrFail($request->from_wallet_id);
+    $toWallet = Wallet::findOrFail($request->to_wallet_id);
+    $amount = Money::of($request->amount, $fromWallet->currency);
+
+    // Periksa saldo cukup
+    if ($fromWallet->balance->isLessThan($amount)) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Saldo dompet asal tidak mencukupi.'
+      ], 400);
+    }
+
+    DB::transaction(function () use ($fromWallet, $toWallet, $request, $amount) {
+      // Buat transaksi transfer di dompet asal (expense)
+      $fromTransaction = new Transaction([
+        'wallet_id' => $fromWallet->id,
+        'category_id' => $this->getTransferOutCategoryId(),
+        'type' => TransactionType::TRANSFER,
+        'amount' => $amount,
+        'transaction_date' => $request->transaction_date,
+        'description' => $request->description ?: 'Transfer ke ' . $toWallet->name,
+        'metadata' => [
+          'transfer_to_wallet_id' => $toWallet->id,
+          'transfer_to_wallet_name' => $toWallet->name
+        ]
+      ]);
+      $fromTransaction->save();
+
+      // Buat transaksi transfer di dompet tujuan (income)
+      $toTransaction = new Transaction([
+        'wallet_id' => $toWallet->id,
+        'category_id' => $this->getTransferInCategoryId(),
+        'type' => TransactionType::TRANSFER,
+        'amount' => $amount,
+        'transaction_date' => $request->transaction_date,
+        'description' => $request->description ?: 'Transfer dari ' . $fromWallet->name,
+        'metadata' => [
+          'transfer_from_wallet_id' => $fromWallet->id,
+          'transfer_from_wallet_name' => $fromWallet->name
+        ]
+      ]);
+      $toTransaction->save();
+
+      // Update saldo
+      $fromWallet->withdraw($amount);
+      $toWallet->deposit($amount);
+    });
+
+    return response()->json([
+      'success' => true,
+      'message' => 'Transfer berhasil dilakukan.'
+    ]);
+  }
+
+  private function getTransferOutCategoryId(): int
+  {
+    return Category::firstOrCreate(
+      ['name' => 'Transfer Keluar'],
+      ['type' => CategoryType::EXPENSE, 'is_system' => true, 'icon' => 'bi-arrow-right', 'color' => '#6c757d']
+    )->id;
+  }
+
+  private function getTransferInCategoryId(): int
+  {
+    return Category::firstOrCreate(
+      ['name' => 'Transfer Masuk'],
+      ['type' => CategoryType::INCOME, 'is_system' => true, 'icon' => 'bi-arrow-left', 'color' => '#6c757d']
+    )->id;
   }
 }
