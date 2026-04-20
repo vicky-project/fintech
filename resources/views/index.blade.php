@@ -224,7 +224,7 @@
       state.transferPage = data.current_page;
       state.transferLastPage = data.last_page;
     } catch(error) {
-      document.getElementById('transfer-list')?.innerHTML = `<p class="text-muted fw-bold">${error.message}</p>`;
+      tgApp.showToast("Gagal memuat data transfer. " + error.message);
     }
   }
 
