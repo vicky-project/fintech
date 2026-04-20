@@ -59,8 +59,6 @@ class StatementController extends Controller
       ], 422);
     }
 
-    \Log::debug("Files", $file);
-
     // Simpan file sementara
     $tempPath = $file->storeAs(
       'temp/statements/' . $user->id,
@@ -125,6 +123,10 @@ class StatementController extends Controller
       ]);
 
     } catch (\Exception $e) {
+      \Log::error("Failed to process file", [
+        "message" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+      ]);
       $statement->updateStatus(StatementStatus::FAILED, ['error' => $e->getMessage()]);
 
       return response()->json([
