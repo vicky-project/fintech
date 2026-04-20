@@ -93,6 +93,11 @@
     // data transaksi halaman saat ini
     transactionPage: 1,
     transactionLastPage: 1,
+    transactionSummary: {
+      total: 0,
+      income: 0,
+      expense: 0
+    },
     transfers: [],
     // data transfer halaman saat ini
     transferPage: 1,
@@ -203,10 +208,11 @@
     if (filters.wallet_id) url += `&wallet_id=${filters.wallet_id}`;
     if (filters.type) url += `&type=${filters.type}`;
     const res = await tgApp.fetchWithAuth(url);
-    const data = res.data;
-    state.transactions = data.data;
-    state.transactionPage = data.current_page;
-    state.transactionLastPage = data.last_page;
+
+    state.transactions = res.data.data;
+    state.transactionPage = res.data.current_page;
+    state.transactionLastPage = res.data.last_page;
+    state.transactionSummary = res.summary
   }
 
   async function loadTransfersPage(page, walletId) {
@@ -396,14 +402,12 @@
     }
 
     function updateTransactionStats() {
-    const filtered = state.transactions;
-    const income = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    const expense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const summary = state.transactionSummary;
     const symbol = getCurrencySymbol(state.defaultCurrency);
     document.getElementById('transaction-stats').innerHTML = `
-    <div class="col-4"><div class="card p-2 text-center"><small>Total</small><strong>${filtered.length}</strong></div></div>
-    <div class="col-4"><div class="card p-2 text-center text-success"><small>Masuk</small><strong>${symbol}${formatNumberShort(income)}</strong></div></div>
-    <div class="col-4"><div class="card p-2 text-center text-danger"><small>Keluar</small><strong>${symbol}${formatNumberShort(expense)}</strong></div></div>
+    <div class="col-4"><div class="card p-2 text-center"><small>Total</small><strong>${summary.total}</strong></div></div>
+    <div class="col-4"><div class="card p-2 text-center text-success"><small>Masuk</small><strong>${symbol}${formatNumberShort(summary.income)}</strong></div></div>
+    <div class="col-4"><div class="card p-2 text-center text-danger"><small>Keluar</small><strong>${symbol}${formatNumberShort(summary.expense)}</strong></div></div>
     `;
     }
 

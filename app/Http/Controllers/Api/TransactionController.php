@@ -30,6 +30,7 @@ class TransactionController extends Controller
       'per_page' => 'integer|min:1|max:100'
     ]);
 
+    // Base query dengan filter
     $query = Transaction::with(['wallet', 'category'])
     ->whereHas('wallet', fn($q) => $q->where('user_id', $request->user()->id));
 
@@ -47,6 +48,19 @@ class TransactionController extends Controller
       ->whereMonth('transaction_date', substr($month, 5, 2));
     }
 
+    // Clone query untuk summary (tanpa paginasi)
+    $summaryQuery = clone $query;
+
+    // Hitung summary
+    $totalCount = $summaryQuery->count();
+    $totalIncome = (clone $summaryQuery)
+    ->where('type', TransactionType::INCOME)
+    ->sum(DB::raw('amount / 100'));
+    $totalExpense = (clone $summaryQuery)
+    ->where('type', TransactionType::EXPENSE)
+    ->sum(DB::raw('amount / 100'));
+
+    // Paginasi untuk list
     $transactions = $query->orderBy('transaction_date', 'desc')
     ->orderBy('id', 'desc')
     ->paginate($request->input('per_page', 20));
@@ -74,7 +88,15 @@ class TransactionController extends Controller
       'metadata' => $trx->metadata,
     ]);
 
-    return response()->json(['success' => true, 'data' => $transformed]);
+    return response()->json([
+      'success' => true,
+      'data' => $transformed,
+      'summary' => [
+        'total' => $totalCount,
+        'income' => $totalIncome,
+        'expense' => $totalExpense,
+      ]
+    ]);
   }
 
   /**
