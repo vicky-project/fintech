@@ -126,7 +126,7 @@
       if (exists) {
         select.value = idStr;
       } else {
-        console.warn(`Wallet ID ${selectedId} tidak ditemukan dalam daftar.`);
+        alert(`Wallet ID ${selectedId} tidak ditemukan dalam daftar.`);
       }
     }
   }
@@ -162,7 +162,7 @@
       if (exists) {
         categorySelect.value = idStr;
       } else {
-        console.warn(`Category ID ${selectedCategoryId} tidak ditemukan untuk tipe ${selectedType}`);
+        alert(`Category ID ${selectedCategoryId} tidak ditemukan untuk tipe ${selectedType}`);
       }
     }
   }
