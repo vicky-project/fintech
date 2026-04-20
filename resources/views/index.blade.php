@@ -522,7 +522,7 @@
     state.transfers = res.data.data || [];
     renderTransferList(state.transfers);
     } catch (error) {
-    tgApp.showToast('Gagal memuat transfer', 'danger');
+    tgApp.showToast('Gagal memuat transfer. '+ error.message, 'danger');
     }
     }
 
