@@ -380,8 +380,10 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <i class="bi bi-list-ul"></i>
+    <div>
+    <i class="bi bi-list-ul me-2"></i>
     <h5>Transaksi</h5>
+    </div>
     <div>
     <button class="btn btn-sm btn-outline-info me-1" onclick="showSuggestCategoryModal()" title="Usulkan Kategori Baru">
     <i class="bi bi-tags"></i>
@@ -616,8 +618,10 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <i class="bi bi-arrow-left-right"></i>
+    <div>
+    <i class="bi bi-arrow-left-right me-2"></i>
     <h5>Transfer</h5>
+    </div>
     <div>
     <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTransferTrash()">
     <i class="bi bi-trash"></i>
@@ -846,6 +850,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
+    <i class="bi bi-wallet2"></i>
     <h5>Dompet Saya</h5>
     <button class="btn btn-sm btn-primary" onclick="showAddWalletModal()"><i class="bi bi-plus"></i></button>
     </div>
