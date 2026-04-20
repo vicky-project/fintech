@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\FinTech\Http\Controllers\Api\ {
   WalletController,
   TransactionController,
+  TransferController,
   CategoryController,
   CategorySuggestionController,
   CurrencyController,
@@ -32,12 +33,15 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::get('transactions/trashed', [TransactionController::class, 'trashed'])->name('transactions.trashed');
   Route::post('transactions/{id}/restore', [TransactionController::class, 'restore'])->name('transactions.restore');
   Route::delete('transactions/{id}/force', [TransactionController::class, 'forceDelete'])->name('transactions.force-delete');
-  Route::post('transfer', [TransactionController::class, 'transfer'])->name('transfer');
-
   // Resource utama transaksi (hanya method yang dibutuhkan)
   Route::apiResource('transactions', TransactionController::class)
   ->only(['index', 'store', 'show', 'destroy', 'update'])
   ->names('transactions');
+
+  Route::apiResource('transfers', TransferController::class)->except(['show']);
+  Route::get('transfers/trashed', [TransferController::class, 'trashed']);
+  Route::post('transfers/{id}/restore', [TransferController::class, 'restore']);
+  Route::delete('transfers/{id}/force', [TransferController::class, 'forceDelete']);
 
   // ==================== REPORTS ====================
   Route::prefix('reports')->name('reports.')->group(function () {

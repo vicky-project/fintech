@@ -55,12 +55,9 @@ class Transaction extends Model
   }
 
   public function scopeExpense($query) {
-    return $query->whereIn('type', [TransactionType::EXPENSE, TransactionType::TRANSFER]);
+    return $query->where('type', TransactionType::EXPENSE);
   }
 
-  public function scopeTransfer($query) {
-    return $query->where('type', TransactionType::TRANSFER->value);
-  }
 
   public function scopeThisMonth($query) {
     return $query->whereMonth('transaction_date', now()->month)
