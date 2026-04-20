@@ -52,6 +52,21 @@
       </ul>
     </div>
   </div>
+
+  <div class="modal fade" id="transactionDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detail Transaksi</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="transactionDetailBody"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {{-- Modals --}}
@@ -377,10 +392,10 @@
     const amountClass = trx.type === 'income' ? 'text-success' : 'text-danger';
     const sign = trx.type === 'income' ? '' : '-';
     return `
-    <div class="card mb-2" onclick="showTransactionDetail(${trx.id})">
+    <div class="card mb-2">
     <div class="card-body p-3">
     <div class="d-flex justify-content-between align-items-start">
-    <div class="flex-grow-1">
+    <div class="flex-grow-1" onclick="showTransactionDetailModal(${trx.id})" style="cursor: pointer;">
     <div class="d-flex align-items-center">
     <i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>
     <div>
@@ -392,7 +407,7 @@
     </div>
     <div class="d-flex align-items-center">
     <span class="${amountClass} fw-bold me-2">${sign}${trx.formatted_amount}</span>
-    <div class="dropdown">
+    <div class="dropdown" onclick="event.stopPropagation()">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
     <i class="bi bi-three-dots-vertical"></i>
     </button>
@@ -419,10 +434,55 @@
     renderTransactionList();
     }
 
-    function showTransactionDetail(id) {
+    function showTransactionDetailModal(id) {
     const trx = state.allTransactions.find(t => t.id === id);
     if (!trx) return;
-    alert(`${trx.category.name}\n${trx.formatted_amount}\n${trx.wallet.name}\n${trx.description || ''}`);
+
+    const body = document.getElementById('transactionDetailBody');
+    const typeLabel = trx.type === 'income' ? 'Pemasukan' : 'Pengeluaran';
+    const amountClass = trx.type === 'income' ? 'text-success' : 'text-danger';
+    const sign = trx.type === 'income' ? '' : '-';
+
+    body.innerHTML = `
+    <div class="text-center mb-3">
+    <i class="${trx.category.icon} fs-1" style="color: ${trx.category.color}"></i>
+    <h5 class="mt-2">${trx.category.name}</h5>
+    <span class="badge bg-secondary">${typeLabel}</span>
+    </div>
+    <table class="table table-sm">
+    <tr><th>Jumlah</th><td class="${amountClass} fw-bold">${sign}${trx.formatted_amount}</td></tr>
+    <tr><th>Dompet</th><td>${trx.wallet.name}</td></tr>
+    <tr><th>Tanggal</th><td>${formatDateFull(trx.transaction_date)}</td></tr>
+    <tr><th>Deskripsi</th><td>${trx.description || '-'}</td></tr>
+    </table>
+    `;
+
+    new bootstrap.Modal(document.getElementById('transactionDetailModal')).show();
+    }
+
+    function formatDateFull(d) {
+    return new Date(d).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    async function deleteTransaction(id) {
+    if (!confirm('Pindahkan transaksi ke tempat sampah?')) return;
+    try {
+    tgApp.showLoading('Menghapus...');
+    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}`, { method: 'DELETE' });
+    await loadWallets();
+    await loadAllTransactions();
+    tgApp.hideLoading();
+    tgApp.showToast('Transaksi dipindahkan ke tempat sampah');
+    if (state.currentPage === 'transactions') {
+    renderTransactionList();
+    updateTransactionStats();
+    } else if (state.currentPage === 'home') {
+    renderHomePage();
+    }
+    } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal menghapus', 'danger');
+    }
     }
 
     // ==================== TRANSFERS PAGE ====================
