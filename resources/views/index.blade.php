@@ -891,7 +891,7 @@
 
     async function loadInsights() {
     try {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/insights/summary');
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/insights/full');
     renderInsightsContent(res.data);
     } catch (error) {
     document.getElementById('insights-content').innerHTML = `
@@ -901,22 +901,105 @@
     }
 
     function renderInsightsContent(data) {
-    const changeClass = data.percentage_change > 0 ? 'text-danger' : 'text-success';
-    const changeIcon = data.percentage_change > 0 ? '↑' : '↓';
+    const symbol = getCurrencySymbol(data.currency || 'IDR');
+    const trend = data.trend;
+    const changeClass = trend.change_percentage > 0 ? 'text-danger' : 'text-success';
+    const changeIcon = trend.change_percentage > 0 ? '↑' : '↓';
 
-    const html = `
+    let html = `
+    <div class="container py-3">
+    <!-- Summary Card -->
     <div class="card mb-3">
     <div class="card-body">
     <h6>Total Pengeluaran Bulan Ini</h6>
-    <h3>Rp ${formatNumber(data.expense_this_month)}</h3>
+    <h3>${symbol} ${formatNumber(trend.current_month_total)}</h3>
     <p class="${changeClass} mb-0">
-    ${changeIcon} ${Math.abs(data.percentage_change)}% dari bulan lalu
+    ${changeIcon} ${Math.abs(trend.change_percentage)}% dari bulan lalu
     </p>
+    <small class="text-muted">Rata-rata 3 bulan: ${symbol} ${formatNumber(trend.avg_last_3months)}</small>
     </div>
     </div>
 
+    <!-- Recommendations -->
+    ${data.recommendations.length > 0 ? `
+    <div class="card mb-3 border-0 shadow-sm">
+    <div class="card-header bg-white border-0 pt-3">
+    <h6 class="mb-0"><i class="bi bi-lightbulb text-warning me-2"></i>Rekomendasi Cerdas</h6>
+    </div>
+    <div class="card-body pt-0">
+    ${data.recommendations.map(rec => `
+    <div class="d-flex alert alert-${rec.type === 'warning' ? 'warning' : (rec.type === 'success' ? 'success' : 'info')} py-2 px-3 mb-2">
+    <i class="bi ${rec.icon} me-3 fs-5"></i>
+    <div>
+    <strong>${rec.title}</strong><br>
+    <small>${rec.message}</small>
+    </div>
+    </div>
+    `).join('')}
+    </div>
+    </div>
+    ` : ''}
+
+    <!-- Anomalies -->
+    ${data.anomalies.length > 0 ? `
     <div class="card mb-3">
-    <div class="card-header">Top Kategori Pengeluaran</div>
+    <div class="card-header">⚠️ Lonjakan Pengeluaran</div>
+    <div class="list-group list-group-flush">
+    ${data.anomalies.map(a => `
+    <div class="list-group-item">
+    <div class="d-flex align-items-center">
+    <i class="${a.category.icon} me-2" style="color:${a.category.color}"></i>
+    <span class="flex-grow-1">${a.category.name}</span>
+    <span class="text-danger">${a.formatted} (+${a.percentage_increase}%)</span>
+    </div>
+    </div>
+    `).join('')}
+    </div>
+    </div>
+    ` : ''}
+
+    <!-- Subscriptions -->
+    ${data.subscriptions.length > 0 ? `
+    <div class="card mb-3">
+    <div class="card-header">📅 Langganan Bulanan</div>
+    <div class="list-group list-group-flush">
+    ${data.subscriptions.map(s => `
+    <div class="list-group-item">
+    <div>${s.category.name} · ${s.description || '-'}</div>
+    <small class="text-muted">${s.formatted} / bulan · ${s.occurrences}x berturut-turut</small>
+    </div>
+    `).join('')}
+    </div>
+    </div>
+    ` : ''}
+
+    <!-- Spending Ratio -->
+    <div class="card mb-3">
+    <div class="card-header">🥧 Komposisi Pengeluaran</div>
+    <div class="card-body">
+    <div class="progress mb-2" style="height: 20px;">
+    <div class="progress-bar bg-success" style="width: ${data.spending_ratio.primary}%">Pokok ${data.spending_ratio.primary}%</div>
+    <div class="progress-bar bg-warning" style="width: ${data.spending_ratio.secondary}%">Sekunder ${data.spending_ratio.secondary}%</div>
+    <div class="progress-bar bg-danger" style="width: ${data.spending_ratio.tertiary}%">Tersier ${data.spending_ratio.tertiary}%</div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Projection -->
+    <div class="card mb-3">
+    <div class="card-header">📈 Proyeksi Bulan Depan</div>
+    <div class="card-body">
+    <p>Estimasi Pemasukan: <strong class="text-success">${data.projection.formatted_income}</strong></p>
+    <p>Estimasi Pengeluaran: <strong class="text-danger">${data.projection.formatted_expense}</strong></p>
+    <p>Surplus/Defisit: <strong class="${data.projection.projected_surplus >= 0 ? 'text-success' : 'text-danger'}">
+    ${symbol} ${formatNumber(data.projection.projected_surplus)}
+    </strong></p>
+    </div>
+    </div>
+
+    <!-- Top Categories -->
+    <div class="card mb-3">
+    <div class="card-header">🏆 Top Kategori Bulan Ini</div>
     <div class="list-group list-group-flush">
     ${data.top_categories.map((cat, i) => `
     <div class="list-group-item">
@@ -929,14 +1012,6 @@
     </div>
     `).join('')}
     </div>
-    </div>
-
-    <div class="card">
-    <div class="card-body">
-    <h6>Rekomendasi</h6>
-    <ul class="list-unstyled">
-    ${generateRecommendations(data)}
-    </ul>
     </div>
     </div>
     `;

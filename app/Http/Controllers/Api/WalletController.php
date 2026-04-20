@@ -5,47 +5,29 @@ namespace Modules\FinTech\Http\Controllers\Api;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Http\Requests\WalletRequest;
+use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Models\Wallet;
-use Brick\Money\Money;
 use Brick\Money\Exception\MoneyMismatchException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class WalletController extends Controller
 {
-  /**
-  * Display a listing of the user's wallets.
-  */
+  protected WalletService $walletService;
+
+  public function __construct(WalletService $walletService) {
+    $this->walletService = $walletService;
+  }
+
   public function index(): JsonResponse
   {
-    $user = request()->user();
-
     try {
-      $wallets = Wallet::where('user_id', $user->id)
-      ->where('is_active', true)
-      ->with('currencyDetails')
-      ->orderBy('name')
-      ->get()
-      ->map(function ($wallet) {
-        return [
-          'id' => $wallet->id,
-          'name' => $wallet->name,
-          'balance' => $wallet->getBalanceFloat(),
-          'formatted_balance' => $wallet->getFormattedBalance(),
-          'currency' => [
-            'code' => $wallet->currency,
-            'name' => $wallet->currencyDetails->name ?? $wallet->currency,
-            'symbol' => $wallet->currencyDetails->symbol ?? $wallet->currency,
-            'precision' => $wallet->currencyDetails->precision ?? 2,
-          ],
-          'description' => $wallet->description,
-          'is_active' => $wallet->is_active,
-        ];
-      });
+      $wallets = $this->walletService->getUserWallets(request()->user());
 
       return response()->json([
         'success' => true,
         'data' => $wallets
       ]);
-    } catch(\Exception $e) {
+    } catch (\Exception $e) {
       return response()->json([
         'success' => false,
         'message' => $e->getMessage(),
@@ -54,24 +36,10 @@ class WalletController extends Controller
     }
   }
 
-  /**
-  * Store a newly created wallet.
-  */
   public function store(WalletRequest $request): JsonResponse
   {
     try {
-      $initialBalance = Money::of(
-        $request->input('initial_balance', 0),
-        $request->input('currency', 'IDR')
-      );
-
-      $wallet = new Wallet();
-      $wallet->user_id = $request->user()->id;
-      $wallet->name = $request->name;
-      $wallet->currency = $request->input('currency', 'IDR');
-      $wallet->description = $request->description;
-      $wallet->balance = $initialBalance;
-      $wallet->save();
+      $wallet = $this->walletService->createWallet($request->user(), $request->validated());
 
       return response()->json([
         'success' => true,
@@ -97,61 +65,42 @@ class WalletController extends Controller
     }
   }
 
-  /**
-  * Display the specified wallet.
-  */
   public function show(Wallet $wallet): JsonResponse
   {
-    if ($wallet->user_id !== request()->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
+    try {
+      $data = $this->walletService->getWalletDetail(request()->user(), $wallet);
+
+      return response()->json([
+        'success' => true,
+        'data' => $data
+      ]);
+    } catch (HttpException $e) {
+      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+    } catch (\Exception $e) {
+      return response()->json(['message' => 'Terjadi kesalahan'], 500);
     }
-
-    $wallet->load('currencyDetails');
-
-    return response()->json([
-      'success' => true,
-      'data' => [
-        'id' => $wallet->id,
-        'name' => $wallet->name,
-        'balance' => $wallet->getBalanceFloat(),
-        'formatted_balance' => $wallet->getFormattedBalance(),
-        'currency' => [
-          'code' => $wallet->currency,
-          'name' => $wallet->currencyDetails->name ?? $wallet->currency,
-          'symbol' => $wallet->currencyDetails->symbol ?? $wallet->currency,
-          'precision' => $wallet->currencyDetails->precision ?? 2,
-        ],
-        'description' => $wallet->description,
-        'transaction_count' => $wallet->transactions()->count(),
-      ]
-    ]);
   }
 
-  /**
-  * Update the specified wallet.
-  */
   public function update(WalletRequest $request, Wallet $wallet): JsonResponse
   {
-    if ($wallet->user_id !== $request->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
+    try {
+      $wallet = $this->walletService->updateWallet($request->user(), $wallet, $request->validated());
+
+      return response()->json([
+        'success' => true,
+        'message' => 'Dompet berhasil diperbarui',
+        'data' => [
+          'id' => $wallet->id,
+          'name' => $wallet->name,
+          'balance' => $wallet->getBalanceFloat(),
+          'formatted_balance' => $wallet->getFormattedBalance(),
+          'is_active' => $wallet->is_active,
+        ]
+      ]);
+    } catch (HttpException $e) {
+      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+    } catch (\Exception $e) {
+      return response()->json(['message' => 'Gagal memperbarui dompet: ' . $e->getMessage()], 500);
     }
-
-    $validated = $request->validated();
-    // Hapus field yang tidak boleh diupdate
-    unset($validated['initial_balance'], $validated['currency']);
-
-    $wallet->update($validated);
-
-    return response()->json([
-      'success' => true,
-      'message' => 'Dompet berhasil diperbarui',
-      'data' => [
-        'id' => $wallet->id,
-        'name' => $wallet->name,
-        'balance' => $wallet->getBalanceFloat(),
-        'formatted_balance' => $wallet->getFormattedBalance(),
-        'is_active' => $wallet->is_active,
-      ]
-    ]);
   }
 }

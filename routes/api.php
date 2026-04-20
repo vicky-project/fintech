@@ -60,5 +60,5 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::get('settings', [SettingController::class, 'show']);
   Route::put('settings', [SettingController::class, 'update']);
 
-  Route::get('insights/summary', [InsightController::class, 'summary']);
+  Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
 });

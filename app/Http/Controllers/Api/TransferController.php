@@ -4,201 +4,123 @@ namespace Modules\FinTech\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
-use Modules\FinTech\Models\Wallet;
-use Modules\FinTech\Models\Transfer;
 use Modules\FinTech\Http\Requests\TransferRequest;
-use Brick\Money\Money;
+use Modules\FinTech\Models\Transfer;
+use Modules\FinTech\Services\TransferService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class TransferController extends Controller
 {
+  protected TransferService $transferService;
+
+  public function __construct(TransferService $transferService) {
+    $this->transferService = $transferService;
+  }
+
   public function index(): JsonResponse
   {
-    $request = request();
-    $request->validate([
+    $filters = request()->validate([
       'wallet_id' => 'nullable|exists:fintech_wallets,id',
       'per_page' => 'integer|min:1|max:100'
     ]);
 
-    $query = Transfer::with(['fromWallet', 'toWallet'])
-    ->where(function ($q) use ($request) {
-      $q->whereHas('fromWallet', fn($q) => $q->where('user_id', $request->user()->id))
-      ->orWhereHas('toWallet', fn($q) => $q->where('user_id', $request->user()->id));
-    })
-    ->orderBy('transfer_date', 'desc')
-    ->orderBy('id', 'desc');
+    $perPage = request('per_page', 20);
+    $result = $this->transferService->getTransfers(request()->user(), $filters, $perPage);
 
-    if ($walletId = $request->input('wallet_id')) {
-      $query->where(function ($q) use ($walletId) {
-        $q->where('from_wallet_id', $walletId)
-        ->orWhere('to_wallet_id', $walletId);
-      });
-    }
-
-    $transfers = $query->paginate($request->input('per_page', 20));
-
-    $transformed = $transfers->through(fn($t) => [
-      'id' => $t->id,
-      'from_wallet' => [
-        'id' => $t->fromWallet->id,
-        'name' => $t->fromWallet->name,
-        'currency' => $t->fromWallet->currency
-      ],
-      'to_wallet' => [
-        'id' => $t->toWallet->id,
-        'name' => $t->toWallet->name,
-        'currency' => $t->toWallet->currency
-      ],
-      'amount' => $t->getAmountFloat(),
-      'formatted_amount' => $t->getFormattedAmount(),
-      'transfer_date' => $t->transfer_date->toDateString(),
-      'description' => $t->description,
+    return response()->json([
+      'success' => true,
+      'data' => $result['data'],
+      'pagination' => $result['pagination'],
     ]);
-
-    return response()->json(['success' => true, 'data' => $transformed]);
   }
 
   public function store(TransferRequest $request): JsonResponse
   {
-    $fromWallet = Wallet::findOrFail($request->from_wallet_id);
-    $toWallet = Wallet::findOrFail($request->to_wallet_id);
-    $amount = Money::of($request->amount, $fromWallet->currency);
-
-    if ($fromWallet->balance->isLessThan($amount)) {
+    try {
+      $this->transferService->createTransfer($request->user(), $request->validated());
+      return response()->json([
+        'success' => true,
+        'message' => 'Transfer berhasil dilakukan.'
+      ], 201);
+    } catch (\Exception $e) {
       return response()->json([
         'success' => false,
-        'message' => 'Saldo dompet asal tidak mencukupi.'
+        'message' => $e->getMessage()
       ], 400);
     }
-
-    DB::transaction(function () use ($fromWallet, $toWallet, $request, $amount) {
-      $transfer = new Transfer($request->validated());
-      $transfer->amount = $amount;
-      $transfer->save();
-
-      $fromWallet->withdraw($amount);
-      $toWallet->deposit($amount);
-    });
-
-    return response()->json([
-      'success' => true,
-      'message' => 'Transfer berhasil dilakukan.'
-    ], 201);
   }
 
   public function update(TransferRequest $request, Transfer $transfer): JsonResponse
   {
-    if ($transfer->fromWallet->user_id !== $request->user()->id &&
-      $transfer->toWallet->user_id !== $request->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
+    try {
+      $this->transferService->updateTransfer($request->user(), $transfer, $request->validated());
+      return response()->json([
+        'success' => true,
+        'message' => 'Transfer berhasil diperbarui.'
+      ]);
+    } catch (HttpException $e) {
+      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+    } catch (\Exception $e) {
+      return response()->json([
+        'success' => false,
+        'message' => $e->getMessage()
+      ], 400);
     }
-
-    $validated = $request->validated();
-    unset($validated['from_wallet_id'], $validated['to_wallet_id']);
-
-    DB::transaction(function () use ($transfer, $validated, $request) {
-      $oldAmount = $transfer->amount;
-      $transfer->fromWallet->deposit($oldAmount);
-      $transfer->toWallet->withdraw($oldAmount);
-
-      $transfer->fill($validated);
-      if ($request->has('amount')) {
-        $transfer->amount = Money::of($request->amount, $transfer->fromWallet->currency);
-      }
-      $transfer->save();
-
-      $newAmount = $transfer->amount;
-      $transfer->fromWallet->withdraw($newAmount);
-      $transfer->toWallet->deposit($newAmount);
-    });
-
-    return response()->json([
-      'success' => true,
-      'message' => 'Transfer berhasil diperbarui.'
-    ]);
   }
 
   public function destroy(Transfer $transfer): JsonResponse
   {
-    if ($transfer->fromWallet->user_id !== request()->user()->id &&
-      $transfer->toWallet->user_id !== request()->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
+    try {
+      $this->transferService->deleteTransfer(request()->user(), $transfer);
+      return response()->json([
+        'success' => true,
+        'message' => 'Transfer dipindahkan ke tempat sampah.'
+      ]);
+    } catch (HttpException $e) {
+      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
     }
-
-    DB::transaction(function () use ($transfer) {
-      $transfer->fromWallet->deposit($transfer->amount);
-      $transfer->toWallet->withdraw($transfer->amount);
-      $transfer->delete();
-    });
-
-    return response()->json([
-      'success' => true,
-      'message' => 'Transfer dipindahkan ke tempat sampah.'
-    ]);
   }
 
   public function trashed(): JsonResponse
   {
-    $request = request();
-    $query = Transfer::onlyTrashed()
-    ->with(['fromWallet', 'toWallet'])
-    ->where(function ($q) use ($request) {
-      $q->whereHas('fromWallet', fn($q) => $q->where('user_id', $request->user()->id))
-      ->orWhereHas('toWallet', fn($q) => $q->where('user_id', $request->user()->id));
-    })
-    ->orderBy('deleted_at', 'desc');
+    $perPage = request('per_page', 20);
+    $result = $this->transferService->getTrashedTransfers(request()->user(), $perPage);
 
-    $transfers = $query->paginate($request->input('per_page', 20));
-
-    $transformed = $transfers->through(fn($t) => [
-      'id' => $t->id,
-      'from_wallet' => ['id' => $t->fromWallet->id, 'name' => $t->fromWallet->name],
-      'to_wallet' => ['id' => $t->toWallet->id, 'name' => $t->toWallet->name],
-      'amount' => $t->getAmountFloat(),
-      'formatted_amount' => $t->getFormattedAmount(),
-      'transfer_date' => $t->transfer_date->toDateString(),
-      'description' => $t->description,
-      'deleted_at' => $t->deleted_at->toDateTimeString(),
+    return response()->json([
+      'success' => true,
+      'data' => $result['data'],
+      'pagination' => $result['pagination'],
     ]);
-
-    return response()->json(['success' => true, 'data' => $transformed]);
   }
 
   public function restore($id): JsonResponse
   {
-    $transfer = Transfer::onlyTrashed()->findOrFail($id);
-
-    if ($transfer->fromWallet->user_id !== request()->user()->id &&
-      $transfer->toWallet->user_id !== request()->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
+    try {
+      $this->transferService->restoreTransfer(request()->user(), $id);
+      return response()->json([
+        'success' => true,
+        'message' => 'Transfer berhasil dipulihkan.'
+      ]);
+    } catch (HttpException $e) {
+      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+    } catch (\Exception $e) {
+      return response()->json([
+        'success' => false,
+        'message' => $e->getMessage()
+      ], 400);
     }
-
-    DB::transaction(function () use ($transfer) {
-      $transfer->fromWallet->withdraw($transfer->amount);
-      $transfer->toWallet->deposit($transfer->amount);
-      $transfer->restore();
-    });
-
-    return response()->json([
-      'success' => true,
-      'message' => 'Transfer berhasil dipulihkan.'
-    ]);
   }
 
   public function forceDelete($id): JsonResponse
   {
-    $transfer = Transfer::withTrashed()->findOrFail($id);
-
-    if ($transfer->fromWallet->user_id !== request()->user()->id &&
-      $transfer->toWallet->user_id !== request()->user()->id) {
-      return response()->json(['message' => 'Unauthorized'], 403);
+    try {
+      $this->transferService->forceDeleteTransfer(request()->user(), $id);
+      return response()->json([
+        'success' => true,
+        'message' => 'Transfer dihapus permanen.'
+      ]);
+    } catch (HttpException $e) {
+      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
     }
-
-    $transfer->forceDelete();
-
-    return response()->json([
-      'success' => true,
-      'message' => 'Transfer dihapus permanen.'
-    ]);
   }
 }

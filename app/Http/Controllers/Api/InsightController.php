@@ -14,13 +14,10 @@ class InsightController extends Controller
     $this->insightService = $insightService;
   }
 
-  /**
-  * Ringkasan analisis pengeluaran.
-  */
-  public function summary(): JsonResponse
+  public function fullAnalysis(): JsonResponse
   {
     $userId = request()->user()->id;
-    $data = $this->insightService->getExpenseSummary($userId);
+    $data = $this->insightService->getFullAnalysis($userId);
 
     return response()->json([
       'success' => true,
