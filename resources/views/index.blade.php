@@ -15,10 +15,10 @@
   </div>
 
   {{-- Main content area --}}
-  <div id="main-content" class="pb-5" style="padding-bottom: 120px  !important"></div>
+  <div id="main-content" class="pb-5"></div>
 
   {{-- Footer --}}
-  <footer class="text-center text-muted small py-3 mt-auto" style="padding-bottom: 80px;">
+  <footer class="text-center text-muted small py-3 mt-auto" style="padding-bottom: 120px !important;">
     <p class="mb-1">
       FinTech — Catat keuangan, kendalikan masa depan.
     </p>
