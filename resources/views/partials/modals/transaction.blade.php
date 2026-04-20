@@ -184,10 +184,8 @@
 
     // Dompet
     const walletSelect = document.getElementById('wallet-select');
-    const hiddenWallet = document.getElementById('wallet-id-hidden');
     populateWalletSelect(transaction.wallet.id);
     walletSelect.disabled = true;
-    hiddenWallet.value = transaction.wallet.id;
 
     // Kategori
     filterCategoriesByType(transaction.category.id);
