@@ -18,12 +18,6 @@ class TransactionRequest extends FormRequest
     $transaction = $this->route('transaction');
 
     $rules = [
-      'wallet_id' => [
-        $transaction ? 'prohibited' : 'required',
-        Rule::exists('fintech_wallets', 'id')->where(function ($query) {
-          $query->where('user_id', $this->user()->id);
-        }),
-      ],
       'category_id' => 'required|exists:fintech_categories,id',
       'type' => ['required',
         Rule::in(TransactionType::values())],
@@ -33,7 +27,16 @@ class TransactionRequest extends FormRequest
     ];
 
     if ($transaction) {
+      // Saat update, wallet_id tidak boleh diubah
       $rules['wallet_id'] = 'prohibited';
+    } else {
+      // Saat store, wallet_id wajib
+      $rules['wallet_id'] = [
+        'required',
+        Rule::exists('fintech_wallets', 'id')->where(function ($query) {
+          $query->where('user_id', $this->user()->id);
+        }),
+      ];
     }
 
     return $rules;
