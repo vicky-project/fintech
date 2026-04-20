@@ -111,7 +111,6 @@
       month: ''
     },
     chartInstances: {},
-    defaultCurrency: 'IDR',
     userSettings: null
   };
 
@@ -187,7 +186,6 @@
     const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
     state.wallets = res.data || [];
     state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
-    state.defaultCurrency = state.wallets[0]?.currency || 'IDR';
   }
 
   async function loadCategories() {
@@ -203,7 +201,6 @@
   async function loadHomeSummary() {
     const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/home-summary');
     state.homeSummary = res.data;
-    state.defaultCurrency = state.homeSummary.currency;
   }
 
   async function loadTransactionsPage(page, filters) {
@@ -219,13 +216,17 @@
   }
 
   async function loadTransfersPage(page, walletId) {
-    let url = `${BASE_URL}/api/fintech/transfers?per_page=20&page=${page}`;
-    if (walletId) url += `&wallet_id=${walletId}`;
-    const res = await tgApp.fetchWithAuth(url);
-    const data = res.data;
-    state.transfers = data.data;
-    state.transferPage = data.current_page;
-    state.transferLastPage = data.last_page;
+    try {
+      let url = `${BASE_URL}/api/fintech/transfers?per_page=20&page=${page}`;
+      if (walletId) url += `&wallet_id=${walletId}`;
+      const res = await tgApp.fetchWithAuth(url);
+      const data = res.data;
+      state.transfers = data.data;
+      state.transferPage = data.current_page;
+      state.transferLastPage = data.last_page;
+    } catch(error) {
+      document.getElementById('transfer-list')?.innerHTML = `<p class="text-muted fw-bold">${error.message}</p>`;
+    }
   }
 
   async function loadUserSettings() {
@@ -261,6 +262,7 @@
       case 'wallets': renderWalletsPage(); break;
       case 'reports': renderReportsPage(); break;
       case 'settings': renderSettingsPage(); break;
+      case 'insights': renderInsightsPage(); break;
     }
   }
 
@@ -487,7 +489,7 @@
 
     function updateTransactionStats() {
     const summary = state.transactionSummary;
-    const symbol = getCurrencySymbol(state.defaultCurrency);
+    const symbol = getCurrencySymbol(state.userSettings?.default_currency || '{{ config("fintech.default_currency") }}');
     document.getElementById('transaction-stats').innerHTML = `
     <div class="col-4"><div class="card p-2 text-center"><small>Total</small><strong>${summary.total}</strong></div></div>
     <div class="col-4"><div class="card p-2 text-center text-success"><small>Masuk</small><strong>${symbol}${formatNumberShort(summary.income)}</strong></div></div>
@@ -869,6 +871,90 @@
     </div>
     </div>
     `).join('');
+    }
+
+    async function renderInsightsPage() {
+    const html = `
+    <div class="container py-3">
+    <h5 class="mb-3">Analisis Keuangan</h5>
+    <div id="insights-content">
+    <div class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2">Menganalisis data...</p>
+    </div>
+    </div>
+    </div>
+    `;
+    document.getElementById('main-content').innerHTML = html;
+    await loadInsights();
+    }
+
+    async function loadInsights() {
+    try {
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/insights/summary');
+    renderInsightsContent(res.data);
+    } catch (error) {
+    document.getElementById('insights-content').innerHTML = `
+    <div class="alert alert-danger">Gagal memuat analisis</div>
+    `;
+    }
+    }
+
+    function renderInsightsContent(data) {
+    const changeClass = data.percentage_change > 0 ? 'text-danger' : 'text-success';
+    const changeIcon = data.percentage_change > 0 ? '↑' : '↓';
+
+    const html = `
+    <div class="card mb-3">
+    <div class="card-body">
+    <h6>Total Pengeluaran Bulan Ini</h6>
+    <h3>Rp ${formatNumber(data.expense_this_month)}</h3>
+    <p class="${changeClass} mb-0">
+    ${changeIcon} ${Math.abs(data.percentage_change)}% dari bulan lalu
+    </p>
+    </div>
+    </div>
+
+    <div class="card mb-3">
+    <div class="card-header">Top Kategori Pengeluaran</div>
+    <div class="list-group list-group-flush">
+    ${data.top_categories.map((cat, i) => `
+    <div class="list-group-item">
+    <div class="d-flex align-items-center">
+    <span class="badge bg-secondary me-2">#${i+1}</span>
+    <i class="${cat.icon} me-2" style="color:${cat.color}"></i>
+    <span class="flex-grow-1">${cat.name}</span>
+    <strong>${cat.formatted}</strong>
+    </div>
+    </div>
+    `).join('')}
+    </div>
+    </div>
+
+    <div class="card">
+    <div class="card-body">
+    <h6>Rekomendasi</h6>
+    <ul class="list-unstyled">
+    ${generateRecommendations(data)}
+    </ul>
+    </div>
+    </div>
+    `;
+    document.getElementById('insights-content').innerHTML = html;
+    }
+
+    function generateRecommendations(data) {
+    const recs = [];
+    if (data.percentage_change > 20) {
+    recs.push('<li class="mb-2"><i class="bi bi-exclamation-triangle text-warning me-2"></i> Pengeluaran naik signifikan. Coba review transaksi minggu ini.</li>');
+    }
+    if (data.top_categories[0]?.name?.includes('Makanan')) {
+    recs.push('<li class="mb-2"><i class="bi bi-cup me-2"></i> Pengeluaran makan cukup besar. Coba bawa bekal 2x seminggu.</li>');
+    }
+    if (recs.length === 0) {
+    recs.push('<li class="text-muted">Pengeluaran Anda terkendali. Pertahankan!</li>');
+    }
+    return recs.join('');
     }
 
     // ==================== REPORTS PAGE ====================

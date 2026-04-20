@@ -2,15 +2,16 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\FinTech\Http\Controllers\Api\ {
-  HomeController,
-  WalletController,
-  TransactionController,
-  TransferController,
   CategoryController,
   CategorySuggestionController,
   CurrencyController,
+  HomeController,
+  InsightController,
   ReportController,
-  SettingController
+  SettingController,
+  TransactionController,
+  TransferController,
+  WalletController
 };
 
 /*
@@ -58,4 +59,6 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 
   Route::get('settings', [SettingController::class, 'show']);
   Route::put('settings', [SettingController::class, 'update']);
+
+  Route::get('insights/summary', [InsightController::class, 'summary']);
 });
