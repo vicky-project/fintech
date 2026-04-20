@@ -48,7 +48,7 @@
       <ul class="dropdown-menu dropdown-menu-end mb-2">
         <li><a class="dropdown-item" href="#" onclick="showAddWalletModal()"><i class="bi bi-wallet me-2"></i>Tambah Dompet</a></li>
         <li><a class="dropdown-item" href="#" onclick="showAddTransactionModal()"><i class="bi bi-arrow-left-right me-2"></i>Tambah Transaksi</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showTransferModal()"><i class="bi bi-arrow-left-right me-2"></i>Transfer</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showAddTransferModal()"><i class="bi bi-arrow-left-right me-2"></i>Transfer</a></li>
         <li><a class="dropdown-item" href="#" onclick="navigateToTrash()"><i class="bi bi-trash me-2"></i>Tempat Sampah</a></li>
       </ul>
     </div>
@@ -75,7 +75,6 @@
 @include('fintech::partials.modals.transaction')
 @include('fintech::partials.modals.transfer')
 @include('fintech::partials.modals.suggest-category')
-@include('fintech::partials.modals.transfer')
 @endsection
 
 @push('scripts')
@@ -134,7 +133,7 @@
 
       await Promise.all([
       loadWallets().catch(e => { throw new Error('Gagal memuat dompet: ' + e.message); }),
-      await loadUserSettings().catch(e => console.warn(e)),
+      loadUserSettings().catch(e => console.warn(e)),
       loadCategories().catch(e => { throw new Error('Gagal memuat kategori: ' + e.message); }),
       loadCurrencies().catch(e => { throw new Error('Gagal memuat mata uang: ' + e.message); })
       ]);
@@ -212,7 +211,7 @@
     state.transactions = res.data.data;
     state.transactionPage = res.data.current_page;
     state.transactionLastPage = res.data.last_page;
-    state.transactionSummary = res.summary
+    state.transactionSummary = res.summary;
   }
 
   async function loadTransfersPage(page, walletId) {
