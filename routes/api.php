@@ -5,6 +5,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
   WalletController,
   TransactionController,
   CategoryController,
+  CategorySuggestionController,
   CurrencyController,
   ReportController
 };
