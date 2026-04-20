@@ -35,6 +35,7 @@
       <button class="btn nav-btn" data-page="transfers"><i class="bi bi-arrow-left-right fs-5"></i></button>
       <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-bar-chart fs-5"></i></button>
+      <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
     </div>
   </nav>
 
@@ -110,7 +111,8 @@
       month: ''
     },
     chartInstances: {},
-    defaultCurrency: 'IDR'
+    defaultCurrency: 'IDR',
+    userSettings: null
   };
 
   // ==================== INITIALIZATION ====================
@@ -133,6 +135,7 @@
 
       await Promise.all([
       loadWallets().catch(e => { throw new Error('Gagal memuat dompet: ' + e.message); }),
+      await loadUserSettings().catch(e => console.warn(e));
       loadCategories().catch(e => { throw new Error('Gagal memuat kategori: ' + e.message); }),
       loadCurrencies().catch(e => { throw new Error('Gagal memuat mata uang: ' + e.message); })
       ]);
@@ -225,6 +228,19 @@
     state.transferLastPage = data.last_page;
   }
 
+  async function loadUserSettings() {
+    try {
+      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings');
+      state.userSettings = res.data;
+    } catch (error) {
+      console.warn('Gagal memuat pengaturan:', error);
+      state.userSettings = {
+        default_currency: 'IDR',
+        default_wallet_id: null
+      };
+    }
+  }
+
   // ==================== NAVIGATION ====================
   function navigateTo(page) {
     state.currentPage = page;
@@ -244,6 +260,7 @@
       case 'transfers': renderTransfersPage(); break;
       case 'wallets': renderWalletsPage(); break;
       case 'reports': renderReportsPage(); break;
+      case 'settings': renderSettingsPage(); break;
     }
   }
 
@@ -388,6 +405,73 @@
     document.getElementById('main-content').innerHTML = html;
     state.transactionPage = 1;
     await refreshTransactionList();
+    }
+
+    function renderSettingsPage() {
+    const settings = state.userSettings || { default_currency: 'IDR', default_wallet_id: '' };
+    const symbol = getCurrencySymbol(settings.default_currency);
+    const html = `
+    <div class="container py-3">
+    <div class="d-flex align-items-center mb-3">
+    <button class="btn btn-link me-2" onclick="navigateTo('home')">
+    <i class="bi bi-arrow-left"></i>
+    </button>
+    <h5 class="mb-0">Pengaturan</h5>
+    </div>
+    <form id="settingsForm">
+    <div class="mb-3">
+    <label class="form-label">Mata Uang Default</label>
+    <select class="form-select" name="default_currency" id="setting-currency">
+    <option value="">Pilih Mata Uang</option>
+    </select>
+    <small class="text-muted">Digunakan sebagai default saat membuat dompet baru.</small>
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Dompet Default</label>
+    <select class="form-select" name="default_wallet_id" id="setting-wallet">
+    <option value="">Tidak Ada</option>
+    ${state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+    </select>
+    <small class="text-muted">Dompet yang otomatis terpilih saat menambah transaksi.</small>
+    </div>
+    <button type="button" class="btn btn-primary w-100" onclick="saveSettings()">
+    Simpan Pengaturan
+    </button>
+    </form>
+    </div>
+    `;
+    document.getElementById('main-content').innerHTML = html;
+
+    // Isi dropdown mata uang
+    const currencySelect = document.getElementById('setting-currency');
+    populateSelectWithCurrencies(currencySelect, settings.default_currency);
+
+    // Isi dropdown dompet
+    const walletSelect = document.getElementById('setting-wallet');
+    if (settings.default_wallet_id) {
+    walletSelect.value = settings.default_wallet_id;
+    }
+    }
+
+    async function saveSettings() {
+    const form = document.getElementById('settingsForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+    tgApp.showLoading('Menyimpan...');
+    await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings', {
+    method: 'PUT',
+    body: JSON.stringify(data)
+    });
+    await loadUserSettings();
+    tgApp.hideLoading();
+    tgApp.showToast('Pengaturan disimpan');
+    navigateTo('home');
+    } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal menyimpan', 'danger');
+    }
     }
 
     async function refreshTransactionList() {

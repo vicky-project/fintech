@@ -9,7 +9,8 @@ use Modules\FinTech\Http\Controllers\Api\ {
   CategoryController,
   CategorySuggestionController,
   CurrencyController,
-  ReportController
+  ReportController,
+  SettingController
 };
 
 /*
@@ -54,4 +55,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   });
 
   Route::post('category-suggestions', [CategorySuggestionController::class, 'store']);
+
+  Route::get('settings', [SettingController::class, 'show']);
+  Route::post('settings', [SettingController::class, 'update']);
 });
