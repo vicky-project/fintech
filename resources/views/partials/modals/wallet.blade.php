@@ -79,7 +79,7 @@
 
     const currencySelect = document.getElementById('wallet-currency');
     currencySelect.disabled = true;
-    populateSelectWithCurrencies(currencySelect, wallet.currency);
+    populateSelectWithCurrencies(currencySelect, wallet.currency.code);
 
     new bootstrap.Modal(document.getElementById('walletModal')).show();
   };
