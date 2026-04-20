@@ -415,9 +415,6 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex align-items-center mb-3">
-    <button class="btn btn-link me-2" onclick="navigateTo('home')">
-    <i class="bi bi-arrow-left"></i>
-    </button>
     <h5 class="mb-0">Pengaturan</h5>
     </div>
     <form id="settingsForm">
