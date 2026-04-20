@@ -1,4 +1,3 @@
-{{-- Modules/FinTech/Resources/views/partials/modals/transfer.blade.php --}}
 <div class="modal fade" id="transferModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -9,7 +8,6 @@
       <div class="modal-body">
         <form id="transferForm">
           <input type="hidden" name="id" id="transfer-id">
-
           <div class="mb-3">
             <label class="form-label">Dompet Asal <span class="text-danger">*</span></label>
             <select class="form-select" name="from_wallet_id" id="from-wallet-select" required>
@@ -31,7 +29,7 @@
             <input type="date" class="form-control" name="transfer_date" id="transfer-date" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Catatan (Opsional)</label>
+            <label class="form-label">Catatan</label>
             <input type="text" class="form-control" name="description" id="transfer-desc">
           </div>
         </form>
@@ -48,23 +46,18 @@
   let editingTransferId = null;
   let pendingTransferData = null;
 
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', () => {
   const modalEl = document.getElementById('transferModal');
-
-  modalEl.addEventListener('show.bs.modal', function() {
-  if (!pendingTransferData) {
-  resetTransferForm();
-  }
+  modalEl.addEventListener('show.bs.modal', () => {
+  if (!pendingTransferData) resetTransferForm();
   });
-
-  modalEl.addEventListener('shown.bs.modal', function() {
+  modalEl.addEventListener('shown.bs.modal', () => {
   if (pendingTransferData) {
   populateEditTransferForm(pendingTransferData);
   pendingTransferData = null;
   }
   });
-
-  modalEl.addEventListener('hidden.bs.modal', function() {
+  modalEl.addEventListener('hidden.bs.modal', () => {
   editingTransferId = null;
   pendingTransferData = null;
   document.getElementById('from-wallet-select').disabled = false;
@@ -79,57 +72,37 @@
     document.getElementById('transfer-id').value = '';
     document.getElementById('transferModalTitle').textContent = 'Transfer Antar Dompet';
     document.getElementById('transfer-date').value = new Date().toISOString().split('T')[0];
-
-    const fromSelect = document.getElementById('from-wallet-select');
-    const toSelect = document.getElementById('to-wallet-select');
-    fromSelect.disabled = false;
-    toSelect.disabled = false;
-
+    document.getElementById('from-wallet-select').disabled = false;
+    document.getElementById('to-wallet-select').disabled = false;
     populateWalletSelects();
   }
 
-  function populateWalletSelects(selectedFromId = null, selectedToId = null) {
+  function populateWalletSelects(selectedFrom = null, selectedTo = null) {
     const fromSelect = document.getElementById('from-wallet-select');
     const toSelect = document.getElementById('to-wallet-select');
-
     fromSelect.innerHTML = '<option value="">Pilih Dompet</option>';
     toSelect.innerHTML = '<option value="">Pilih Dompet</option>';
-
-    state.wallets.filter(w => w.is_active).forEach(wallet => {
-    const option1 = document.createElement('option');
-    option1.value = wallet.id;
-    option1.textContent = `${wallet.name} (${wallet.formatted_balance})`;
-    fromSelect.appendChild(option1);
-
-    const option2 = document.createElement('option');
-    option2.value = wallet.id;
-    option2.textContent = `${wallet.name} (${wallet.formatted_balance})`;
-    toSelect.appendChild(option2);
+    state.wallets.filter(w => w.is_active).forEach(w => {
+    const opt1 = document.createElement('option');
+    opt1.value = w.id;
+    opt1.textContent = `${w.name} (${w.formatted_balance})`;
+    fromSelect.appendChild(opt1);
+    const opt2 = opt1.cloneNode(true);
+    toSelect.appendChild(opt2);
     });
-
-    if (selectedFromId) {
-      fromSelect.value = selectedFromId;
-    }
-    if (selectedToId) {
-      toSelect.value = selectedToId;
-    }
+    if (selectedFrom) fromSelect.value = selectedFrom;
+    if (selectedTo) toSelect.value = selectedTo;
   }
 
   function populateEditTransferForm(transfer) {
     document.getElementById('transfer-id').value = transfer.id;
     document.getElementById('transferModalTitle').textContent = 'Edit Transfer';
-
     document.getElementById('transfer-amount').value = transfer.amount;
     document.getElementById('transfer-date').value = transfer.transfer_date;
     document.getElementById('transfer-desc').value = transfer.description || '';
-
-    const fromSelect = document.getElementById('from-wallet-select');
-    const toSelect = document.getElementById('to-wallet-select');
-
     populateWalletSelects(transfer.from_wallet.id, transfer.to_wallet.id);
-
-    fromSelect.disabled = true;
-    toSelect.disabled = true;
+    document.getElementById('from-wallet-select').disabled = true;
+    document.getElementById('to-wallet-select').disabled = true;
   }
 
   window.showAddTransferModal = function() {
@@ -145,20 +118,18 @@
       tgApp.showToast('Transfer tidak ditemukan', 'danger');
       return;
     }
-
     editingTransferId = id;
     pendingTransferData = transfer;
     new bootstrap.Modal(document.getElementById('transferModal')).show();
   };
 
-  window.submitTransfer = async function() {
+  async function submitTransfer() {
     const form = document.getElementById('transferForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     const id = data.id;
     const isEdit = !!id;
 
-    // Validasi
     if (!data.from_wallet_id || !data.to_wallet_id || !data.amount) {
       tgApp.showToast('Harap isi semua field wajib', 'danger');
       return;
@@ -167,8 +138,6 @@
       tgApp.showToast('Dompet asal dan tujuan tidak boleh sama', 'warning');
       return;
     }
-
-    // Untuk edit, hapus field wallet_id karena dilarang diubah
     if (isEdit) {
       delete data.from_wallet_id;
       delete data.to_wallet_id;
@@ -177,33 +146,23 @@
     }
 
     try {
-      tgApp.showLoading('Memproses transfer...');
+      tgApp.showLoading('Memproses...');
       const url = isEdit ? `${BASE_URL}/api/fintech/transfers/${id}`: `${BASE_URL}/api/fintech/transfers`;
       const method = isEdit ? 'PUT': 'POST';
-
-      await tgApp.fetchWithAuth(url, {
-      method: method,
-      body: JSON.stringify(data)
-      });
+      await tgApp.fetchWithAuth(url, { method, body: JSON.stringify(data) });
 
       await loadWallets();
-      await loadTransfers();
+      await loadHomeSummary();
+      if (state.currentPage === 'transfers') await refreshTransferList();
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Transfer diperbarui' : 'Transfer berhasil');
+      bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
 
-      const modal = bootstrap.Modal.getInstance(document.getElementById('transferModal'));
-      modal.hide();
-
-      // Refresh tampilan sesuai halaman aktif
-      if (state.currentPage === 'home') {
-        renderHomePage();
-      } else if (state.currentPage === 'transfers') {
-        loadTransferList();
-      }
+      if (state.currentPage === 'home') renderHomePage();
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal memproses transfer', 'danger');
     }
-  };
+  }
 </script>

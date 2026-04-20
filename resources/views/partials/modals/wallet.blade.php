@@ -44,8 +44,10 @@
 </div>
 
 <script>
-  // Fungsi untuk membuka modal dalam mode tambah
+  let editingWalletId = null;
+
   function showAddWalletModal() {
+    editingWalletId = null;
     const form = document.getElementById('walletForm');
     form.reset();
     document.getElementById('wallet-id').value = '';
@@ -61,11 +63,11 @@
     new bootstrap.Modal(document.getElementById('walletModal')).show();
   }
 
-  // Fungsi untuk membuka modal dalam mode edit
-  function editWallet(id) {
+  window.editWallet = function(id) {
     const wallet = state.wallets.find(w => w.id === id);
     if (!wallet) return;
 
+    editingWalletId = id;
     document.getElementById('wallet-id').value = wallet.id;
     document.getElementById('wallet-name').value = wallet.name;
     document.getElementById('wallet-description').value = wallet.description || '';
@@ -80,9 +82,8 @@
     populateSelectWithCurrencies(currencySelect, wallet.currency);
 
     new bootstrap.Modal(document.getElementById('walletModal')).show();
-  }
+  };
 
-  // Fungsi untuk menyimpan data wallet (tambah/edit)
   async function saveWallet() {
     const form = document.getElementById('walletForm');
     const formData = new FormData(form);
@@ -90,7 +91,6 @@
     const id = data.id;
     const isEdit = !!id;
 
-    // Hapus field yang tidak diperlukan
     if (isEdit) {
       delete data.initial_balance;
       delete data.currency;
@@ -100,7 +100,6 @@
       delete data.is_active;
     }
 
-    // Validasi client-side duplikat nama
     if (!isEdit && state.wallets.some(w => w.name.toLowerCase() === data.name.toLowerCase())) {
       tgApp.showToast('Nama dompet sudah digunakan', 'warning');
       return;
@@ -113,13 +112,12 @@
       await tgApp.fetchWithAuth(url, { method, body: JSON.stringify(data) });
 
       await loadWallets();
-      await loadAllTransactions();
+      await loadHomeSummary();
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Dompet diperbarui' : 'Dompet dibuat');
       bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
 
-      // Refresh tampilan sesuai halaman aktif
       if (state.currentPage === 'wallets') {
         renderWalletsList();
       } else if (state.currentPage === 'home') {

@@ -45,12 +45,10 @@
     const form = document.getElementById('suggestCategoryForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-
     if (!data.name || !data.type) {
       tgApp.showToast('Nama dan tipe wajib diisi', 'danger');
       return;
     }
-
     try {
       tgApp.showLoading('Mengirim...');
       await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/category-suggestions', {
