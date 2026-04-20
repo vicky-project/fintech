@@ -110,15 +110,25 @@
   function populateWalletSelect(selectedId = null) {
     const select = document.getElementById('wallet-select');
     select.innerHTML = '<option value="">Pilih Dompet</option>';
+
     state.wallets.filter(w => w.is_active).forEach(wallet => {
     const option = document.createElement('option');
     option.value = wallet.id;
     option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
-    if (selectedId && wallet.id == selectedId) {
-    option.selected = true;
-    }
     select.appendChild(option);
     });
+
+    // Set selected setelah semua opsi ditambahkan
+    if (selectedId) {
+      // Pastikan selectedId dalam bentuk string untuk perbandingan value
+      const idStr = String(selectedId);
+      const exists = Array.from(select.options).some(opt => opt.value === idStr);
+      if (exists) {
+        select.value = idStr;
+      } else {
+        console.warn(`Wallet ID ${selectedId} tidak ditemukan dalam daftar.`);
+      }
+    }
   }
 
   // Filter kategori berdasarkan tipe yang dipilih
@@ -146,29 +156,34 @@
     categorySelect.appendChild(option);
     });
 
-    // Jika diberikan ID kategori, set nilai setelah opsi dibuat
     if (selectedCategoryId) {
-      categorySelect.value = selectedCategoryId;
+      const idStr = String(selectedCategoryId);
+      const exists = Array.from(categorySelect.options).some(opt => opt.value === idStr);
+      if (exists) {
+        categorySelect.value = idStr;
+      } else {
+        console.warn(`Category ID ${selectedCategoryId} tidak ditemukan untuk tipe ${selectedType}`);
+      }
     }
   }
 
-  // Mengisi form dengan data transaksi (dipanggil setelah modal tampil)
   function populateEditForm(transaction) {
+    console.log('Populate edit form with:', transaction);
+
     document.getElementById('transaction-id').value = transaction.id;
     document.getElementById('transactionModalTitle').textContent = 'Edit Transaksi';
 
-    // Isi field dasar
     document.getElementById('type-select').value = transaction.type;
     document.getElementById('amount-input').value = transaction.amount;
     document.getElementById('date-input').value = transaction.transaction_date;
     document.getElementById('desc-input').value = transaction.description || '';
 
-    // Dompet: populate dan disable
+    // Dompet
     const walletSelect = document.getElementById('wallet-select');
     populateWalletSelect(transaction.wallet_id);
     walletSelect.disabled = true;
 
-    // Filter kategori sesuai tipe, lalu set nilai kategori dengan ID yang tepat
+    // Kategori
     filterCategoriesByType(transaction.category_id);
   }
 
