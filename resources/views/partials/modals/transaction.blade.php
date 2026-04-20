@@ -1,3 +1,4 @@
+{{-- Modules/FinTech/Resources/views/partials/modals/transaction.blade.php --}}
 <div class="modal fade" id="transactionModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -85,7 +86,9 @@
 
   // Event listener untuk filter kategori
   const typeSelect = document.getElementById('type-select');
-  typeSelect.addEventListener('change', filterCategoriesByType);
+  typeSelect.addEventListener('change', function() {
+  filterCategoriesByType();
+  });
   });
 
   // ==================== FUNGSI UTAMA ====================
@@ -100,7 +103,7 @@
     document.getElementById('wallet-select').disabled = false;
 
     populateWalletSelect();
-    filterCategoriesByType();
+    filterCategoriesByType(); // tanpa parameter, hanya mengisi opsi
   }
 
   // Isi dropdown dompet
@@ -119,13 +122,13 @@
   }
 
   // Filter kategori berdasarkan tipe yang dipilih
-  function filterCategoriesByType() {
+  // @param {number|null} selectedCategoryId - ID kategori yang ingin dipilih setelah filter
+  function filterCategoriesByType(selectedCategoryId = null) {
     const typeSelect = document.getElementById('type-select');
     const categorySelect = document.getElementById('category-select');
     if (!typeSelect || !categorySelect) return;
 
     const selectedType = typeSelect.value;
-    const currentCategoryId = categorySelect.value;
 
     const filtered = state.categories.filter(cat => {
     if (selectedType === 'income') {
@@ -143,12 +146,9 @@
     categorySelect.appendChild(option);
     });
 
-    // Coba pulihkan pilihan sebelumnya jika masih ada
-    if (currentCategoryId) {
-      const exists = Array.from(categorySelect.options).some(opt => opt.value === currentCategoryId);
-      if (exists) {
-        categorySelect.value = currentCategoryId;
-      }
+    // Jika diberikan ID kategori, set nilai setelah opsi dibuat
+    if (selectedCategoryId) {
+      categorySelect.value = selectedCategoryId;
     }
   }
 
@@ -168,10 +168,8 @@
     populateWalletSelect(transaction.wallet_id);
     walletSelect.disabled = true;
 
-    // Filter kategori sesuai tipe, lalu set nilai kategori
-    filterCategoriesByType();
-    const categorySelect = document.getElementById('category-select');
-    categorySelect.value = transaction.category_id;
+    // Filter kategori sesuai tipe, lalu set nilai kategori dengan ID yang tepat
+    filterCategoriesByType(transaction.category_id);
   }
 
   // ==================== TAMBAH & EDIT ====================
