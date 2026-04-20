@@ -161,7 +161,7 @@
     }
     categorySelect.appendChild(option);
     });
-    alert(JSON.stringify(filtered), currentCategoryId);
+    alert(currentCategoryId);
   }
 
   // Simpan transaksi (tambah/edit)
