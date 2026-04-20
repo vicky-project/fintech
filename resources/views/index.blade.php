@@ -541,7 +541,7 @@
     <i class="bi bi-arrow-right me-2 text-primary"></i>
     <span>${t.from_wallet.name} → ${t.to_wallet.name}</span>
     </div>
-    <div class="text-primary fw-bold mb-1" title="${trx.formatted_amount}">↔ ${formatNumberShort(t.amount)}</div>
+    <div class="text-primary fw-bold mb-1" title="${t.formatted_amount}">↔ ${formatNumberShort(t.amount)}</div>
     <small class="text-muted">${formatDate(t.transfer_date)}</small>
     ${t.description ? `<div class="small text-muted mt-1">${t.description}</div>` : ''}
     </div>
