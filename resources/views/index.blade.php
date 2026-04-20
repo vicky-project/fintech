@@ -383,7 +383,7 @@
     <h5>Transaksi</h5>
     <div>
     <button class="btn btn-sm btn-outline-info me-1" onclick="showSuggestCategoryModal()" title="Usulkan Kategori Baru">
-    <i class="bi bi-lightbulb"></i>
+    <i class="bi bi-tags"></i>
     </button>
     <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()">
     <i class="bi bi-trash"></i>
