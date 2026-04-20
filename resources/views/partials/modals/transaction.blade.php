@@ -103,20 +103,52 @@
     // Populate dompet dan disable (readonly)
     const walletSelect = document.getElementById('wallet-select');
     populateWalletSelect(trx.wallet_id);
-    walletSelect.disabled = true; // Dompet tidak bisa diubah
+    walletSelect.disabled = true;
 
-    // Filter dan pilih kategori
-    filterCategoriesByType();
-    // Tunggu sebentar agar DOM terupdate
-    setTimeout(() => {
-    const categorySelect = document.getElementById('category-select');
-    if (categorySelect) {
-    categorySelect.value = trx.category_id;
-    }
-    }, 20);
+    // Filter kategori dan langsung set nilai setelah opsi dibuat
+    filterCategoriesByType(() => {
+      const categorySelect = document.getElementById('category-select');
+      if (categorySelect) {
+        categorySelect.value = trx.category_id;
+      }
+    });
 
     new bootstrap.Modal(document.getElementById('transactionModal')).show();
   };
+
+  // Fungsi filter kategori dengan callback opsional setelah render
+  function filterCategoriesByType(callback = null) {
+    const typeSelect = document.getElementById('type-select');
+    const categorySelect = document.getElementById('category-select');
+    if (!typeSelect || !categorySelect) return;
+
+    const selectedType = typeSelect.value;
+    // Simpan nilai yang mungkin sudah dipilih (tidak relevan untuk mode edit)
+    // const currentCategoryId = categorySelect.value;
+
+    const filtered = state.categories.filter(cat => {
+    if (selectedType === 'income') {
+    return cat.type === 'income' || cat.type === 'both';
+    } else if (selectedType === 'expense') {
+    return cat.type === 'expense' || cat.type === 'both';
+    }
+    return true;
+    });
+
+    // Render ulang opsi
+    categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
+    filtered.forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat.id;
+    option.textContent = cat.name;
+    categorySelect.appendChild(option);
+    });
+
+    // Panggil callback setelah opsi selesai ditambahkan
+    if (callback) {
+      callback();
+    }
+  }
 
   // Helper: isi dropdown dompet
   function populateWalletSelect(selectedId = null) {
@@ -130,37 +162,6 @@
     option.selected = true;
     }
     walletSelect.appendChild(option);
-    });
-  }
-
-  // Filter kategori berdasarkan tipe
-  function filterCategoriesByType() {
-    const typeSelect = document.getElementById('type-select');
-    const categorySelect = document.getElementById('category-select');
-    if (!typeSelect || !categorySelect) return;
-
-    alert(categorySelect.value);
-    const selectedType = typeSelect.value;
-    const currentCategoryId = categorySelect.value;
-
-    const filtered = state.categories.filter(cat => {
-    if (selectedType === 'income') {
-    return cat.type === 'income' || cat.type === 'both';
-    } else if (selectedType === 'expense') {
-    return cat.type === 'expense' || cat.type === 'both';
-    }
-    return true;
-    });
-
-    categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
-    filtered.forEach(cat => {
-    const option = document.createElement('option');
-    option.value = cat.id;
-    option.textContent = cat.name;
-    if (cat.id == currentCategoryId) {
-    option.selected = true;
-    }
-    categorySelect.appendChild(option);
     });
   }
 
