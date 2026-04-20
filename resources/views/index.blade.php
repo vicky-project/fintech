@@ -309,11 +309,15 @@
     }
 
     function getTotalIncome() {
-    return state.allTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    return state.allTransactions
+    .filter(t => t.type === 'income' || (t.type === 'transfer' && t.metadata?.transfer_to_wallet_id))
+    .reduce((s, t) => s + t.amount, 0);
     }
 
     function getTotalExpense() {
-    return state.allTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    return state.allTransactions
+    .filter(t => t.type === 'expense' || (t.type === 'transfer' && !t.metadata?.transfer_to_wallet_id))
+    .reduce((s, t) => s + t.amount, 0);
     }
 
     function renderRecentTransactions() {
@@ -323,12 +327,28 @@
     container.innerHTML = '<p class="text-muted text-center">Belum ada transaksi</p>';
     return;
     }
-    container.innerHTML = state.recentTransactions.map(trx => `
+    container.innerHTML = state.recentTransactions.map(trx => {
+    let icon = trx.category.icon;
+    let color = trx.category.color;
+    let amountClass = '';
+    let sign = '';
+    if (trx.type === 'income') {
+    amountClass = 'text-success';
+    sign = '';
+    } else if (trx.type === 'expense') {
+    amountClass = 'text-danger';
+    sign = '-';
+    } else if (trx.type === 'transfer') {
+    amountClass = 'text-primary';
+    sign = '↔ ';
+    }
+    return `
     <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-    <div><i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>${trx.category.name}</div>
-    <span class="${trx.type === 'income' ? 'text-success' : 'text-danger'}">${trx.formatted_amount}</span>
+    <div><i class="${icon} me-2" style="color:${color}"></i>${trx.category.name}</div>
+    <span class="${amountClass}">${sign}${trx.formatted_amount}</span>
     </div>
-    `).join('');
+    `;
+    }).join('');
     }
 
     async function loadHomeChart() {
@@ -384,11 +404,14 @@
     const filtered = getFilteredTransactions();
     const income = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
     const expense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const transfer = filtered.filter(t => t.type === 'transfer').reduce((s, t) => s + t.amount, 0);
     const symbol = getCurrencySymbol(state.defaultCurrency);
+
     document.getElementById('transaction-stats').innerHTML = `
-    <div class="col-4"><div class="card p-2 text-center"><small>Total</small><strong>${filtered.length}</strong></div></div>
-    <div class="col-4"><div class="card p-2 text-center text-success"><small>Masuk</small><strong>${symbol}${formatNumber(income)}</strong></div></div>
-    <div class="col-4"><div class="card p-2 text-center text-danger"><small>Keluar</small><strong>${symbol}${formatNumber(expense)}</strong></div></div>
+    <div class="col-3"><div class="card p-2 text-center"><small>Total</small><strong>${filtered.length}</strong></div></div>
+    <div class="col-3"><div class="card p-2 text-center text-success"><small>Masuk</small><strong>${symbol}${formatNumber(income)}</strong></div></div>
+    <div class="col-3"><div class="card p-2 text-center text-danger"><small>Keluar</small><strong>${symbol}${formatNumber(expense)}</strong></div></div>
+    <div class="col-3"><div class="card p-2 text-center text-primary"><small>Transfer</small><strong>${symbol}${formatNumber(transfer)}</strong></div></div>
     `;
     }
 
@@ -399,11 +422,23 @@
     container.innerHTML = '<p class="text-muted text-center py-4">Tidak ada transaksi</p>';
     return;
     }
-    container.innerHTML = filtered.slice(0, 50).map(trx => `
-    <div class="card mb-2">
+    container.innerHTML = filtered.slice(0, 50).map(trx => {
+    let amountClass = '';
+    let sign = '';
+    if (trx.type === 'income') {
+    amountClass = 'text-success';
+    } else if (trx.type === 'expense') {
+    amountClass = 'text-danger';
+    sign = '-';
+    } else if (trx.type === 'transfer') {
+    amountClass = 'text-primary';
+    sign = '↔ ';
+    }
+    return `
+    <div class="card mb-2" onclick="showTransactionDetail(${trx.id})">
     <div class="card-body p-3">
     <div class="d-flex justify-content-between align-items-start">
-    <div class="flex-grow-1" onclick="showTransactionDetail(${trx.id})">
+    <div class="flex-grow-1">
     <div class="d-flex align-items-center">
     <i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>
     <div>
@@ -411,11 +446,10 @@
     <small class="text-muted">${trx.wallet.name} · ${formatDate(trx.transaction_date)}</small>
     </div>
     </div>
+    ${trx.description ? `<small class="text-muted d-block mt-1">${trx.description}</small>` : ''}
     </div>
     <div class="d-flex align-items-center">
-    <span class="${trx.type === 'income' ? 'text-success' : 'text-danger'} fw-bold me-2">
-    ${trx.formatted_amount}
-    </span>
+    <span class="${amountClass} fw-bold me-2">${sign}${trx.formatted_amount}</span>
     <div class="dropdown">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
     <i class="bi bi-three-dots-vertical"></i>
@@ -431,10 +465,10 @@
     </div>
     </div>
     </div>
-    ${trx.description ? `<small class="text-muted d-block mt-1">${trx.description}</small>` : ''}
     </div>
     </div>
-    `).join('');
+    `;
+    }).join('');
     }
 
     function applyTransactionFilter() {
@@ -446,7 +480,16 @@
     function showTransactionDetail(id) {
     const trx = state.allTransactions.find(t => t.id === id);
     if (!trx) return;
-    alert(`${trx.category.name}\n${trx.formatted_amount}\n${trx.wallet.name}\n${trx.description || ''}`);
+
+    let detail = `${trx.category.name}\n${trx.formatted_amount}\n${trx.wallet.name}\n${trx.description || ''}`;
+    if (trx.type === 'transfer' && trx.metadata) {
+    if (trx.metadata.transfer_to_wallet_id) {
+    detail += `\nTransfer ke: ${trx.metadata.transfer_to_wallet_name}`;
+    } else if (trx.metadata.transfer_from_wallet_id) {
+    detail += `\nTransfer dari: ${trx.metadata.transfer_from_wallet_name}`;
+    }
+    }
+    alert(detail);
     }
 
     // ==================== WALLETS PAGE ====================
