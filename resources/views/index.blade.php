@@ -380,7 +380,7 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <div>
+    <div class="d-flex">
     <i class="bi bi-list-ul me-2"></i>
     <h5>Transaksi</h5>
     </div>
@@ -850,8 +850,10 @@
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
-    <i class="bi bi-wallet2"></i>
+    <div>
+    <i class="bi bi-wallet2 me-2"></i>
     <h5>Dompet Saya</h5>
+    </div>
     <button class="btn btn-sm btn-primary" onclick="showAddWalletModal()"><i class="bi bi-plus"></i></button>
     </div>
     <div id="wallet-list"></div>
@@ -1040,7 +1042,12 @@
     function renderReportsPage() {
     const html = `
     <div class="container py-3">
+    <div class="d-flex justify-content-between mb-3">
+    <div>
+    <i class="bi bi-bar-chart me-2"></i>
     <h5>Laporan Keuangan</h5>
+    </div>
+    </div>
     <div class="mb-3">
     <select class="form-select form-select-sm" id="report-wallet" onchange="loadReportCharts()">
     <option value="">Semua Dompet</option>
