@@ -59,6 +59,8 @@ class StatementController extends Controller
       ], 422);
     }
 
+    \Log::debug("Files", $file);
+
     // Simpan file sementara
     $tempPath = $file->storeAs(
       'temp/statements/' . $user->id,
