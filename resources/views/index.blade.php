@@ -36,6 +36,7 @@
       <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-bar-chart fs-5"></i></button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
+      <button class="btn nav-btn" data-page="insights"><i class="bi bi-graph-down fs-5"></i></button>
     </div>
   </nav>
 
@@ -47,8 +48,8 @@
       </button>
       <ul class="dropdown-menu dropdown-menu-end mb-2">
         <li><a class="dropdown-item" href="#" onclick="showAddWalletModal()"><i class="bi bi-wallet me-2"></i>Tambah Dompet</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showAddTransactionModal()"><i class="bi bi-arrow-left-right me-2"></i>Tambah Transaksi</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showAddTransferModal()"><i class="bi bi-arrow-left-right me-2"></i>Transfer</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showAddTransactionModal()"><i class="bi bi-plus-circle me-2"></i>Tambah Transaksi</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showAddTransferModal()"><i class="bi bi-send me-2"></i>Transfer</a></li>
         <li><a class="dropdown-item" href="#" onclick="navigateToTrash()"><i class="bi bi-trash me-2"></i>Tempat Sampah</a></li>
       </ul>
     </div>
