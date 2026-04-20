@@ -227,6 +227,8 @@
       return;
     }
 
+    if (isEdit) delete data.wallet_id;
+
     if (!isEdit) delete data.id;
 
     try {
