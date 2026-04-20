@@ -100,9 +100,11 @@
     option.textContent = `${w.name} (${w.formatted_balance})`;
     select.appendChild(option);
     });
-    if (selectedId) {
-      select.value = selectedId;
-      hidden.value = selectedId;
+
+    const defaultWalletId = selectedId || state.userSettings?.default_wallet_id;
+    if (defaultWalletId) {
+      select.value = defaultWalletId;
+      hidden.value = defaultWalletId;
     } else {
       hidden.value = '';
     }

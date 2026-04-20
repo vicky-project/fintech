@@ -58,7 +58,8 @@
 
     const currencySelect = document.getElementById('wallet-currency');
     currencySelect.disabled = false;
-    populateSelectWithCurrencies(currencySelect, 'IDR');
+    const defaultCurrency = state.userSettings?.default_currency || '{{ config("fintech.default_currency", "IDR") }}'
+    populateSelectWithCurrencies(currencySelect, defaultCurrency);
 
     new bootstrap.Modal(document.getElementById('walletModal')).show();
   }
