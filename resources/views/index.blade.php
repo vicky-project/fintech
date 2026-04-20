@@ -58,6 +58,7 @@
 @include('fintech::partials.modals.transaction')
 @include('fintech::partials.modals.transfer')
 @include('fintech::partials.modals.suggest-category')
+@include('fintech::partials.modals.transfer')
 @endsection
 
 @push('scripts')
@@ -65,13 +66,14 @@
 <script>
   const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
 
-  // State management
+  // ==================== STATE MANAGEMENT ====================
   const state = {
     wallets: [],
     categories: [],
     currencies: [],
     allTransactions: [],
     recentTransactions: [],
+    transfers: [],
     totalBalance: 0,
     currentPage: 'home',
     filters: {
@@ -92,8 +94,15 @@
 
   async function initializeApp() {
     const loadingOverlay = document.getElementById('loading-overlay');
-
     try {
+      loadingOverlay.classList.remove('d-none');
+      loadingOverlay.innerHTML = `
+      <div class="text-center">
+      <div class="spinner-border text-primary mb-3" role="status"></div>
+      <p class="text-muted">Memuat data keuangan...</p>
+      </div>
+      `;
+
       await Promise.all([
       loadWallets().catch(e => { throw new Error('Gagal memuat dompet: ' + e.message); }),
       loadCategories().catch(e => { throw new Error('Gagal memuat kategori: ' + e.message); }),
@@ -105,16 +114,16 @@
         tgApp.showToast('Gagal memuat transaksi terbaru', 'warning');
         state.allTransactions = [];
         });
+        await loadTransfers().catch(e => {
+        console.warn('Gagal memuat transfer', e);
+        state.transfers = [];
+        });
       }
 
       navigateTo('home');
-
-      // Sembunyikan overlay dengan class d-none
       loadingOverlay.classList.add('d-none');
-
     } catch (error) {
       console.error('Init error:', error);
-      // Tampilkan pesan error di overlay (tetap visible)
       loadingOverlay.innerHTML = `
       <div class="text-center p-4">
       <i class="bi bi-exclamation-triangle text-danger display-4"></i>
@@ -125,22 +134,11 @@
       </button>
       </div>
       `;
-
       loadingOverlay.classList.remove('d-none');
     }
   }
 
-  // Fungsi untuk mencoba ulang inisialisasi
   function retryInitialization() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    // Reset overlay ke tampilan loading spinner
-    loadingOverlay.innerHTML = `
-    <div class="text-center">
-    <div class="spinner-border text-primary mb-3" role="status"></div>
-    <p class="text-muted">Memuat data keuangan...</p>
-    </div>
-    `;
-    loadingOverlay.classList.remove('d-none');
     initializeApp();
   }
 
@@ -150,72 +148,41 @@
     });
   }
 
-  // Setup FAB opacity on dropdown toggle
   function setupFabOpacity() {
     const fab = document.getElementById('fab-button');
     if (!fab) return;
-
-    // Atur opacity awal
     fab.style.opacity = '0.7';
-
-    // Event saat dropdown ditampilkan
-    fab.addEventListener('shown.bs.dropdown', () => {
-    fab.style.opacity = '1';
-    });
-
-    // Event saat dropdown disembunyikan
-    fab.addEventListener('hidden.bs.dropdown', () => {
-    fab.style.opacity = '0.7';
-    });
+    fab.addEventListener('shown.bs.dropdown', () => fab.style.opacity = '1');
+    fab.addEventListener('hidden.bs.dropdown', () => fab.style.opacity = '0.7');
   }
 
   // ==================== DATA LOADING ====================
   async function loadWallets() {
-    try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
-      state.wallets = res.data || [];
-      state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
-    } catch (error) {
-      console.error('loadWallets error:', error);
-      state.wallets = [];
-      state.totalBalance = 0;
-      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
-    }
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
+    state.wallets = res.data || [];
+    state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
+    state.defaultCurrency = state.wallets[0]?.currency || 'IDR';
   }
 
   async function loadCategories() {
-    try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/categories');
-      state.categories = res.data || [];
-    } catch(error) {
-      console.error('loadCategories error:', error);
-      state.categories = [];
-      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
-    }
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/categories');
+    state.categories = res.data || [];
   }
 
   async function loadCurrencies() {
-    try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
-      state.currencies = res.data || [];
-    } catch(error) {
-      console.error('loadCurrencies error:', error);
-      state.currencies = [];
-      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
-    }
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
+    state.currencies = res.data || [];
   }
 
   async function loadAllTransactions() {
-    try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=100');
-      state.allTransactions = res.data.data || [];
-      state.recentTransactions = state.allTransactions.slice(0, 5);
-    } catch(error) {
-      console.error('loadAllTransactions error:', error);
-      state.allTransactions = [];
-      state.recentTransactions = [];
-      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
-    }
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions?per_page=100');
+    state.allTransactions = res.data.data || [];
+    state.recentTransactions = state.allTransactions.slice(0, 5);
+  }
+
+  async function loadTransfers() {
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transfers?per_page=100');
+    state.transfers = res.data.data || [];
   }
 
   // ==================== NAVIGATION ====================
@@ -234,15 +201,10 @@
     switch (page) {
       case 'home': renderHomePage(); break;
       case 'transactions': renderTransactionsPage(); break;
+      case 'transfers': renderTransfersPage(); break;
       case 'wallets': renderWalletsPage(); break;
       case 'reports': renderReportsPage(); break;
     }
-  }
-
-  function navigateToTrash() {
-    state.currentPage = 'trash';
-    renderTrashPage();
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
   }
 
   // ==================== EMPTY STATE ====================
@@ -261,7 +223,7 @@
 
   // ==================== HOME PAGE ====================
   function renderHomePage() {
-    const symbol = getCurrencySymbol(state.wallets[0]?.currency || 'IDR');
+    const symbol = getCurrencySymbol(state.defaultCurrency);
     const html = `
     <div class="container py-3">
     <div class="card bg-gradient-primary text-white mb-3" style="background: linear-gradient(135deg, #667eea, #764ba2);">
@@ -309,15 +271,11 @@
     }
 
     function getTotalIncome() {
-    return state.allTransactions
-    .filter(t => t.type === 'income' || (t.type === 'transfer' && t.metadata?.transfer_to_wallet_id))
-    .reduce((s, t) => s + t.amount, 0);
+    return state.allTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
     }
 
     function getTotalExpense() {
-    return state.allTransactions
-    .filter(t => t.type === 'expense' || (t.type === 'transfer' && !t.metadata?.transfer_to_wallet_id))
-    .reduce((s, t) => s + t.amount, 0);
+    return state.allTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     }
 
     function renderRecentTransactions() {
@@ -328,23 +286,11 @@
     return;
     }
     container.innerHTML = state.recentTransactions.map(trx => {
-    let icon = trx.category.icon;
-    let color = trx.category.color;
-    let amountClass = '';
-    let sign = '';
-    if (trx.type === 'income') {
-    amountClass = 'text-success';
-    sign = '';
-    } else if (trx.type === 'expense') {
-    amountClass = 'text-danger';
-    sign = '-';
-    } else if (trx.type === 'transfer') {
-    amountClass = 'text-primary';
-    sign = '↔ ';
-    }
+    const amountClass = trx.type === 'income' ? 'text-success' : 'text-danger';
+    const sign = trx.type === 'income' ? '' : '-';
     return `
     <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-    <div><i class="${icon} me-2" style="color:${color}"></i>${trx.category.name}</div>
+    <div><i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>${trx.category.name}</div>
     <span class="${amountClass}">${sign}${trx.formatted_amount}</span>
     </div>
     `;
@@ -352,15 +298,18 @@
     }
 
     async function loadHomeChart() {
-    try {
     const ctx = document.getElementById('homeChart')?.getContext('2d');
     if (!ctx) return;
+    try {
     const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/reports/doughnut-weekly');
     const data = res.data;
     if (state.chartInstances.home) state.chartInstances.home.destroy();
-    state.chartInstances.home = new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: data.colors }] } });
-    } catch(error) {
-    tgApp.showToast('Gagal memuat grafik: ' + error.message, 'danger');
+    state.chartInstances.home = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: data.colors }] }
+    });
+    } catch (error) {
+    tgApp.showToast('Gagal memuat grafik', 'danger');
     }
     }
 
@@ -374,8 +323,12 @@
     <button class="btn btn-sm btn-outline-info me-1" onclick="showSuggestCategoryModal()" title="Usulkan Kategori Baru">
     <i class="bi bi-lightbulb"></i>
     </button>
-    <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()"><i class="bi bi-trash"></i></button>
-    <button class="btn btn-sm btn-primary" onclick="showAddTransactionModal()"><i class="bi bi-plus"></i></button>
+    <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()">
+    <i class="bi bi-trash"></i>
+    </button>
+    <button class="btn btn-sm btn-primary" onclick="showAddTransactionModal()">
+    <i class="bi bi-plus"></i>
+    </button>
     </div>
     </div>
     <div class="row g-2 mb-3" id="transaction-stats"></div>
@@ -404,14 +357,11 @@
     const filtered = getFilteredTransactions();
     const income = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
     const expense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const transfer = filtered.filter(t => t.type === 'transfer').reduce((s, t) => s + t.amount, 0);
     const symbol = getCurrencySymbol(state.defaultCurrency);
-
     document.getElementById('transaction-stats').innerHTML = `
-    <div class="col-3"><div class="card p-2 text-center"><small>Total</small><strong>${filtered.length}</strong></div></div>
-    <div class="col-3"><div class="card p-2 text-center text-success"><small>Masuk</small><strong>${symbol}${formatNumber(income)}</strong></div></div>
-    <div class="col-3"><div class="card p-2 text-center text-danger"><small>Keluar</small><strong>${symbol}${formatNumber(expense)}</strong></div></div>
-    <div class="col-3"><div class="card p-2 text-center text-primary"><small>Transfer</small><strong>${symbol}${formatNumber(transfer)}</strong></div></div>
+    <div class="col-4"><div class="card p-2 text-center"><small>Total</small><strong>${filtered.length}</strong></div></div>
+    <div class="col-4"><div class="card p-2 text-center text-success"><small>Masuk</small><strong>${symbol}${formatNumber(income)}</strong></div></div>
+    <div class="col-4"><div class="card p-2 text-center text-danger"><small>Keluar</small><strong>${symbol}${formatNumber(expense)}</strong></div></div>
     `;
     }
 
@@ -423,17 +373,8 @@
     return;
     }
     container.innerHTML = filtered.slice(0, 50).map(trx => {
-    let amountClass = '';
-    let sign = '';
-    if (trx.type === 'income') {
-    amountClass = 'text-success';
-    } else if (trx.type === 'expense') {
-    amountClass = 'text-danger';
-    sign = '-';
-    } else if (trx.type === 'transfer') {
-    amountClass = 'text-primary';
-    sign = '↔ ';
-    }
+    const amountClass = trx.type === 'income' ? 'text-success' : 'text-danger';
+    const sign = trx.type === 'income' ? '' : '-';
     return `
     <div class="card mb-2" onclick="showTransactionDetail(${trx.id})">
     <div class="card-body p-3">
@@ -480,16 +421,198 @@
     function showTransactionDetail(id) {
     const trx = state.allTransactions.find(t => t.id === id);
     if (!trx) return;
+    alert(`${trx.category.name}\n${trx.formatted_amount}\n${trx.wallet.name}\n${trx.description || ''}`);
+    }
 
-    let detail = `${trx.category.name}\n${trx.formatted_amount}\n${trx.wallet.name}\n${trx.description || ''}`;
-    if (trx.type === 'transfer' && trx.metadata) {
-    if (trx.metadata.transfer_to_wallet_id) {
-    detail += `\nTransfer ke: ${trx.metadata.transfer_to_wallet_name}`;
-    } else if (trx.metadata.transfer_from_wallet_id) {
-    detail += `\nTransfer dari: ${trx.metadata.transfer_from_wallet_name}`;
+    // ==================== TRANSFERS PAGE ====================
+    function renderTransfersPage() {
+    const html = `
+    <div class="container py-3">
+    <div class="d-flex justify-content-between mb-3">
+    <h5>Transfer</h5>
+    <div>
+    <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTransferTrash()">
+    <i class="bi bi-trash"></i>
+    </button>
+    <button class="btn btn-sm btn-primary" onclick="showAddTransferModal()">
+    <i class="bi bi-plus"></i>
+    </button>
+    </div>
+    </div>
+    <div class="mb-3">
+    <select class="form-select form-select-sm" id="transfer-wallet-filter" onchange="loadTransferList()">
+    <option value="">Semua Dompet</option>
+    ${state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+    </select>
+    </div>
+    <div id="transfer-list"></div>
+    </div>
+    `;
+    document.getElementById('main-content').innerHTML = html;
+    loadTransferList();
+    }
+
+    async function loadTransferList() {
+    const walletId = document.getElementById('transfer-wallet-filter')?.value || '';
+    let url = BASE_URL + '/api/fintech/transfers?per_page=50';
+    if (walletId) url += `&wallet_id=${walletId}`;
+    try {
+    const res = await tgApp.fetchWithAuth(url);
+    state.transfers = res.data.data || [];
+    renderTransferList(state.transfers);
+    } catch (error) {
+    tgApp.showToast('Gagal memuat transfer', 'danger');
     }
     }
-    alert(detail);
+
+    function renderTransferList(transfers) {
+    const container = document.getElementById('transfer-list');
+    if (!transfers.length) {
+    container.innerHTML = '<p class="text-muted text-center py-4">Belum ada transfer</p>';
+    return;
+    }
+    container.innerHTML = transfers.map(t => `
+    <div class="card mb-2">
+    <div class="card-body p-3">
+    <div class="d-flex justify-content-between align-items-start">
+    <div class="flex-grow-1" onclick="editTransfer(${t.id})">
+    <div class="d-flex align-items-center mb-1">
+    <i class="bi bi-arrow-right me-2 text-primary"></i>
+    <span>${t.from_wallet.name} → ${t.to_wallet.name}</span>
+    </div>
+    <div class="text-primary fw-bold mb-1">↔ ${t.formatted_amount}</div>
+    <small class="text-muted">${formatDate(t.transfer_date)}</small>
+    ${t.description ? `<div class="small text-muted mt-1">${t.description}</div>` : ''}
+    </div>
+    <div class="dropdown">
+    <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
+    <i class="bi bi-three-dots-vertical"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="#" onclick="editTransfer(${t.id})">
+    <i class="bi bi-pencil me-2"></i>Edit
+    </a></li>
+    <li><a class="dropdown-item text-danger" href="#" onclick="deleteTransfer(${t.id})">
+    <i class="bi bi-trash me-2"></i>Hapus
+    </a></li>
+    </ul>
+    </div>
+    </div>
+    </div>
+    </div>
+    `).join('');
+    }
+
+    // ==================== TRASH ====================
+    function navigateToTrash() {
+    state.currentPage = 'trash';
+    renderTrashPage();
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    }
+
+    async function renderTrashPage() {
+    const html = `
+    <div class="container py-3">
+    <div class="d-flex align-items-center mb-3">
+    <button class="btn btn-link me-2" onclick="navigateTo('transactions')"><i class="bi bi-arrow-left"></i></button>
+    <h5 class="mb-0">Tempat Sampah Transaksi</h5>
+    </div>
+    <div id="trash-list"></div>
+    </div>
+    `;
+    document.getElementById('main-content').innerHTML = html;
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions/trashed');
+    const trashed = res.data.data || [];
+    const container = document.getElementById('trash-list');
+    if (!trashed.length) {
+    container.innerHTML = '<p class="text-muted text-center">Kosong</p>';
+    return;
+    }
+    container.innerHTML = trashed.map(t => `
+    <div class="card mb-2">
+    <div class="card-body">
+    <div class="d-flex justify-content-between">
+    <div>
+    <div>${t.category.name} · ${t.formatted_amount}</div>
+    <small class="text-muted">${t.wallet.name} · ${formatDate(t.transaction_date)}</small>
+    </div>
+    <div>
+    <button class="btn btn-sm btn-outline-success" onclick="restoreTransaction(${t.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
+    <button class="btn btn-sm btn-outline-danger" onclick="forceDeleteTransaction(${t.id})"><i class="bi bi-trash"></i></button>
+    </div>
+    </div>
+    </div>
+    </div>
+    `).join('');
+    }
+
+    async function restoreTransaction(id) {
+    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/restore`, { method: 'POST' });
+    await loadAllTransactions();
+    await loadWallets();
+    renderTrashPage();
+    }
+
+    async function forceDeleteTransaction(id) {
+    if (!confirm('Hapus permanen?')) return;
+    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/force`, { method: 'DELETE' });
+    renderTrashPage();
+    }
+
+    function navigateToTransferTrash() {
+    state.currentPage = 'transfer-trash';
+    renderTransferTrashPage();
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    }
+
+    async function renderTransferTrashPage() {
+    const html = `
+    <div class="container py-3">
+    <div class="d-flex align-items-center mb-3">
+    <button class="btn btn-link me-2" onclick="navigateTo('transfers')"><i class="bi bi-arrow-left"></i></button>
+    <h5 class="mb-0">Tempat Sampah Transfer</h5>
+    </div>
+    <div id="transfer-trash-list"></div>
+    </div>
+    `;
+    document.getElementById('main-content').innerHTML = html;
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transfers/trashed');
+    const trashed = res.data.data || [];
+    const container = document.getElementById('transfer-trash-list');
+    if (!trashed.length) {
+    container.innerHTML = '<p class="text-muted text-center">Kosong</p>';
+    return;
+    }
+    container.innerHTML = trashed.map(t => `
+    <div class="card mb-2">
+    <div class="card-body">
+    <div class="d-flex justify-content-between">
+    <div>
+    <div>${t.from_wallet.name} → ${t.to_wallet.name}</div>
+    <div class="text-primary">${t.formatted_amount}</div>
+    <small class="text-muted">${formatDate(t.transfer_date)}</small>
+    </div>
+    <div>
+    <button class="btn btn-sm btn-outline-success" onclick="restoreTransfer(${t.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
+    <button class="btn btn-sm btn-outline-danger" onclick="forceDeleteTransfer(${t.id})"><i class="bi bi-trash"></i></button>
+    </div>
+    </div>
+    </div>
+    </div>
+    `).join('');
+    }
+
+    async function restoreTransfer(id) {
+    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transfers/${id}/restore`, { method: 'POST' });
+    await loadWallets();
+    await loadTransfers();
+    renderTransferTrashPage();
+    }
+
+    async function forceDeleteTransfer(id) {
+    if (!confirm('Hapus permanen?')) return;
+    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transfers/${id}/force`, { method: 'DELETE' });
+    renderTransferTrashPage();
     }
 
     // ==================== WALLETS PAGE ====================
@@ -556,68 +679,28 @@
     try {
     const period = document.querySelector('#reportTab .active')?.dataset.period || 'monthly';
     const walletId = document.getElementById('report-wallet')?.value || '';
-    let url = `/api/fintech/reports/${period}`;
+    let url = `${BASE_URL}/api/fintech/reports/${period}`;
     if (walletId) url += `?wallet_id=${walletId}`;
 
-    const res = await tgApp.fetchWithAuth(BASE_URL + url);
+    const res = await tgApp.fetchWithAuth(url);
     const data = res.data;
     const ctx = document.getElementById('reportBarChart')?.getContext('2d');
     if (ctx) {
     if (state.chartInstances.report) state.chartInstances.report.destroy();
     state.chartInstances.report = new Chart(ctx, {
     type: 'bar',
-    data: { labels: data.labels, datasets: [
+    data: {
+    labels: data.labels,
+    datasets: [
     { label: 'Pemasukan', data: data.income, backgroundColor: '#4DB6AC' },
     { label: 'Pengeluaran', data: data.expense, backgroundColor: '#FF6384' }
-    ]}
+    ]
+    }
     });
     }
-    } catch(error) {
-    tgApp.showToast('Gagal memuat grafik: ' + error.message, 'danger');
+    } catch (error) {
+    tgApp.showToast('Gagal memuat laporan', 'danger');
     }
-    }
-
-    // ==================== TRASH PAGE ====================
-    async function renderTrashPage() {
-    const html = `
-    <div class="container py-3">
-    <div class="d-flex align-items-center mb-3">
-    <button class="btn btn-link me-2" onclick="navigateTo('transactions')"><i class="bi bi-arrow-left"></i></button>
-    <h5 class="mb-0">Tempat Sampah</h5>
-    </div>
-    <div id="trash-list"></div>
-    </div>
-    `;
-    document.getElementById('main-content').innerHTML = html;
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions/trashed');
-    const trashed = res.data.data || [];
-    const container = document.getElementById('trash-list');
-    container.innerHTML = trashed.length ? trashed.map(t => `
-    <div class="card mb-2">
-    <div class="card-body">
-    <div class="d-flex justify-content-between">
-    <div>${t.category.name} · ${t.formatted_amount}</div>
-    <div>
-    <button class="btn btn-sm btn-outline-success" onclick="restoreTransaction(${t.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
-    <button class="btn btn-sm btn-outline-danger" onclick="forceDeleteTransaction(${t.id})"><i class="bi bi-trash"></i></button>
-    </div>
-    </div>
-    </div>
-    </div>
-    `).join('') : '<p class="text-muted text-center">Kosong</p>';
-    }
-
-    async function restoreTransaction(id) {
-    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/restore`, { method: 'POST' });
-    await loadAllTransactions();
-    await loadWallets();
-    renderTrashPage();
-    }
-
-    async function forceDeleteTransaction(id) {
-    if (!confirm('Hapus permanen?')) return;
-    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/force`, { method: 'DELETE' });
-    renderTrashPage();
     }
 
     // ==================== UTILS ====================
@@ -625,10 +708,21 @@
     const c = state.currencies.find(c => c.code === code);
     return c?.symbol || code.symbol || code;
     }
-    function formatNumber(n) { return new Intl.NumberFormat('id-ID').format(n); }
-    function formatDate(d) { return new Date(d).toLocaleDateString('id-ID', { day:'numeric', month:'short' }); }
+
+    function formatNumber(n) {
+    return new Intl.NumberFormat('id-ID').format(n);
+    }
+
+    function formatDate(d) {
+    return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function formatDateTime(dt) {
+    return new Date(dt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
     function populateSelectWithCurrencies(select, def) {
-    select.innerHTML = state.currencies.map(c => `<option value="${c.code}" ${c.code===(def.code || def)?'selected':''}>${c.name} (${c.symbol})</option>`).join('');
+    select.innerHTML = state.currencies.map(c => `<option value="${c.code}" ${c.code === def ? 'selected' : ''}>${c.name} (${c.symbol})</option>`).join('');
     }
     </script>
     @endpush
