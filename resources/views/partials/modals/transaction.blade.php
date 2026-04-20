@@ -1,4 +1,3 @@
-{{-- Modules/FinTech/Resources/views/partials/modals/transaction.blade.php --}}
 <div class="modal fade" id="transactionModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -179,11 +178,11 @@
 
     // Dompet
     const walletSelect = document.getElementById('wallet-select');
-    populateWalletSelect(transaction.wallet_id);
+    populateWalletSelect(transaction.wallet.id);
     walletSelect.disabled = true;
 
     // Kategori
-    filterCategoriesByType(transaction.category_id);
+    filterCategoriesByType(transaction.category.id);
   }
 
   // ==================== TAMBAH & EDIT ====================
