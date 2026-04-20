@@ -13,6 +13,9 @@ use Brick\Money\Money;
 
 class TransactionController extends Controller
 {
+  /**
+  * Display a listing of transactions.
+  */
   public function index(): JsonResponse
   {
     $request = request();
@@ -71,6 +74,9 @@ class TransactionController extends Controller
     return response()->json(['success' => true, 'data' => $transformed]);
   }
 
+  /**
+  * Store a newly created transaction.
+  */
   public function store(TransactionRequest $request): JsonResponse
   {
     $wallet = Wallet::findOrFail($request->wallet_id);
@@ -80,7 +86,7 @@ class TransactionController extends Controller
 
       DB::transaction(function () use ($wallet, $request, $amount) {
         $transaction = new Transaction($request->validated());
-        $transaction->amount = $amount; // Custom cast akan menangani
+        $transaction->amount = $amount;
         $transaction->save();
 
         if ($request->type === TransactionType::INCOME->value) {
@@ -104,6 +110,9 @@ class TransactionController extends Controller
     }
   }
 
+  /**
+  * Display the specified transaction.
+  */
   public function show(Transaction $transaction): JsonResponse
   {
     if ($transaction->wallet->user_id !== request()->user()->id) {
@@ -129,6 +138,62 @@ class TransactionController extends Controller
   }
 
   /**
+  * Update the specified transaction.
+  */
+  public function update(TransactionRequest $request, Transaction $transaction): JsonResponse
+  {
+    if ($transaction->wallet->user_id !== $request->user()->id) {
+      return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // Validasi tambahan: wallet_id tidak boleh berubah
+    if ($request->has('wallet_id') && $request->wallet_id != $transaction->wallet_id) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Dompet tidak dapat diubah.'
+      ], 422);
+    }
+
+    try {
+      DB::transaction(function () use ($request, $transaction) {
+        $oldAmount = $transaction->amount;
+        $oldType = $transaction->type;
+        $wallet = $transaction->wallet;
+
+        // Kembalikan saldo ke kondisi sebelum transaksi
+        if ($oldType === TransactionType::INCOME) {
+          $wallet->withdraw($oldAmount);
+        } elseif ($oldType === TransactionType::EXPENSE) {
+          $wallet->deposit($oldAmount);
+        }
+
+        // Update data transaksi
+        $transaction->fill($request->validated());
+        $transaction->amount = Money::of($request->amount, $wallet->currency);
+        $transaction->save();
+
+        // Terapkan saldo baru
+        if ($transaction->type === TransactionType::INCOME) {
+          $wallet->deposit($transaction->amount);
+        } elseif ($transaction->type === TransactionType::EXPENSE) {
+          $wallet->withdraw($transaction->amount);
+        }
+      });
+
+      return response()->json([
+        'success' => true,
+        'message' => 'Transaksi berhasil diperbarui'
+      ]);
+    } catch (\Exception $e) {
+      return response()->json([
+        'success' => false,
+        'message' => $e->getMessage()
+      ],
+        400);
+    }
+  }
+
+  /**
   * Soft delete transaksi.
   */
   public function destroy(Transaction $transaction): JsonResponse
@@ -143,10 +208,8 @@ class TransactionController extends Controller
 
       // Kembalikan saldo ke kondisi sebelum transaksi
       if ($transaction->type === TransactionType::INCOME) {
-        // Jika tadinya pemasukan, kurangi saldo
         $wallet->withdraw($amount);
       } elseif ($transaction->type === TransactionType::EXPENSE) {
-        // Jika tadinya pengeluaran, tambah saldo
         $wallet->deposit($amount);
       }
 
@@ -213,7 +276,6 @@ class TransactionController extends Controller
       return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    // Kembalikan saldo dompet sesuai tipe transaksi
     DB::transaction(function () use ($transaction) {
       $wallet = $transaction->wallet;
       $amount = $transaction->amount;
@@ -244,7 +306,6 @@ class TransactionController extends Controller
       return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    // Hapus permanen (tidak perlu ubah saldo karena saat soft delete saldo sudah disesuaikan)
     $transaction->forceDelete();
 
     return response()->json([

@@ -34,7 +34,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 
   // Resource utama transaksi (hanya method yang dibutuhkan)
   Route::apiResource('transactions', TransactionController::class)
-  ->only(['index', 'store', 'show', 'destroy'])
+  ->only(['index', 'store', 'show', 'destroy', 'update'])
   ->names('transactions');
 
   // ==================== REPORTS ====================
