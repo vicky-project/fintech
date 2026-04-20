@@ -150,6 +150,7 @@
     }
     return true;
     });
+    alert(JSON.stringify(filtered));
 
     categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
     filtered.forEach(cat => {
