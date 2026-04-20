@@ -363,9 +363,8 @@
     }
 
     function getFilteredTransactions() {
-    alert(JSON.stringify(state.allTransactions));
     let filtered = state.allTransactions;
-    if (state.filters.wallet_id) filtered = filtered.filter(t => t.wallet_id == state.filters.wallet_id);
+    if (state.filters.wallet_id) filtered = filtered.filter(t => t.wallet.id == state.filters.wallet_id);
     if (state.filters.type) filtered = filtered.filter(t => t.type === state.filters.type);
     return filtered;
     }
