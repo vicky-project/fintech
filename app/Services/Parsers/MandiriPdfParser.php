@@ -166,66 +166,71 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
   }
 
   /**
-  * Parse satu blok transaksi (kumpulan baris) menjadi data terstruktur.
+  * Parse satu blok transaksi menjadi data terstruktur.
   */
   private function parseTransactionBlock(array $block): ?array
   {
     if (empty($block)) return null;
 
-    // Cari tanggal (format "DD MMM YYYY")
+    $fullText = implode(' ', $block);
     $date = null;
     $descriptionParts = [];
     $amountStr = null;
     $type = StatementType::UNKNOWN;
 
-    // Gabungkan semua baris untuk pencarian amount
-    $fullText = implode(' ', $block);
-
-    // Cari nominal dengan format seperti "+700.000,00" atau "-2.500,00" atau "1.071.983,52"
-    if (preg_match('/[+-]?[\d\.]+,\d{2}/', $fullText, $matches)) {
-      $amountStr = $matches[0];
+    // Cari pola nominal yang diawali nomor urut (contoh: "1-2.500,00" atau "3+700.000,00")
+    // Pola: digit diikuti langsung oleh + atau - lalu nominal
+    if (preg_match('/\b(\d+)([+-])([\d\.]+,\d{2})\b/', $fullText, $matches)) {
+      $amountStr = $matches[2] . $matches[3]; // contoh: "-2.500,00" atau "+700.000,00"
+    } else {
+      // Fallback: cari nominal dengan format standar di akhir
+      if (preg_match('/[+-]?[\d\.]+,\d{2}/', $fullText, $matches)) {
+        $amountStr = $matches[0];
+      }
     }
 
+    // Ambil tanggal
     foreach ($block as $line) {
-      // Ambil tanggal
       if (!$date && $this->isDateLine($line)) {
         $date = $this->parseDate($line);
         continue;
       }
-      // Abaikan waktu
       if ($this->isTimeLine($line)) {
         continue;
       }
-      // Abaikan baris yang hanya berisi nominal (sudah diambil)
+      // Abaikan baris yang hanya berisi nominal atau saldo
       if (preg_match('/^[+-]?[\d\.]+,\d{2}$/', trim($line))) {
         continue;
       }
       // Abaikan baris dengan nomor urut dan nominal
-      if (preg_match('/^\d+\s+[+-]?[\d\.]+,\d{2}/', $line)) {
+      if (preg_match('/^\d+[+-][\d\.]+,\d{2}/', $line)) {
         continue;
       }
-      // Abaikan baris "dari" atau nomor halaman
+      // Abaikan baris yang hanya berisi nomor halaman
       if (preg_match('/^\d+\s*dari/', $line)) {
         continue;
       }
+      // Hapus bagian saldo yang menempel di akhir keterangan (contoh: "...debit 871.983,52")
+      $line = preg_replace('/\s+[\d\.]+,\d{2}$/', '', $line);
 
-      $descriptionParts[] = $line;
+      if (!empty(trim($line))) {
+        $descriptionParts[] = trim($line);
+      }
     }
 
-    $description = implode(' ', array_filter($descriptionParts));
+    $description = implode(' ', $descriptionParts);
     $description = preg_replace('/\s+/', ' ', $description);
 
     if (!$date || !$amountStr) {
       return null;
     }
 
-    // Tentukan tipe dari nominal (jika ada tanda + atau -)
+    // Tentukan tipe dari tanda di amount
     if (str_contains($amountStr, '+')) {
       $type = StatementType::CREDIT;
     } elseif (str_contains($amountStr, '-')) {
       $type = StatementType::DEBIT;
     } else {
-      // Jika tidak ada tanda, coba deteksi dari deskripsi
       $type = $this->determineType($description, $amountStr);
     }
 
