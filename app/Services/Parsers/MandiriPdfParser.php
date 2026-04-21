@@ -107,10 +107,6 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
 
   private function shouldSkipLine(string $line): bool
   {
-    if (preg_match('/^\d+\s*dari/', '', $line)) {
-      return true;
-    }
-
     return collect($this->skipPatterns)->contains(
       fn($pattern) => str_contains($line, $pattern)
     );
@@ -250,6 +246,7 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     ->filter()
     ->map(fn($desc) => trim($desc))
     ->implode(" ");
+
     $desc = preg_replace('/^\d+\s*dari\s*/', '', $desc);
   }
 
