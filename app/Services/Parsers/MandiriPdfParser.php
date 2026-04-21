@@ -88,18 +88,10 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
   {
     $lines = explode("\n", $content);
 
-    $startIndex = 0;
-    foreach ($lines as $i => $line) {
-      if (str_contains($line, "Tabungan Mandiri")) {
-        $startIndex = $i;
-        break;
-      }
-    }
-
     return collect($lines)
     ->map(fn($line) => trim($line))
     ->filter(fn($line) => !empty($line))
-    ->slice($startIndex)
+    ->slice(array_search("Tabungan Mandiri", $lines))
     ->filter(fn($line) => !$this->shouldSkipLine($line))
     ->values()
     ->all();
