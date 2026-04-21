@@ -59,7 +59,7 @@
     <div class="spinner-border text-primary" role="status"></div>
     <p class="mt-2">Memuat data...</p>
     </div>
-    <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-secondary border-top p-3 d-none" style="padding-bottom: 30px !important;">
+    <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-secondary border-top p-3 d-none" style="padding-bottom: 60px !important;">
     <button class="btn btn-primary w-100" onclick="importSelectedTransactions()">
     <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
     </button>
