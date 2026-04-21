@@ -37,6 +37,7 @@ class MandiriPdfParser extends AbstractBankParser
     "Remarks",
     "Dicetak pada/Issued on",
     "Tabungan Mandiri",
+    "PRATAMA",
   ];
 
   public function canParse(string $filePath, ?string $content = null): bool
@@ -84,8 +85,10 @@ class MandiriPdfParser extends AbstractBankParser
   {
     $lines = explode("\n", $content);
 
+    // Cari awal data transaksi
     $startIndex = 0;
     foreach ($lines as $i => $line) {
+      // Cari header tabel "No Tanggal Keterangan..."
       if (str_contains($line, "No") && str_contains($line, "Tanggal") && str_contains($line, "Keterangan")) {
         $startIndex = $i + 1;
         break;
@@ -108,12 +111,20 @@ class MandiriPdfParser extends AbstractBankParser
         return true;
       }
     }
-    // Skip nomor halaman "161 dari"
-    if (preg_match('/^\d+\s*dari/', $line)) {
+    // Nomor halaman
+    if (preg_match('/^\d+\s+of\s+\d+$/', $line)) {
       return true;
     }
-    // Skip baris yang hanya nomor (tanpa informasi lain)
-    if (preg_match('/^\d+$/', $line)) {
+    // Baris hanya ":"
+    if (trim($line) === ':') {
+      return true;
+    }
+    // Periode
+    if (preg_match('/^\d{1,2} [A-Za-z]{3} \d{4} - \d{1,2} [A-Za-z]{3} \d{4}$/', $line)) {
+      return true;
+    }
+    // Angka saldo berdiri sendiri
+    if (preg_match('/^[\d\.]+,\d{2}$/', $line)) {
       return true;
     }
     return false;
@@ -122,45 +133,113 @@ class MandiriPdfParser extends AbstractBankParser
   private function extractTransactions(array $lines): array
   {
     $transactions = [];
+    $i = 0;
+    $total = count($lines);
 
-    foreach ($lines as $line) {
-      $transaction = $this->parseTransactionLine($line);
-      if ($transaction) {
-        $transactions[] = $transaction;
+    while ($i < $total) {
+      // Cari baris yang mengandung nominal
+      if ($this->isAmountLine($lines[$i])) {
+        // Kumpulkan blok transaksi: deskripsi dari baris sebelumnya, nominal, waktu, tanggal
+        $block = [];
+
+        // Mundur untuk mengambil deskripsi
+        $j = $i - 1;
+        $descLines = [];
+        while ($j >= 0 && !$this->isAmountLine($lines[$j]) && !$this->isTimeLine($lines[$j]) && !$this->isDateLine($lines[$j])) {
+          array_unshift($descLines, $lines[$j]);
+          $j--;
+        }
+
+        $block = array_merge($descLines, [$lines[$i]]);
+
+        // Maju untuk mengambil waktu dan tanggal
+        $j = $i + 1;
+        while ($j < $total && ($this->isTimeLine($lines[$j]) || $this->isDateLine($lines[$j]))) {
+          $block[] = $lines[$j];
+          $j++;
+        }
+
+        $transaction = $this->parseTransactionBlock($block);
+        if ($transaction) {
+          $transactions[] = $transaction;
+        }
+
+        $i = $j;
+        continue;
       }
+      $i++;
     }
 
     return $transactions;
   }
 
-  /**
-  * Parse satu baris transaksi.
-  * Pola: "NomorUrut DD MMM YYYY HH:MM:SS WIB Keterangan Nominal Saldo"
-  * Contoh: "1 01 Jul 2024 10:38:49 WIB Penarikan tunai di ATM BANK MANDIRI JBR CB AMBULU 02 -600,000.00 1,552,668.52"
-  */
-  private function parseTransactionLine(string $line): ?array
+  private function isAmountLine(string $line): bool
   {
-    $pattern = '/^(\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})\s+(\d{1,2}:\d{2}:\d{2}\s+WIB)\s+(.+?)\s+([+-][\d,\.]+)\s+([\d,\.]+)$/u';
+    // Baris mengandung saldo dan nominal (nominal memiliki +/-)
+    return preg_match('/[\d\.]+,\d{2}\s+[+-][\d\.]+,\d{2}$/', $line) === 1;
+  }
 
-    if (preg_match($pattern, $line, $matches)) {
-      $dateStr = $matches[2];
-      $description = trim($matches[4]);
-      $amountStr = $matches[5];
-      // Saldo diabaikan
+  private function parseTransactionBlock(array $block): ?array
+  {
+    if (empty($block)) return null;
 
-      $date = $this->parseDate($dateStr);
-      $amount = abs($this->parseAmount($amountStr));
-      $type = str_contains($amountStr, '+') ? StatementType::CREDIT : StatementType::DEBIT;
+    // Cari baris nominal
+    $amountLine = null;
+    foreach ($block as $line) {
+      if ($this->isAmountLine($line)) {
+        $amountLine = $line;
+        break;
+      }
+    }
+    if (!$amountLine) return null;
 
-      return [
-        'date' => $date,
-        'description' => $description,
-        'amount' => $amount,
-        'type' => $type,
-      ];
+    // Ekstrak nominal
+    preg_match('/[+-][\d\.]+,\d{2}$/', $amountLine, $matches);
+    if (empty($matches)) return null;
+
+    $amountStr = $matches[0];
+    $amount = abs($this->parseAmount($amountStr));
+    $type = str_contains($amountStr, '+') ? StatementType::CREDIT : StatementType::DEBIT;
+
+    // Cari tanggal di blok
+    $date = null;
+    foreach ($block as $line) {
+      if ($this->isDateLine($line)) {
+        $date = $this->parseDate($line);
+        break;
+      }
+    }
+    if (!$date) return null;
+
+    // Deskripsi dari baris sebelum nominal
+    $descriptionParts = [];
+    $foundAmount = false;
+    foreach ($block as $line) {
+      if ($line === $amountLine) {
+        $foundAmount = true;
+        continue;
+      }
+      if ($foundAmount) break; // hanya ambil sebelum nominal
+
+      if ($this->isTimeLine($line) || $this->isDateLine($line)) continue;
+
+      $line = str_replace(':', '', $line);
+      $line = trim($line);
+      if (!empty($line)) {
+        $descriptionParts[] = $line;
+      }
     }
 
-    return null;
+    $description = implode(' ', $descriptionParts);
+    $description = preg_replace('/\s+/', ' ', $description);
+    $description = trim($description);
+
+    return [
+      'date' => $date,
+      'description' => $description ?: 'Transaksi Bank Mandiri',
+      'amount' => $amount,
+      'type' => $type,
+    ];
   }
 
   private function formatTransactions(array $transactions): array
@@ -168,9 +247,18 @@ class MandiriPdfParser extends AbstractBankParser
     return array_values(array_filter($transactions, fn($t) => $t['amount'] != 0));
   }
 
-  private function parseDate(string $dateStr): string
+  private function isTimeLine(string $line): bool
   {
-    // Format: "01 Jul 2024"
-    return Carbon::createFromFormat('d M Y', trim($dateStr))->toDateString();
+    return (bool) preg_match('/^\d{1,2}:\d{2}:\d{2} [A-Z]+$/', trim($line));
+  }
+
+  private function isDateLine(string $line): bool
+  {
+    return (bool) preg_match('/^\d{1,2} [A-Za-z]{3} \d{4}$/', trim($line));
+  }
+
+  private function parseDate(string $line): string
+  {
+    return Carbon::createFromFormat('d M Y', trim($line))->toDateString();
   }
 }
