@@ -217,7 +217,7 @@ class WalletService
   * @param int $userId
   * @return void
   */
-  protected function clearUserWalletsCache(int $userId): void
+  public function clearUserWalletsCache(int $userId): void
   {
     Cache::forget($this->getUserWalletsCacheKey($userId));
   }
@@ -228,7 +228,7 @@ class WalletService
   * @param int $walletId
   * @return void
   */
-  protected function clearWalletDetailCache(int $walletId): void
+  public function clearWalletDetailCache(int $walletId): void
   {
     Cache::forget($this->getWalletDetailCacheKey($walletId));
   }
@@ -240,7 +240,7 @@ class WalletService
   * @param int $userId
   * @return void
   */
-  protected function clearWalletCaches(int $walletId, int $userId): void
+  public function clearWalletCaches(int $walletId, int $userId): void
   {
     $this->clearWalletDetailCache($walletId);
     $this->clearUserWalletsCache($userId);
