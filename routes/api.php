@@ -67,6 +67,6 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
     Route::post('/upload', [StatementController::class, 'upload']);
     Route::put("/transactions/{transaction}/category", [StatementController::class, 'updateCategory']);
     Route::get('/{statement}/preview', [StatementController::class, 'preview']);
-    Route::get('/{statement}/import', [StatementController::class, 'import']);
+    Route::post('/{statement}/import', [StatementController::class, 'import']);
   });
 });
