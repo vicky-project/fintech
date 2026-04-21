@@ -67,8 +67,17 @@ class MandiriPdfParser extends AbstractBankParser
   public function parse(string $filePath): array
   {
     $text = $this->extractText($filePath);
+    \Log::debug("Text extract", [
+      'text' => $text
+    ]);
     $lines = $this->prepareLines($text);
+    \Log::debug("Lines", [
+      'lines' => $lines
+    ]);
     $transactions = $this->extractTransactions($lines);
+    \Log::debug("Transaction extract", [
+      'transaksi' => $transactions
+    ]);
     return $this->formatTransactions($transactions);
   }
 
