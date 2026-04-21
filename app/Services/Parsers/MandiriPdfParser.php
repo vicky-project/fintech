@@ -151,6 +151,9 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
   private function parseTransactionBlock(array $block): ?array
   {
     if (empty($block)) return null;
+    \Log::debug("Transaction block", [
+      "block" => $block
+    ]);
 
     $fullText = implode(' ', $block);
 
