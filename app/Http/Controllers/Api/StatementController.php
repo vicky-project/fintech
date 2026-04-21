@@ -14,21 +14,22 @@ use Modules\FinTech\Enums\StatementStatus;
 use Modules\FinTech\Enums\StatementType;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class StatementController extends Controller
 {
   protected PdfDecryptor $decryptor;
   protected BankParserManager $parserManager;
-  protected CategorizationService $categorization;
+  protected CategorizationService $categorizationService;
 
   public function __construct(
     PdfDecryptor $decryptor,
     BankParserManager $parserManager,
-    CategorizationService $categorization
+    CategorizationService $categorizationService
   ) {
     $this->decryptor = $decryptor;
     $this->parserManager = $parserManager;
-    $this->categorization = $categorization;
+    $this->categorizationService = $categorizationService;
   }
 
   /**
@@ -54,7 +55,6 @@ class StatementController extends Controller
     $password = $request->input('password');
     $walletId = $request->input('wallet_id');
 
-    // Verifikasi wallet milik user
     $wallet = \Modules\FinTech\Models\Wallet::where('user_id', $user->id)
     ->where('id', $walletId)
     ->first();
@@ -66,16 +66,14 @@ class StatementController extends Controller
       ], 422);
     }
 
-    // Simpan file sementara
     $tempPath = $file->storeAs(
       'temp/statements/' . $user->id,
-      uniqid() . '_' . str()->replace(' ', '', $file->getClientOriginalName())
+      uniqid() . '_' . $file->getClientOriginalName()
     );
 
     $fullPath = Storage::path($tempPath);
     $processedPath = $fullPath;
 
-    // Buat record statement
     $statement = BankStatement::create([
       'user_id' => $user->id,
       'wallet_id' => $walletId,
@@ -85,7 +83,6 @@ class StatementController extends Controller
     ]);
 
     try {
-      // Jika PDF terenkripsi, dekripsi dengan password
       if ($file->getClientOriginalExtension() === 'pdf' && $this->decryptor->isEncrypted($fullPath)) {
         if (!$password) {
           throw new \Exception("File PDF ini diproteksi password. Silakan masukkan password.");
@@ -95,7 +92,6 @@ class StatementController extends Controller
         $statement->updateStatus(StatementStatus::DECRYPTED);
       }
 
-      // Parse statement
       $result = $this->parserManager->parse($processedPath);
 
       $statement->update([
@@ -104,11 +100,9 @@ class StatementController extends Controller
       ]);
       $statement->updateStatus(StatementStatus::PARSED);
 
-      // Simpan transaksi hasil parsing
       foreach ($result['transactions'] as $trx) {
-        // Tentukan tipe berdasarkan deskripsi jika belum ada
         $type = $trx['type'] ?? StatementType::fromDescription($trx['description'], $trx['amount']);
-        $category = $this->categorization->categorize($trx['description'], $type);
+        $category = $this->categorizationService->categorize($trx['description'], $type);
 
         StatementTransaction::create([
           'statement_id' => $statement->id,
@@ -132,10 +126,6 @@ class StatementController extends Controller
       ]);
 
     } catch (\Exception $e) {
-      \Log::error("Failed to process file", [
-        "message" => $e->getMessage(),
-        "trace" => $e->getTraceAsString()
-      ]);
       $statement->updateStatus(StatementStatus::FAILED, ['error' => $e->getMessage()]);
 
       return response()->json([
@@ -143,7 +133,6 @@ class StatementController extends Controller
         'message' => $e->getMessage()
       ], 422);
     } finally {
-      // Bersihkan file temporary hasil dekripsi
       if (isset($processedPath) && $processedPath !== $fullPath && file_exists($processedPath)) {
         @unlink($processedPath);
       }
@@ -151,7 +140,7 @@ class StatementController extends Controller
   }
 
   /**
-  * Preview transaksi hasil parsing (belum diimpor).
+  * Preview transaksi hasil parsing.
   */
   public function preview(BankStatement $statement): JsonResponse
   {
@@ -160,6 +149,7 @@ class StatementController extends Controller
     }
 
     $transactions = $statement->transactions()
+    ->with('category')
     ->notImported()
     ->get()
     ->map(fn($trx) => [
@@ -170,16 +160,35 @@ class StatementController extends Controller
       'formatted_amount' => $trx->getFormattedAmount(),
       'type' => $trx->type?->value,
       'type_label' => $trx->type?->label(),
+      'category' => $trx->category ? [
+        'id' => $trx->category->id,
+        'name' => $trx->category->name,
+        'icon' => $trx->category->icon,
+        'color' => $trx->category->color,
+      ] : null,
     ]);
+
+    // Ambil semua kategori untuk dropdown edit
+    $categories = \Modules\FinTech\Models\Category::active()
+    ->orderBy('name')
+    ->get(['id', 'name', 'type', 'icon', 'color']);
 
     return response()->json([
       'success' => true,
-      'data' => $transactions
+      'data' => [
+        'statement_id' => $statement->id,
+        'wallet' => [
+          'id' => $statement->wallet->id,
+          'name' => $statement->wallet->name,
+        ],
+        'transactions' => $transactions,
+        'categories' => $categories,
+      ]
     ]);
   }
 
   /**
-  * Import transaksi terpilih ke dompet.
+  * Import transaksi terpilih.
   */
   public function import(Request $request, BankStatement $statement): JsonResponse
   {
@@ -188,47 +197,104 @@ class StatementController extends Controller
     }
 
     $request->validate([
-      'transaction_ids' => 'required|array',
+      'transaction_ids' => 'required|array|min:1',
       'transaction_ids.*' => 'required|exists:fintech_statement_transactions,id',
-      'category_id' => 'required|exists:fintech_categories,id',
     ]);
 
     $wallet = $statement->wallet;
-    $categoryId = $request->category_id;
-
     $transactions = $statement->transactions()
     ->notImported()
     ->whereIn('id', $request->transaction_ids)
     ->get();
 
-    $imported = 0;
-    foreach ($transactions as $trx) {
-      $transactionType = $trx->toTransactionType();
-      if (!$transactionType) continue;
+    if ($transactions->isEmpty()) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Tidak ada transaksi yang valid untuk diimpor.'
+      ], 422);
+    }
 
-      // Buat transaksi utama
-      \Modules\FinTech\Models\Transaction::create([
-        'wallet_id' => $wallet->id,
-        'category_id' => $categoryId,
-        'type' => $transactionType,
-        'amount' => $trx->amount,
-        'transaction_date' => $trx->transaction_date,
-        'description' => $trx->description,
+    DB::beginTransaction();
+    try {
+      $imported = 0;
+      foreach ($transactions as $trx) {
+        $transactionType = $trx->type?->toTransactionType();
+        if (!$transactionType) {
+          continue;
+        }
+
+        // Buat transaksi utama
+        \Modules\FinTech\Models\Transaction::create([
+          'wallet_id' => $wallet->id,
+          'category_id' => $trx->category_id,
+          'type' => $transactionType,
+          'amount' => $trx->amount,
+          'transaction_date' => $trx->transaction_date,
+          'description' => $trx->description,
+          'metadata' => ['imported_from_statement_id' => $statement->id],
+        ]);
+
+        // Update saldo wallet
+        if ($transactionType === \Modules\FinTech\Enums\TransactionType::INCOME) {
+          $wallet->deposit($trx->amount);
+        } else {
+          $wallet->withdraw($trx->amount);
+        }
+
+        $trx->markAsImported();
+        $imported++;
+      }
+
+      // Update status statement
+      $remaining = $statement->transactions()->notImported()->count();
+      if ($remaining === 0) {
+        $statement->updateStatus(StatementStatus::IMPORTED);
+      }
+
+      DB::commit();
+
+      return response()->json([
+        'success' => true,
+        'message' => "{$imported} transaksi berhasil diimpor.",
+        'data' => ['imported' => $imported]
       ]);
+    } catch (\Exception $e) {
+      DB::rollBack();
+      return response()->json([
+        'success' => false,
+        'message' => 'Gagal mengimpor: ' . $e->getMessage()
+      ], 500);
+    }
+  }
 
-      $trx->markAsImported();
-      $imported++;
+  /**
+  * Update kategori transaksi statement.
+  */
+  public function updateCategory(Request $request, StatementTransaction $transaction): JsonResponse
+  {
+    if ($transaction->statement->user_id !== $request->user()->id) {
+      return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    // Update status statement jika semua sudah diimpor
-    $remaining = $statement->transactions()->notImported()->count();
-    if ($remaining === 0) {
-      $statement->updateStatus(StatementStatus::IMPORTED);
-    }
+    $request->validate([
+      'category_id' => 'required|exists:fintech_categories,id',
+    ]);
+
+    $transaction->category_id = $request->category_id;
+    $transaction->save();
 
     return response()->json([
       'success' => true,
-      'message' => "{$imported} transaksi berhasil diimpor.",
+      'message' => 'Kategori diperbarui',
+      'data' => [
+        'id' => $transaction->id,
+        'category' => [
+          'id' => $transaction->category->id,
+          'name' => $transaction->category->name,
+          'icon' => $transaction->category->icon,
+          'color' => $transaction->category->color,
+        ]
+      ]
     ]);
   }
 }

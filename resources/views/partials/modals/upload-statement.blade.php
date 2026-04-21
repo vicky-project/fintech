@@ -40,6 +40,215 @@
 </div>
 
 <script>
+  let currentStatementId = null;
+  let previewTransactions = [];
+  let previewCategories = [];
+
+  async function renderPreviewStatementPage(statementId) {
+    currentStatementId = statementId;
+    state.currentPage = 'statement-preview';
+
+    const html = `
+    <div class="container py-3">
+    <div class="d-flex align-items-center mb-3">
+    <button class="btn btn-link me-2" onclick="navigateTo('transactions')">
+    <i class="bi bi-arrow-left"></i>
+    </button>
+    <h5 class="mb-0">Preview Statement</h5>
+    </div>
+    <div id="preview-content" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2">Memuat data...</p>
+    </div>
+    <div id="preview-actions" class="position-fixed bottom-0 start-0 w-100 bg-white border-top p-3 d-none" style="padding-bottom: 80px !important;">
+    <button class="btn btn-primary w-100" onclick="importSelectedTransactions()">
+    <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
+    </button>
+    </div>
+    </div>
+    `;
+    document.getElementById('main-content').innerHTML = html;
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+    await loadPreviewData();
+  }
+
+  async function loadPreviewData() {
+    try {
+      const res = await tgApp.fetchWithAuth(BASE_URL + `/api/fintech/statements/${currentStatementId}/preview`);
+      const data = res.data;
+
+      previewTransactions = data.transactions;
+      previewCategories = data.categories;
+
+      renderPreviewContent(data);
+    } catch (error) {
+      document.getElementById('preview-content').innerHTML = `
+      <div class="alert alert-danger">Gagal memuat preview: ${error.message}</div>
+      `;
+    }
+  }
+
+  function renderPreviewContent(data) {
+    const container = document.getElementById('preview-content');
+
+    if (previewTransactions.length === 0) {
+      container.innerHTML = '<p class="text-muted text-center py-4">Semua transaksi sudah diimpor.</p>';
+      return;
+    }
+
+    let html = `
+    <div class="mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+    <div>
+    <small class="text-muted">Dompet Tujuan:</small>
+    <strong>${data.wallet.name}</strong>
+    </div>
+    <div>
+    <button class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
+    <i class="bi bi-check-all me-1"></i>Pilih Semua
+    </button>
+    </div>
+    </div>
+    </div>
+    <div class="list-group" id="preview-transaction-list">
+    `;
+
+    previewTransactions.forEach((trx, index) => {
+    const amountClass = trx.type === 'credit' ? 'text-success' : 'text-danger';
+    const typeLabel = trx.type === 'credit' ? 'Masuk' : 'Keluar';
+
+    html += `
+    <div class="list-group-item" id="trx-${trx.id}">
+    <div class="d-flex align-items-start">
+    <div class="form-check me-3 mt-1">
+    <input class="form-check-input transaction-checkbox" type="checkbox"
+    value="${trx.id}" id="chk-${trx.id}"
+    ${trx.category ? 'checked' : ''}
+    onchange="updateSelectedCount()">
+    </div>
+    <div class="flex-grow-1">
+    <div class="d-flex justify-content-between align-items-start">
+    <div>
+    <div class="fw-semibold">${trx.description}</div>
+    <small class="text-muted">${formatDate(trx.date)}</small>
+    </div>
+    <span class="${amountClass} fw-bold">${trx.formatted_amount}</span>
+    </div>
+    <div class="mt-2 d-flex align-items-center">
+    <span class="badge bg-secondary me-2">${typeLabel}</span>
+    <select class="form-select form-select-sm category-select"
+    style="width: auto;"
+    data-transaction-id="${trx.id}"
+    onchange="updateTransactionCategory(${trx.id}, this.value)">
+    <option value="">Pilih Kategori</option>
+    ${previewCategories.map(cat => `
+    <option value="${cat.id}" ${trx.category?.id === cat.id ? 'selected' : ''}>
+    ${cat.name}
+    </option>
+    `).join('')}
+    </select>
+    </div>
+    </div>
+    </div>
+    </div>
+    `;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
+
+    document.getElementById('preview-actions').classList.remove('d-none');
+    updateSelectedCount();
+  }
+
+  function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('.transaction-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+    updateSelectedCount();
+  }
+
+  function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.transaction-checkbox');
+    const selected = Array.from(checkboxes).filter(cb => cb.checked).length;
+    document.getElementById('selected-count').textContent = selected;
+  }
+
+  async function updateTransactionCategory(transactionId, categoryId) {
+    if (!categoryId) return;
+
+    try {
+      await tgApp.fetchWithAuth(
+      BASE_URL + `/api/fintech/statements/transactions/${transactionId}/category`,
+      {
+      method: 'PUT',
+      body: JSON.stringify({ category_id: categoryId })
+      }
+      );
+
+      // Update local state
+      const trx = previewTransactions.find(t => t.id === transactionId);
+      if (trx) {
+        const cat = previewCategories.find(c => c.id == categoryId);
+        trx.category = cat;
+      }
+
+      // Check checkbox if category selected
+      document.getElementById(`chk-${transactionId}`).checked = true;
+      updateSelectedCount();
+
+      tgApp.showToast('Kategori diperbarui', 'success');
+    } catch (error) {
+      tgApp.showToast('Gagal mengupdate kategori', 'danger');
+    }
+  }
+
+  async function importSelectedTransactions() {
+    const checkboxes = document.querySelectorAll('.transaction-checkbox:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selectedIds.length === 0) {
+      tgApp.showToast('Pilih minimal satu transaksi', 'warning');
+      return;
+    }
+
+    // Validasi: semua transaksi yang dipilih harus memiliki kategori
+    const missingCategory = selectedIds.some(id => {
+    const trx = previewTransactions.find(t => t.id == id);
+    return !trx?.category;
+    });
+
+    if (missingCategory) {
+      tgApp.showToast('Semua transaksi yang dipilih harus memiliki kategori', 'warning');
+      return;
+    }
+
+    if (!confirm(`Import ${selectedIds.length} transaksi ke dompet?`)) return;
+
+    try {
+      tgApp.showLoading('Mengimpor...');
+
+      await tgApp.fetchWithAuth(
+      BASE_URL + `/api/fintech/statements/${currentStatementId}/import`,
+      {
+      method: 'POST',
+      body: JSON.stringify({ transaction_ids: selectedIds })
+      }
+      );
+
+      tgApp.hideLoading();
+      tgApp.showToast('Transaksi berhasil diimpor');
+
+      // Refresh preview
+      await loadPreviewData();
+    } catch (error) {
+      tgApp.hideLoading();
+      tgApp.showToast(error.message || 'Gagal mengimpor', 'danger');
+    }
+  }
+
   function showUploadStatementModal() {
     // Reset form
     const form = document.getElementById('uploadStatementForm');
@@ -103,7 +312,7 @@
         // Tutup modal
         bootstrap.Modal.getInstance(document.getElementById('uploadStatementModal')).hide();
         // Bisa langsung buka preview atau refresh halaman
-        // showPreviewStatement(data.data.statement_id);
+        renderPreviewStatementPage(data.data.statement_id);
       } else {
         tgApp.showToast(data.message || 'Gagal memproses statement', 'danger');
       }
