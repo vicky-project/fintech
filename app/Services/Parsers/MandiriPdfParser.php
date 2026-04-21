@@ -202,10 +202,9 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
       $line = preg_replace('/\s+[\d\.]+,\d{2}$/', '', $line);
 
       $line = str_replace(':', '', $line);
-      $line = trim($line);
       // Hapus awalan "161 dari" jika masih ada
       $line = preg_replace('/^\d+\s*dari\s*/', '', $line);
-      \Log::debug("Description parts", ["line" => $line]);
+      $line = trim($line);
       if (!empty($line)) {
         $descriptionParts[] = $line;
       }
@@ -213,6 +212,8 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
 
     $description = implode(' ', $descriptionParts);
     $description = preg_replace('/\s+/', ' ', $description);
+    $description = preg_replace('/\d{1,2} [A-Za-z]{3} \d{4} \- \d{1,2} [A-Za-z]{3} \d{4}/', '', $description);
+    \Log::debug("Description parts", ["line" => $line]);
 
     // 4. Deteksi transfer berdasarkan kata kunci di deskripsi
     if ($type === StatementType::UNKNOWN) {
