@@ -69,6 +69,9 @@ class PdfDecryptor
       \Log::debug("result", ["parser" => $result]);
       return false;
     } catch (\Exception $e) {
+      \Log::error("Failed to parsed", [
+        "message" => $e->getMessage()
+      ]);
       return str_contains($e->getMessage(), 'password') ||
       str_contains($e->getMessage(), 'encrypted');
     }

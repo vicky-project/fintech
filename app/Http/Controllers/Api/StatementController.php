@@ -91,7 +91,8 @@ class StatementController extends Controller
         "ext" => $file->getClientOriginalExtension(),
         "fullpath" => $fullPath,
         "is_encrypted" => $this->decryptor->isEncrypted($fullPath),
-        "processpath" => $processedPath
+        "processpath" => $processedPath,
+        "is_passed" => $file->getClientOriginalExtension() === 'pdf' && $this->decryptor->isEncrypted($fullPath)
       ]);
 
       // Parse statement
