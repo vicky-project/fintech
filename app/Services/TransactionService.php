@@ -128,7 +128,7 @@ class TransactionService
 
     $amount = Money::of($data['amount'], $wallet->currency);
 
-    $transaction = DB::transaction(function () use ($wallet, $data, $amount) {
+    $transaction = DB::transaction(function () use ($wallet, $data, $amount, $user) {
       $transaction = new Transaction($data);
       $transaction->amount = $amount->getAmount()->toInt();
       $transaction->save();
