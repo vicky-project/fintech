@@ -228,7 +228,7 @@
     try {
       tgApp.showLoading('Mengimpor...');
 
-      await tgApp.fetchWithAuth(
+      const res = await tgApp.fetchWithAuth(
       BASE_URL + `/api/fintech/statements/${currentStatementId}/import`,
       {
       method: 'POST',
@@ -237,7 +237,11 @@
       );
 
       tgApp.hideLoading();
-      tgApp.showToast('Transaksi berhasil diimpor');
+      let message = res.message;
+      if (res.data.skipped > 0) {
+        message += '\n\nDilewati:\n' + res.data.skipped_reasons.join('\n');
+      }
+      tgApp.showToast(message, res.data.skipped > 0 ? 'warning' : 'success');
 
       // Refresh preview
       await loadPreviewData();

@@ -221,13 +221,30 @@ class StatementController extends Controller
       ], 422);
     }
 
+    $imported = 0;
+    $skipped = 0;
+    $skippedReasons = [];
+
     DB::beginTransaction();
     try {
-      $imported = 0;
       foreach ($transactions as $trx) {
         $transactionType = $trx->type?->toTransactionType();
         if (!$transactionType) {
+          $skipped++;
+          $skippedReasons[] = "{$trx->description}: tipe tidak dikenali";
           continue;
+        }
+
+        // Cek saldo untuk expense
+        if ($transactionType === \Modules\FinTech\Enums\TransactionType::EXPENSE) {
+          if ($wallet->balance->isLessThan($trx->amount)) {
+            $skipped++;
+            $skippedReasons[] = "{$trx->description}: saldo tidak mencukupi (butuh {$trx->getFormattedAmount()}, saldo {$wallet->getFormattedBalance()})";
+            continue;
+          }
+          $wallet->withdraw($trx->amount);
+        } else {
+          $wallet->deposit($trx->amount);
         }
 
         // Buat transaksi utama
@@ -241,13 +258,6 @@ class StatementController extends Controller
           'metadata' => ['imported_from_statement_id' => $statement->id],
         ]);
 
-        // Update saldo wallet
-        if ($transactionType === \Modules\FinTech\Enums\TransactionType::INCOME) {
-          $wallet->deposit($trx->amount);
-        } else {
-          $wallet->withdraw($trx->amount);
-        }
-
         $trx->markAsImported();
         $imported++;
       }
@@ -260,10 +270,20 @@ class StatementController extends Controller
 
       DB::commit();
 
+      $message = "{$imported} transaksi berhasil diimpor.";
+      if ($skipped > 0) {
+        $message .= " {$skipped} transaksi dilewati.";
+        // Bisa kirim detail skipped reasons jika perlu
+      }
+
       return response()->json([
         'success' => true,
-        'message' => "{$imported} transaksi berhasil diimpor.",
-        'data' => ['imported' => $imported]
+        'message' => $message,
+        'data' => [
+          'imported' => $imported,
+          'skipped' => $skipped,
+          'skipped_reasons' => $skippedReasons
+        ]
       ]);
     } catch (\Exception $e) {
       DB::rollBack();
