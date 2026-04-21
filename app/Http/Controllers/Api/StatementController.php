@@ -90,6 +90,9 @@ class StatementController extends Controller
 
       // Parse statement
       $result = $this->parserManager->parse($processedPath);
+      \Log::debug("Parser result", [
+        'result' => $result['transactions']
+      ]);
 
       $statement->update([
         'bank_code' => $result['bank_code'],

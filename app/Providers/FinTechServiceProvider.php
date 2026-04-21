@@ -8,6 +8,7 @@ use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use Modules\FinTech\Services\BankParserManager;
+use Modules\FinTech\Services\Parsers\MandiriPdfParser;
 
 class FinTechServiceProvider extends ServiceProvider
 {
@@ -47,6 +48,7 @@ class FinTechServiceProvider extends ServiceProvider
 
     $this->app->singleton(BankParserManager::class, function($app) {
       $manager = new BankParserManager();
+      $manager->addParser(new MandiriPdfParser());
       return $manager;
     });
   }
