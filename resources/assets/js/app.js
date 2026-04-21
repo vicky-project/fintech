@@ -1,5 +1,3 @@
-const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
-
 // ==================== STATE MANAGEMENT ====================
 const state = {
   wallets: [],
