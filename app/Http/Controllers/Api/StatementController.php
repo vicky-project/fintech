@@ -62,7 +62,7 @@ class StatementController extends Controller
     // Simpan file sementara
     $tempPath = $file->storeAs(
       'temp/statements/' . $user->id,
-      uniqid() . '_' . $file->getClientOriginalName()
+      uniqid() . '_' . str()->replace(' ', '', $file->getClientOriginalName())
     );
 
     $fullPath = Storage::path($tempPath);
