@@ -130,7 +130,7 @@ class TransactionService
 
     $transaction = DB::transaction(function () use ($wallet, $data, $amount) {
       $transaction = new Transaction($data);
-      $transaction->amount = $amount;
+      $transaction->amount = $amount->toInt();
       $transaction->save();
 
       if ($data['type'] === TransactionType::INCOME->value) {
