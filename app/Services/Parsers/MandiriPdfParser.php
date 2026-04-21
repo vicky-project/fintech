@@ -233,6 +233,7 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
         }
         if ($this->isAmountLine($line)) {
           $currentTransaction["amount"] = $this->extractAmount($line);
+          $currentTransaction["type"] = $this->determineType($line);
           $descriptionPart = $this->extractDescriptionFromAmountLine($line);
           if ($descriptionPart) {
             $currentDescriptions[] = $descriptionPart;
@@ -265,7 +266,9 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     $parts = explode("\t", $line);
     $amount = end($parts);
 
-    return preg_replace("/[^\d.,+-]/", "", $amount);
+    $amount = preg_replace("/[^\d.,+-]/", "", $amount);
+
+    return abs($this->parseAmount($amount));
   }
 
 
@@ -326,34 +329,8 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     ->implode(" ");
   }
 
-  private function determineType(string $description): StatementType
+  private function determineType(string $amount): StatementType
   {
-    $lower = strtolower($description);
-    $debitKeywords = ['debit',
-      'db',
-      'tarik',
-      'withdrawal',
-      'pembayaran',
-      'payment',
-      'biaya',
-      'adm',
-      'keluar',
-      'penarikan'];
-    $creditKeywords = ['credit',
-      'cr',
-      'setor',
-      'deposit',
-      'masuk',
-      'incoming',
-      'transfer masuk'];
-
-    foreach ($debitKeywords as $kw) {
-      if (str_contains($lower, $kw)) return StatementType::DEBIT;
-    }
-    foreach ($creditKeywords as $kw) {
-      if (str_contains($lower, $kw)) return StatementType::CREDIT;
-    }
-
-    return StatementType::UNKNOWN;
+    return str_contains($amount, '+') ? StatementType::CREDIT : (str_contains($amount, '-') ? StatementType::DEBIT : StatementType::UNKNOWN);
   }
 }
