@@ -36,6 +36,7 @@
       <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-graph-up fs-5"></i></button>
       <button class="btn nav-btn" data-page="insights"><i class="bi bi-bar-chart fs-5"></i></button>
+      <button class="btn nav-btn" data-page="statements"><i class="bi bi-file-text fs-5"></i></button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
     </div>
   </nav>
@@ -157,7 +158,10 @@
       date: null,
       month: null,
       year: null
-    }
+    },
+    statementPage: 1,
+    statementLastPage: 1,
+    statements: [],
   };
 
   // ==================== INITIALIZATION ====================
@@ -309,6 +313,7 @@
       case 'reports': renderReportsPage(); break;
       case 'settings': renderSettingsPage(); break;
       case 'insights': renderInsightsPage(); break;
+      case 'statements': renderStatementsPage(); break;
     }
   }
 
@@ -1245,6 +1250,122 @@
     }
     } catch (error) {
     tgApp.showToast('Gagal memuat laporan. ' + error.message, 'danger');
+    }
+    }
+
+    async function renderStatementsPage() {
+    const html = `
+    <div class="container py-3">
+    <h5 class="mb-3">Riwayat Statement</h5>
+    <div id="statement-list"></div>
+    <div id="statement-pagination" class="mt-3"></div>
+    </div>
+    `;
+    document.getElementById('main-content').innerHTML = html;
+    state.statementPage = 1;
+    await loadStatements();
+    }
+
+    async function loadStatements(page = 1) {
+    try {
+    const res = await tgApp.fetchWithAuth(BASE_URL + `/api/fintech/statements?page=${page}`);
+    state.statements = res.data.data;
+    state.statementPage = res.data.current_page;
+    state.statementLastPage = res.data.last_page;
+    renderStatementList();
+    renderStatementPagination();
+    } catch (error) {
+    tgApp.showToast('Gagal memuat statement', 'danger');
+    }
+    }
+
+    function renderStatementList() {
+    const container = document.getElementById('statement-list');
+    if (state.statements.length === 0) {
+    container.innerHTML = '<p class="text-muted text-center py-4">Belum ada statement</p>';
+    return;
+    }
+
+    let html = '<div class="list-group">';
+    state.statements.forEach(s => {
+    const statusClass = {
+    'uploaded': 'secondary',
+    'decrypted': 'info',
+    'parsed': 'warning',
+    'imported': 'success',
+    'failed': 'danger'
+    }[s.status] || 'secondary';
+
+    const icon = s.status === 'parsed' ? 'bi-hourglass-split' :
+    (s.status === 'imported' ? 'bi-check-circle' :
+    (s.status === 'failed' ? 'bi-exclamation-circle' : 'bi-file-earmark'));
+
+    html += `
+    <div class="list-group-item">
+    <div class="d-flex justify-content-between align-items-start">
+    <div class="flex-grow-1">
+    <div class="d-flex align-items-center">
+    <i class="${icon} me-2 text-${statusClass}"></i>
+    <span class="fw-semibold">${s.original_filename}</span>
+    </div>
+    <small class="text-muted">Bank: ${s.bank_code || '-'} | Dompet: ${s.wallet?.name || '-'}</small>
+    <div>
+    <span class="badge bg-${statusClass}">${s.status_label}</span>
+    ${s.remaining_count > 0 ? `<span class="badge bg-warning ms-1">${s.remaining_count} belum diimpor</span>` : ''}
+    </div>
+    <small class="text-muted d-block">${formatDateTime(s.created_at)}</small>
+    </div>
+    <div class="dropdown">
+    <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
+    <i class="bi bi-three-dots-vertical"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+    ${s.status === 'parsed' ? `
+    <li><a class="dropdown-item" href="#" onclick="renderPreviewStatementPage(${s.id})">
+    <i class="bi bi-eye me-2"></i>Preview & Import
+    </a></li>
+    ` : ''}
+    <li><a class="dropdown-item text-danger" href="#" onclick="deleteStatement(${s.id})">
+    <i class="bi bi-trash me-2"></i>Hapus
+    </a></li>
+    </ul>
+    </div>
+    </div>
+    </div>
+    `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    }
+
+    function renderStatementPagination() {
+    if (state.statementLastPage <= 1) {
+    document.getElementById('statement-pagination').innerHTML = '';
+    return;
+    }
+    tgApp.renderPagination(
+    'statement-pagination',
+    state.statementPage,
+    state.statementLastPage,
+    async (newPage) => {
+    state.statementPage = newPage;
+    await loadStatements(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    );
+    }
+
+    async function deleteStatement(id) {
+    if (!confirm('Hapus statement ini? File dan data transaksi terkait akan dihapus permanen.')) return;
+    try {
+    tgApp.showLoading('Menghapus...');
+    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/statements/${id}`, { method: 'DELETE' });
+    tgApp.hideLoading();
+    tgApp.showToast('Statement dihapus');
+    await loadStatements(state.statementPage);
+    } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal menghapus', 'danger');
     }
     }
 

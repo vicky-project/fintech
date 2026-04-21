@@ -37,6 +37,60 @@ class StatementController extends Controller
   }
 
   /**
+  * List all statements for the user.
+  */
+  public function index(Request $request): JsonResponse
+  {
+    $statements = BankStatement::where('user_id', $request->user()->id)
+    ->with(['wallet'])
+    ->orderBy('created_at', 'desc')
+    ->paginate($request->input('per_page', 20));
+
+    $transformed = $statements->through(fn($s) => [
+      'id' => $s->id,
+      'original_filename' => $s->original_filename,
+      'bank_code' => $s->bank_code,
+      'status' => $s->status->value,
+      'status_label' => $s->status->label(),
+      'wallet' => $s->wallet ? [
+        'id' => $s->wallet->id,
+        'name' => $s->wallet->name,
+      ] : null,
+      'meta_data' => $s->meta_data,
+      'processed_at' => $s->processed_at?->toDateTimeString(),
+      'created_at' => $s->created_at->toDateTimeString(),
+      'remaining_count' => $s->transactions()->notImported()->count(),
+    ]);
+
+    return response()->json([
+      'success' => true,
+      'data' => $transformed
+    ]);
+  }
+
+  /**
+  * Delete a statement and its file.
+  */
+  public function destroy(BankStatement $statement): JsonResponse
+  {
+    if ($statement->user_id !== request()->user()->id) {
+      return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // Hapus file fisik
+    if ($statement->file_path) {
+      Storage::delete($statement->file_path);
+    }
+
+    $statement->delete();
+
+    return response()->json([
+      'success' => true,
+      'message' => 'Statement dihapus.'
+    ]);
+  }
+
+  /**
   * Upload dan proses file statement bank.
   */
   public function upload(Request $request): JsonResponse

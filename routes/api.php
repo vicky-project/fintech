@@ -65,9 +65,11 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
 
   Route::prefix('statements')->group(function() {
+    Route::get('', [StatementController::class, 'index']);
     Route::post('/upload', [StatementController::class, 'upload']);
     Route::put("/transactions/{transaction}/category", [StatementController::class, 'updateCategory']);
     Route::get('/{statement}/preview', [StatementController::class, 'preview']);
     Route::post('/{statement}/import', [StatementController::class, 'import']);
+    Route::delete('/{statement}', [StatementController::class, 'destroy']);
   });
 });
