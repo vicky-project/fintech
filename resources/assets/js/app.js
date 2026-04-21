@@ -1074,7 +1074,7 @@ async function deleteStatement(id) {
     });
     tgApp.hideLoading();
     tgApp.showToast('Statement dihapus');
-    await loadStatements(state.statementPage);
+    await refreshStatementList(state.statementPage);
   } catch (error) {
     tgApp.hideLoading();
     tgApp.showToast(error.message || 'Gagal menghapus', 'danger');

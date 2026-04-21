@@ -127,16 +127,16 @@
     </div>
     <div class="flex-grow-1">
     <div class="d-flex justify-content-between align-items-start">
-    <div>
-    <div class="fw-semibold">${trx.description}</div>
+    <div class="me-2" style="max-width: 70%;">
+    <div class="fw-semibold text-truncate" title="${trx.description}">${trx.description}</div>
     <small class="text-muted">${formatDate(trx.date)}</small>
     </div>
     <span class="${amountClass} fw-bold">${trx.formatted_amount}</span>
     </div>
-    <div class="mt-2 d-flex align-items-center">
+    <div class="mt-2 d-flex align-items-center flex-wrap">
     <span class="badge bg-secondary me-2">${typeLabel}</span>
     <select class="form-select form-select-sm category-select"
-    style="width: auto;"
+    style="width: auto; min-width: 150px;"
     data-transaction-id="${trx.id}"
     onchange="updateTransactionCategory(${trx.id}, this.value)">
     <option value="">Pilih Kategori</option>
