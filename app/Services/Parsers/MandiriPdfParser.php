@@ -37,7 +37,6 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     "Amount (IDR)",
     "Keterangan",
     "Remarks",
-    "Biaya administrasi",
   ];
 
   public function canParse(string $filePath, ?string $content = null): bool
@@ -73,7 +72,6 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     \Log::debug("Text extract", [
       "lines" => $lines]);
     $transactions = $this->extractTransactions($lines);
-    \Log::debug('transactions', $transactions);
     return $this->formatTransactions($transactions);
   }
 
