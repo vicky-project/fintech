@@ -270,6 +270,8 @@ class StatementController extends Controller
     $transactions = $statement->transactions()
     ->notImported()
     ->whereIn('id', $request->transaction_ids)
+    ->orderBy('transaction_date', 'asc')
+    ->orderBy('id', 'asc')
     ->get();
 
     if ($transactions->isEmpty()) {
