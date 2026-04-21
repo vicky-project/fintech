@@ -1251,7 +1251,7 @@
     `;
     }
     } catch (error) {
-    tgApp.showToast('Gagal memuat laporan', 'danger');
+    tgApp.showToast('Gagal memuat laporan. ' + error.message, 'danger');
     }
     }
 
