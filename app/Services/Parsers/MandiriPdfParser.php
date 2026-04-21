@@ -141,9 +141,6 @@ class MandiriPdfParser extends AbstractBankParser
   */
   private function parseTransactionLine(string $line): ?array
   {
-    // Pola: nomor urut (1 atau lebih digit), spasi, tanggal, spasi, waktu WIB, spasi, keterangan, nominal, saldo
-    // Nominal selalu memiliki tanda + atau - di depan, format ribuan dengan koma atau titik
-    // Saldo adalah angka di akhir baris
     $pattern = '/^(\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})\s+(\d{1,2}:\d{2}:\d{2}\s+WIB)\s+(.+?)\s+([+-][\d,\.]+)\s+([\d,\.]+)$/u';
 
     if (preg_match($pattern, $line, $matches)) {
