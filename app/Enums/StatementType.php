@@ -4,9 +4,9 @@ namespace Modules\FinTech\Enums;
 
 enum StatementType: string
 {
-  case DEBIT = 'debit'; // Pengeluaran
-  case CREDIT = 'credit'; // Pemasukan
-  case UNKNOWN = 'unknown'; // Belum diketahui
+  case DEBIT = 'debit';
+  case CREDIT = 'credit';
+  case UNKNOWN = 'unknown';
 
     /**
     * Konversi ke TransactionType.
@@ -29,37 +29,73 @@ enum StatementType: string
       };
     }
 
-    public static function fromDescription(string $description, float $amount): self
+    /**
+    * Tentukan tipe dari deskripsi dan nominal.
+    * Prioritas:
+    * 1. Tanda pada nominal (jika ada)
+    * 2. Kata kunci di deskripsi
+    * 3. UNKNOWN
+    */
+    public static function fromDescription(string $description, ?string $amountStr = null): self
     {
-      // Deteksi dari kata kunci di deskripsi
-      $keywords = [
-        'debit' => self::DEBIT,
-        'db' => self::DEBIT,
-        'tarik' => self::DEBIT,
-        'withdrawal' => self::DEBIT,
-        'pembayaran' => self::DEBIT,
-        'payment' => self::DEBIT,
-        'transfer keluar' => self::DEBIT,
-        'credit' => self::CREDIT,
-        'cr' => self::CREDIT,
-        'setor' => self::CREDIT,
-        'deposit' => self::CREDIT,
-        'transfer masuk' => self::CREDIT,
-        'incoming' => self::CREDIT,
-      ];
-
-      $lowerDesc = strtolower($description);
-      foreach ($keywords as $keyword => $type) {
-        if (str_contains($lowerDesc, $keyword)) {
-          return $type;
+      // 1. Deteksi dari tanda nominal
+      if ($amountStr !== null) {
+        if (str_contains($amountStr, '+')) {
+          return self::CREDIT;
+        }
+        if (str_contains($amountStr, '-')) {
+          return self::DEBIT;
         }
       }
 
-      // Jika nominal negatif, anggap debit
-      if ($amount < 0) {
-        return self::DEBIT;
+      // 2. Deteksi dari kata kunci di deskripsi
+      $lowerDesc = strtolower($description);
+
+      $debitKeywords = [
+        'debit',
+        'db',
+        'tarik',
+        'withdrawal',
+        'pembayaran',
+        'payment',
+        'biaya',
+        'adm',
+        'keluar',
+        'penarikan',
+        'transfer keluar'
+      ];
+
+      $creditKeywords = [
+        'credit',
+        'cr',
+        'setor',
+        'deposit',
+        'masuk',
+        'incoming',
+        'transfer masuk',
+        'penerimaan'
+      ];
+
+      foreach ($debitKeywords as $kw) {
+        if (str_contains($lowerDesc, $kw)) {
+          return self::DEBIT;
+        }
+      }
+
+      foreach ($creditKeywords as $kw) {
+        if (str_contains($lowerDesc, $kw)) {
+          return self::CREDIT;
+        }
       }
 
       return self::UNKNOWN;
+    }
+
+    /**
+    * Mendapatkan array nilai untuk validasi.
+    */
+    public static function values(): array
+    {
+      return array_column(self::cases(), 'value');
     }
 }
