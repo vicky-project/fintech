@@ -48,12 +48,12 @@ class PdfDecryptor
       throw new \Exception("File output tidak valid.");
     } catch (ProcessFailedException $e) {
       $error = $process->getErrorOutput();
+      Log::error("QPDF gagal: " . $error);
 
       if (str_contains($error, 'invalid password')) {
         throw new \Exception("Password yang dimasukkan salah.");
       }
 
-      Log::error("QPDF gagal: " . $error);
       throw new \Exception("Gagal mendekripsi PDF: " . $e->getMessage());
     }
   }

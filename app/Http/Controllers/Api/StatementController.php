@@ -87,13 +87,6 @@ class StatementController extends Controller
         $processedPath = $this->decryptor->decrypt($fullPath, $password);
         $statement->updateStatus(StatementStatus::DECRYPTED);
       }
-      \Log::debug("data", [
-        "ext" => $file->getClientOriginalExtension(),
-        "fullpath" => $fullPath,
-        "is_encrypted" => $this->decryptor->isEncrypted($fullPath),
-        "processpath" => $processedPath,
-        "is_passed" => $file->getClientOriginalExtension() === 'pdf' && $this->decryptor->isEncrypted($fullPath)
-      ]);
 
       // Parse statement
       $result = $this->parserManager->parse($processedPath);
