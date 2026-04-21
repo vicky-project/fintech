@@ -21,14 +21,14 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
         'metadata' => ['tags' => ['kebutuhan_pokok', 'harian']],
-        'keywords' => json_encode([
+        'keywords' => [
           'restoran', 'rm ', 'warung', 'kafe', 'cafe', 'coffee', 'mcd', 'kfc', 'pizza', 'burger',
           'sushi', 'steak', 'martabak', 'bakso', 'sate', 'nasi goreng', 'mie ayam', 'gado-gado',
           'sarapan', 'makan siang', 'makan malam', 'minum', 'kopi', 'teh', 'jus', 'es',
           'gofood', 'grabfood', 'shopeefood', 'food', 'kuliner', 'catering', 'kantin',
           'snack', 'cemilan', 'roti', 'kue', 'cokelat', 'es krim', 'ice cream', 'boba',
           'starbucks', 'hokben', 'solaria', 'wendy', 'a&w', 'dunkin', 'jco'
-        ])
+        ]
       ]
     );
 
@@ -41,10 +41,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $foodParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['kebutuhan_pokok']],
-        'keywords' => json_encode([
+        'keywords' => [
           'makan', 'nasi', 'lauk', 'sayur', 'sarapan', 'makan siang', 'makan malam',
           'resto', 'restaurant', 'rm', 'warung makan', 'warteg', 'prasmanan'
-        ])
+        ]
       ]
     );
 
@@ -57,10 +57,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $foodParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['kebutuhan_pokok']],
-        'keywords' => json_encode([
+        'keywords' => [
           'minum', 'kopi', 'teh', 'jus', 'es', 'boba', 'bubble tea', 'soda', 'air mineral',
           'starbucks', 'chatime', 'kopi kenangan', 'janji jiwa', 'fore coffee'
-        ])
+        ]
       ]
     );
 
@@ -73,10 +73,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $foodParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['hiburan', 'sekunder']],
-        'keywords' => json_encode([
+        'keywords' => [
           'restoran', 'cafe', 'kafe', 'dine in', 'dine out', 'makan malam romantis',
           'steak', 'sushi', 'all you can eat', 'buffet', 'fine dining'
-        ])
+        ]
       ]
     );
 
@@ -89,13 +89,13 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
         'metadata' => ['tags' => ['kebutuhan_pokok', 'mobilitas']],
-        'keywords' => json_encode([
+        'keywords' => [
           'transport', 'transportasi', 'bensin', 'pertamina', 'shell', 'bp', 'vivo',
           'spbu', 'bbm', 'bahan bakar', 'parkir', 'tol', 'e-toll', 'flazz', 'brizzi',
           'gojek', 'grab', 'maxim', 'ojek', 'taksi', 'blue bird', 'bus', 'kereta',
           'commuter line', 'krl', 'mrt', 'lrt', 'transjakarta', 'tj', 'damri',
           'travel', 'tiket pesawat', 'garuda', 'lion air', 'citilink', 'air asia'
-        ])
+        ]
       ]
     );
 
@@ -108,10 +108,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $transportParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['rutin']],
-        'keywords' => json_encode([
+        'keywords' => [
           'bensin', 'pertamax', 'pertalite', 'dex', 'solar', 'spbu', 'bbm', 'fuel',
           'shell', 'bp', 'vivo', 'pengisian', 'isi bensin'
-        ])
+        ]
       ]
     );
 
@@ -124,10 +124,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $transportParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['rutin']],
-        'keywords' => json_encode([
+        'keywords' => [
           'bus', 'kereta', 'krl', 'commuter', 'mrt', 'lrt', 'transjakarta', 'tj',
           'damri', 'angkot', 'angkutan', 'tiket kereta', 'tiket bus'
-        ])
+        ]
       ]
     );
 
@@ -140,10 +140,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $transportParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['sekunder', 'mobilitas']],
-        'keywords' => json_encode([
+        'keywords' => [
           'gojek', 'grab', 'maxim', 'ojol', 'ojek', 'goride', 'gocar', 'grabbike',
           'taksi', 'blue bird', 'express', 'silver bird', 'taksi online'
-        ])
+        ]
       ]
     );
 
@@ -156,10 +156,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $transportParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['insidental']],
-        'keywords' => json_encode([
+        'keywords' => [
           'parkir', 'parking', 'tol', 'e-toll', 'flazz', 'brizzi', 'jalan tol',
           'jasa marga', 'rest area'
-        ])
+        ]
       ]
     );
 
@@ -172,13 +172,14 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
         'metadata' => ['tags' => ['sekunder']],
-        'keywords' => json_encode([
+        'keywords' =>
+        [
           'belanja', 'shopping', 'mall', 'plaza', 'supermarket', 'minimarket',
           'indomaret', 'alfamart', 'alfamidi', 'circle k', 'lawson', 'family mart',
           'transmart', 'carrefour', 'hypermart', 'giant', 'lotte mart', 'aeon',
           'toko', 'shopee', 'tokopedia', 'lazada', 'blibli', 'bukalapak', 'amazon',
           'e-commerce', 'online shop'
-        ])
+        ]
       ]
     );
 
@@ -191,11 +192,11 @@ class CategorySeeder extends Seeder
         'parent_id' => $shoppingParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['kebutuhan_pokok']],
-        'keywords' => json_encode([
+        'keywords' => [
           'sembako', 'beras', 'minyak goreng', 'gula', 'garam', 'tepung', 'telur',
           'susu', 'roti', 'sabun', 'deterjen', 'pembersih', 'tisu', 'popok',
           'kebutuhan rumah', 'perlengkapan rumah', 'alat dapur', 'perabot'
-        ])
+        ]
       ]
     );
 
@@ -208,11 +209,11 @@ class CategorySeeder extends Seeder
         'parent_id' => $shoppingParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['sekunder', 'tersier']],
-        'keywords' => json_encode([
+        'keywords' => [
           'baju', 'celana', 'sepatu', 'sandal', 'tas', 'dompet', 'aksesoris',
           'fashion', 'pakaian', 'kaos', 'kemeja', 'dress', 'rok', 'jaket',
           'h&m', 'uniqlo', 'zara', 'mango', 'pull&bear', 'stradivarius', 'bershka'
-        ])
+        ]
       ]
     );
 
@@ -225,11 +226,11 @@ class CategorySeeder extends Seeder
         'parent_id' => $shoppingParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['tersier', 'investasi']],
-        'keywords' => json_encode([
+        'keywords' => [
           'hp', 'handphone', 'smartphone', 'laptop', 'komputer', 'tablet', 'ipad',
           'iphone', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'macbook',
           'elektronik', 'gadget', 'aksesoris hp', 'charger', 'headset', 'earphone'
-        ])
+        ]
       ]
     );
 
@@ -242,13 +243,14 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
         'metadata' => ['tags' => ['kebutuhan_pokok', 'rutin']],
-        'keywords' => json_encode([
+        'keywords' =>
+        [
           'tagihan', 'bill', 'pln', 'listrik', 'pdam', 'air', 'pgn', 'gas',
           'internet', 'wifi', 'indihome', 'first media', 'biznet', 'myrepublic',
           'pulsa', 'telkomsel', 'xl', 'indosat', 'tri', 'smartfren', 'axis',
           'paket data', 'kuota', 'bpjs', 'asuransi', 'premi', 'sewa', 'kontrakan',
           'kost', 'kos', 'apartemen', 'rumah', 'cicilan', 'kpr', 'leasing'
-        ])
+        ]
       ]
     );
 
@@ -261,7 +263,7 @@ class CategorySeeder extends Seeder
         'parent_id' => $billsParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['wajib']],
-        'keywords' => json_encode(['pln', 'listrik', 'token listrik', 'pascabayar', 'prabayar'])
+        'keywords' => ['pln', 'listrik', 'token listrik', 'pascabayar', 'prabayar']
       ]
     );
 
@@ -274,7 +276,7 @@ class CategorySeeder extends Seeder
         'parent_id' => $billsParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['wajib']],
-        'keywords' => json_encode(['pdam', 'air', 'pam', 'palang', 'palapa'])
+        'keywords' => ['pdam', 'air', 'pam', 'palang', 'palapa']
       ]
     );
 
@@ -287,11 +289,12 @@ class CategorySeeder extends Seeder
         'parent_id' => $billsParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['kebutuhan_pokok', 'digital']],
-        'keywords' => json_encode([
+        'keywords' =>
+        [
           'internet', 'wifi', 'indihome', 'first media', 'biznet', 'myrepublic',
           'pulsa', 'telkomsel', 'xl', 'indosat', 'tri', 'smartfren', 'axis',
           'paket data', 'kuota', 'isi ulang', 'voucher'
-        ])
+        ]
       ]
     );
 
@@ -304,10 +307,11 @@ class CategorySeeder extends Seeder
         'parent_id' => $billsParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['wajib', 'besar']],
-        'keywords' => json_encode([
+        'keywords' =>
+        [
           'sewa', 'kontrakan', 'kost', 'kos', 'apartemen', 'rumah', 'kpr',
           'cicilan rumah', 'angsuran', 'pembayaran sewa', 'rent'
-        ])
+        ]
       ]
     );
 
@@ -320,13 +324,13 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
         'metadata' => ['tags' => ['tersier', 'non-esensial']],
-        'keywords' => json_encode([
+        'keywords' => [
           'hiburan', 'entertainment', 'bioskop', 'cinema', 'xxi', 'cgv', 'cinepolis',
           'netflix', 'spotify', 'youtube', 'disney', 'hbo', 'vidio', 'viki', 'iqiyi',
           'we tv', 'langganan', 'subscription', 'game', 'steam', 'playstation',
           'nintendo', 'xbox', 'mobile legend', 'pubg', 'free fire', 'genshin',
           'konser', 'event', 'tiket', 'pertunjukan', 'teater', 'museum', 'wisata'
-        ])
+        ]
       ]
     );
 
@@ -338,11 +342,21 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'parent_id' => $entertainmentParent->id,
         'is_system' => true,
-        'metadata' => ['tags' => ['digital', 'bulanan']],
-        'keywords' => json_encode([
-          'netflix', 'spotify', 'youtube premium', 'disney+', 'hbo go', 'vidio',
-          'viki', 'iqiyi', 'we tv', 'langganan', 'subscription'
-        ])
+        'metadata' => ['tags' => ['digital',
+          'bulanan']],
+        'keywords' => [
+          'netflix',
+          'spotify',
+          'youtube premium',
+          'disney+',
+          'hbo go',
+          'vidio',
+          'viki',
+          'iqiyi',
+          'we tv',
+          'langganan',
+          'subscription'
+        ]
       ]
     );
 
@@ -355,10 +369,21 @@ class CategorySeeder extends Seeder
         'parent_id' => $entertainmentParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['insidental']],
-        'keywords' => json_encode([
-          'bioskop', 'cinema', 'xxi', 'cgv', 'cinepolis', 'tiket', 'nonton',
-          'konser', 'event', 'pertunjukan', 'teater', 'stand up', 'comedy'
-        ])
+        'keywords' => [
+          'bioskop',
+          'cinema',
+          'xxi',
+          'cgv',
+          'cinepolis',
+          'tiket',
+          'nonton',
+          'konser',
+          'event',
+          'pertunjukan',
+          'teater',
+          'stand up',
+          'comedy'
+        ]
       ]
     );
 
@@ -371,11 +396,26 @@ class CategorySeeder extends Seeder
         'parent_id' => $entertainmentParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['digital']],
-        'keywords' => json_encode([
-          'game', 'steam', 'playstation', 'psn', 'nintendo', 'xbox', 'game pass',
-          'mobile legend', 'pubg', 'free fire', 'genshin impact', 'valorant',
-          'top up', 'diamond', 'uc', 'skin', 'item game', 'dlc'
-        ])
+        'keywords' => [
+          'game',
+          'steam',
+          'playstation',
+          'psn',
+          'nintendo',
+          'xbox',
+          'game pass',
+          'mobile legend',
+          'pubg',
+          'free fire',
+          'genshin impact',
+          'valorant',
+          'top up',
+          'diamond',
+          'uc',
+          'skin',
+          'item game',
+          'dlc'
+        ]
       ]
     );
 
@@ -387,13 +427,33 @@ class CategorySeeder extends Seeder
         'color' => '#FF9F40',
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok', 'darurat']],
-        'keywords' => json_encode([
-          'kesehatan', 'health', 'dokter', 'rumah sakit', 'klinik', 'puskesmas',
-          'obat', 'apotek', 'farmasi', 'vitamin', 'suplemen', 'bpjs kesehatan',
-          'asuransi kesehatan', 'medical', 'check up', 'laboratorium', 'rontgen',
-          'gigi', 'dokter gigi', 'behel', 'kacamata', 'softlens', 'optik'
-        ])
+        'metadata' => ['tags' => ['kebutuhan_pokok',
+          'darurat']],
+        'keywords' => [
+          'kesehatan',
+          'health',
+          'dokter',
+          'rumah sakit',
+          'klinik',
+          'puskesmas',
+          'obat',
+          'apotek',
+          'farmasi',
+          'vitamin',
+          'suplemen',
+          'bpjs kesehatan',
+          'asuransi kesehatan',
+          'medical',
+          'check up',
+          'laboratorium',
+          'rontgen',
+          'gigi',
+          'dokter gigi',
+          'behel',
+          'kacamata',
+          'softlens',
+          'optik'
+        ]
       ]
     );
 
@@ -406,10 +466,18 @@ class CategorySeeder extends Seeder
         'parent_id' => $healthParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['rutin']],
-        'keywords' => json_encode([
-          'obat', 'vitamin', 'suplemen', 'apotek', 'kimia farma', 'century',
-          'guardian', 'watson', 'obat resep', 'obat bebas'
-        ])
+        'keywords' => [
+          'obat',
+          'vitamin',
+          'suplemen',
+          'apotek',
+          'kimia farma',
+          'century',
+          'guardian',
+          'watson',
+          'obat resep',
+          'obat bebas'
+        ]
       ]
     );
 
@@ -421,11 +489,22 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'parent_id' => $healthParent->id,
         'is_system' => true,
-        'metadata' => ['tags' => ['insidental', 'darurat']],
-        'keywords' => json_encode([
-          'dokter', 'rumah sakit', 'rs ', 'klinik', 'puskesmas', 'ugd', 'igd',
-          'rawat inap', 'operasi', 'bedah', 'poli', 'spesialis'
-        ])
+        'metadata' => ['tags' => ['insidental',
+          'darurat']],
+        'keywords' => [
+          'dokter',
+          'rumah sakit',
+          'rs ',
+          'klinik',
+          'puskesmas',
+          'ugd',
+          'igd',
+          'rawat inap',
+          'operasi',
+          'bedah',
+          'poli',
+          'spesialis'
+        ]
       ]
     );
 
@@ -437,14 +516,39 @@ class CategorySeeder extends Seeder
         'color' => '#8AC24A',
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
-        'metadata' => ['tags' => ['investasi', 'sekunder']],
-        'keywords' => json_encode([
-          'pendidikan', 'education', 'sekolah', 'kuliah', 'universitas', 'spp',
-          'uang pangkal', 'biaya pendidikan', 'kursus', 'les', 'bimbel', 'ruang guru',
-          'zenius', 'pijar', 'buku', 'alat tulis', 'stationery', 'seminar', 'workshop',
-          'pelatihan', 'training', 'sertifikasi', 'bootcamp', 'online course', 'udemy',
-          'coursera', 'dicoding', 'harisenin', 'revou'
-        ])
+        'metadata' => ['tags' => ['investasi',
+          'sekunder']],
+        'keywords' => [
+          'pendidikan',
+          'education',
+          'sekolah',
+          'kuliah',
+          'universitas',
+          'spp',
+          'uang pangkal',
+          'biaya pendidikan',
+          'kursus',
+          'les',
+          'bimbel',
+          'ruang guru',
+          'zenius',
+          'pijar',
+          'buku',
+          'alat tulis',
+          'stationery',
+          'seminar',
+          'workshop',
+          'pelatihan',
+          'training',
+          'sertifikasi',
+          'bootcamp',
+          'online course',
+          'udemy',
+          'coursera',
+          'dicoding',
+          'harisenin',
+          'revou'
+        ]
       ]
     );
 
@@ -457,10 +561,19 @@ class CategorySeeder extends Seeder
         'parent_id' => $educationParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['investasi_diri']],
-        'keywords' => json_encode([
-          'kursus', 'les', 'bimbel', 'pelatihan', 'training', 'sertifikasi',
-          'bootcamp', 'online course', 'udemy', 'coursera', 'dicoding'
-        ])
+        'keywords' => [
+          'kursus',
+          'les',
+          'bimbel',
+          'pelatihan',
+          'training',
+          'sertifikasi',
+          'bootcamp',
+          'online course',
+          'udemy',
+          'coursera',
+          'dicoding'
+        ]
       ]
     );
 
@@ -473,10 +586,21 @@ class CategorySeeder extends Seeder
         'parent_id' => $educationParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['pengetahuan']],
-        'keywords' => json_encode([
-          'buku', 'novel', 'komik', 'majalah', 'ebook', 'kindle', 'gramedia',
-          'periplus', 'alat tulis', 'stationery', 'pensil', 'pulpen', 'binder'
-        ])
+        'keywords' => [
+          'buku',
+          'novel',
+          'komik',
+          'majalah',
+          'ebook',
+          'kindle',
+          'gramedia',
+          'periplus',
+          'alat tulis',
+          'stationery',
+          'pensil',
+          'pulpen',
+          'binder'
+        ]
       ]
     );
 
@@ -488,12 +612,26 @@ class CategorySeeder extends Seeder
         'color' => '#6c757d',
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
-        'metadata' => ['tags' => ['transfer', 'keuangan']],
-        'keywords' => json_encode([
-          'transfer', 'trsf', 'bi fast', 'kliring', 'rtgs', 'skn', 'antar bank',
-          'biaya admin', 'administrasi', 'admin bank', 'biaya transfer',
-          'pajak', 'bunga', 'denda', 'penalty', 'fee'
-        ])
+        'metadata' => ['tags' => ['transfer',
+          'keuangan']],
+        'keywords' => [
+          'transfer',
+          'trsf',
+          'bi fast',
+          'kliring',
+          'rtgs',
+          'skn',
+          'antar bank',
+          'biaya admin',
+          'administrasi',
+          'admin bank',
+          'biaya transfer',
+          'pajak',
+          'bunga',
+          'denda',
+          'penalty',
+          'fee'
+        ]
       ]
     );
 
@@ -506,10 +644,19 @@ class CategorySeeder extends Seeder
         'parent_id' => $transferParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['wajib']],
-        'keywords' => json_encode([
-          'biaya admin', 'administrasi', 'admin bank', 'biaya transfer',
-          'pajak', 'pph', 'ppn', 'bunga', 'denda', 'penalty', 'fee'
-        ])
+        'keywords' => [
+          'biaya admin',
+          'administrasi',
+          'admin bank',
+          'biaya transfer',
+          'pajak',
+          'pph',
+          'ppn',
+          'bunga',
+          'denda',
+          'penalty',
+          'fee'
+        ]
       ]
     );
 
@@ -522,7 +669,9 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::EXPENSE,
         'is_system' => true,
         'metadata' => ['tags' => ['tidak_terkategori']],
-        'keywords' => json_encode(['lainnya', 'other', 'uncategorized'])
+        'keywords' => ['lainnya',
+          'other',
+          'uncategorized']
       ]
     );
 
@@ -536,11 +685,25 @@ class CategorySeeder extends Seeder
         'color' => '#4DB6AC',
         'type' => CategoryType::INCOME,
         'is_system' => true,
-        'metadata' => ['tags' => ['gaji', 'rutin', 'primer']],
-        'keywords' => json_encode([
-          'gaji', 'salary', 'upah', 'wage', 'honor', 'honorarium', 'tunjangan',
-          'bonus', 'insentif', 'thr', 'lembur', 'overtime', 'pensiun', 'pension'
-        ])
+        'metadata' => ['tags' => ['gaji',
+          'rutin',
+          'primer']],
+        'keywords' => [
+          'gaji',
+          'salary',
+          'upah',
+          'wage',
+          'honor',
+          'honorarium',
+          'tunjangan',
+          'bonus',
+          'insentif',
+          'thr',
+          'lembur',
+          'overtime',
+          'pensiun',
+          'pension'
+        ]
       ]
     );
 
@@ -552,10 +715,16 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::INCOME,
         'parent_id' => $incomeParent->id,
         'is_system' => true,
-        'metadata' => ['tags' => ['bulanan', 'tetap']],
-        'keywords' => json_encode([
-          'gaji', 'salary', 'payroll', 'gajian', 'upah', 'wage'
-        ])
+        'metadata' => ['tags' => ['bulanan',
+          'tetap']],
+        'keywords' => [
+          'gaji',
+          'salary',
+          'payroll',
+          'gajian',
+          'upah',
+          'wage'
+        ]
       ]
     );
 
@@ -568,9 +737,14 @@ class CategorySeeder extends Seeder
         'parent_id' => $incomeParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['tidak_tetap']],
-        'keywords' => json_encode([
-          'bonus', 'insentif', 'thr', 'tunjangan hari raya', 'reward', 'komisi'
-        ])
+        'keywords' => [
+          'bonus',
+          'insentif',
+          'thr',
+          'tunjangan hari raya',
+          'reward',
+          'komisi'
+        ]
       ]
     );
 
@@ -582,12 +756,29 @@ class CategorySeeder extends Seeder
         'color' => '#F06292',
         'type' => CategoryType::INCOME,
         'is_system' => true,
-        'metadata' => ['tags' => ['pasif', 'modal']],
-        'keywords' => json_encode([
-          'investasi', 'investment', 'dividen', 'dividend', 'saham', 'stock',
-          'reksadana', 'mutual fund', 'obligasi', 'bond', 'deposito', 'bunga',
-          'kripto', 'crypto', 'bitcoin', 'ethereum', 'forex', 'trading', 'profit'
-        ])
+        'metadata' => ['tags' => ['pasif',
+          'modal']],
+        'keywords' => [
+          'investasi',
+          'investment',
+          'dividen',
+          'dividend',
+          'saham',
+          'stock',
+          'reksadana',
+          'mutual fund',
+          'obligasi',
+          'bond',
+          'deposito',
+          'bunga',
+          'kripto',
+          'crypto',
+          'bitcoin',
+          'ethereum',
+          'forex',
+          'trading',
+          'profit'
+        ]
       ]
     );
 
@@ -600,7 +791,9 @@ class CategorySeeder extends Seeder
         'parent_id' => $investmentParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['saham']],
-        'keywords' => json_encode(['dividen', 'dividend', 'pembagian laba'])
+        'keywords' => ['dividen',
+          'dividend',
+          'pembagian laba']
       ]
     );
 
@@ -613,7 +806,10 @@ class CategorySeeder extends Seeder
         'parent_id' => $investmentParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['perbankan']],
-        'keywords' => json_encode(['bunga', 'deposito', 'interest', 'tabungan'])
+        'keywords' => ['bunga',
+          'deposito',
+          'interest',
+          'tabungan']
       ]
     );
 
@@ -625,12 +821,26 @@ class CategorySeeder extends Seeder
         'color' => '#FF9F40',
         'type' => CategoryType::INCOME,
         'is_system' => true,
-        'metadata' => ['tags' => ['freelance', 'tidak_tetap']],
-        'keywords' => json_encode([
-          'freelance', 'side hustle', 'sampingan', 'proyek', 'project',
-          'jasa', 'service', 'konsultan', 'desain', 'nulis', 'fotografi',
-          'videografi', 'editing', 'ngajar', 'private', 'tutor'
-        ])
+        'metadata' => ['tags' => ['freelance',
+          'tidak_tetap']],
+        'keywords' => [
+          'freelance',
+          'side hustle',
+          'sampingan',
+          'proyek',
+          'project',
+          'jasa',
+          'service',
+          'konsultan',
+          'desain',
+          'nulis',
+          'fotografi',
+          'videografi',
+          'editing',
+          'ngajar',
+          'private',
+          'tutor'
+        ]
       ]
     );
 
@@ -643,10 +853,19 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::INCOME,
         'is_system' => true,
         'metadata' => ['tags' => ['insidental']],
-        'keywords' => json_encode([
-          'hadiah', 'gift', 'transfer masuk', 'incoming transfer', 'uang saku',
-          'allowance', 'kiriman', 'remittance', 'pemberian', 'angpao', 'amplop'
-        ])
+        'keywords' => [
+          'hadiah',
+          'gift',
+          'transfer masuk',
+          'incoming transfer',
+          'uang saku',
+          'allowance',
+          'kiriman',
+          'remittance',
+          'pemberian',
+          'angpao',
+          'amplop'
+        ]
       ]
     );
 
@@ -659,7 +878,9 @@ class CategorySeeder extends Seeder
         'type' => CategoryType::INCOME,
         'is_system' => true,
         'metadata' => ['tags' => ['tidak_terkategori']],
-        'keywords' => json_encode(['lainnya', 'other', 'uncategorized income'])
+        'keywords' => ['lainnya',
+          'other',
+          'uncategorized income']
       ]
     );
 
@@ -672,8 +893,10 @@ class CategorySeeder extends Seeder
         'color' => '#17a2b8',
         'type' => CategoryType::BOTH,
         'is_system' => true,
-        'metadata' => ['tags' => ['transfer', 'internal']],
-        'keywords' => json_encode(['transfer antar dompet', 'internal transfer'])
+        'metadata' => ['tags' => ['transfer',
+          'internal']],
+        'keywords' => ['transfer antar dompet',
+          'internal transfer']
       ]
     );
   }
