@@ -610,6 +610,152 @@ function renderReportsPage() {
   setTimeout(loadReportCharts, 50);
 }
 
+function showReportFilterModal() {
+  // Isi dropdown dompet
+  const walletSelect = document.getElementById('filter-wallet');
+  if (!walletSelect) return;
+  walletSelect.innerHTML = '<option value="">Semua Dompet</option>';
+  state.wallets.forEach(w => {
+    const option = document.createElement('option');
+    option.value = w.id;
+    option.textContent = w.name;
+    if (w.id == state.reportFilter.wallet_id) option.selected = true;
+    walletSelect.appendChild(option);
+  });
+
+  // Set tipe periode
+  const periodTypeSelect = document.getElementById('filter-period-type');
+  periodTypeSelect.value = state.reportFilter.periodType;
+
+  // Render input detail periode
+  renderPeriodDetailInputs();
+
+  // Event saat tipe periode berubah
+  periodTypeSelect.onchange = renderPeriodDetailInputs;
+
+  new bootstrap.Modal(document.getElementById('reportFilterModal')).show();
+}
+
+function renderPeriodDetailInputs() {
+  const type = document.getElementById('filter-period-type').value;
+  const container = document.getElementById('filter-period-detail');
+  const filter = state.reportFilter;
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().toISOString().slice(0,
+    7);
+
+  if (type === 'all_years') {
+    container.innerHTML = `<p class="text-muted small">Menampilkan total per tahun untuk semua tahun yang memiliki data.</p>`;
+  } else if (type === 'monthly') {
+    container.innerHTML = `
+    <label class="form-label">Bulan</label>
+    <input type="month" class="form-control" id="filter-month" value="${filter.month || currentMonth}">
+    `;
+  } else if (type === 'yearly') {
+    const yearOptions = [];
+    for (let y = currentYear; y >= currentYear - 10; y--) {
+      yearOptions.push(`<option value="${y}" ${y == (filter.year || currentYear) ? 'selected': ''}>${y}</option>`);
+    }
+    container.innerHTML = `
+    <label class="form-label">Tahun</label>
+    <select class="form-select" id="filter-year">
+    ${yearOptions}
+    </select>
+    `;
+  }
+}
+
+function applyReportFilter() {
+  const walletId = document.getElementById('filter-wallet').value;
+  const periodType = document.getElementById('filter-period-type').value;
+
+  state.reportFilter.wallet_id = walletId;
+  state.reportFilter.periodType = periodType;
+
+  if (periodType === 'all_years') {
+    state.reportFilter.date = null;
+    state.reportFilter.month = null;
+    state.reportFilter.year = null;
+  } else if (periodType === 'monthly') {
+    state.reportFilter.month = document.getElementById('filter-month').value;
+    state.reportFilter.date = null;
+    state.reportFilter.year = null;
+  } else if (periodType === 'yearly') {
+    state.reportFilter.year = document.getElementById('filter-year').value;
+    state.reportFilter.date = null;
+    state.reportFilter.month = null;
+  }
+
+  bootstrap.Modal.getInstance(document.getElementById('reportFilterModal')).hide();
+  loadReportCharts();
+}
+
+async function loadReportCharts() {
+  try {
+    const filter = state.reportFilter;
+    let url = `${BASE_URL}/api/fintech/reports/${filter.periodType}`;
+    const params = new URLSearchParams();
+
+    if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
+
+    if (filter.periodType === 'monthly' && filter.month) {
+      const [year,
+        month] = filter.month.split('-');
+      params.append('year', parseInt(year, 10));
+      params.append('month', parseInt(month, 10));
+    } else if (filter.periodType === 'yearly' && filter.year) {
+      params.append('year', parseInt(filter.year, 10));
+    }
+    // Untuk all_years tidak perlu parameter tambahan
+
+    if (params.toString()) url += '?' + params.toString();
+
+    const res = await tgApp.fetchWithAuth(url);
+    const data = res.data;
+    const ctx = document.getElementById('reportBarChart')?.getContext('2d');
+    if (ctx) {
+      if (state.chartInstances.report) state.chartInstances.report.destroy();
+      state.chartInstances.report = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'Pemasukan', data: data.income, backgroundColor: '#4DB6AC'
+          },
+            {
+              label: 'Pengeluaran', data: data.expense, backgroundColor: '#FF6384'
+            }]
+        }
+      });
+    }
+
+    // Ringkasan
+    const summaryEl = document.getElementById('trend-summary');
+    if (summaryEl) {
+      const totalIncome = data.income.reduce((a, b) => a + b, 0);
+      const totalExpense = data.expense.reduce((a, b) => a + b, 0);
+      summaryEl.innerHTML = `
+      <div class="row">
+      <div class="col-6">
+      <div class="card text-center p-2">
+      <small class="text-success">Pemasukan</small>
+      <strong>${formatNumber(totalIncome)}</strong>
+      </div>
+      </div>
+      <div class="col-6">
+      <div class="card text-center p-2">
+      <small class="text-danger">Pengeluaran</small>
+      <strong>${formatNumber(totalExpense)}</strong>
+      </div>
+      </div>
+      </div>
+      `;
+    }
+  } catch (error) {
+    tgApp.showToast('Gagal memuat laporan. ' + error.message, 'danger');
+  }
+}
+
 // ==================== SETTINGS PAGE ====================
 function renderSettingsPage() {
   const settings = state.userSettings || {
@@ -649,7 +795,8 @@ function renderSettingsPage() {
 
   // Isi dropdown mata uang
   const currencySelect = document.getElementById('setting-currency');
-  populateSelectWithCurrencies(currencySelect, settings.default_currency);
+  populateSelectWithCurrencies(currencySelect,
+    settings.default_currency);
 
   // Isi dropdown dompet
   const walletSelect = document.getElementById('setting-wallet');
