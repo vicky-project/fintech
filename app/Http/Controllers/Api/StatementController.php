@@ -295,9 +295,11 @@ class StatementController extends Controller
           continue;
         }
 
+        $wallet->refresh();
+
         // Cek saldo untuk expense
         if ($transactionType === \Modules\FinTech\Enums\TransactionType::EXPENSE) {
-          if ($wallet->balance->isLessThan($trx->amount)) {
+          if ($wallet->fresh()->balance->isLessThan($trx->amount)) {
             $skipped++;
             $skippedReasons[] = "{$trx->description}: saldo tidak mencukupi (butuh {$trx->getFormattedAmount()}, saldo {$wallet->getFormattedBalance()})";
             continue;
@@ -309,7 +311,7 @@ class StatementController extends Controller
           'wallet_id' => $wallet->id,
           'category_id' => $trx->category_id,
           'type' => $transactionType->value,
-          'amount' => $trx->amount->getAmount()->tofloat(),
+          'amount' => $trx->amount->getAmountFloat(),
           'transaction_date' => $trx->transaction_date,
           'description' => $trx->description,
           'metadata' => ['imported_from_statement_id' => $statement->id],

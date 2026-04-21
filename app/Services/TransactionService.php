@@ -134,17 +134,17 @@ class TransactionService
       $transaction->save();
 
       if ($data['type'] === TransactionType::INCOME->value) {
-        $wallet->fresh()->deposit($amount);
+        $wallet->deposit($amount);
       } elseif ($data['type'] === TransactionType::EXPENSE->value) {
-        $wallet->fresh()->withdraw($amount);
+        $wallet->withdraw($amount);
       }
-      $this->clearTransactionCaches($user->id,
-        $wallet->id,
-        $transaction->id);
 
       return $transaction;
     });
 
+    $this->clearTransactionCaches($user->id,
+      $wallet->id,
+      $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
     return $transaction;
