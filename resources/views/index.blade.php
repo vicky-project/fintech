@@ -1046,6 +1046,11 @@
 
     // ==================== REPORTS PAGE ====================
     function renderReportsPage() {
+    const currentYear = new Date().getFullYear();
+    const yearOptions = [];
+    for(let y = currentYear; y >= currentYear - 5; y--) {
+    yearOptions.push(`<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`);
+    }
     const html = `
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
@@ -1054,11 +1059,18 @@
     <h5>Laporan Keuangan</h5>
     </div>
     </div>
-    <div class="mb-3">
+    <div class="row g-2 mb-3">
+    <div class="col-6">
     <select class="form-select form-select-sm" id="report-wallet" onchange="loadReportCharts()">
     <option value="">Semua Dompet</option>
     ${state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
     </select>
+    </div>
+    <div class="col-6">
+    <select class="form-select form-select-sm" id="report-year" onchange="loadReportCharts();">
+    ${yearOptions}
+    </select>
+    </div>
     </div>
     <ul class="nav nav-tabs mb-2" id="reportTab">
     <li class="nav-item"><button class="nav-link active" data-period="monthly" onclick="setReportPeriod('monthly')">Bulanan</button></li>
@@ -1082,8 +1094,15 @@
     try {
     const period = document.querySelector('#reportTab .active')?.dataset.period || 'monthly';
     const walletId = document.getElementById('report-wallet')?.value || '';
+    const year = document.getElementById('report-year')?.value || new Date().getFullYear();
+
     let url = `${BASE_URL}/api/fintech/reports/${period}`;
-    if (walletId) url += `?wallet_id=${walletId}`;
+    const params = new URLSearchParams();
+    if (walletId) params.append('wallet_id', walletId);
+    if (period === 'yearly' || period === 'monthly') {
+    params.append('year', year);
+    }
+    if (params.toString()) url += '?' + params.toString();
 
     const res = await tgApp.fetchWithAuth(url);
     const data = res.data;
@@ -1100,6 +1119,17 @@
     ]
     }
     });
+    }
+
+    // Tampilkan ringkasan (opsional)
+    const summaryEl = document.getElementById('trend-summary');
+    if (summaryEl && data.summary) {
+    summaryEl.innerHTML = `
+    <div class="alert alert-info">
+    Total Pemasukan: ${formatNumber(data.summary.total_income)}<br>
+    Total Pengeluaran: ${formatNumber(data.summary.total_expense)}
+    </div>
+    `;
     }
     } catch (error) {
     tgApp.showToast('Gagal memuat laporan', 'danger');
