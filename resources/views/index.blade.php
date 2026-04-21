@@ -34,7 +34,7 @@
       <button class="btn nav-btn" data-page="transactions"><i class="bi bi-list-ul fs-5"></i></button>
       <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-graph-up fs-5"></i></button>
-      <button class="btn nav-btn" data-page="insights"><i class="bi bi-bar-chart fs-5"></i></button>
+      <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
 
       {{-- Dropup untuk menu lebih --}}
       <div class="dropup">
@@ -44,7 +44,7 @@
         <ul class="dropdown-menu dropdown-menu-end mb-2">
           <li><button class="dropdown-item nav-btn" data-page="transfers"><i class="bi bi-arrow-left-right me-2"></i>Transfer</button></li>
           <li><button class="dropdown-item nav-btn" data-page="statements"><i class="bi bi-file-text me-2"></i>Statement</button></li>
-          <li><button class="dropdown-item nav-btn" data-page="settings"><i class="bi bi-gear me-2"></i>Pengaturan</button></li>
+          <li><button class="dropdown-item nav-btn" data-page="insights"><i class="bi bi-bar-chart me-2"></i>Insight</button></li>
         </ul>
       </div>
     </div>

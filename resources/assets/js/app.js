@@ -994,7 +994,8 @@ async function renderStatementsPage() {
     icon: 'bi-file-text',
     listContainerId: 'statement-list',
     paginationId: 'statement-pagination',
-    loadFn: refreshStatementList
+    loadFn: refreshStatementList,
+    extraHeaderButtons: '<button class="btn btn-sm btn-outline-primary" onclick="showUploadStatementModal();"><i class="bi bi-cloud-upload"></i></button>'
   });
 }
 
