@@ -36,7 +36,9 @@ class MandiriPdfParser extends AbstractBankParser
     "Amount (IDR)",
     "Keterangan",
     "Remarks",
-    "Tabungan Mandiri"
+    "Dicetak pada/Issued on",
+    "Tabungan Mandiri",
+    ":"
   ];
 
   public function canParse(string $filePath, ?string $content = null): bool
@@ -80,7 +82,6 @@ class MandiriPdfParser extends AbstractBankParser
   private function extractText(string $filePath): string
   {
     $text = parent::extractPdfText($filePath);
-    \Log::debug("Processing extract", ['text' => $text]);
     $text = preg_replace("/\n\s*\n/", "\n", $text);
     $text = preg_replace("/[ \t]+/", " ", $text);
     return $text;
@@ -118,6 +119,12 @@ class MandiriPdfParser extends AbstractBankParser
     if (preg_match('/^\d+\s*dari/', $line)) {
       return true;
     }
+
+    // Skip baris periode (contoh: "01 Jan 2023 - 30 Jun 2023")
+    if (preg_match('/^\d{1,2} [A-Za-z]{3} \d{4} - \d{1,2} [A-Za-z]{3} \d{4}$/', $line)) {
+      return true;
+    }
+
     return false;
   }
 
@@ -210,6 +217,7 @@ class MandiriPdfParser extends AbstractBankParser
       $line = preg_replace('/\s+[\d\.]+,\d{2}$/', '', $line);
       // Hapus awalan nomor halaman "161 dari"
       $line = preg_replace('/^\d+\s*dari\s*/', '', $line);
+      $line = str_replace(":", "", $line);
 
       $line = trim($line);
       if (!empty($line)) {
@@ -220,12 +228,18 @@ class MandiriPdfParser extends AbstractBankParser
     $description = implode(' ', $descriptionParts);
     $description = preg_replace('/\s+/', ' ', $description);
 
+    // Hapus informasi yang masih tersangkut seperti nama pemilik atau periode
+    // Misalnya "01 Jan 2023 - 30 Jun 2023"
+    $description = preg_replace('/\b[A-Z]{2,}\s+[A-Z\s]+\b/', '', $description); // Nama kapital
+    $description = preg_replace('/\d{1,2} [A-Za-z]{3} \d{4} - \d{1,2} [A-Za-z]{3} \d{4}/', '', $description);
+    $description = trim($description);
+
     // 4. Tentukan tipe menggunakan StatementType::fromDescription
     $type = StatementType::fromDescription($description, $amountStr);
 
     return [
       'date' => $date,
-      'description' => trim($description),
+      'description' => trim($description) ?: "Transaksi Bank Mandiri",
       'amount' => $amount,
       'type' => $type,
     ];
