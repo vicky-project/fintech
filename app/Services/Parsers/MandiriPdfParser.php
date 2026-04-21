@@ -101,9 +101,9 @@ class MandiriPdfParser extends AbstractBankParser
     }
 
     return collect($lines)
-    ->slice($startIndex)
     ->map(fn($line) => trim($line))
     ->filter(fn($line) => !empty($line))
+    ->slice($startIndex)
     ->filter(fn($line) => !$this->shouldSkipLine($line))
     ->values()
     ->all();
