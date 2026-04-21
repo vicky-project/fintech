@@ -29,8 +29,8 @@ class PdfDecryptor
       'qpdf',
       '--password=' . escapeshellarg($password),
       '--decrypt',
-      escapeshellarg($inputPath),
-      escapeshellarg($outputPath)
+      $inputPath,
+      $outputPath
     ];
 
     $process = new Process($command);
