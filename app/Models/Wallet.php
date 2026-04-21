@@ -65,6 +65,11 @@ class Wallet extends Model
       throw new \Exception('Jumlah penarikan harus positif');
     }
     if ($this->balance->isLessThan($amount)) {
+      \Log::error("Saldo tidak mencukupi", [
+        "amount" => $amount,
+        "balance" => $this->balance->toInt(),
+        "wallet" => $this
+      ]);
       throw new \Exception('Saldo tidak mencukupi');
     }
     $this->balance = $this->balance->minus($amount);
