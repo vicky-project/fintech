@@ -25,6 +25,7 @@ class MandiriPdfParser extends AbstractBankParser
     "Mandiri Call 14000",
     " (LPS)",
     "KCP ",
+    "of",
     "No",
     "Date",
     "Tanggal",
@@ -69,6 +70,7 @@ class MandiriPdfParser extends AbstractBankParser
   public function parse(string $filePath): array
   {
     $text = $this->extractText($filePath);
+    \Log::debug("extract text", ["text" => $text]);
     $lines = $this->prepareLines($text);
     \Log::debug("Mandiri Text extract", ["lines" => $lines]);
     $transactions = $this->extractTransactions($lines);
