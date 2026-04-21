@@ -16,9 +16,6 @@ return new class extends Migration
       $table->string('name');
       $table->string('icon')->nullable();
       $table->string('color', 7)->nullable(); // Format #RRGGBB
-
-      // Tipe kategori: income, expense, atau both
-      // Menggunakan string agar fleksibel dan mudah dimodifikasi di masa depan
       $table->string('type')->default('expense');
 
         // Self-referencing untuk hierarki kategori
@@ -35,6 +32,7 @@ return new class extends Migration
 
         // Metadata tambahan (JSON) untuk tags atau keperluan analitik
         $table->json('metadata')->nullable();
+        $table->json('keywords')->nullable();
 
         $table->timestamps();
 

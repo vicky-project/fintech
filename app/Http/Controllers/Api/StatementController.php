@@ -9,6 +9,7 @@ use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
 use Modules\FinTech\Services\PdfDecryptor;
 use Modules\FinTech\Services\BankParserManager;
+use Modules\FinTech\Services\CategorizationService;
 use Modules\FinTech\Enums\StatementStatus;
 use Modules\FinTech\Enums\StatementType;
 use Illuminate\Support\Facades\Storage;
@@ -18,10 +19,16 @@ class StatementController extends Controller
 {
   protected PdfDecryptor $decryptor;
   protected BankParserManager $parserManager;
+  protected CategorizationService $categorization;
 
-  public function __construct(PdfDecryptor $decryptor, BankParserManager $parserManager) {
+  public function __construct(
+    PdfDecryptor $decryptor,
+    BankParserManager $parserManager,
+    CategorizationService $categorization
+  ) {
     $this->decryptor = $decryptor;
     $this->parserManager = $parserManager;
+    $this->categorization = $categorization;
   }
 
   /**
@@ -90,9 +97,6 @@ class StatementController extends Controller
 
       // Parse statement
       $result = $this->parserManager->parse($processedPath);
-      \Log::debug("Parser result", [
-        'result' => $result['transactions']
-      ]);
 
       $statement->update([
         'bank_code' => $result['bank_code'],
@@ -104,6 +108,7 @@ class StatementController extends Controller
       foreach ($result['transactions'] as $trx) {
         // Tentukan tipe berdasarkan deskripsi jika belum ada
         $type = $trx['type'] ?? StatementType::fromDescription($trx['description'], $trx['amount']);
+        $category = $this->categorization->categorize($trx['description'], $type);
 
         StatementTransaction::create([
           'statement_id' => $statement->id,
@@ -111,6 +116,7 @@ class StatementController extends Controller
           'description' => $trx['description'],
           'amount' => $trx['amount'],
           'type' => $type,
+          'category_id' => $category?->id,
           'raw_data' => $trx,
         ]);
       }

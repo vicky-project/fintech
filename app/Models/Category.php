@@ -19,7 +19,8 @@ class Category extends Model
     'parent_id',
     'is_system',
     'is_active',
-    'metadata'
+    'metadata',
+    'keywords'
   ];
 
   protected $casts = [
@@ -28,6 +29,7 @@ class Category extends Model
     'is_system' => 'boolean',
     'is_active' => 'boolean',
     'metadata' => 'array',
+    'keywords' => 'array'
   ];
 
   public function transactions(): HasMany
