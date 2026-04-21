@@ -88,6 +88,7 @@ class StatementController extends Controller
         $statement->updateStatus(StatementStatus::DECRYPTED);
       }
       \Log::debug("data", [
+        "ext" => $file->getClientOriginalExtension(),
         "fullpath" => $fullPath,
         "is_encrypted" => $this->decryptor->isEncrypted($fullPath),
         "processpath" => $processedPath
