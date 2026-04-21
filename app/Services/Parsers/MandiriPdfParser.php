@@ -2,10 +2,11 @@
 
 namespace Modules\FinTech\Services\Parsers;
 
+use Modules\FinTech\Contracts\BankParserInterface;
 use Carbon\Carbon;
 use Modules\FinTech\Enums\StatementType;
 
-class MandiriPdfParser extends AbstractBankParser
+class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
 {
   protected string $bankCode = 'mandiri';
 
@@ -36,6 +37,7 @@ class MandiriPdfParser extends AbstractBankParser
     "Amount (IDR)",
     "Keterangan",
     "Remarks",
+    "Biaya administrasi",
   ];
 
   public function canParse(string $filePath, ?string $content = null): bool
@@ -67,40 +69,23 @@ class MandiriPdfParser extends AbstractBankParser
   public function parse(string $filePath): array
   {
     $text = $this->extractText($filePath);
-    \Log::debug("Text extract", [
-      'text' => $text
-    ]);
     $lines = $this->prepareLines($text);
-    \Log::debug("Lines", [
-      'lines' => $lines
-    ]);
     $transactions = $this->extractTransactions($lines);
-    \Log::debug("Transaction extract", [
-      'transaksi' => $transactions
-    ]);
+    \Log::debug('transaksi', $transactions);
     return $this->formatTransactions($transactions);
   }
 
-  /**
-  * Ekstrak teks dari PDF (mendukung multi-halaman).
-  */
   private function extractText(string $filePath): string
   {
     $text = parent::extractPdfText($filePath);
-    // Normalisasi: ganti multiple newline dengan satu, hapus spasi berlebih
     $text = preg_replace("/\n\s*\n/", "\n", $text);
     $text = preg_replace("/[ \t]+/", " ", $text);
     return $text;
   }
 
-  /**
-  * Bersihkan dan siapkan baris teks.
-  */
   private function prepareLines(string $content): array
   {
     $lines = explode("\n", $content);
-
-    // Cari posisi "Tabungan Mandiri" sebagai awal data
     $startIndex = 0;
     foreach ($lines as $i => $line) {
       if (str_contains($line, "Tabungan Mandiri")) {
@@ -114,14 +99,10 @@ class MandiriPdfParser extends AbstractBankParser
     ->map(fn($line) => trim($line))
     ->filter(fn($line) => !empty($line))
     ->filter(fn($line) => !$this->shouldSkipLine($line))
-    ->filter(fn($line) => $this->isRelevantLine($line))
     ->values()
     ->all();
   }
 
-  /**
-  * Cek apakah baris harus dilewati.
-  */
   private function shouldSkipLine(string $line): bool
   {
     foreach ($this->skipPatterns as $pattern) {
@@ -133,174 +114,155 @@ class MandiriPdfParser extends AbstractBankParser
   }
 
   /**
-  * Cek apakah baris relevan (bukan header atau info lain).
-  */
-  private function isRelevantLine(string $line): bool
-  {
-    // Baris dengan ":" biasanya info akun, kecuali time (07:02:54)
-    if (str_contains($line, ":") && !$this->isTimeLine($line)) {
-      return false;
-    }
-    // Baris dengan "-" yang bukan tanggal dan bukan tab
-    if (str_contains($line, "-") && !str_contains($line, "\t") && !$this->isDateLine($line)) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-  * Ekstrak transaksi dari baris yang sudah dibersihkan.
+  * Ekstrak transaksi dengan logika baru:
+  * Setiap transaksi diakhiri oleh baris yang mengandung pola "WIB" diikuti tanggal.
   */
   private function extractTransactions(array $lines): array
   {
-    if (empty($lines)) {
-      return [];
-    }
-
     $transactions = [];
-    $lastDateIndex = 0;
+    $current = [];
+    $i = 0;
+    $totalLines = count($lines);
 
-    foreach ($lines as $key => $line) {
-      if ($this->isDateLine($line)) {
-        // Jika jarak dengan tanggal sebelumnya terlalu dekat, abaikan
-        if ($key - $lastDateIndex <= 2) {
-          $lastDateIndex = $key;
-          continue;
-        }
+    while ($i < $totalLines) {
+      $line = $lines[$i];
 
-        // Ambil semua baris antara tanggal ini dan tanggal sebelumnya
-        $currentTransaction = [];
-        for ($i = $key; $i > $lastDateIndex; $i--) {
-          $currentTransaction[] = $lines[$i];
+      // Deteksi akhir transaksi: baris dengan format "WIB" lalu diikuti tanggal di baris berikutnya
+      if (str_contains($line, 'WIB') && isset($lines[$i+1]) && $this->isDateLine($lines[$i+1])) {
+        // Tambahkan baris WIB dan tanggal ke current
+        $current[] = $line;
+        $current[] = $lines[$i+1];
+        $i += 2;
+
+        // Simpan transaksi yang sudah terkumpul
+        if (!empty($current)) {
+          $transactions[] = $this->parseTransactionBlock($current);
+          $current = [];
         }
-        $transactions[] = $currentTransaction;
-        $lastDateIndex = $key;
+        continue;
       }
+
+      // Jika baris adalah tanggal yang tidak didahului WIB, mungkin awal transaksi tanpa waktu
+      if ($this->isDateLine($line) && (empty($current) || !str_contains(end($current), 'WIB'))) {
+        if (!empty($current)) {
+          $transactions[] = $this->parseTransactionBlock($current);
+          $current = [];
+        }
+        $current[] = $line;
+        $i++;
+        continue;
+      }
+
+      $current[] = $line;
+      $i++;
     }
 
-    return $this->populateDataTransaction($transactions);
+    // Proses sisa blok terakhir
+    if (!empty($current)) {
+      $transactions[] = $this->parseTransactionBlock($current);
+    }
+
+    return $transactions;
   }
 
   /**
-  * Populasi data transaksi dari kumpulan baris.
+  * Parse satu blok transaksi (kumpulan baris) menjadi data terstruktur.
   */
-  private function populateDataTransaction(array $transactions): array
+  private function parseTransactionBlock(array $block): ?array
   {
-    $data = [];
-    foreach ($transactions as $transaction) {
-      $current = [];
-      $descriptions = [];
+    if (empty($block)) return null;
 
-      foreach ($transaction as $line) {
-        if ($this->isDateLine($line)) {
-          $current['date'] = $this->parseDate($line);
-          continue;
-        }
-        if ($this->isTimeLine($line)) {
-          $current['time'] = $line;
-          continue;
-        }
-        if ($this->isAmountLine($line)) {
-          $current['amount'] = $this->extractAmount($line);
-          $descPart = $this->extractDescriptionFromAmountLine($line);
-          if ($descPart) {
-            $descriptions[] = $descPart;
-          }
-          continue;
-        }
-        $descriptions[] = $line;
-      }
+    // Cari tanggal (format "DD MMM YYYY")
+    $date = null;
+    $descriptionParts = [];
+    $amountStr = null;
+    $type = StatementType::UNKNOWN;
 
-      // Bangun deskripsi
-      $current['description'] = $this->buildDescription($descriptions);
+    // Gabungkan semua baris untuk pencarian amount
+    $fullText = implode(' ', $block);
 
-      // Tentukan tipe transaksi
-      $current['type'] = $this->determineType($current['description'], $current['amount'] ?? '');
-
-      if (isset($current['date']) && isset($current['amount'])) {
-        $data[] = $current;
-      }
+    // Cari nominal dengan format seperti "+700.000,00" atau "-2.500,00" atau "1.071.983,52"
+    if (preg_match('/[+-]?[\d\.]+,\d{2}/', $fullText, $matches)) {
+      $amountStr = $matches[0];
     }
 
-    return $data;
+    foreach ($block as $line) {
+      // Ambil tanggal
+      if (!$date && $this->isDateLine($line)) {
+        $date = $this->parseDate($line);
+        continue;
+      }
+      // Abaikan waktu
+      if ($this->isTimeLine($line)) {
+        continue;
+      }
+      // Abaikan baris yang hanya berisi nominal (sudah diambil)
+      if (preg_match('/^[+-]?[\d\.]+,\d{2}$/', trim($line))) {
+        continue;
+      }
+      // Abaikan baris dengan nomor urut dan nominal
+      if (preg_match('/^\d+\s+[+-]?[\d\.]+,\d{2}/', $line)) {
+        continue;
+      }
+      // Abaikan baris "dari" atau nomor halaman
+      if (preg_match('/^\d+\s*dari/', $line)) {
+        continue;
+      }
+
+      $descriptionParts[] = $line;
+    }
+
+    $description = implode(' ', array_filter($descriptionParts));
+    $description = preg_replace('/\s+/', ' ', $description);
+
+    if (!$date || !$amountStr) {
+      return null;
+    }
+
+    // Tentukan tipe dari nominal (jika ada tanda + atau -)
+    if (str_contains($amountStr, '+')) {
+      $type = StatementType::CREDIT;
+    } elseif (str_contains($amountStr, '-')) {
+      $type = StatementType::DEBIT;
+    } else {
+      // Jika tidak ada tanda, coba deteksi dari deskripsi
+      $type = $this->determineType($description, $amountStr);
+    }
+
+    $amount = $this->parseAmount($amountStr);
+
+    return [
+      'date' => $date,
+      'description' => trim($description),
+      'amount' => $amount,
+      'type' => $type,
+    ];
   }
 
-  /**
-  * Format hasil akhir sesuai kontrak.
-  */
   private function formatTransactions(array $transactions): array
   {
-    return array_map(function ($trx) {
-      return [
-        'date' => $trx['date'],
-        'description' => $trx['description'],
-        'amount' => $this->parseAmount($trx['amount']), // pakai helper parent
-        'type' => $trx['type'],
-      ];
-    }, $transactions);
+    return array_filter($transactions);
   }
 
   // ==================== HELPER DETEKSI ====================
 
   private function isDateLine(string $line): bool
   {
-    return (bool) preg_match('/^\d{1,2} [A-Za-z]{3} \d{4}$/', $line);
+    return (bool) preg_match('/^\d{1,2} [A-Za-z]{3} \d{4}$/', trim($line));
   }
 
   private function isTimeLine(string $line): bool
   {
-    return (bool) preg_match('/^\d{1,2}:\d{2}:\d{2} [A-Za-z]+$/', $line);
+    return (bool) preg_match('/^\d{1,2}:\d{2}:\d{2} [A-Za-z]+$/', trim($line));
   }
-
-  private function isAmountLine(string $line): bool
-  {
-    return str_contains($line, "\t") &&
-    preg_match('/[+-]?\d{1,3}(?:\.\d{3})*(?:,\d{2})$/', $line);
-  }
-
-  // ==================== HELPER EKSTRAKSI ====================
 
   private function parseDate(string $line): string
   {
-    return Carbon::createFromFormat('d M Y', $line)->toDateString();
+    return Carbon::createFromFormat('d M Y', trim($line))->toDateString();
   }
 
-  private function extractAmount(string $line): string
-  {
-    $parts = explode("\t", $line);
-    $amount = end($parts);
-    return preg_replace("/[^\d.,+-]/", "", $amount);
-  }
-
-  private function extractDescriptionFromAmountLine(string $line): ?string
-  {
-    $parts = explode("\t", $line);
-    if (count($parts) >= 3) {
-      $desc = trim($parts[0]);
-      return !empty($desc) ? $desc : null;
-    }
-    return null;
-  }
-
-  private function buildDescription(array $descriptions): string
-  {
-    return collect($descriptions)
-    ->reverse()
-    ->filter()
-    ->map(fn($d) => trim($d))
-    ->implode(' ');
-  }
-
-  /**
-  * Tentukan tipe transaksi berdasarkan deskripsi dan nominal.
-  */
   private function determineType(string $description, string $amount): StatementType
   {
-    // Jika nominal mengandung minus, pasti debit
-    if (str_contains($amount, '-')) {
-      return StatementType::DEBIT;
-    }
-
     $lower = strtolower($description);
     $debitKeywords = ['debit',
       'db',
@@ -310,7 +272,8 @@ class MandiriPdfParser extends AbstractBankParser
       'payment',
       'biaya',
       'adm',
-      'keluar'];
+      'keluar',
+      'penarikan'];
     $creditKeywords = ['credit',
       'cr',
       'setor',
