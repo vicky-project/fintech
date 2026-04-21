@@ -65,7 +65,8 @@ class PdfDecryptor
   {
     $parser = new \Smalot\PdfParser\Parser();
     try {
-      $parser->parseFile($filePath);
+      $result = $parser->parseFile($filePath);
+      \Log::debug("result", ["parser" => $result]);
       return false;
     } catch (\Exception $e) {
       return str_contains($e->getMessage(), 'password') ||
