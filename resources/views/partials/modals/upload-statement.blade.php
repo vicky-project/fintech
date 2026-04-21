@@ -118,7 +118,7 @@
 
     html += `
     <div class="list-group-item" id="trx-${trx.id}">
-    <div class="d-flex align-items-start">
+    <div class="d-flex align-items-start" style="overflow-x: scroll;">
     <div class="form-check me-3 mt-1">
     <input class="form-check-input transaction-checkbox" type="checkbox"
     value="${trx.id}" id="chk-${trx.id}"
