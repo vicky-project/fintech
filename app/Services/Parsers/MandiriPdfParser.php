@@ -175,13 +175,13 @@ class MandiriPdfParser extends AbstractBankParser
     // Contoh: "871.983,521 -2.500,00" -> ambil "-2.500,00"
     if (preg_match('/\s\d+\s+([+-][\d\.]+,\d{2})/', $fullText, $matches)) {
       $amountStr = $matches[1];
-      $amount = $this->parseAmount($amountStr);
+      $amount = abs($this->parseAmount($amountStr));
       $type = str_contains($amountStr, '+') ? StatementType::CREDIT : StatementType::DEBIT;
     } else {
       // Fallback: cari nominal dengan format umum
       if (preg_match('/[+-][\d\.]+,\d{2}/', $fullText, $matches)) {
         $amountStr = $matches[0];
-        $amount = $this->parseAmount($amountStr);
+        $amount = abs($this->parseAmount($amountStr));
         $type = str_contains($amountStr, '+') ? StatementType::CREDIT : StatementType::DEBIT;
       }
     }
@@ -199,6 +199,7 @@ class MandiriPdfParser extends AbstractBankParser
       $line = preg_replace('/\s+[\d\.]+,\d{2}$/', '', $line);
 
       $line = trim($line);
+      $line = preg_replace('/^\d+\s*dari\s*/', '', $line);
       if (!empty($line)) {
         $descriptionParts[] = $line;
       }
@@ -206,6 +207,11 @@ class MandiriPdfParser extends AbstractBankParser
 
     $description = implode(' ', $descriptionParts);
     $description = preg_replace('/\s+/', ' ', $description);
+
+
+    if ($this->isTransfer($description)) {
+      $type = StatementType::TRANSFER;
+    }
 
     // Jika type masih unknown, coba deteksi dari deskripsi
     if ($type === StatementType::UNKNOWN) {
@@ -218,6 +224,28 @@ class MandiriPdfParser extends AbstractBankParser
       'amount' => $amount,
       'type' => $type,
     ];
+  }
+
+  private function isTransfer(string $description): bool
+  {
+    $keywords = [
+      'transfer',
+      'trsf',
+      'pindah',
+      'BI Fast',
+      'kliring',
+      'rtgs',
+      'skn',
+      'antar bank'
+    ];
+
+    $lower = strtolower($description);
+    foreach ($keywords as $kw) {
+      if (str_contains($lower, $kw)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private function formatTransactions(array $transactions): array
