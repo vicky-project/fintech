@@ -80,6 +80,7 @@ class MandiriPdfParser extends AbstractBankParser
   private function extractText(string $filePath): string
   {
     $text = parent::extractPdfText($filePath);
+    \Log::debug("Processing extract", ['text' => $text]);
     $text = preg_replace("/\n\s*\n/", "\n", $text);
     $text = preg_replace("/[ \t]+/", " ", $text);
     return $text;
