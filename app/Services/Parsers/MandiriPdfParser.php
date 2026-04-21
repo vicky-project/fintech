@@ -37,6 +37,7 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     "Amount (IDR)",
     "Keterangan",
     "Remarks",
+    "Tabungan Mandiri"
   ];
 
   public function canParse(string $filePath, ?string $content = null): bool
