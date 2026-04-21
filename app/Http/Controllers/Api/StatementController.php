@@ -288,6 +288,10 @@ class StatementController extends Controller
       ]);
     } catch (\Exception $e) {
       DB::rollBack();
+      \Log::error("Failed to import statement.", [
+        "message" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+      ]);
       return response()->json([
         'success' => false,
         'message' => 'Gagal mengimpor: ' . $e->getMessage()
