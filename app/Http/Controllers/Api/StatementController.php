@@ -299,7 +299,8 @@ class StatementController extends Controller
 
         // Cek saldo untuk expense
         if ($transactionType === \Modules\FinTech\Enums\TransactionType::EXPENSE) {
-          if ($wallet->fresh()->balance->isLessThan($trx->amount)) {
+          if ($wallet->balance->isLessThan($trx->amount)) {
+            \Log::warning("Saldo kurang.", ["amount" => $trx->getFormattedAmount(), "saldo" => $wallet->getFormattedBalance()]);
             $skipped++;
             $skippedReasons[] = "{$trx->description}: saldo tidak mencukupi (butuh {$trx->getFormattedAmount()}, saldo {$wallet->getFormattedBalance()})";
             continue;
