@@ -36,7 +36,8 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     "Amount (IDR)",
     "Keterangan",
     "Remarks",
-    "Tabungan Mandiri"
+    "Tabungan Mandiri",
+    "Dicetak pada/Issued on"
   ];
 
   public function canParse(string $filePath, ?string $content = null): bool
@@ -198,6 +199,7 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
       // Hapus saldo di akhir baris
       $line = preg_replace('/\s+[\d\.]+,\d{2}$/', '', $line);
 
+      $line = str_replace(':', '', $line);
       $line = trim($line);
       // Hapus awalan "161 dari" jika masih ada
       $line = preg_replace('/^\d+\s*dari\s*/', '', $line);
