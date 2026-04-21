@@ -258,7 +258,7 @@ function renderPagination(containerId, page, lastPage, onPageChange) {
 
 // ==================== HOME PAGE ====================
 async function renderHomePage() {
-  await initializeApp();
+  await loadHomeSummary();
   const summary = state.homeSummary;
   if (!summary) {
     document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
