@@ -201,6 +201,7 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
       $line = trim($line);
       // Hapus awalan "161 dari" jika masih ada
       $line = preg_replace('/^\d+\s*dari\s*/', '', $line);
+      \Log::debug("Description parts", ["line" => $line]);
       if (!empty($line)) {
         $descriptionParts[] = $line;
       }
