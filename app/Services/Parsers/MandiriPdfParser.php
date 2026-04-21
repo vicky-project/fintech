@@ -128,6 +128,9 @@ class MandiriPdfParser extends AbstractBankParser
     return false;
   }
 
+  /**
+  * Ekstrak transaksi dengan memotong berdasarkan kemunculan baris nominal yang valid.
+  */
   private function extractTransactions(array $lines): array
   {
     $transactions = [];
@@ -138,12 +141,29 @@ class MandiriPdfParser extends AbstractBankParser
     while ($i < $total) {
       $line = $lines[$i];
 
-      // Akhir blok transaksi: baris mengandung "WIB" dan baris berikutnya adalah tanggal
+      // Deteksi baris yang mengandung nominal transaksi (pola: digit+spasi+tanda+nominal)
+      if (preg_match('/\s\d+\s+[+-][\d\.]+,\d{2}/', $line)) {
+        // Jika sudah ada blok sebelumnya, proses dulu
+        if (!empty($currentBlock)) {
+          $transaction = $this->parseTransactionBlock($currentBlock);
+          if ($transaction) {
+            $transactions[] = $transaction;
+          }
+          $currentBlock = [];
+        }
+        // Mulai blok baru dengan baris ini
+        $currentBlock[] = $line;
+        $i++;
+        continue;
+      }
+
+      // Jika baris mengandung "WIB" dan diikuti tanggal, kemungkinan akhir transaksi
       if (str_contains($line, 'WIB') && isset($lines[$i+1]) && $this->isDateLine($lines[$i+1])) {
         $currentBlock[] = $line;
         $currentBlock[] = $lines[$i+1];
         $i += 2;
 
+        // Proses blok dan reset
         $transaction = $this->parseTransactionBlock($currentBlock);
         if ($transaction) {
           $transactions[] = $transaction;
@@ -152,6 +172,7 @@ class MandiriPdfParser extends AbstractBankParser
         continue;
       }
 
+      // Tambahkan ke blok saat ini
       $currentBlock[] = $line;
       $i++;
     }
@@ -173,13 +194,15 @@ class MandiriPdfParser extends AbstractBankParser
       return null;
     }
 
+    // Gabungkan untuk pencarian pola
     $fullText = implode(' ', $block);
 
-    // 1. Cari tanggal
+    // 1. Cari tanggal (prioritas: tanggal yang paling akhir di blok)
     $date = null;
-    foreach ($block as $line) {
-      if ($this->isDateLine($line)) {
-        $date = $this->parseDate($line);
+    // Cari dari belakang karena tanggal transaksi biasanya di akhir
+    for ($i = count($block) - 1; $i >= 0; $i--) {
+      if ($this->isDateLine($block[$i])) {
+        $date = $this->parseDate($block[$i]);
         break;
       }
     }
@@ -187,12 +210,11 @@ class MandiriPdfParser extends AbstractBankParser
       return null;
     }
 
-    // 2. Cari nominal transaksi dengan pola: spasi + digit(nomor urut) + spasi + [+-]nominal
+    // 2. Cari nominal transaksi
     $amountStr = null;
     if (preg_match('/\s\d+\s+([+-][\d\.]+,\d{2})/', $fullText, $matches)) {
       $amountStr = $matches[1];
     } else {
-      // Fallback: cari nominal dengan tanda +/- di mana saja
       if (preg_match('/[+-][\d\.]+,\d{2}/', $fullText, $matches)) {
         $amountStr = $matches[0];
       }
@@ -204,20 +226,25 @@ class MandiriPdfParser extends AbstractBankParser
 
     $amount = abs($this->parseAmount($amountStr));
 
-    // 3. Bangun deskripsi
+    // 3. Bangun deskripsi (hanya ambil baris sebelum nominal dan bukan tanggal/waktu)
     $descriptionParts = [];
     foreach ($block as $line) {
       if ($this->isDateLine($line) || $this->isTimeLine($line)) {
         continue;
       }
-
-      // Hapus pola nomor urut + nominal
-      $line = preg_replace('/\s\d+\s+[+-][\d\.]+,\d{2}/', '', $line);
-      // Hapus saldo di akhir baris (contoh: "871.983,52")
+      // Hentikan jika sudah mencapai baris yang mengandung nominal (karena setelah itu adalah saldo/nomor urut)
+      if (preg_match('/\s\d+\s+[+-][\d\.]+,\d{2}/', $line)) {
+        // Ambil hanya bagian sebelum pola nominal
+        $line = preg_replace('/\s\d+\s+[+-][\d\.]+,\d{2}.*$/', '', $line);
+        if (!empty(trim($line))) {
+          $descriptionParts[] = trim($line);
+        }
+        continue;
+      }
+      // Hapus saldo di akhir baris (jika ada)
       $line = preg_replace('/\s+[\d\.]+,\d{2}$/', '', $line);
-      // Hapus awalan nomor halaman "161 dari"
-      $line = preg_replace('/^\d+\s*dari\s*/', '', $line);
-      $line = str_replace(":", "", $line);
+      // Hapus karakter ':'
+      $line = str_replace(':', '', $line);
 
       $line = trim($line);
       if (!empty($line)) {
@@ -227,19 +254,21 @@ class MandiriPdfParser extends AbstractBankParser
 
     $description = implode(' ', $descriptionParts);
     $description = preg_replace('/\s+/', ' ', $description);
-
-    // Hapus informasi yang masih tersangkut seperti nama pemilik atau periode
-    // Misalnya "01 Jan 2023 - 30 Jun 2023"
     $description = preg_replace('/\b[A-Z]{2,}\s+[A-Z\s]+\b/', '', $description); // Nama kapital
     $description = preg_replace('/\d{1,2} [A-Za-z]{3} \d{4} - \d{1,2} [A-Za-z]{3} \d{4}/', '', $description);
     $description = trim($description);
 
-    // 4. Tentukan tipe menggunakan StatementType::fromDescription
+    // Batasi panjang deskripsi (misal 255 karakter)
+    if (strlen($description) > 255) {
+      $description = substr($description, 0, 252) . '...';
+    }
+
+    // 4. Tentukan tipe
     $type = StatementType::fromDescription($description, $amountStr);
 
     return [
       'date' => $date,
-      'description' => trim($description) ?: "Transaksi Bank Mandiri",
+      'description' => $description ?: "Transaksi Bank Mandiri",
       'amount' => $amount,
       'type' => $type,
     ];
