@@ -307,7 +307,7 @@ class StatementController extends Controller
           'wallet_id' => $wallet->id,
           'category_id' => $trx->category_id,
           'type' => $transactionType,
-          'amount' => $trx->amount->getAmount()->toInt(),
+          'amount' => $trx->amount->getAmount()->tofloat(),
           'transaction_date' => $trx->transaction_date,
           'description' => $trx->description,
           'metadata' => ['imported_from_statement_id' => $statement->id],
