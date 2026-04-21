@@ -90,9 +90,9 @@
           <div class="mb-3">
             <label class="form-label">Periode</label>
             <select class="form-select" id="filter-period-type">
-              <option value="daily">Harian</option>
               <option value="monthly">Bulanan</option>
               <option value="yearly">Tahunan</option>
+              <option value="all_years">Semua Tahun</option>
             </select>
           </div>
           <div class="mb-3" id="filter-period-detail">
@@ -152,13 +152,11 @@
     userSettings: null,
     reportFilter: {
       wallet_id: '',
-      periodType: 'monthly',
-      // daily, monthly, yearly
+      periodType: 'all_years',
+      // default
       date: null,
-      // untuk daily: YYYY-MM-DD
       month: null,
-      // untuk monthly: YYYY-MM
-      year: null // untuk yearly: YYYY
+      year: null
     }
   };
 
@@ -1140,13 +1138,9 @@
     const filter = state.reportFilter;
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().toISOString().slice(0,7);
-    const currentDate = new Date().toISOString().slice(0,10);
 
-    if (type === 'daily') {
-    container.innerHTML = `
-    <label class="form-label">Tanggal</label>
-    <input type="date" class="form-control" id="filter-date" value="${filter.date || currentDate}">
-    `;
+    if (type === 'all_years') {
+    container.innerHTML = `<p class="text-muted small">Menampilkan total per tahun untuk semua tahun yang memiliki data.</p>`;
     } else if (type === 'monthly') {
     container.innerHTML = `
     <label class="form-label">Bulan</label>
@@ -1173,8 +1167,8 @@
     state.reportFilter.wallet_id = walletId;
     state.reportFilter.periodType = periodType;
 
-    if (periodType === 'daily') {
-    state.reportFilter.date = document.getElementById('filter-date').value;
+    if (periodType === 'all_years') {
+    state.reportFilter.date = null;
     state.reportFilter.month = null;
     state.reportFilter.year = null;
     } else if (periodType === 'monthly') {
@@ -1199,15 +1193,14 @@
 
     if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
 
-    if (filter.periodType === 'daily' && filter.date) {
-    params.append('date', filter.date);
-    } else if (filter.periodType === 'monthly' && filter.month) {
+    if (filter.periodType === 'monthly' && filter.month) {
     const [year, month] = filter.month.split('-');
     params.append('year', parseInt(year, 10));
     params.append('month', parseInt(month, 10));
     } else if (filter.periodType === 'yearly' && filter.year) {
     params.append('year', parseInt(filter.year, 10));
     }
+    // Untuk all_years tidak perlu parameter tambahan
 
     if (params.toString()) url += '?' + params.toString();
 
@@ -1228,7 +1221,7 @@
     });
     }
 
-    // Ringkasan (opsional)
+    // Ringkasan
     const summaryEl = document.getElementById('trend-summary');
     if (summaryEl) {
     const totalIncome = data.income.reduce((a, b) => a + b, 0);
@@ -1251,7 +1244,7 @@
     `;
     }
     } catch (error) {
-    tgApp.showToast('Gagal memuat laporan. ' + error.message, 'danger');
+    tgApp.showToast('Gagal memuat laporan', 'danger');
     }
     }
 

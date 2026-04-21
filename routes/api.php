@@ -50,11 +50,11 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 
   // ==================== REPORTS ====================
   Route::prefix('reports')->name('reports.')->group(function () {
-    Route::get('daily', [ReportController::class, 'daily'])->name('daily');
     Route::get('weekly', [ReportController::class, 'weekly'])->name('weekly');
     Route::get('monthly', [ReportController::class, 'monthly'])->name('monthly');
     Route::get('yearly', [ReportController::class, 'yearly'])->name('yearly');
     Route::get('doughnut-weekly', [ReportController::class, 'doughnutWeekly'])->name('doughnut-weekly');
+    Route::get('all-years', [ReportController::class, 'allYears'])->name('all-years');
   });
 
   Route::post('category-suggestions', [CategorySuggestionController::class, 'store']);

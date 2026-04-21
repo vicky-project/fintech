@@ -16,22 +16,24 @@ class ReportController extends Controller
     $this->reportService = $reportService;
   }
 
-  public function daily(Request $request): JsonResponse
+  /**
+  * All years report (total per year).
+  */
+  public function allYears(Request $request): JsonResponse
   {
     $request->validate([
-      'wallet_id' => 'nullable|exists:fintech_wallets,id',
-      'date' => 'required|date_format:Y-m-d'
+      'wallet_id' => 'nullable|exists:fintech_wallets,id'
     ]);
 
     try {
-      $data = $this->reportService->getDailyReport($request, $request->user()->id);
+      $data = $this->reportService->getAllYearsReport($request, $request->user()->id);
 
       return response()->json([
         'success' => true,
         'data' => $data
       ]);
-    } catch(\Exception $e) {
-      \Log::error("Failed to get report daily", [
+    }catch(\Exception $e) {
+      \Log::error("Failed to get report all year", [
         "message" => $e->getMessage(),
         "trace" => $e->getTraceAsString()
       ]);

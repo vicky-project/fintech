@@ -15,32 +15,6 @@ class ReportService
 {
   protected int $cacheTtl = 3600; // 1 hour
 
-  public function getDailyReport(Request $request, int $userId): array
-  {
-    $date = $request->input('date', now()->toDateString());
-    $walletId = $request->input('wallet_id');
-
-    $cacheKey = $this->generateDailyCacheKey($userId, $date, $walletId);
-
-    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($userId, $date, $walletId) {
-      $startDate = Carbon::parse($date)->startOfDay();
-      $endDate = Carbon::parse($date)->endOfDay();
-
-      $query = $this->buildBaseQuery($userId, $walletId, $startDate, $endDate);
-      $currency = $this->getCurrency($userId, $walletId);
-
-      $income = (clone $query)->income()->sum(DB::raw('amount / 100'));
-      $expense = (clone $query)->expense()->sum(DB::raw('amount / 100'));
-
-      return [
-        'labels' => ['Pemasukan', 'Pengeluaran'],
-        'income' => [$income],
-        'expense' => [$expense],
-        'currency' => $currency,
-      ];
-    });
-  }
-
   /**
   * Weekly report data.
   */
@@ -244,6 +218,70 @@ class ReportService
   }
 
   /**
+  * All years report data (total per year).
+  */
+  public function getAllYearsReport(Request $request,
+    int $userId): array
+  {
+    $walletId = $request->input('wallet_id');
+
+    $cacheKey = $this->generateAllYearCacheKey($userId,
+      $walletId);
+
+    return Cache::remember($cacheKey,
+      $this->cacheTtl,
+      function () use ($userId, $walletId) {
+        $query = Transaction::whereHas('wallet', function ($q) use ($userId, $walletId) {
+          $q->where('user_id', $userId);
+          if ($walletId) {
+            $q->where('id', $walletId);
+          }
+        });
+
+        $currency = $this->getCurrency($userId,
+          $walletId);
+
+        $rawData = $query->select(
+          DB::raw('YEAR(transaction_date) as year'),
+          'type',
+          DB::raw('SUM(amount) as total_raw')
+        )
+        ->groupBy('year',
+          'type')
+        ->orderBy('year')
+        ->get();
+
+        $years = [];
+        $incomeByYear = [];
+        $expenseByYear = [];
+
+        foreach ($rawData as $item) {
+          $year = (int) $item->year;
+          $amount = (int) $item->total_raw / 100;
+          if (!in_array($year, $years)) {
+            $years[] = $year;
+          }
+          if ($item->type === TransactionType::INCOME) {
+            $incomeByYear[$year] = $amount;
+          } elseif ($item->type === TransactionType::EXPENSE) {
+            $expenseByYear[$year] = $amount;
+          }
+        }
+
+        sort($years);
+        $income = array_map(fn($y) => $incomeByYear[$y] ?? 0, $years);
+        $expense = array_map(fn($y) => $expenseByYear[$y] ?? 0, $years);
+
+        return [
+          'labels' => $years,
+          'income' => $income,
+          'expense' => $expense,
+          'currency' => $currency,
+        ];
+      });
+  }
+
+  /**
   * Doughnut chart data for weekly expenses by category.
   */
   public function getDoughnutWeeklyReport(Request $request,
@@ -361,10 +399,6 @@ class ReportService
     return "report_weekly_{$userId}_{$year}_{$week}_" . ($walletId ?? 'all');
   }
 
-  protected function generateDailyCacheKey(int $userId, string $date, ?int $walletId): string
-  {
-    return "report_daily_{$userId}_{$date}_" . ($walletId ?? 'all');
-  }
 
   /**
   * Generate cache key for monthly report.
@@ -388,5 +422,10 @@ class ReportService
   protected function generateDoughnutCacheKey(int $userId, int $weekOffset, ?int $walletId): string
   {
     return "report_doughnut_{$userId}_{$weekOffset}_" . ($walletId ?? 'all');
+  }
+
+  protected function generateAllYearCacheKey(int $userId, ?int $walletId): string
+  {
+    return "report_all_years_{$userId}_" . ($walletId ?? 'all');
   }
 }
