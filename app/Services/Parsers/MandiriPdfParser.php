@@ -86,7 +86,6 @@ class MandiriPdfParser extends AbstractBankParser
 
     $startIndex = 0;
     foreach ($lines as $i => $line) {
-      // Cari awal data transaksi (setelah header "No Tanggal Keterangan...")
       if (str_contains($line, "No") && str_contains($line, "Tanggal") && str_contains($line, "Keterangan")) {
         $startIndex = $i + 1;
         break;
