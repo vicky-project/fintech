@@ -70,6 +70,8 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
   {
     $text = $this->extractText($filePath);
     $lines = $this->prepareLines($text);
+    \Log::debug("Text extract", [
+      "lines" => $lines]);
     $transactions = $this->extractTransactions($lines);
     \Log::debug('transaksi', $transactions);
     return $this->formatTransactions($transactions);
