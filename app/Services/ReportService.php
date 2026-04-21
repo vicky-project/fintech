@@ -361,7 +361,7 @@ class ReportService
     return "report_weekly_{$userId}_{$year}_{$week}_" . ($walletId ?? 'all');
   }
 
-  protected function generateDailyCacheKey(int $userId, int $date, ?int $walletId): string
+  protected function generateDailyCacheKey(int $userId, string $date, ?int $walletId): string
   {
     return "report_daily_{$userId}_{$date}_" . ($walletId ?? 'all');
   }
