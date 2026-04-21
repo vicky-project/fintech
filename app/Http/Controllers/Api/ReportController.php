@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\ReportService;
+use Carbon\Carbon;
 
 class ReportController extends Controller
 {
@@ -13,6 +14,21 @@ class ReportController extends Controller
 
   public function __construct(ReportService $reportService) {
     $this->reportService = $reportService;
+  }
+
+  public function daily(Request $request): JsonResponse
+  {
+    $request->validate([
+      'wallet_id' => 'nullable|exists:fintech_wallets,id',
+      'date' => 'required|date_format:Y-m-d'
+    ]);
+
+    $data = $this->reportService->getDailyReport($request, $request->user()->id);
+
+    return response()->json([
+      'success' => true,
+      'data' => $data
+    ]);
   }
 
   /**

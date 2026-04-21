@@ -50,6 +50,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 
   // ==================== REPORTS ====================
   Route::prefix('reports')->name('reports.')->group(function () {
+    Route::get('daily', [ReportController::class, 'daily'])->name('daily');
     Route::get('weekly', [ReportController::class, 'weekly'])->name('weekly');
     Route::get('monthly', [ReportController::class, 'monthly'])->name('monthly');
     Route::get('yearly', [ReportController::class, 'yearly'])->name('yearly');

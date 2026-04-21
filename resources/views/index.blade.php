@@ -71,6 +71,41 @@
       </div>
     </div>
   </div>
+
+  {{-- Modal Filter Laporan --}}
+  <div class="modal fade" id="reportFilterModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Filter Laporan</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Dompet</label>
+            <select class="form-select" id="filter-wallet">
+              <option value="">Semua Dompet</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Periode</label>
+            <select class="form-select" id="filter-period-type">
+              <option value="daily">Harian</option>
+              <option value="monthly">Bulanan</option>
+              <option value="yearly">Tahunan</option>
+            </select>
+          </div>
+          <div class="mb-3" id="filter-period-detail">
+            {{-- Akan diisi oleh JS sesuai tipe --}}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary" onclick="applyReportFilter()">Terapkan</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {{-- Modals --}}
@@ -114,7 +149,17 @@
       month: ''
     },
     chartInstances: {},
-    userSettings: null
+    userSettings: null,
+    reportFilter: {
+      wallet_id: '',
+      periodType: 'monthly',
+      // daily, monthly, yearly
+      date: null,
+      // untuk daily: YYYY-MM-DD
+      month: null,
+      // untuk monthly: YYYY-MM
+      year: null // untuk yearly: YYYY
+    }
   };
 
   // ==================== INITIALIZATION ====================
@@ -1046,37 +1091,17 @@
 
     // ==================== REPORTS PAGE ====================
     function renderReportsPage() {
-    const currentYear = new Date().getFullYear();
-    const yearOptions = [];
-    for(let y = currentYear; y >= currentYear - 5; y--) {
-    yearOptions.push(`<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`);
-    }
     const html = `
     <div class="container py-3">
-    <div class="d-flex justify-content-between mb-3">
-    <div class="d-flex">
-    <i class="bi bi-graph-up me-2"></i>
-    <h5>Laporan Keuangan</h5>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Laporan Keuangan</h5>
+    <button class="btn btn-sm btn-outline-primary" onclick="showReportFilterModal()">
+    <i class="bi bi-funnel"></i> Filter
+    </button>
     </div>
+    <div style="height: 250px;">
+    <canvas id="reportBarChart"></canvas>
     </div>
-    <div class="row g-2 mb-3">
-    <div class="col-6">
-    <select class="form-select form-select-sm" id="report-wallet" onchange="loadReportCharts()">
-    <option value="">Semua Dompet</option>
-    ${state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
-    </select>
-    </div>
-    <div class="col-6">
-    <select class="form-select form-select-sm" id="report-year" onchange="loadReportCharts();">
-    ${yearOptions}
-    </select>
-    </div>
-    </div>
-    <ul class="nav nav-tabs mb-2" id="reportTab">
-    <li class="nav-item"><button class="nav-link active" data-period="monthly" onclick="setReportPeriod('monthly')">Bulanan</button></li>
-    <li class="nav-item"><button class="nav-link" data-period="yearly" onclick="setReportPeriod('yearly')">Tahunan</button></li>
-    </ul>
-    <div style="height: 250px;"><canvas id="reportBarChart"></canvas></div>
     <div id="trend-summary" class="mt-3"></div>
     </div>
     `;
@@ -1084,24 +1109,106 @@
     setTimeout(loadReportCharts, 50);
     }
 
-    function setReportPeriod(period) {
-    document.querySelectorAll('#reportTab .nav-link').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`#reportTab [data-period="${period}"]`).classList.add('active');
+    function showReportFilterModal() {
+    // Isi dropdown dompet
+    const walletSelect = document.getElementById('filter-wallet');
+    walletSelect.innerHTML = '<option value="">Semua Dompet</option>';
+    state.wallets.forEach(w => {
+    const option = document.createElement('option');
+    option.value = w.id;
+    option.textContent = w.name;
+    if (w.id == state.reportFilter.wallet_id) option.selected = true;
+    walletSelect.appendChild(option);
+    });
+
+    // Set tipe periode
+    const periodTypeSelect = document.getElementById('filter-period-type');
+    periodTypeSelect.value = state.reportFilter.periodType;
+
+    // Render input detail periode
+    renderPeriodDetailInputs();
+
+    // Event saat tipe periode berubah
+    periodTypeSelect.onchange = renderPeriodDetailInputs;
+
+    new bootstrap.Modal(document.getElementById('reportFilterModal')).show();
+    }
+
+    function renderPeriodDetailInputs() {
+    const type = document.getElementById('filter-period-type').value;
+    const container = document.getElementById('filter-period-detail');
+    const filter = state.reportFilter;
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().toISOString().slice(0,7);
+    const currentDate = new Date().toISOString().slice(0,10);
+
+    if (type === 'daily') {
+    container.innerHTML = `
+    <label class="form-label">Tanggal</label>
+    <input type="date" class="form-control" id="filter-date" value="${filter.date || currentDate}">
+    `;
+    } else if (type === 'monthly') {
+    container.innerHTML = `
+    <label class="form-label">Bulan</label>
+    <input type="month" class="form-control" id="filter-month" value="${filter.month || currentMonth}">
+    `;
+    } else if (type === 'yearly') {
+    const yearOptions = [];
+    for (let y = currentYear; y >= currentYear - 10; y--) {
+    yearOptions.push(`<option value="${y}" ${y == (filter.year || currentYear) ? 'selected' : ''}>${y}</option>`);
+    }
+    container.innerHTML = `
+    <label class="form-label">Tahun</label>
+    <select class="form-select" id="filter-year">
+    ${yearOptions}
+    </select>
+    `;
+    }
+    }
+
+    function applyReportFilter() {
+    const walletId = document.getElementById('filter-wallet').value;
+    const periodType = document.getElementById('filter-period-type').value;
+
+    state.reportFilter.wallet_id = walletId;
+    state.reportFilter.periodType = periodType;
+
+    if (periodType === 'daily') {
+    state.reportFilter.date = document.getElementById('filter-date').value;
+    state.reportFilter.month = null;
+    state.reportFilter.year = null;
+    } else if (periodType === 'monthly') {
+    state.reportFilter.month = document.getElementById('filter-month').value;
+    state.reportFilter.date = null;
+    state.reportFilter.year = null;
+    } else if (periodType === 'yearly') {
+    state.reportFilter.year = document.getElementById('filter-year').value;
+    state.reportFilter.date = null;
+    state.reportFilter.month = null;
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('reportFilterModal')).hide();
     loadReportCharts();
     }
 
     async function loadReportCharts() {
     try {
-    const period = document.querySelector('#reportTab .active')?.dataset.period || 'monthly';
-    const walletId = document.getElementById('report-wallet')?.value || '';
-    const year = document.getElementById('report-year')?.value || new Date().getFullYear();
-
-    let url = `${BASE_URL}/api/fintech/reports/${period}`;
+    const filter = state.reportFilter;
+    let url = `${BASE_URL}/api/fintech/reports/${filter.periodType}`;
     const params = new URLSearchParams();
-    if (walletId) params.append('wallet_id', walletId);
-    if (period === 'yearly' || period === 'monthly') {
+
+    if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
+
+    if (filter.periodType === 'daily' && filter.date) {
+    params.append('date', filter.date);
+    } else if (filter.periodType === 'monthly' && filter.month) {
+    const [year, month] = filter.month.split('-');
     params.append('year', year);
+    params.append('month', month);
+    } else if (filter.periodType === 'yearly' && filter.year) {
+    params.append('year', filter.year);
     }
+
     if (params.toString()) url += '?' + params.toString();
 
     const res = await tgApp.fetchWithAuth(url);
@@ -1121,13 +1228,25 @@
     });
     }
 
-    // Tampilkan ringkasan (opsional)
+    // Ringkasan (opsional)
     const summaryEl = document.getElementById('trend-summary');
-    if (summaryEl && data.summary) {
+    if (summaryEl) {
+    const totalIncome = data.income.reduce((a, b) => a + b, 0);
+    const totalExpense = data.expense.reduce((a, b) => a + b, 0);
     summaryEl.innerHTML = `
-    <div class="alert alert-info">
-    Total Pemasukan: ${formatNumber(data.summary.total_income)}<br>
-    Total Pengeluaran: ${formatNumber(data.summary.total_expense)}
+    <div class="row">
+    <div class="col-6">
+    <div class="card text-center p-2">
+    <small class="text-success">Pemasukan</small>
+    <strong>${formatNumber(totalIncome)}</strong>
+    </div>
+    </div>
+    <div class="col-6">
+    <div class="card text-center p-2">
+    <small class="text-danger">Pengeluaran</small>
+    <strong>${formatNumber(totalExpense)}</strong>
+    </div>
+    </div>
     </div>
     `;
     }

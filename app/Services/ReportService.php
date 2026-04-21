@@ -2,6 +2,7 @@
 
 namespace Modules\FinTech\Services;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -14,69 +15,103 @@ class ReportService
 {
   protected int $cacheTtl = 3600; // 1 hour
 
-  /**
-  * Weekly report data.
-  */
-  public function getWeeklyReport(Request $request, int $userId): array
+  public function getDailyReport(Request $request, int $userId): array
   {
-    $year = $request->input('year', now()->year);
-    $week = $request->input('week', now()->weekOfYear);
+    $date = $request->input('date', now()->toDateString());
     $walletId = $request->input('wallet_id');
 
-    $cacheKey = $this->generateWeeklyCacheKey($userId, $year, $week, $walletId);
+    $cacheKey = $this->generateDailyCacheKey($userId, $date, $walletId);
 
-    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($userId, $year, $week, $walletId) {
-      $startDate = now()->setISODate($year, $week)->startOfWeek();
-      $endDate = now()->setISODate($year, $week)->endOfWeek();
+    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($userId, $date, $walletId) {
+      $startDate = Carbon::parse($date)->startOfDay();
+      $endDate = Carbon::parse($date)->endOfDay();
 
       $query = $this->buildBaseQuery($userId, $walletId, $startDate, $endDate);
-
       $currency = $this->getCurrency($userId, $walletId);
 
-      // Initialize daily data
-      $dailyData = [];
-      $currentDate = $startDate->copy();
-      while ($currentDate <= $endDate) {
-        $dailyData[$currentDate->toDateString()] = ['income' => 0,
-          'expense' => 0];
-        $currentDate->addDay();
-      }
-
-      $rawData = $query->select(
-        'transaction_date',
-        'type',
-        DB::raw('SUM(amount) as total_raw')
-      )
-      ->groupBy('transaction_date', 'type')
-      ->get();
-
-      foreach ($rawData as $item) {
-        $date = $item->transaction_date->toDateString();
-        $amount = (int) $item->total_raw / 100;
-        if ($item->type === TransactionType::INCOME) {
-          $dailyData[$date]['income'] += $amount;
-        } elseif ($item->type === TransactionType::EXPENSE) {
-          $dailyData[$date]['expense'] += $amount;
-        }
-      }
-
-      $labels = [];
-      $income = [];
-      $expense = [];
-
-      foreach ($dailyData as $date => $values) {
-        $labels[] = date('D', strtotime($date));
-        $income[] = $values['income'];
-        $expense[] = $values['expense'];
-      }
+      $income = (clone $query)->income()->sum(DB::raw('amount / 100'));
+      $expense = (clone $query)->expense()->sum(DB::raw('amount / 100'));
 
       return [
-        'labels' => $labels,
-        'income' => $income,
-        'expense' => $expense,
+        'labels' => ['Pemasukan', 'Pengeluaran'],
+        'income' => [$income],
+        'expense' => [$expense],
         'currency' => $currency,
       ];
     });
+  }
+
+  /**
+  * Weekly report data.
+  */
+  public function getWeeklyReport(Request $request,
+    int $userId): array
+  {
+    $year = $request->input('year',
+      now()->year);
+    $week = $request->input('week',
+      now()->weekOfYear);
+    $walletId = $request->input('wallet_id');
+
+    $cacheKey = $this->generateWeeklyCacheKey($userId,
+      $year,
+      $week,
+      $walletId);
+
+    return Cache::remember($cacheKey,
+      $this->cacheTtl,
+      function () use ($userId, $year, $week, $walletId) {
+        $startDate = now()->setISODate($year, $week)->startOfWeek();
+        $endDate = now()->setISODate($year, $week)->endOfWeek();
+
+        $query = $this->buildBaseQuery($userId, $walletId, $startDate, $endDate);
+
+        $currency = $this->getCurrency($userId, $walletId);
+
+        // Initialize daily data
+        $dailyData = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+          $dailyData[$currentDate->toDateString()] = ['income' => 0,
+            'expense' => 0];
+          $currentDate->addDay();
+        }
+
+        $rawData = $query->select(
+          'transaction_date',
+          'type',
+          DB::raw('SUM(amount) as total_raw')
+        )
+        ->groupBy('transaction_date', 'type')
+        ->get();
+
+        foreach ($rawData as $item) {
+          $date = $item->transaction_date->toDateString();
+          $amount = (int) $item->total_raw / 100;
+          if ($item->type === TransactionType::INCOME) {
+            $dailyData[$date]['income'] += $amount;
+          } elseif ($item->type === TransactionType::EXPENSE) {
+            $dailyData[$date]['expense'] += $amount;
+          }
+        }
+
+        $labels = [];
+        $income = [];
+        $expense = [];
+
+        foreach ($dailyData as $date => $values) {
+          $labels[] = date('D', strtotime($date));
+          $income[] = $values['income'];
+          $expense[] = $values['expense'];
+        }
+
+        return [
+          'labels' => $labels,
+          'income' => $income,
+          'expense' => $expense,
+          'currency' => $currency,
+        ];
+      });
   }
 
   /**
@@ -324,6 +359,11 @@ class ReportService
   protected function generateWeeklyCacheKey(int $userId, int $year, int $week, ?int $walletId): string
   {
     return "report_weekly_{$userId}_{$year}_{$week}_" . ($walletId ?? 'all');
+  }
+
+  protected function generateDailyCacheKey(int $userId, int $date, ?int $walletId): string
+  {
+    return "report_daily_{$userId}_{$date}_" . ($walletId ?? 'all');
   }
 
   /**
