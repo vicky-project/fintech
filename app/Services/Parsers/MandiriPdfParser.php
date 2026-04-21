@@ -27,6 +27,8 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     " (LPS)",
     "KCP ",
     "No",
+    "of",
+    " - ",
     "Date",
     "Tanggal",
     "Balance (IDR)",
