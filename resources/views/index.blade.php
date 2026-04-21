@@ -34,8 +34,8 @@
       <button class="btn nav-btn" data-page="transactions"><i class="bi bi-list-ul fs-5"></i></button>
       <button class="btn nav-btn" data-page="transfers"><i class="bi bi-arrow-left-right fs-5"></i></button>
       <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
-      <button class="btn nav-btn" data-page="reports"><i class="bi bi-bar-chart fs-5"></i></button>
-      <button class="btn nav-btn" data-page="insights"><i class="bi bi-graph-up fs-5"></i></button>
+      <button class="btn nav-btn" data-page="reports"><i class="bi bi-graph-up fs-5"></i></button>
+      <button class="btn nav-btn" data-page="insights"><i class="bi bi-bar-chart fs-5"></i></button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
     </div>
   </nav>
@@ -50,10 +50,9 @@
         <li><a class="dropdown-item" href="#" onclick="showAddWalletModal()"><i class="bi bi-wallet me-2"></i>Tambah Dompet</a></li>
         <li><a class="dropdown-item" href="#" onclick="showAddTransactionModal()"><i class="bi bi-plus-circle me-2"></i>Tambah Transaksi</a></li>
         <li><a class="dropdown-item" href="#" onclick="showAddTransferModal()"><i class="bi bi-send me-2"></i>Transfer</a></li>
-        <li><a class="dropdown-item" href="#" onclick="navigateToTrash()"><i class="bi bi-trash me-2"></i>Tempat Sampah</a></li>
         <li><a class="dropdown-item" href="#" onclick="showUploadStatementModal()">
-          <i class="bi bi-cloud-upload me-2"></i>Upload Statement
-        </a></li>
+          <i class="bi bi-cloud-upload me-2"></i>Upload Statement</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showSuggestCategoryModal()"><i class="bi bi-tags me-2"></i>Category Recomendation</a></li>
       </ul>
     </div>
   </div>
@@ -389,9 +388,6 @@
     <h5>Transaksi</h5>
     </div>
     <div>
-    <button class="btn btn-sm btn-outline-info me-1" onclick="showSuggestCategoryModal()" title="Usulkan Kategori Baru">
-    <i class="bi bi-tags"></i>
-    </button>
     <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()">
     <i class="bi bi-trash"></i>
     </button>
@@ -889,7 +885,7 @@
     <div class="container py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="d-flex">
-    <i class="bi bi-graph-up me-2"></i>
+    <i class="bi bi-bar-chart me-2"></i>
     <h5>Analisis Keuangan</h5>
     </div>
     </div>
@@ -1054,7 +1050,7 @@
     <div class="container py-3">
     <div class="d-flex justify-content-between mb-3">
     <div class="d-flex">
-    <i class="bi bi-bar-chart me-2"></i>
+    <i class="bi bi-graph-up me-2"></i>
     <h5>Laporan Keuangan</h5>
     </div>
     </div>

@@ -34,7 +34,7 @@ class PdfDecryptor
     ];
 
     $process = new Process($command);
-    $process->setTimeout(60);
+    $process->setTimeout(120);
 
     try {
       $process->mustRun();
@@ -45,13 +45,23 @@ class PdfDecryptor
         return $outputPath;
       }
 
-      throw new \Exception("File output tidak valid.");
+      throw new \Exception("File output tidak valid atau kosong.");
     } catch (ProcessFailedException $e) {
       $error = $process->getErrorOutput();
-      Log::error("QPDF gagal: " . $error);
+      $output = $process->getOutput();
+      Log::error("QPDF gagal. Error: ", [
+        "command" => $process->getCommandLine(),
+        "error" => $error,
+        "output" => $output,
+        "exit_code" => $process->getExitCode()
+      ]);
 
       if (str_contains($error, 'invalid password')) {
         throw new \Exception("Password yang dimasukkan salah.");
+      }
+
+      if (str_contains($error, "No such file")) {
+        throw new \Exception("File tidak ditemukan atau tidak dapat diakses.");
       }
 
       throw new \Exception("Gagal mendekripsi PDF: " . $e->getMessage());
@@ -68,8 +78,14 @@ class PdfDecryptor
       $result = $parser->parseFile($filePath);
       return false;
     } catch (\Exception $e) {
-      return str_contains(strtolower($e->getMessage()), 'password') ||
-      str_contains(strtolower($e->getMessage()), 'encrypted') || str_contains(strtolower($e->getMessage()), 'secured');
+      $message = strtolower($e->getMessage());
+      return str_contains($message,
+        'password') ||
+      str_contains($message,
+        'encrypted') ||
+      str_contains($message,
+        'secured') ||
+      str_contains($message, 'file is encrypted');
     }
   }
 }
