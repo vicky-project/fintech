@@ -1203,10 +1203,10 @@
     params.append('date', filter.date);
     } else if (filter.periodType === 'monthly' && filter.month) {
     const [year, month] = filter.month.split('-');
-    params.append('year', year);
-    params.append('month', month);
+    params.append('year', parseInt(year, 10));
+    params.append('month', parseInt(month, 10));
     } else if (filter.periodType === 'yearly' && filter.year) {
-    params.append('year', filter.year);
+    params.append('year', parseInt(filter.year, 10));
     }
 
     if (params.toString()) url += '?' + params.toString();
