@@ -10,6 +10,7 @@ use Modules\FinTech\Models\StatementTransaction;
 use Modules\FinTech\Services\PdfDecryptor;
 use Modules\FinTech\Services\BankParserManager;
 use Modules\FinTech\Services\CategorizationService;
+use Modules\FinTech\Services\TransactionService;
 use Modules\FinTech\Enums\StatementStatus;
 use Modules\FinTech\Enums\StatementType;
 use Illuminate\Support\Facades\Storage;
@@ -21,15 +22,18 @@ class StatementController extends Controller
   protected PdfDecryptor $decryptor;
   protected BankParserManager $parserManager;
   protected CategorizationService $categorizationService;
+  protected TransactionService $transactionService;
 
   public function __construct(
     PdfDecryptor $decryptor,
     BankParserManager $parserManager,
-    CategorizationService $categorizationService
+    CategorizationService $categorizationService,
+    TransactionService $transactionService
   ) {
     $this->decryptor = $decryptor;
     $this->parserManager = $parserManager;
     $this->categorizationService = $categorizationService;
+    $this->transactionService = $transactionService;
   }
 
   /**
@@ -242,13 +246,10 @@ class StatementController extends Controller
             $skippedReasons[] = "{$trx->description}: saldo tidak mencukupi (butuh {$trx->getFormattedAmount()}, saldo {$wallet->getFormattedBalance()})";
             continue;
           }
-          $wallet->withdraw($trx->amount);
-        } else {
-          $wallet->deposit($trx->amount);
         }
 
         // Buat transaksi utama
-        \Modules\FinTech\Models\Transaction::create([
+        $this->transactionService->createTransaction($request->user(), [
           'wallet_id' => $wallet->id,
           'category_id' => $trx->category_id,
           'type' => $transactionType,
