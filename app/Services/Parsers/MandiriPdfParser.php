@@ -248,6 +248,7 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
     ->implode(" ");
 
     $desc = preg_replace('/^\d+\s*dari\s*/', '', $desc);
+    return $desc;
   }
 
   private function determineType(string $amount): StatementType
