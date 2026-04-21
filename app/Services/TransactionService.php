@@ -134,9 +134,9 @@ class TransactionService
       $transaction->save();
 
       if ($data['type'] === TransactionType::INCOME->value) {
-        $wallet->deposit($amount);
+        $wallet->fresh()->deposit($amount);
       } elseif ($data['type'] === TransactionType::EXPENSE->value) {
-        $wallet->withdraw($amount);
+        $wallet->fresh()->withdraw($amount);
       }
       $this->clearTransactionCaches($user->id,
         $wallet->id,
