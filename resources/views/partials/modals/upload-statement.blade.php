@@ -50,7 +50,7 @@
 
     const html = `
     <div class="d-flex align-items-center">
-    <button class="btn btn-link me-2" onclick="navigateTo('transactions')">
+    <button class="btn btn-link me-2" onclick="navigateTo('statements')">
     <i class="bi bi-arrow-left"></i>
     </button>
     <h5 class="mb-0">Preview Statement</h5>
