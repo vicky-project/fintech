@@ -306,7 +306,7 @@ class StatementController extends Controller
         $this->transactionService->createTransaction($request->user(), [
           'wallet_id' => $wallet->id,
           'category_id' => $trx->category_id,
-          'type' => $transactionType,
+          'type' => $transactionType->value,
           'amount' => $trx->amount->getAmount()->tofloat(),
           'transaction_date' => $trx->transaction_date,
           'description' => $trx->description,
