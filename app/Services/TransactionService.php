@@ -138,13 +138,13 @@ class TransactionService
       } elseif ($data['type'] === TransactionType::EXPENSE->value) {
         $wallet->withdraw($amount);
       }
+      $this->clearTransactionCaches($user->id,
+        $wallet->id,
+        $transaction->id);
 
       return $transaction;
     });
 
-    $this->clearTransactionCaches($user->id,
-      $wallet->id,
-      $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
     return $transaction;
