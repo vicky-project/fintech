@@ -23,12 +23,24 @@ class ReportController extends Controller
       'date' => 'required|date_format:Y-m-d'
     ]);
 
-    $data = $this->reportService->getDailyReport($request, $request->user()->id);
+    try {
+      $data = $this->reportService->getDailyReport($request, $request->user()->id);
 
-    return response()->json([
-      'success' => true,
-      'data' => $data
-    ]);
+      return response()->json([
+        'success' => true,
+        'data' => $data
+      ]);
+    } catch(\Exception $e) {
+      \Log::error("Failed to get report daily", [
+        "message" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+      ]);
+
+      return response()->json([
+        "success" => false,
+        "message" => $e->getMessage()
+      ], 500);
+    }
   }
 
   /**
@@ -42,12 +54,24 @@ class ReportController extends Controller
       'week' => 'integer|min:1|max:53'
     ]);
 
-    $data = $this->reportService->getWeeklyReport($request, $request->user()->id);
+    try {
+      $data = $this->reportService->getWeeklyReport($request, $request->user()->id);
 
-    return response()->json([
-      'success' => true,
-      'data' => $data
-    ]);
+      return response()->json([
+        'success' => true,
+        'data' => $data
+      ]);
+    } catch (\Exception $e) {
+      \Log::error("Failed to get report weekly", [
+        "message" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+      ]);
+
+      return response()->json([
+        "success" => false,
+        "message" => $e->getMessage()
+      ], 500);
+    }
   }
 
   /**
@@ -61,12 +85,24 @@ class ReportController extends Controller
       'month' => 'integer|min:1|max:12'
     ]);
 
-    $data = $this->reportService->getMonthlyReport($request, $request->user()->id);
+    try {
+      $data = $this->reportService->getMonthlyReport($request, $request->user()->id);
 
-    return response()->json([
-      'success' => true,
-      'data' => $data
-    ]);
+      return response()->json([
+        'success' => true,
+        'data' => $data
+      ]);
+    } catch (\Exception $e) {
+      \Log::error("Failed to get report monthly", [
+        "message" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+      ]);
+
+      return response()->json([
+        "success" => false,
+        "message" => $e->getMessage()
+      ], 500);
+    }
   }
 
   /**
@@ -79,12 +115,24 @@ class ReportController extends Controller
       'year' => 'integer|min:2000|max:2100'
     ]);
 
-    $data = $this->reportService->getYearlyReport($request, $request->user()->id);
+    try {
+      $data = $this->reportService->getYearlyReport($request, $request->user()->id);
 
-    return response()->json([
-      'success' => true,
-      'data' => $data
-    ]);
+      return response()->json([
+        'success' => true,
+        'data' => $data
+      ]);
+    } catch(\Exception $e) {
+      \Log::error("Failed to get report yearly", [
+        "message" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+      ]);
+
+      return response()->json([
+        "success" => false,
+        "message" => $e->getMessage()
+      ], 500);
+    }
   }
 
   /**
@@ -97,11 +145,23 @@ class ReportController extends Controller
       'week_offset' => 'integer|min:0'
     ]);
 
-    $data = $this->reportService->getDoughnutWeeklyReport($request, $request->user()->id);
+    try {
+      $data = $this->reportService->getDoughnutWeeklyReport($request, $request->user()->id);
 
-    return response()->json([
-      'success' => true,
-      'data' => $data
-    ]);
+      return response()->json([
+        'success' => true,
+        'data' => $data
+      ]);
+    } catch(\Exception $e) {
+      \Log::error("Failed to get report doughnut weekly", [
+        "message" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+      ]);
+
+      return response()->json([
+        "success" => false,
+        "message" => $e->getMessage()
+      ], 500);
+    }
   }
 }
