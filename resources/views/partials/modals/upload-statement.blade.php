@@ -49,8 +49,7 @@
     state.currentPage = 'statement-preview';
 
     const html = `
-    <div class="container py-3">
-    <div class="d-flex align-items-center mb-3">
+    <div class="d-flex align-items-center mb-2">
     <button class="btn btn-link me-2" onclick="navigateTo('transactions')">
     <i class="bi bi-arrow-left"></i>
     </button>
@@ -60,11 +59,10 @@
     <div class="spinner-border text-primary" role="status"></div>
     <p class="mt-2">Memuat data...</p>
     </div>
-    <div id="preview-actions" class="position-fixed bottom-0 start-0 w-100 bg-white border-top p-3 d-none" style="padding-bottom: 80px !important;">
+    <div id="preview-actions" class="bottom-0 start-0 w-100 bg-white border-top p-3 d-none" style="padding-bottom: 80px !important;">
     <button class="btn btn-primary w-100" onclick="importSelectedTransactions()">
     <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
     </button>
-    </div>
     </div>
     `;
     document.getElementById('main-content').innerHTML = html;
