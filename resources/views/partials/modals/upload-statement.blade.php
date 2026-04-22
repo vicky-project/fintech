@@ -288,6 +288,7 @@
     }
 
     const walletId = formData.get('wallet_id');
+    alert(walletId);
     if (!walletId) {
       tgApp.showToast('Pilih dompet tujuan', 'danger');
       return;
@@ -297,7 +298,6 @@
     document.getElementById('upload-progress')?.classList.remove('d-none');
     const submitBtn = form.closest('.modal').querySelector('.btn-primary');
     submitBtn.disabled = true;
-    alert(JSON.stringify(formData.entries()));
 
     try {
       const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/statements/upload', {
