@@ -108,7 +108,7 @@ class TransactionController extends Controller
         'success' => true,
         'message' => "{$count} transaksi berhasil dipindahkan ke tempat sampah."
       ]);
-    } catch(\Exception $e) {
+    } catch(HttpException $e) {
       return response()->json(["message" => $e->getMessage()], $e->getStatusCode());
     }
   }
@@ -117,8 +117,7 @@ class TransactionController extends Controller
   {
     $perPage = request('per_page',
       20);
-    $result = $this->transactionService->getTrashedTransactions(request()->user(),
-      $perPage);
+    $result = $this->transactionService->getTrashedTransactions(request()->user(), $perPage);
 
     return response()->json([
       'success' => true,
