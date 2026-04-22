@@ -10,6 +10,7 @@ use RecursiveIteratorIterator;
 use Modules\FinTech\Services\BankParserManager;
 use Modules\FinTech\Services\Parsers\MandiriPdfParser;
 use Modules\FinTech\Services\Parsers\MandiriExcelParser;
+use Modules\FinTech\Services\Parsers\MandiriCsvParser;
 
 class FinTechServiceProvider extends ServiceProvider
 {
@@ -51,6 +52,7 @@ class FinTechServiceProvider extends ServiceProvider
       $manager = new BankParserManager();
       $manager->addParser(new MandiriPdfParser());
       $manager->addParser(new MandiriExcelParser());
+      $manager->addParser(new MandiriCsvParser());
       return $manager;
     });
   }

@@ -12,7 +12,7 @@ class MandiriExcelParser extends AbstractBankParser
   public function canParse(string $filePath, ?string $content = null): bool
   {
     $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-    return in_array($ext, ['csv', 'xls', 'xlsx']);
+    return in_array($ext, ['xls', 'xlsx']);
   }
 
   public function parse(string $filePath): array
