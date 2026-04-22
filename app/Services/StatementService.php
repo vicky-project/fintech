@@ -121,11 +121,13 @@ class StatementService
       ]);
       $statement->updateStatus(StatementStatus::PARSED);
 
+      $insertData = [];
+      $now = now();
       foreach ($result['transactions'] as $trx) {
         $type = $trx['type'] ?? StatementType::fromDescription($trx['description'], $trx['amount']);
         $category = $this->categorizationService->categorize($trx['description'], $type);
 
-        StatementTransaction::create([
+        $insertData[] = [
           'statement_id' => $statement->id,
           'transaction_date' => $trx['date'],
           'description' => $trx['description'],
@@ -133,7 +135,13 @@ class StatementService
           'type' => $type,
           'category_id' => $category?->id,
           'raw_data' => $trx,
-        ]);
+          'created_at' => $now,
+          'updated_at' => $now
+        ];
+      }
+
+      foreach (array_chunk($insertData, 500) as $chunk) {
+        StatementTransaction::insert($chunk);
       }
 
       return [
@@ -141,7 +149,6 @@ class StatementService
         'bank_code' => $result['bank_code'],
         'transaction_count' => count($result['transactions']),
       ];
-
     } catch (\Exception $e) {
       \Log::error("Failed to process upload statement.", [
         "message" => $e->getMessage(),
