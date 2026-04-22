@@ -382,7 +382,8 @@ async function renderTransactionsPage() {
 async function refreshTransactionList(page = 1) {
   const filters = {
     wallet_id: state.filters.wallet_id,
-    type: state.filters.type
+    type: state.filters.type,
+    month: state.filters.month
   };
   await loadTransactionsPage(page, filters);
   updateTransactionStats();
