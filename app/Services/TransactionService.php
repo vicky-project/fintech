@@ -418,6 +418,7 @@ class TransactionService
   protected function buildBaseQuery(Authenticatable $user,
     array $filters): \Illuminate\Database\Eloquent\Builder
   {
+    \Log::debug($filters);
     $query = Transaction::with(['wallet',
       'category'])
     ->whereHas('wallet',
@@ -430,6 +431,7 @@ class TransactionService
       $query->where('type', $filters['type']);
     }
     if (!empty($filters['month'])) {
+      \Log::debug("month filter", $filters);
       $query->whereYear('transaction_date', substr($filters['month'], 0, 4))
       ->whereMonth('transaction_date', substr($filters['month'], 5, 2));
     }
