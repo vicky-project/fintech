@@ -176,7 +176,7 @@ async function loadStatements(page = 1) {
     state.statementPage = res.data.current_page;
     state.statementLastPage = res.data.last_page;
   } catch (error) {
-    tgApp.showToast('Gagal memuat statement', 'danger');
+    tgApp.showToast('Gagal memuat statement. '+ error.message, 'danger');
   }
 }
 
