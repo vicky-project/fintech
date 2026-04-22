@@ -57,6 +57,21 @@ abstract class AbstractBankParser implements BankParserInterface
   }
 
   /**
+  * Membaca file CSV baris per baris menggunakan generator (streaming).
+  */
+  protected function streamCsv(string $filePath): \Generator
+  {
+    $handle = fopen($filePath, 'r');
+    if (!$handle) {
+      throw new \Exception("Tidak dapat membuka file: {$filePath}");
+    }
+    while (($data = fgetcsv($handle, 0, ',')) !== false) {
+      yield $data;
+    }
+    fclose($handle);
+  }
+
+  /**
   * Membersihkan string nominal menjadi float.
   * Contoh: "1,234,567.89" -> 1234567.89
   *         "1.234.567,89" -> 1234567.89

@@ -16,32 +16,25 @@ class MandiriCsvParser extends AbstractBankParser
       return false;
     }
 
-    $rows = $this->readCsv($filePath);
-    if (empty($rows)) {
-      return false;
-    }
+    // Baca beberapa baris pertama untuk deteksi header
+    $handle = fopen($filePath, 'r');
+    if (!$handle) return false;
 
-    // Cari header khas: "Tanggal","Jenis","Kategori","Deskripsi","Jumlah"
-    foreach ($rows as $row) {
-      if (count($row) >= 5 &&
-        str_contains(strtolower($row[0] ?? ''), 'tanggal') &&
-        str_contains(strtolower($row[1] ?? ''), 'jenis') &&
-        str_contains(strtolower($row[2] ?? ''), 'kategori') &&
-        str_contains(strtolower($row[3] ?? ''), 'deskripsi') &&
-        str_contains(strtolower($row[4] ?? ''), 'jumlah')) {
-        return true;
+    $found = false;
+    $count = 0;
+    while (($row = fgetcsv($handle, 0, ',')) !== false && $count < 50) {
+      if ($this->isHeaderRow($row)) {
+        $found = true;
+        break;
       }
+      $count++;
     }
-    return false;
+    fclose($handle);
+    return $found;
   }
 
   public function parse(string $filePath): array
   {
-    $rows = $this->readCsv($filePath);
-    if (empty($rows)) {
-      return [];
-    }
-
     $transactions = [];
     $headerIndices = null;
     $inTransactionBlock = false;
@@ -49,34 +42,34 @@ class MandiriCsvParser extends AbstractBankParser
       'total pengeluaran',
       'saldo bulanan',
       'total pemasukan'];
+    $rowCount = 0;
+    $maxRowsPerMonth = 5000; // Batas aman per bulan
 
-    foreach ($rows as $row) {
+    foreach ($this->streamCsv($filePath) as $row) {
+      $rowCount++;
+
       // Abaikan baris kosong
       if (empty(array_filter($row, fn($cell) => trim($cell) !== ''))) {
         continue;
       }
 
       // Deteksi header kolom
-      if (!$headerIndices || $this->isHeaderRow($row)) {
-        $indices = $this->findHeaderIndices($row);
-        if ($indices) {
-          $headerIndices = $indices;
-          $inTransactionBlock = true;
-        }
+      if ($this->isHeaderRow($row)) {
+        $headerIndices = $this->findHeaderIndices($row);
+        $inTransactionBlock = true;
+        $rowCount = 0; // Reset counter per bulan
         continue;
       }
 
-      // Jika sedang dalam blok transaksi, cek apakah baris ini adalah awal bulan baru atau ringkasan
-      $firstCell = strtolower(trim($row[0] ?? ''));
-
       // Deteksi awal bulan baru (contoh: "BULAN: NOVEMBER 2025")
+      $firstCell = strtolower(trim($row[0] ?? ''));
       if (str_starts_with($firstCell, 'bulan:')) {
         $inTransactionBlock = false;
         $headerIndices = null;
         continue;
       }
 
-      // Deteksi baris ringkasan
+      // Deteksi baris ringkasan → hentikan blok transaksi
       $isSummary = false;
       foreach ($stopKeywords as $kw) {
         if (str_contains($firstCell, $kw)) {
@@ -90,7 +83,13 @@ class MandiriCsvParser extends AbstractBankParser
       }
 
       // Jika tidak dalam blok transaksi, lewati
-      if (!$inTransactionBlock) {
+      if (!$inTransactionBlock || !$headerIndices) {
+        continue;
+      }
+
+      // Batasi jumlah baris per bulan untuk mencegah loop tak terbatas
+      if ($rowCount > $maxRowsPerMonth) {
+        $inTransactionBlock = false;
         continue;
       }
 
@@ -193,8 +192,8 @@ class MandiriCsvParser extends AbstractBankParser
     if (in_array($lower, ['expense', 'pengeluaran', 'keluar'])) {
       return StatementType::DEBIT;
     }
-    // Fallback: cek tanda minus (meskipun di CSV ini tidak ada)
-    return str_contains($amountStr, '-') ? StatementType::DEBIT : StatementType::DEBIT;
+    // Fallback
+    return StatementType::DEBIT;
   }
 
   /**
