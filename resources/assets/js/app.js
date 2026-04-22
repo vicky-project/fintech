@@ -707,7 +707,7 @@ function renderReportsPage() {
   <button type="button" class="btn btn-outline-success" data-cat-type="income" onclick="switchCategoryType('income')">Pemasukan</button>
   </div>
   </div>
-  <div style="height: 250px;">
+  <div style="height: 350px;">
   <canvas id="categoryChart"></canvas>
   </div>
   <div id="category-total" class="text-center mt-2 small text-muted"></div>
