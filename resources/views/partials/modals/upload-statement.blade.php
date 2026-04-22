@@ -288,12 +288,12 @@
     }
 
     const walletId = formData.get('wallet_id');
-    alert(walletId);
     if (!walletId) {
       tgApp.showToast('Pilih dompet tujuan', 'danger');
       return;
     }
 
+    alert(JSON.stringify(formData) + ' ' + formData.entries() + ' ' + formData.get('wallet_id') + ' ' + formData.get('file'));
     // Tampilkan progress
     document.getElementById('upload-progress')?.classList.remove('d-none');
     const submitBtn = form.closest('.modal').querySelector('.btn-primary');
