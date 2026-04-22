@@ -59,13 +59,18 @@ class CategorizationService
   {
     $score = 0;
     $keywords = $category->keywords ?? [];
+    $lowerDesc = strtolower($description);
 
     // 1. Pencocokan keyword
     foreach ($keywords as $keyword) {
       $kw = strtolower($keyword);
-      if (str_contains($description, $kw)) {
+      if (str_contains($lowerDesc, $kw)) {
         // Bobot lebih tinggi untuk keyword yang lebih panjang (lebih spesifik)
         $score += 10 + (strlen($kw) * 0.5);
+      }
+
+      if ($kw === 'biaya' && preg_match('/\bbiaya\b/', $lowerDesc)) {
+        $score += 20;
       }
 
       // Pencocokan kata utuh (untuk menghindari partial match yang salah)
@@ -78,7 +83,7 @@ class CategorizationService
     }
 
     // 2. Similaritas dengan nama kategori
-    similar_text($description, strtolower($category->name), $percent);
+    similar_text($lowerDesc, strtolower($category->name), $percent);
     if ($percent > 50) {
       $score += $percent / 5;
     }
@@ -95,67 +100,74 @@ class CategorizationService
   private function patternBonus(string $description, Category $category): float
   {
     $bonus = 0;
+    $lowerDesc = strtolower($description);
     $catName = strtolower($category->name);
 
+    if (str_contains($lowerDesc, 'biaya')) {
+      if (str_contains($catName, 'biaya') || str_contains($catName, 'admin') || str_contains($catName, 'pajak')) {
+        $bonus += 50;
+      }
+    }
+
     // Pola Transfer
-    if (str_contains($description, 'transfer') || str_contains($description, 'trsf') || str_contains($description, 'bi fast')) {
+    if (str_contains($lowerDesc, 'transfer') || str_contains($lowerDesc, 'trsf') || str_contains($lowerDesc, 'bi fast')) {
       if (str_contains($catName, 'transfer') || str_contains($catName, 'keuangan')) {
         $bonus += 20;
       }
     }
 
     // Pola Tarik Tunai / ATM
-    if (str_contains($description, 'tarik') || str_contains($description, 'atm') || str_contains($description, 'penarikan')) {
+    if (str_contains($lowerDesc, 'tarik') || str_contains($lowerDesc, 'atm') || str_contains($lowerDesc, 'penarikan')) {
       if (str_contains($catName, 'tarik') || str_contains($catName, 'tunai') || str_contains($catName, 'atm')) {
         $bonus += 25;
       }
     }
 
     // Pola Belanja Online / Marketplace
-    if (str_contains($description, 'shopee') || str_contains($description, 'tokopedia') ||
-      str_contains($description, 'lazada') || str_contains($description, 'bukalapak')) {
+    if (str_contains($lowerDesc, 'shopee') || str_contains($lowerDesc, 'tokopedia') ||
+      str_contains($lowerDesc, 'lazada') || str_contains($lowerDesc, 'bukalapak')) {
       if (str_contains($catName, 'belanja') || str_contains($catName, 'online')) {
         $bonus += 25;
       }
     }
 
     // Pola Pembayaran Tagihan (PLN, PDAM, BPJS, Telkom, dll)
-    if (preg_match('/\b(pln|pdam|bpjs|telkom|indihome|listrik|air|internet|pulsa)\b/i', $description)) {
+    if (preg_match('/\b(pln|pdam|bpjs|telkom|indihome|listrik|air|internet|pulsa)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'tagihan') || str_contains($catName, 'utilitas')) {
         $bonus += 30;
       }
     }
 
     // Pola Makanan / Kuliner
-    if (preg_match('/\b(resto|restaurant|cafe|kafe|mcd|kfc|pizza|burger|sushi|steak|martabak|bakso|sate|nasi goreng|mie ayam|kopi|coffee)\b/i', $description)) {
+    if (preg_match('/\b(resto|restaurant|cafe|kafe|mcd|kfc|pizza|burger|sushi|steak|martabak|bakso|sate|nasi goreng|mie ayam|kopi|coffee)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'makanan') || str_contains($catName, 'minuman')) {
         $bonus += 30;
       }
     }
 
     // Pola Transportasi / BBM
-    if (preg_match('/\b(bensin|pertamina|shell|spbu|bbm|gojek|grab|taksi|parkir|tol)\b/i', $description)) {
+    if (preg_match('/\b(bensin|pertamina|shell|spbu|bbm|gojek|grab|taksi|parkir|tol)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'transportasi') || str_contains($catName, 'bahan bakar')) {
         $bonus += 30;
       }
     }
 
     // Pola Pendidikan / Kursus
-    if (preg_match('/\b(kursus|les|bimbel|sekolah|kuliah|universitas|spp|bootcamp|pelatihan)\b/i', $description)) {
+    if (preg_match('/\b(kursus|les|bimbel|sekolah|kuliah|universitas|spp|bootcamp|pelatihan)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'pendidikan') || str_contains($catName, 'kursus')) {
         $bonus += 30;
       }
     }
 
     // Pola Kesehatan
-    if (preg_match('/\b(dokter|rumah sakit|klinik|apotek|obat|vitamin|bpjs kesehatan|medical)\b/i', $description)) {
+    if (preg_match('/\b(dokter|rumah sakit|klinik|apotek|obat|vitamin|bpjs kesehatan|medical)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'kesehatan')) {
         $bonus += 30;
       }
     }
 
     // Pola Hiburan / Streaming
-    if (preg_match('/\b(netflix|spotify|youtube|disney|hbo|vidio|bioskop|cinema|xxi|cgv)\b/i', $description)) {
+    if (preg_match('/\b(netflix|spotify|youtube|disney|hbo|vidio|bioskop|cinema|xxi|cgv)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'hiburan') || str_contains($catName, 'streaming')) {
         $bonus += 30;
       }
