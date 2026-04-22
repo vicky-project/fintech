@@ -151,6 +151,7 @@ class StatementController extends Controller
       }
 
       $result = $this->parserManager->parse($processedPath);
+      \Log::debug("Parser result", $result);
 
       $statement->update([
         'bank_code' => $result['bank_code'],
