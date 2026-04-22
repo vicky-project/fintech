@@ -692,6 +692,7 @@ function renderReportsPage() {
   <i class="bi bi-funnel"></i> Filter
   </button>
   </div>
+  <div id="report-period-indicator" class="mb-3 small text-muted"></div>
   <div style="height: 250px;">
   <canvas id="reportBarChart"></canvas>
   </div>
@@ -714,6 +715,7 @@ function renderReportsPage() {
   `;
   document.getElementById('main-content').innerHTML = html;
   setTimeout(() => {
+    updateReportPeriodIndicator();
     loadReportCharts();
     loadCategoryChart(); // panggil chart kategori
   }, 50);
@@ -796,6 +798,7 @@ function applyReportFilter() {
   }
 
   bootstrap.Modal.getInstance(document.getElementById('reportFilterModal')).hide();
+  updateReportPeriodIndicator();
   loadReportCharts();
   loadCategoryChart();
 }
@@ -953,6 +956,48 @@ function switchCategoryType(type) {
   });
   document.querySelector(`[data-cat-type="${type}"]`).classList.add('active');
   loadCategoryChart();
+}
+
+function updateReportPeriodIndicator() {
+  const filter = state.reportFilter;
+  const indicatorEl = document.getElementById('report-period-indicator');
+  if (!indicatorEl) return;
+
+  let text = '';
+  let icon = 'bi-calendar3';
+
+  if (filter.periodType === 'all_years') {
+    text = 'Semua Tahun';
+    icon = 'bi-calendar-range';
+  } else if (filter.periodType === 'monthly') {
+    if (filter.month) {
+      const [year,
+        month] = filter.month.split('-');
+      const date = new Date(year, month - 1);
+      const monthName = date.toLocaleDateString('id-ID', {
+        month: 'long', year: 'numeric'
+      });
+      text = `Bulanan: ${monthName}`;
+    } else {
+      text = 'Bulanan (belum dipilih)';
+    }
+  } else if (filter.periodType === 'yearly') {
+    if (filter.year) {
+      text = `Tahunan: ${filter.year}`;
+    } else {
+      text = 'Tahunan (belum dipilih)';
+    }
+  }
+
+  // Tambahkan info dompet jika ada
+  if (filter.wallet_id) {
+    const wallet = state.wallets.find(w => w.id == filter.wallet_id);
+    if (wallet) {
+      text += ` · ${wallet.name}`;
+    }
+  }
+
+  indicatorEl.innerHTML = `<i class="${icon} me-1"></i> ${text}`;
 }
 
 // ==================== SETTINGS PAGE ====================
