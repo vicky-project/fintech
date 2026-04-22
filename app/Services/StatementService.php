@@ -99,15 +99,15 @@ class StatementService
     $fullPath = Storage::path($tempPath);
     $processedPath = $fullPath;
 
-    $statement = BankStatement::create([
-      'user_id' => $userId,
-      'wallet_id' => $walletId,
-      'original_filename' => $file->getClientOriginalName(),
-      'file_path' => $tempPath,
-      'status' => StatementStatus::UPLOADED,
-    ]);
-
     try {
+      $statement = BankStatement::create([
+        'user_id' => $userId,
+        'wallet_id' => $walletId,
+        'original_filename' => $file->getClientOriginalName(),
+        'file_path' => $tempPath,
+        'status' => StatementStatus::UPLOADED,
+      ]);
+
       $extension = strtolower($file->getClientOriginalExtension());
       if ($extension === 'pdf' && $this->pdfDecryptor->isEncrypted($fullPath)) {
         if (!$password) {
