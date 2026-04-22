@@ -135,8 +135,6 @@ async function loadTransactionsPage(page, filters) {
   if (filters.type) url += `&type=${filters.type}`;
   if (filters.month) url += `&month=${filters.month}`;
 
-  alert('Fetching transactions with URL:'+ url);
-
   const res = await tgApp.fetchWithAuth(url);
   state.transactions = res.data.data;
   state.transactionPage = res.data.current_page;
