@@ -133,7 +133,9 @@ async function loadTransactionsPage(page, filters) {
   let url = `${BASE_URL}/api/fintech/transactions?per_page=20&page=${page}`;
   if (filters.wallet_id) url += `&wallet_id=${filters.wallet_id}`;
   if (filters.type) url += `&type=${filters.type}`;
+  if (filters.month) url += `&month=${filters.month}`; // tambahkan ini
   const res = await tgApp.fetchWithAuth(url);
+
   state.transactions = res.data.data;
   state.transactionPage = res.data.current_page;
   state.transactionLastPage = res.data.last_page;
@@ -332,16 +334,25 @@ function renderRecentTransactionsFromSummary() {
 
 // ==================== TRANSACTIONS PAGE ====================
 async function renderTransactionsPage() {
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
   await renderListPage( {
     title: 'Transaksi',
     icon: 'bi bi-list-ul',
     filterHtml: `
     <div class="row g-2 mb-3" id="transaction-stats"></div>
-    <div class="mb-3">
+    <div class="row g-2 mb-3">
+    <div class="col-6">
     <select class="form-select form-select-sm" id="filter-wallet" onchange="applyTransactionFilter()">
     <option value="">Semua Dompet</option>
-    ${state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+    ${state.wallets.map(w => `<option value="${w.id}" ${w.id == state.filters.wallet_id ? 'selected': ''}>${w.name}</option>`).join('')}
     </select>
+    </div>
+    <div class="col-6">
+    <input type="month" class="form-control form-control-sm" id="filter-month"
+    value="${state.filters.month || currentMonth}"
+    onchange="applyTransactionFilter()">
+    </div>
     </div>
     `,
     listContainerId: 'transaction-list',
@@ -421,6 +432,7 @@ function renderTransactionList() {
 
 function applyTransactionFilter() {
   state.filters.wallet_id = document.getElementById('filter-wallet')?.value || '';
+  state.filters.month = document.getElementById('filter-month')?.value || '';
   state.transactionPage = 1;
   refreshTransactionList();
 }
