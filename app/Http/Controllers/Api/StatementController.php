@@ -5,10 +5,10 @@ namespace Modules\FinTech\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use Modules\FinTech\Services\StatementService;
+use Modules\FinTech\Http\Requests\UploadStatementRequest;
 use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
-use Illuminate\Support\Facades\Validator;
+use Modules\FinTech\Services\StatementService;
 
 class StatementController extends Controller
 {
@@ -45,21 +45,8 @@ class StatementController extends Controller
     ]);
   }
 
-  public function upload(Request $request): JsonResponse
+  public function upload(UploadStatementRequest $request): JsonResponse
   {
-    $validator = Validator::make($request->all(), [
-      'file' => 'required|file|mimes:pdf,xls,xlsx,csv|max:10240',
-      'password' => 'nullable|string|max:50',
-      'wallet_id' => 'required|exists:fintech_wallets,id',
-    ]);
-
-    if ($validator->fails()) {
-      return response()->json([
-        'success' => false,
-        'message' => $validator->errors()->first()
-      ], 422);
-    }
-
     try {
       $result = $this->statementService->uploadStatement(
         $request->user()->id,
