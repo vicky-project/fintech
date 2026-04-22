@@ -148,9 +148,11 @@ class StatementService
           'statement_id' => $statement->id,
           'transaction_date' => $trx['date'],
           'description' => $desc,
-          'amount' => $trx['amount'],
+          // insert harus mengkalikan manual
+          'amount' => (int) $trx['amount'] * 100,
           'type' => $type,
           'category_id' => $categoryId,
+          // insert harus encode manual
           'raw_data' => json_encode($trx),
           'created_at' => $now,
           'updated_at' => $now
