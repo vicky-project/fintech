@@ -94,15 +94,6 @@ class TransactionController extends Controller
     $walletId = $request->wallet_id;
     $month = $request->month;
 
-    // Pastikan wallet milik user
-    $wallet = Wallet::where('user_id', $user->id)->find($walletId);
-    if (!$wallet) {
-      return response()->json([
-        'success' => false,
-        'message' => 'Dompet tidak ditemukan atau bukan milik Anda.'
-      ], 403);
-    }
-
     try {
       $count = $this->transactionService->bulkDeleteTransactions($user, $walletId, $month);
 
