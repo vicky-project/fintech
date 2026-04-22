@@ -188,7 +188,7 @@
       if (state.currentPage === 'transactions') await refreshTransactionList();
 
       tgApp.hideLoading();
-      tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil');
+      tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil', 'success');
       bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
 
       if (state.currentPage === 'home') renderHomePage();
