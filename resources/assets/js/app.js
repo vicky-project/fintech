@@ -92,10 +92,10 @@ const renderPagination = (containerId, page, lastPage, onPageChange) => {
 const loadWallets = () => api.get('/api/fintech/wallets').then(res => {
   state.wallets = res.data || [];
   state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
-});
-const loadCategories = () => api.get('/api/fintech/categories').then(res => state.categories = res.data || []);
-const loadCurrencies = () => api.get('/api/fintech/currencies').then(res => state.currencies = res.data || []);
-const loadHomeSummary = () => api.get('/api/fintech/home-summary').then(res => state.homeSummary = res.data);
+}).catch(err => alert(err));
+const loadCategories = () => api.get('/api/fintech/categories').then(res => state.categories = res.data || []).catch(err => alert(err));
+const loadCurrencies = () => api.get('/api/fintech/currencies').then(res => state.currencies = res.data || []).catch(err => alert(err));
+const loadHomeSummary = () => api.get('/api/fintech/home-summary').then(res => state.homeSummary = res.data).catch(err => alert(err));
 const loadUserSettings = () => api.get('/api/fintech/settings').then(res => state.userSettings = res.data).catch(() => state.userSettings = {
   default_currency: 'IDR', default_wallet_id: null
 });
