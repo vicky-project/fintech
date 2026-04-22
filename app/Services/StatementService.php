@@ -16,18 +16,21 @@ use Modules\FinTech\Enums\TransactionType;
 
 class StatementService
 {
-  protected PdfDecryptor $decryptor;
+  protected PdfDecryptor $pdfDecryptor;
+  protected ExcelDecryptor $excelDecryptor;
   protected BankParserManager $parserManager;
   protected CategorizationService $categorizationService;
   protected TransactionService $transactionService;
 
   public function __construct(
-    PdfDecryptor $decryptor,
+    PdfDecryptor $pdfDecryptor,
+    ExcelDecryptor $excelDecryptor,
     BankParserManager $parserManager,
     CategorizationService $categorizationService,
     TransactionService $transactionService
   ) {
-    $this->decryptor = $decryptor;
+    $this->pdfDecryptor = $pdfDecryptor;
+    $this->excelDecryptor = $excelDecryptor;
     $this->parserManager = $parserManager;
     $this->categorizationService = $categorizationService;
     $this->transactionService = $transactionService;
@@ -104,15 +107,25 @@ class StatementService
     ]);
 
     try {
-      if ($file->getClientOriginalExtension() === 'pdf' && $this->decryptor->isEncrypted($fullPath)) {
+      $extension = strtolower($file->getClientOriginalExtension());
+      if ($extension === 'pdf' && $this->pdfDecryptor->isEncrypted($fullPath)) {
         if (!$password) {
           throw new \Exception("File PDF ini diproteksi password. Silakan masukkan password.");
         }
-        $processedPath = $this->decryptor->decrypt($fullPath, $password);
+        $processedPath = $this->pdfDecryptor->decrypt($fullPath, $password);
+        $statement->updateStatus(StatementStatus::DECRYPTED);
+      }
+
+      if (in_array($extension, ['xls', 'xlsx']) && $this->excelDecryptor->isEncrypted($fullPath)) {
+        if (!$password) {
+          throw new \Exception("File Excel ini diproteksi password.Silakan masukkan password.");
+        }
+        $processedPath = $this->excelDecryptor->decrypt($fullPath, $password);
         $statement->updateStatus(StatementStatus::DECRYPTED);
       }
 
       $result = $this->parserManager->parse($processedPath);
+      \Log::debug("File parsed.", $result);
 
       $statement->update([
         'bank_code' => $result['bank_code'],
