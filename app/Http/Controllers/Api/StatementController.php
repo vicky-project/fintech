@@ -296,7 +296,7 @@ class StatementController extends Controller
           continue;
         }
 
-        $wallet->refresh();
+        $wallet->fresh();
 
         // Cek saldo untuk expense
         if ($transactionType === \Modules\FinTech\Enums\TransactionType::EXPENSE) {

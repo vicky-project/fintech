@@ -167,34 +167,56 @@ class TransactionService
       $transaction);
     $wallet = $transaction->wallet;
 
-    // Prevent wallet change
     if (isset($data['wallet_id']) && $data['wallet_id'] != $wallet->id) {
       throw new \Exception('Dompet tidak dapat diubah.');
     }
 
-    $newAmount = Money::of($data['amount'], $wallet->currency);
+    $newAmount = isset($data['amount'])
+    ? Money::of($data['amount'], $wallet->currency)
+    : $transaction->amount;
+
+    $newType = $data['type'] ?? $transaction->type;
     $oldAmount = $transaction->amount;
     $oldType = $transaction->type;
 
-    DB::transaction(function () use ($transaction, $wallet, $data, $newAmount, $oldAmount, $oldType) {
-      // Reverse old transaction effect
-      if ($oldType === TransactionType::INCOME) {
-        $wallet->withdraw($oldAmount);
-      } elseif ($oldType === TransactionType::EXPENSE) {
-        $wallet->deposit($oldAmount);
+    $amountChanged = !$oldAmount->isEqualTo($newAmount);
+    $typeChanged = $oldType !== $newType;
+
+    DB::transaction(function () use ($transaction, $wallet, $data, $newAmount, $newType, $oldAmount, $oldType, $amountChanged, $typeChanged) {
+      // Hanya sesuaikan saldo jika ada perubahan amount atau type
+      if ($amountChanged || $typeChanged) {
+        $netEffect = Money::zero($wallet->currency);
+
+        // Balikkan efek transaksi lama
+        if ($oldType === TransactionType::INCOME) {
+          $netEffect = $netEffect->minus($oldAmount);
+        } else {
+          $netEffect = $netEffect->plus($oldAmount);
+        }
+
+        // Terapkan efek transaksi baru
+        if ($newType === TransactionType::INCOME) {
+          $netEffect = $netEffect->plus($newAmount);
+        } else {
+          $netEffect = $netEffect->minus($newAmount);
+        }
+
+        // Jika netEffect negatif, artinya saldo akan berkurang
+        if ($netEffect->isNegative()) {
+          $required = $netEffect->abs();
+          if ($wallet->balance->isLessThan($required)) {
+            throw new \Exception('Saldo tidak mencukupi untuk perubahan ini.');
+          }
+          $wallet->withdraw($required);
+        } elseif ($netEffect->isPositive()) {
+          $wallet->deposit($netEffect);
+        }
+        // Jika netEffect nol, tidak ada perubahan saldo
       }
 
-      // Update transaction
       $transaction->fill($data);
       $transaction->amount = $newAmount;
       $transaction->save();
-
-      // Apply new effect
-      if ($transaction->type === TransactionType::INCOME) {
-        $wallet->deposit($newAmount);
-      } elseif ($transaction->type === TransactionType::EXPENSE) {
-        $wallet->withdraw($newAmount);
-      }
     });
 
     $this->clearTransactionCaches($user->id,
@@ -202,6 +224,7 @@ class TransactionService
       $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+
     return $transaction->fresh();
   }
 
