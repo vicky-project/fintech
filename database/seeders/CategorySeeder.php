@@ -1008,6 +1008,8 @@ class CategorySeeder extends Seeder
     foreach ($this->categories as $cat) {
       $children = $cat['children'] ?? [];
       unset($cat['children']);
+      $cat['metadata'] = json_encode($cat['metadata'] ?? []);
+      $cat['keywords'] = json_encode($cat['keywords'] ?? []);
       $parents[] = $cat;
     }
 
@@ -1031,6 +1033,8 @@ class CategorySeeder extends Seeder
         $child['parent_id'] = $parent->id;
         $child['type'] = $cat['type'];
         $child['is_system'] = true;
+        $child['metadata'] = json_encode($child['metadata'] ?? []);
+        $child['keywords'] = json_encode($child['keywords'] ?? []);
         $childrenData[] = $child;
       }
     }
