@@ -135,7 +135,7 @@ async function loadTransactionsPage(page, filters) {
   if (filters.type) url += `&type=${filters.type}`;
   if (filters.month) url += `&month=${filters.month}`;
 
-  console.log('Fetching transactions with URL:', url);
+  alert('Fetching transactions with URL:', url);
 
   const res = await tgApp.fetchWithAuth(url);
   state.transactions = res.data.data;
@@ -380,7 +380,6 @@ async function renderTransactionsPage() {
 }
 
 async function refreshTransactionList(page = 1) {
-  alert(JSON.stringify(state.filters))
   const filters = {
     wallet_id: state.filters.wallet_id,
     type: state.filters.type
