@@ -299,9 +299,9 @@
     submitBtn.disabled = true;
 
     try {
-      const res = await fetchWithAuth(BASE_URL + '/api/fintech/statements/upload', {
-        method: 'POST',
-        body: formData
+      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/statements/upload', {
+      method: 'POST',
+      body: formData
       });
 
       const data = await res.json();
