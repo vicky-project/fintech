@@ -44,10 +44,10 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   ->only(['index', 'store', 'show', 'destroy', 'update'])
   ->names('transactions');
 
-  Route::apiResource('transfers', TransferController::class)->except(['show']);
   Route::get('transfers/trashed', [TransferController::class, 'trashed']);
   Route::post('transfers/{id}/restore', [TransferController::class, 'restore']);
   Route::delete('transfers/{id}/force', [TransferController::class, 'forceDelete']);
+  Route::apiResource('transfers', TransferController::class)->except(['show']);
 
   // ==================== REPORTS ====================
   Route::prefix('reports')->name('reports.')->group(function () {
@@ -68,10 +68,10 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 
   Route::prefix('statements')->group(function() {
     Route::get('', [StatementController::class, 'index']);
-    Route::post('/upload', [StatementController::class, 'upload']);
-    Route::put("/transactions/{transaction}/category", [StatementController::class, 'updateCategory']);
-    Route::get('/{statement}/preview', [StatementController::class, 'preview']);
-    Route::post('/{statement}/import', [StatementController::class, 'import']);
-    Route::delete('/{statement}', [StatementController::class, 'destroy']);
+    Route::post('upload', [StatementController::class, 'upload']);
+    Route::put("transactions/{transaction}/category", [StatementController::class, 'updateCategory']);
+    Route::get('{statement}/preview', [StatementController::class, 'preview']);
+    Route::post('{statement}/import', [StatementController::class, 'import']);
+    Route::delete('{statement}', [StatementController::class, 'destroy']);
   });
 });

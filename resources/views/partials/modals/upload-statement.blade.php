@@ -60,7 +60,7 @@
     <p class="mt-2">Memuat data...</p>
     </div>
     <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-transparent border-top p-3 d-none" style="padding-bottom: 70px !important;">
-    <button class="btn btn-primary opacity-5 w-100" onclick="importSelectedTransactions()">
+    <button class="btn btn-primary opacity-50 w-100" onclick="importSelectedTransactions()">
     <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
     </button>
     </div>
@@ -299,11 +299,8 @@
     submitBtn.disabled = true;
 
     try {
-      const res = await fetch(BASE_URL + '/api/fintech/statements/upload', {
+      const res = await fetchWithAuth(BASE_URL + '/api/fintech/statements/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${tgApp.getToken()}`
-        },
         body: formData
       });
 
