@@ -380,6 +380,7 @@ async function renderTransactionsPage() {
 }
 
 async function refreshTransactionList(page = 1) {
+  alert(JSON.stringify(state.filters))
   const filters = {
     wallet_id: state.filters.wallet_id,
     type: state.filters.type
@@ -401,7 +402,6 @@ function updateTransactionStats() {
 }
 
 function renderTransactionList() {
-  alert(JSON.stringify(state.transactions));
   const filtered = state.transactions;
   const container = document.getElementById('transaction-list');
   if (filtered.length === 0) {
