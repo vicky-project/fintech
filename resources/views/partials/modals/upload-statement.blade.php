@@ -15,7 +15,7 @@
           </div>
           <div class="mb-3">
             <label class="form-label">File Statement <span class="text-danger">*</span></label>
-            <input type="file" class="form-control" name="file" accept=".pdf,.xls,.xlsx,.csv,.txt" required>
+            <input type="file" class="form-control" name="file" accept=".pdf,.xls,.xlsx,.csv,application/vnd.ms-excel,text/csv" required>
             <small class="text-muted">PDF, Excel, CSV (maks 10MB)</small>
           </div>
           <div class="mb-3">
