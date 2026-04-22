@@ -121,19 +121,37 @@ class StatementService
       ]);
       $statement->updateStatus(StatementStatus::PARSED);
 
+      // Kumpulkan semua deskripsi unik
+      $uniqueDescriptions = [];
+      foreach ($result['transactions'] as $trx) {
+        $desc = $trx['description'];
+        if (!isset($uniqueDescriptions[$desc])) {
+          $uniqueDescriptions[$desc] = [
+            'type' => $trx['type'] ?? StatementType::fromDescription($desc, $trx['amount']),
+          ];
+        }
+      }
+
+      // Kategorisasi setiap deskripsi unik (sekali saja)
+      $categoryCache = [];
+      foreach ($uniqueDescriptions as $desc => $info) {
+        $categoryCache[$desc] = $this->categorizationService->categorize($desc, $info['type'])?->id;
+      }
+
       $insertData = [];
       $now = now();
       foreach ($result['transactions'] as $trx) {
-        $type = $trx['type'] ?? StatementType::fromDescription($trx['description'], $trx['amount']);
-        $category = $this->categorizationService->categorize($trx['description'], $type);
+        $desc = $trx['description'];
+        $type = $uniqueDescriptions[$desc]['type'];
+        $categoryId = $categoryCache[$desc];
 
         $insertData[] = [
           'statement_id' => $statement->id,
           'transaction_date' => $trx['date'],
-          'description' => $trx['description'],
+          'description' => $desc,
           'amount' => $trx['amount'],
           'type' => $type,
-          'category_id' => $category?->id,
+          'category_id' => $categoryId,
           'raw_data' => $trx,
           'created_at' => $now,
           'updated_at' => $now
