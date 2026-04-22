@@ -293,7 +293,7 @@
       return;
     }
 
-    alert(JSON.stringify(formData) + ' ' + formData.entries() + ' ' + formData.get('wallet_id') + ' ' + formData.get('file'));
+    alert(JSON.stringify(formData.entries()) + ' ' + formData.get('wallet_id') + ' ' + JSON.stringify(formData.get('file')));
     // Tampilkan progress
     document.getElementById('upload-progress')?.classList.remove('d-none');
     const submitBtn = form.closest('.modal').querySelector('.btn-primary');
