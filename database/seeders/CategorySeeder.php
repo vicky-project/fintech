@@ -644,11 +644,11 @@ class CategorySeeder extends Seeder
         'parent_id' => $transferParent->id,
         'is_system' => true,
         'metadata' => ['tags' => ['wajib']],
-        'keywords' => json_encode([
+        'keywords' => [
           'biaya admin', 'administrasi', 'admin bank', 'biaya transfer',
           'pajak', 'pph', 'ppn', 'bunga', 'denda', 'penalty', 'fee',
           'biaya', 'biaya transaksi', 'biaya pembayaran', 'biaya layanan'
-        ])
+        ]
       ]
     );
 
