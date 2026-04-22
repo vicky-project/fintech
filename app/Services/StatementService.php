@@ -151,7 +151,7 @@ class StatementService
           'amount' => $trx['amount'],
           'type' => $type,
           'category_id' => $categoryId,
-          'raw_data' => $trx,
+          'raw_data' => json_encode($trx),
           'created_at' => $now,
           'updated_at' => $now
         ];
@@ -160,7 +160,6 @@ class StatementService
       \Log::debug("Process total rows: " . count($insertData));
 
       foreach (array_chunk($insertData, 500) as $chunk) {
-        \Log::debug($chunk);
         StatementTransaction::insert($chunk);
       }
 
