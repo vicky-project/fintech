@@ -506,6 +506,9 @@ function showBulkDeleteModal() {
     walletSelect.appendChild(option);
   });
 
+  const defaultWallet = state.userSettings?.default_wallet_id;
+  if (defaultWallet) walletSelect.value = defaultWallet;
+
   // Set default bulan ke bulan ini
   const today = new Date();
   const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
