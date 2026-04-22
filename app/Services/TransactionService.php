@@ -175,9 +175,9 @@ class TransactionService
     ? Money::of($data['amount'], $wallet->currency)
     : $transaction->amount;
 
-    $newType = $data['type'] ?? $transaction->type;
+    $newType = $data['type'] ?? $transaction->type->value;
     $oldAmount = $transaction->amount;
-    $oldType = $transaction->type;
+    $oldType = $transaction->type->value;
 
     $amountChanged = !$oldAmount->isEqualTo($newAmount);
     $typeChanged = $oldType !== $newType;
@@ -188,14 +188,14 @@ class TransactionService
         $netEffect = Money::zero($wallet->currency);
 
         // Balikkan efek transaksi lama
-        if ($oldType === TransactionType::INCOME) {
+        if ($oldType === TransactionType::INCOME->value) {
           $netEffect = $netEffect->minus($oldAmount);
         } else {
           $netEffect = $netEffect->plus($oldAmount);
         }
 
         // Terapkan efek transaksi baru
-        if ($newType === TransactionType::INCOME) {
+        if ($newType === TransactionType::INCOME->value) {
           $netEffect = $netEffect->plus($newAmount);
         } else {
           $netEffect = $netEffect->minus($newAmount);
