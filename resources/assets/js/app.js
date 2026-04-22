@@ -401,6 +401,7 @@ function updateTransactionStats() {
 }
 
 function renderTransactionList() {
+  alert(JSON.stringify(state.transactions));
   const filtered = state.transactions;
   const container = document.getElementById('transaction-list');
   if (filtered.length === 0) {

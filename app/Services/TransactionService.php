@@ -415,24 +415,27 @@ class TransactionService
   /**
   * Build base query with filters.
   */
-  protected function buildBaseQuery(Authenticatable $user, array $filters): \Illuminate\Database\Eloquent\Builder
-{
-    $query = Transaction::with(['wallet', 'category'])
-        ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id));
+  protected function buildBaseQuery(Authenticatable $user,
+    array $filters): \Illuminate\Database\Eloquent\Builder
+  {
+    $query = Transaction::with(['wallet',
+      'category'])
+    ->whereHas('wallet',
+      fn($q) => $q->where('user_id', $user->id));
 
     if (!empty($filters['wallet_id'])) {
-        $query->where('wallet_id', $filters['wallet_id']);
+      $query->where('wallet_id', $filters['wallet_id']);
     }
     if (!empty($filters['type'])) {
-        $query->where('type', $filters['type']);
+      $query->where('type', $filters['type']);
     }
     if (!empty($filters['month'])) {
-        $query->whereYear('transaction_date', substr($filters['month'], 0, 4))
-              ->whereMonth('transaction_date', substr($filters['month'], 5, 2));
+      $query->whereYear('transaction_date', substr($filters['month'], 0, 4))
+      ->whereMonth('transaction_date', substr($filters['month'], 5, 2));
     }
 
     return $query;
-}
+  }
 
   /**
   * Format a single transaction for API response.
