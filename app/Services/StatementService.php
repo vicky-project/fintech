@@ -140,6 +140,8 @@ class StatementService
         ];
       }
 
+      \Log::debug("Process total rows: " . count($insertData));
+
       foreach (array_chunk($insertData, 500) as $chunk) {
         StatementTransaction::insert($chunk);
       }
