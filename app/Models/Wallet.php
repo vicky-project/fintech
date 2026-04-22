@@ -67,7 +67,7 @@ class Wallet extends Model
     if ($this->balance->isLessThan($amount)) {
       \Log::error("Saldo tidak mencukupi", [
         "amount" => $amount,
-        "balance" => $this->balance->toInt(),
+        "balance" => $this->balance->getAmount()->toInt(),
         "wallet" => $this
       ]);
       throw new \Exception('Saldo tidak mencukupi');
