@@ -82,8 +82,9 @@ class TransactionController extends Controller
   /**
   * Bulk soft delete transactions for a specific month and wallet.
   */
-  public function bulkDestroy(Request $request): JsonResponse
+  public function bulkDestroy(): JsonResponse
   {
+    $request = request();
     $request->validate([
       'wallet_id' => 'required|exists:fintech_wallets,id',
       'month' => 'required|date_format:Y-m',
