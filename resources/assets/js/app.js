@@ -40,134 +40,166 @@ const state = {
   statements: [],
 };
 
-// ==================== UTILS ====================
-const api = {
-  get: (url) => tgApp.fetchWithAuth(BASE_URL + url),
-  post: (url, data) => tgApp.fetchWithAuth(BASE_URL + url, {
-    method: 'POST', body: JSON.stringify(data)
-  }),
-  put: (url, data) => tgApp.fetchWithAuth(BASE_URL + url, {
-    method: 'PUT', body: JSON.stringify(data)
-  }),
-  delete: (url) => tgApp.fetchWithAuth(BASE_URL + url, {
-    method: 'DELETE'
-  }),
-};
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', async () => {
+  await initializeApp();
+  setupNavigation();
+  setupFabOpacity();
+});
 
-const toast = (msg, type = 'success') => tgApp.showToast(msg, type);
-const loading = {
-  show: (msg) => tgApp.showLoading(msg),
-  hide: () => tgApp.hideLoading()
-};
+async function initializeApp() {
+  const loadingOverlay = document.getElementById('loading-overlay');
+  try {
+    loadingOverlay.classList.remove('d-none');
+    loadingOverlay.innerHTML = `
+    <div class="text-center">
+    <div class="spinner-border text-primary mb-3" role="status"></div>
+    <p class="text-muted">Memuat data keuangan...</p>
+    </div>
+    `;
 
-const format = {
-  number: (n) => new Intl.NumberFormat('id-ID').format(n),
-  short: (num) => {
-    if (num >= 1e9) return (num / 1e9).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (num >= 1e6) return (num / 1e6).toFixed(1).replace(/\.0$/, '') + 'JT';
-    if (num >= 1e3) return (num / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
-    return num.toString();
-  },
-  date: (d) => new Date(d).toLocaleDateString('id-ID', {
-    day: 'numeric', month: 'short', year: 'numeric'
-  }),
-  dateFull: (d) => new Date(d).toLocaleDateString('id-ID', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  }),
-  datetime: (dt) => new Date(dt).toLocaleString('id-ID', {
-    dateStyle: 'short', timeStyle: 'short'
-  }),
-};
+    await Promise.all([
+      loadWallets().catch(e => {
+        throw new Error('Gagal memuat dompet: ' + e.message);
+      }),
+      loadUserSettings().catch(e => console.warn(e)),
+      loadCategories().catch(e => {
+        throw new Error('Gagal memuat kategori: ' + e.message);
+      }),
+      loadCurrencies().catch(e => {
+        throw new Error('Gagal memuat mata uang: ' + e.message);
+      })
+    ]);
 
-const getCurrencySymbol = (code) => state.currencies.find(c => c.code === code)?.symbol || code;
+    if (state.wallets.length > 0) {
+      await loadHomeSummary().catch(e => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
+    }
 
-const renderPagination = (containerId, page, lastPage, onPageChange) => {
-  if (lastPage <= 1) return document.getElementById(containerId).innerHTML = '';
-  tgApp.renderPagination(containerId, page, lastPage, async (newPage) => {
-    await onPageChange(newPage);
+    navigateTo('home');
+    loadingOverlay.classList.add('d-none');
+  } catch (error) {
+    console.error('Init error:', error);
+    loadingOverlay.innerHTML = `
+    <div class="text-center p-4">
+    <i class="bi bi-exclamation-triangle text-danger display-4"></i>
+    <h5 class="mt-3">Gagal Memuat Aplikasi</h5>
+    <p class="text-muted">${error.message || 'Terjadi kesalahan tidak diketahui.'}</p>
+    <button class="btn btn-primary mt-2" onclick="retryInitialization()">
+    <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
+    </button>
+    </div>
+    `;
+    loadingOverlay.classList.remove('d-none');
+  }
+}
+
+function retryInitialization() {
+  initializeApp();
+}
+
+function setupNavigation() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => navigateTo(btn.dataset.page));
   });
-};
+}
+
+function setupFabOpacity() {
+  const fab = document.getElementById('fab-button');
+  if (!fab) return;
+  fab.style.opacity = '0.7';
+  fab.addEventListener('shown.bs.dropdown', () => fab.style.opacity = '1');
+  fab.addEventListener('hidden.bs.dropdown', () => fab.style.opacity = '0.7');
+}
 
 // ==================== DATA LOADING ====================
-const loadWallets = () => api.get('/api/fintech/wallets').then(res => {
+async function loadWallets() {
+  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
   state.wallets = res.data || [];
   state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
-});
-const loadCategories = () => api.get('/api/fintech/categories').then(res => state.categories = res.data || []);
-const loadCurrencies = () => api.get('/api/fintech/currencies').then(res => state.currencies = res.data || []);
-const loadHomeSummary = () => api.get('/api/fintech/home-summary').then(res => state.homeSummary = res.data);
-const loadUserSettings = () => api.get('/api/fintech/settings').then(res => state.userSettings = res.data).catch(() => state.userSettings = {
-  default_currency: 'IDR', default_wallet_id: null
-});
+}
 
-const loadTransactionsPage = async (page, filters) => {
-  let url = `/api/fintech/transactions?per_page=20&page=${page}`;
+async function loadCategories() {
+  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/categories');
+  state.categories = res.data || [];
+}
+
+async function loadCurrencies() {
+  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
+  state.currencies = res.data || [];
+}
+
+async function loadHomeSummary() {
+  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/home-summary');
+  state.homeSummary = res.data;
+}
+
+async function loadTransactionsPage(page, filters) {
+  let url = `${BASE_URL}/api/fintech/transactions?per_page=20&page=${page}`;
   if (filters.wallet_id) url += `&wallet_id=${filters.wallet_id}`;
   if (filters.type) url += `&type=${filters.type}`;
   if (filters.month) url += `&month=${filters.month}`;
-  const res = await api.get(url);
+
+  const res = await tgApp.fetchWithAuth(url);
   state.transactions = res.data.data;
   state.transactionPage = res.data.current_page;
   state.transactionLastPage = res.data.last_page;
   state.transactionSummary = res.summary;
-};
+}
 
-const loadTransfersPage = async (page, walletId) => {
-  let url = `/api/fintech/transfers?per_page=20&page=${page}`;
-  if (walletId) url += `&wallet_id=${walletId}`;
-  const res = await api.get(url);
-  state.transfers = res.data.data;
-  state.transferPage = res.data.current_page;
-  state.transferLastPage = res.data.last_page;
-};
-
-const loadStatements = async (page = 1) => {
-  const res = await api.get(`/api/fintech/statements?page=${page}`);
-  state.statements = res.data.data;
-  state.statementPage = res.data.current_page;
-  state.statementLastPage = res.data.last_page;
-};
-
-// ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', async () => {
-  await initializeApp();
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => navigateTo(btn.dataset.page)));
-  const fab = document.getElementById('fab-button');
-  if (fab) {
-    fab.style.opacity = '0.7';
-    fab.addEventListener('shown.bs.dropdown', () => fab.style.opacity = '1');
-    fab.addEventListener('hidden.bs.dropdown', () => fab.style.opacity = '0.7');
-  }
-});
-
-async function initializeApp() {
-  const overlay = document.getElementById('loading-overlay');
+async function loadTransfersPage(page, walletId) {
   try {
-    overlay.classList.remove('d-none');
-    overlay.innerHTML = `<div class="text-center"><div class="spinner-border text-primary mb-3"></div><p class="text-muted">Memuat data keuangan...</p></div>`;
-    await Promise.all([loadWallets(),
-      loadUserSettings(),
-      loadCategories(),
-      loadCurrencies()]);
-    if (state.wallets.length > 0) await loadHomeSummary().catch(e => toast('Gagal memuat ringkasan', 'warning'));
-    navigateTo('home');
-    overlay.classList.add('d-none');
+    let url = `${BASE_URL}/api/fintech/transfers?per_page=20&page=${page}`;
+    if (walletId) url += `&wallet_id=${walletId}`;
+    const res = await tgApp.fetchWithAuth(url);
+    const data = res.data;
+    state.transfers = data.data;
+    state.transferPage = data.current_page;
+    state.transferLastPage = data.last_page;
   } catch (error) {
-    console.error('Init error:', error);
-    overlay.innerHTML = `<div class="text-center p-4"><i class="bi bi-exclamation-triangle text-danger display-4"></i><h5 class="mt-3">Gagal Memuat Aplikasi</h5><p class="text-muted">${error.message || 'Terjadi kesalahan tidak diketahui.'}</p><button class="btn btn-primary mt-2" onclick="retryInitialization()"><i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi</button></div>`;
-    overlay.classList.remove('d-none');
+    tgApp.showToast("Gagal memuat data transfer. " + error.message);
   }
 }
-function retryInitialization() {
-  initializeApp();
+
+async function loadUserSettings() {
+  try {
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings');
+    state.userSettings = res.data;
+  } catch (error) {
+    console.warn('Gagal memuat pengaturan:', error);
+    state.userSettings = {
+      default_currency: 'IDR',
+      default_wallet_id: null
+    };
+  }
+}
+
+async function loadStatements(page = 1) {
+  try {
+    const res = await tgApp.fetchWithAuth(BASE_URL + `/api/fintech/statements?page=${page}`);
+    state.statements = res.data.data;
+    state.statementPage = res.data.current_page;
+    state.statementLastPage = res.data.last_page;
+  } catch (error) {
+    tgApp.showToast('Gagal memuat statement. '+ error.message, 'danger');
+  }
 }
 
 // ==================== NAVIGATION ====================
 function navigateTo(page) {
   state.currentPage = page;
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
-  document.querySelectorAll('.dropdown-item.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
-  if (state.wallets.length === 0) return document.getElementById('main-content').innerHTML = renderEmptyState();
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === page);
+  });
+  document.querySelectorAll('.dropdown-item.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === page);
+  });
+
+  const container = document.getElementById('main-content');
+  if (state.wallets.length === 0) {
+    container.innerHTML = renderEmptyState();
+    return;
+  }
+
   const pages = {
     home: renderHomePage,
     transactions: renderTransactionsPage,
@@ -176,42 +208,113 @@ function navigateTo(page) {
     reports: renderReportsPage,
     settings: renderSettingsPage,
     insights: renderInsightsPage,
-    statements: renderStatementsPage
+    statements: renderStatementsPage,
   };
   if (pages[page]) pages[page]();
 }
+
 function renderEmptyState() {
-  return `<div class="container py-4 text-center"><i class="bi bi-wallet2 display-1 text-primary"></i><h4 class="mt-3">Belum Ada Dompet</h4><p>Buat dompet pertama untuk mulai mencatat keuangan.</p><button class="btn btn-primary" onclick="showAddWalletModal()"><i class="bi bi-plus-circle"></i> Buat Dompet</button></div>`;
+  return `
+  <div class="container py-4 text-center">
+  <i class="bi bi-wallet2 display-1 text-primary"></i>
+  <h4 class="mt-3">Belum Ada Dompet</h4>
+  <p>Buat dompet pertama untuk mulai mencatat keuangan.</p>
+  <button class="btn btn-primary" onclick="showAddWalletModal()">
+  <i class="bi bi-plus-circle"></i> Buat Dompet
+  </button>
+  </div>
+  `;
 }
 
-// ==================== GENERIC LIST RENDERER ====================
-async function renderListPage( {
-  title, icon, filterHtml, listContainerId, paginationId, loadFn, extraHeaderButtons = ''
-}) {
-  document.getElementById('main-content').innerHTML = `<div class="container py-3"><div class="d-flex justify-content-between mb-3"><div class="d-flex"><i class="${icon} me-2"></i><h5>${title}</h5></div><div>${extraHeaderButtons}</div></div>${filterHtml || ''}<div id="${listContainerId}"></div><div id="${paginationId}" class="mt-3"></div></div>`;
+// ==================== GENERIC LIST PAGE ====================
+async function renderListPage(config) {
+  const {
+    title,
+    icon,
+    filterHtml,
+    listContainerId,
+    paginationId,
+    loadFn,
+    extraHeaderButtons = ''
+  } = config;
+  const html = `
+  <div class="container py-3">
+  <div class="d-flex justify-content-between mb-3">
+  <div class="d-flex"><i class="${icon} me-2"></i><h5>${title}</h5></div>
+  <div>${extraHeaderButtons}</div>
+  </div>
+  ${filterHtml || ''}
+  <div id="${listContainerId}"></div>
+  <div id="${paginationId}" class="mt-3"></div>
+  </div>
+  `;
+  document.getElementById('main-content').innerHTML = html;
   await loadFn(1);
+}
+
+function renderPagination(containerId, page, lastPage, onPageChange) {
+  if (lastPage <= 1) {
+    document.getElementById(containerId).innerHTML = '';
+    return;
+  }
+  tgApp.renderPagination(containerId, page, lastPage, async (newPage) => {
+    await onPageChange(newPage);
+  });
 }
 
 // ==================== HOME PAGE ====================
 async function renderHomePage() {
   await loadHomeSummary();
-  const s = state.homeSummary;
-  if (!s) return document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
-  const sym = getCurrencySymbol(s.currency);
-  document.getElementById('main-content').innerHTML = `<div class="container py-3"><div class="card bg-gradient-primary text-white mb-3" style="background: linear-gradient(135deg, #667eea, #764ba2);"><div class="card-body"><h6>Total Saldo</h6><h2>${sym} ${format.number(s.total_balance)}</h2><small>${state.wallets.length} dompet aktif</small></div></div><div class="row g-2 mb-3"><div class="col-6"><div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-down-circle text-success fs-4"></i><h6 class="mb-0">${format.short(s.total_income)}</h6><small>Pemasukan</small></div></div></div><div class="col-6"><div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-up-circle text-danger fs-4"></i><h6 class="mb-0">${format.short(s.total_expense)}</h6><small>Pengeluaran</small></div></div></div></div><div class="card mb-3"><div class="card-body"><h6>Pengeluaran Mingguan</h6><div style="height: 180px;"><canvas id="homeChart"></canvas></div></div></div><h6>Transaksi Terbaru</h6><div id="recent-transactions"></div></div>`;
+  const summary = state.homeSummary;
+  if (!summary) {
+    document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
+    return;
+  }
+
+  const symbol = getCurrencySymbol(summary.currency);
+  const html = `
+  <div class="container py-3">
+  <div class="card bg-gradient-primary text-white mb-3" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+  <div class="card-body">
+  <h6>Total Saldo</h6>
+  <h2>${symbol} ${formatNumber(summary.total_balance)}</h2>
+  <small>${state.wallets.length} dompet aktif</small>
+  </div>
+  </div>
+  <div class="row g-2 mb-3">
+  <div class="col-6">
+  <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-down-circle text-success fs-4"></i><h6 class="mb-0">${formatNumberShort(summary.total_income)}</h6><small>Pemasukan</small></div></div>
+  </div>
+  <div class="col-6">
+  <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-up-circle text-danger fs-4"></i><h6 class="mb-0">${formatNumberShort(summary.total_expense)}</h6><small>Pengeluaran</small></div></div>
+  </div>
+  </div>
+  <div class="card mb-3">
+  <div class="card-body">
+  <h6>Pengeluaran Mingguan</h6>
+  <div style="height: 180px;"><canvas id="homeChart"></canvas></div>
+  </div>
+  </div>
+  <h6>Transaksi Terbaru</h6>
+  <div id="recent-transactions"></div>
+  </div>
+  `;
+  document.getElementById('main-content').innerHTML = html;
   setTimeout(() => {
-    loadHomeChart(); renderRecentTransactions();
+    loadHomeChartFromSummary();
+    renderRecentTransactionsFromSummary();
   }, 50);
 }
 
-function loadHomeChart() {
+function loadHomeChartFromSummary() {
   const ctx = document.getElementById('homeChart')?.getContext('2d');
   if (!ctx) return;
   const data = state.homeSummary.weekly_expense;
   if (state.chartInstances.home) state.chartInstances.home.destroy();
-  if (!data?.length) return;
+  if (!data || data.length === 0) return;
   state.chartInstances.home = new Chart(ctx, {
-    type: 'doughnut', data: {
+    type: 'doughnut',
+    data: {
       labels: data.map(d => d.label), datasets: [{
         data: data.map(d => d.value), backgroundColor: data.map(d => d.color)
       }]
@@ -219,11 +322,18 @@ function loadHomeChart() {
   });
 }
 
-function renderRecentTransactions() {
+function renderRecentTransactionsFromSummary() {
   const container = document.getElementById('recent-transactions');
-  const tx = state.homeSummary.recent_transactions;
-  if (!tx.length) return container.innerHTML = '<p class="text-muted text-center">Belum ada transaksi</p>';
-  container.innerHTML = tx.map(t => `<div class="d-flex justify-content-between align-items-center border-bottom py-2"><div><i class="${t.category.icon} me-2" style="color:${t.category.color}"></i>${t.category.name}</div><span class="${t.type === 'income' ? 'text-success': 'text-danger'}" title="${t.formatted_amount}">${t.type === 'income' ? '': '-'}${format.short(t.amount)}</span></div>`).join('');
+  const transactions = state.homeSummary.recent_transactions;
+  if (!transactions.length) {
+    container.innerHTML = '<p class="text-muted text-center">Belum ada transaksi</p>';
+    return;
+  }
+  container.innerHTML = transactions.map(trx => {
+    const amountClass = trx.type === 'income' ? 'text-success': 'text-danger';
+    const sign = trx.type === 'income' ? '': '-';
+    return `<div class="d-flex justify-content-between align-items-center border-bottom py-2"><div><i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>${trx.category.name}</div><span class="${amountClass}" title="${trx.formatted_amount}">${sign}${formatNumberShort(trx.amount)}</span></div>`;
+  }).join('');
 }
 
 // ==================== TRANSACTIONS PAGE ====================
