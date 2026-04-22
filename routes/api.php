@@ -36,6 +36,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   // ==================== TRANSACTIONS ====================
   // Soft delete & trashed routes (diletakkan sebelum resource untuk menghindari konflik)
   Route::get('transactions/trashed', [TransactionController::class, 'trashed'])->name('transactions.trashed');
+  Route::post('bulk-destrot', [TransactionController::class, 'bulkDestroy']);
   Route::post('transactions/{id}/restore', [TransactionController::class, 'restore'])->name('transactions.restore');
   Route::delete('transactions/{id}/force', [TransactionController::class, 'forceDelete'])->name('transactions.force-delete');
   // Resource utama transaksi (hanya method yang dibutuhkan)

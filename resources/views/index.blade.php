@@ -116,6 +116,37 @@
       </div>
     </div>
   </div>
+
+  {{-- Modal Hapus Massal --}}
+  <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Hapus Transaksi Massal</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-danger">
+            Peringatan: Semua transaksi pada dompet dan bulan yang dipilih akan dipindahkan ke tempat sampah.
+          </p>
+          <div class="mb-3">
+            <label class="form-label">Dompet <span class="text-danger">*</span></label>
+            <select class="form-select" id="bulk-wallet" required>
+              <option value="">Pilih Dompet</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Pilih Bulan <span class="text-danger">*</span></label>
+            <input type="month" class="form-control" id="bulk-month" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger" onclick="executeBulkDelete()">Hapus</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {{-- Modals --}}

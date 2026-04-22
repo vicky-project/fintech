@@ -240,6 +240,58 @@ class TransactionService
   }
 
   /**
+  * Bulk soft delete transactions for a specific month and wallet.
+  */
+  public function bulkDeleteTransactions(
+    Authenticatable $user,
+    int $walletId,
+    string $month
+  ): int
+  {
+    $wallet = Wallet::where('user_id',
+      $user->id)->findOrFail($walletId);
+
+    [$year, $monthNum] = explode('-',
+      $month);
+
+    $transactions = Transaction::where('wallet_id',
+      $walletId)
+    ->whereYear('transaction_date',
+      $year)
+    ->whereMonth('transaction_date',
+      $monthNum)
+    ->get();
+
+    $count = $transactions->count();
+
+    if ($count === 0) {
+      return 0;
+    }
+
+    DB::transaction(function () use ($transactions, $wallet) {
+      foreach ($transactions as $transaction) {
+        $amount = $transaction->amount;
+
+        if ($transaction->type === TransactionType::INCOME) {
+          $wallet->withdraw($amount);
+        } elseif ($transaction->type === TransactionType::EXPENSE) {
+          $wallet->deposit($amount);
+        }
+
+        $transaction->delete();
+      }
+    });
+
+    // Clear caches
+    $this->clearTransactionCaches($user->id,
+      $walletId);
+    InsightService::clearCache($user->id);
+    ReportService::clearReportCaches($user->id);
+
+    return $count;
+  }
+
+  /**
   * Restore a soft-deleted transaction.
   *
   * @param Authenticatable $user

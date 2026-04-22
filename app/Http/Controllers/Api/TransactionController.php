@@ -79,10 +79,54 @@ class TransactionController extends Controller
     }
   }
 
+  /**
+  * Bulk soft delete transactions for a specific month and wallet.
+  */
+  public function bulkDestroy(Request $request): JsonResponse
+  {
+    $request->validate([
+      'wallet_id' => 'required|exists:fintech_wallets,id',
+      'month' => 'required|date_format:Y-m',
+    ]);
+
+    $user = $request->user();
+    $walletId = $request->wallet_id;
+    $month = $request->month;
+
+    // Pastikan wallet milik user
+    $wallet = Wallet::where('user_id', $user->id)->find($walletId);
+    if (!$wallet) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Dompet tidak ditemukan atau bukan milik Anda.'
+      ], 403);
+    }
+
+    try {
+      $count = $this->transactionService->bulkDeleteTransactions($user, $walletId, $month);
+
+      if ($count === 0) {
+        return response()->json([
+          'success' => false,
+          'message' => 'Tidak ada transaksi pada periode tersebut.'
+        ], 404);
+      }
+
+      return response()->json([
+        'success' => true,
+        'message' => "{$count} transaksi berhasil dipindahkan ke tempat sampah."
+      ]);
+    } catch(\Exception $e) {
+      return response()->json(["message" => $e->getMessage()], $e->getStatusCode());
+    }
+  }
+
   public function trashed(): JsonResponse
   {
-    $perPage = request('per_page', 20);
-    $result = $this->transactionService->getTrashedTransactions(request()->user(), $perPage);
+    $perPage = request('per_page',
+      20);
+    $result = $this->transactionService->getTrashedTransactions(request()->user(),
+      $perPage);
 
     return response()->json([
       'success' => true,
@@ -94,22 +138,30 @@ class TransactionController extends Controller
   public function restore($id): JsonResponse
   {
     try {
-      $this->transactionService->restoreTransaction(request()->user(), $id);
-      return response()->json(['success' => true, 'message' => 'Transaksi berhasil dipulihkan']);
+      $this->transactionService->restoreTransaction(request()->user(),
+        $id);
+      return response()->json(['success' => true,
+        'message' => 'Transaksi berhasil dipulihkan']);
     } catch (HttpException $e) {
-      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+      return response()->json(['message' => $e->getMessage()],
+        $e->getStatusCode());
     } catch (\Exception $e) {
-      return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+      return response()->json(['success' => false,
+        'message' => $e->getMessage()],
+        400);
     }
   }
 
   public function forceDelete($id): JsonResponse
   {
     try {
-      $this->transactionService->forceDeleteTransaction(request()->user(), $id);
-      return response()->json(['success' => true, 'message' => 'Transaksi dihapus permanen']);
+      $this->transactionService->forceDeleteTransaction(request()->user(),
+        $id);
+      return response()->json(['success' => true,
+        'message' => 'Transaksi dihapus permanen']);
     } catch (HttpException $e) {
-      return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+      return response()->json(['message' => $e->getMessage()],
+        $e->getStatusCode());
     }
   }
 }

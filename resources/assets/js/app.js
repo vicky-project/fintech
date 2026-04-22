@@ -347,8 +347,15 @@ async function renderTransactionsPage() {
     listContainerId: 'transaction-list',
     paginationId: 'transaction-pagination',
     extraHeaderButtons: `
-    <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()"><i class="bi bi-trash"></i></button>
-    <button class="btn btn-sm btn-primary" onclick="showAddTransactionModal()"><i class="bi bi-plus"></i></button>
+    <button class="btn btn-sm btn-outline-warning me-1" onclick="showBulkDeleteModal()" title="Hapus Massal">
+    <i class="bi bi-calendar-x"></i>
+    </button>
+    <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()">
+    <i class="bi bi-trash"></i>
+    </button>
+    <button class="btn btn-sm btn-primary" onclick="showAddTransactionModal()">
+    <i class="bi bi-plus"></i>
+    </button>
     `,
     loadFn: refreshTransactionList
   });
@@ -459,6 +466,68 @@ async function deleteTransaction(id) {
       await refreshTransactionList();
     } else if (state.currentPage === 'home') {
       renderHomePage();
+    }
+  } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal menghapus', 'danger');
+  }
+}
+
+function showBulkDeleteModal() {
+  // Isi dropdown dompet
+  const walletSelect = document.getElementById('bulk-wallet');
+  walletSelect.innerHTML = '<option value="">Pilih Dompet</option>';
+  state.wallets.filter(w => w.is_active).forEach(w => {
+    const option = document.createElement('option');
+    option.value = w.id;
+    option.textContent = w.name;
+    walletSelect.appendChild(option);
+  });
+
+  // Set default bulan ke bulan ini
+  const today = new Date();
+  const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('bulk-month').value = month;
+
+  new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
+}
+
+async function executeBulkDelete() {
+  const walletSelect = document.getElementById('bulk-wallet');
+  const walletId = walletSelect.value;
+  const month = document.getElementById('bulk-month').value;
+
+  if (!walletId) {
+    tgApp.showToast('Pilih dompet terlebih dahulu', 'warning');
+    return;
+  }
+  if (!month) {
+    tgApp.showToast('Pilih bulan terlebih dahulu', 'warning');
+    return;
+  }
+
+  const walletName = walletSelect.options[walletSelect.selectedIndex]?.text || 'dompet';
+  if (!confirm(`Hapus semua transaksi di dompet "${walletName}" pada bulan ${month}? Tindakan ini dapat dibatalkan di Tempat Sampah.`)) return;
+
+  try {
+    tgApp.showLoading('Menghapus...');
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions/bulk-destroy', {
+      method: 'POST',
+      body: JSON.stringify({
+        wallet_id: walletId, month
+      })
+    });
+
+    tgApp.hideLoading();
+    tgApp.showToast(res.message, res.success ? 'success': 'warning');
+
+    if (res.success) {
+      bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal')).hide();
+      await loadWallets();
+      await loadHomeSummary();
+      if (state.currentPage === 'transactions') {
+        await refreshTransactionList();
+      }
     }
   } catch (error) {
     tgApp.hideLoading();
