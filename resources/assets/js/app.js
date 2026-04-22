@@ -377,8 +377,8 @@ async function renderTransactionsPage() {
   updateTransactionStats();
 }
 
-async function refreshTransactionList() {
-  const page = state.transactionPage || 1;
+async function refreshTransactionList(page) {
+  page = page || state.transactionPage || 1;
   const filters = {
     wallet_id: state.filters.wallet_id,
     type: state.filters.type,
