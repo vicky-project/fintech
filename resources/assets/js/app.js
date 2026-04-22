@@ -130,13 +130,17 @@ const loadStatements = async (page = 1) => {
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async () => {
-  await initializeApp();
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => navigateTo(btn.dataset.page)));
-  const fab = document.getElementById('fab-button');
-  if (fab) {
-    fab.style.opacity = '0.7';
-    fab.addEventListener('shown.bs.dropdown', () => fab.style.opacity = '1');
-    fab.addEventListener('hidden.bs.dropdown', () => fab.style.opacity = '0.7');
+  try {
+    await initializeApp();
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => navigateTo(btn.dataset.page)));
+    const fab = document.getElementById('fab-button');
+    if (fab) {
+      fab.style.opacity = '0.7';
+      fab.addEventListener('shown.bs.dropdown', () => fab.style.opacity = '1');
+      fab.addEventListener('hidden.bs.dropdown', () => fab.style.opacity = '0.7');
+    }
+  } catch(error) {
+    alert(error.message);
   }
 });
 
