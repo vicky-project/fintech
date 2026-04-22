@@ -5,432 +5,593 @@ namespace Modules\FinTech\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\CategoryType;
+use Illuminate\Support\Facades\DB;
 
 class CategorySeeder extends Seeder
 {
+  protected array $categories = [];
+
   public function run(): void
   {
-    // ==================== KATEGORI PENGELUARAN (EXPENSE) ====================
+    $this->prepareCategories();
+    $this->seedCategories();
+  }
 
-    // 1. Makanan & Minuman
-    $foodParent = Category::updateOrCreate(
-      ['name' => 'Makanan & Minuman'],
+  /**
+  * Siapkan semua data kategori dalam array.
+  */
+  protected function prepareCategories(): void
+  {
+    $this->categories = [
+      // ========== EXPENSE ==========
       [
+        'name' => 'Makanan & Minuman',
+        'type' => CategoryType::EXPENSE,
         'icon' => 'bi-cup-hot',
         'color' => '#FF6384',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok', 'harian']],
-        'keywords' => [
-          'restoran', 'rm ', 'warung', 'kafe', 'cafe', 'coffee', 'mcd', 'kfc', 'pizza', 'burger',
-          'sushi', 'steak', 'martabak', 'bakso', 'sate', 'nasi goreng', 'mie ayam', 'gado-gado',
-          'sarapan', 'makan siang', 'makan malam', 'minum', 'kopi', 'teh', 'jus', 'es',
-          'gofood', 'grabfood', 'shopeefood', 'food', 'kuliner', 'catering', 'kantin',
-          'snack', 'cemilan', 'roti', 'kue', 'cokelat', 'es krim', 'ice cream', 'boba',
-          'starbucks', 'hokben', 'solaria', 'wendy', 'a&w', 'dunkin', 'jco'
+        'keywords' => ['restoran',
+          'rm ',
+          'warung',
+          'kafe',
+          'cafe',
+          'coffee',
+          'mcd',
+          'kfc',
+          'pizza',
+          'burger',
+          'sushi',
+          'steak',
+          'martabak',
+          'bakso',
+          'sate',
+          'nasi goreng',
+          'mie ayam',
+          'gado-gado',
+          'sarapan',
+          'makan siang',
+          'makan malam',
+          'minum',
+          'kopi',
+          'teh',
+          'jus',
+          'es',
+          'gofood',
+          'grabfood',
+          'shopeefood',
+          'food',
+          'kuliner',
+          'catering',
+          'kantin',
+          'snack',
+          'cemilan',
+          'roti',
+          'kue',
+          'cokelat',
+          'es krim',
+          'ice cream',
+          'boba',
+          'starbucks',
+          'hokben',
+          'solaria',
+          'wendy',
+          'a&w',
+          'dunkin',
+          'jco'],
+        'metadata' => ['tags' => ['kebutuhan_pokok',
+          'harian']],
+        'children' => [
+          ['name' => 'Makanan',
+            'icon' => 'bi-egg-fried',
+            'color' => '#FF6384',
+            'keywords' => ['makan',
+              'nasi',
+              'lauk',
+              'sayur',
+              'resto',
+              'restaurant',
+              'rm',
+              'warung makan',
+              'warteg',
+              'prasmanan'],
+            'metadata' => ['tags' => ['kebutuhan_pokok']]],
+          ['name' => 'Minuman',
+            'icon' => 'bi-cup',
+            'color' => '#FF9F40',
+            'keywords' => ['minum',
+              'kopi',
+              'teh',
+              'jus',
+              'es',
+              'boba',
+              'bubble tea',
+              'soda',
+              'air mineral',
+              'starbucks',
+              'chatime',
+              'kopi kenangan',
+              'janji jiwa',
+              'fore coffee'],
+            'metadata' => ['tags' => ['kebutuhan_pokok']]],
+          ['name' => 'Makan di Luar',
+            'icon' => 'bi-shop',
+            'color' => '#FFCE56',
+            'keywords' => ['restoran',
+              'cafe',
+              'kafe',
+              'dine in',
+              'dine out',
+              'makan malam romantis',
+              'steak',
+              'sushi',
+              'all you can eat',
+              'buffet',
+              'fine dining'],
+            'metadata' => ['tags' => ['hiburan',
+              'sekunder']]],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Makanan'],
+      ],
       [
-        'icon' => 'bi-egg-fried',
-        'color' => '#FF6384',
+        'name' => 'Transportasi',
         'type' => CategoryType::EXPENSE,
-        'parent_id' => $foodParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok']],
-        'keywords' => [
-          'makan', 'nasi', 'lauk', 'sayur', 'sarapan', 'makan siang', 'makan malam',
-          'resto', 'restaurant', 'rm', 'warung makan', 'warteg', 'prasmanan'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Minuman'],
-      [
-        'icon' => 'bi-cup',
-        'color' => '#FF9F40',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $foodParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok']],
-        'keywords' => [
-          'minum', 'kopi', 'teh', 'jus', 'es', 'boba', 'bubble tea', 'soda', 'air mineral',
-          'starbucks', 'chatime', 'kopi kenangan', 'janji jiwa', 'fore coffee'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Makan di Luar'],
-      [
-        'icon' => 'bi-shop',
-        'color' => '#FFCE56',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $foodParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['hiburan', 'sekunder']],
-        'keywords' => [
-          'restoran', 'cafe', 'kafe', 'dine in', 'dine out', 'makan malam romantis',
-          'steak', 'sushi', 'all you can eat', 'buffet', 'fine dining'
-        ]
-      ]
-    );
-
-    // 2. Transportasi
-    $transportParent = Category::updateOrCreate(
-      ['name' => 'Transportasi'],
-      [
         'icon' => 'bi-car-front',
         'color' => '#36A2EB',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok', 'mobilitas']],
-        'keywords' => [
-          'transport', 'transportasi', 'bensin', 'pertamina', 'shell', 'bp', 'vivo',
-          'spbu', 'bbm', 'bahan bakar', 'parkir', 'tol', 'e-toll', 'flazz', 'brizzi',
-          'gojek', 'grab', 'maxim', 'ojek', 'taksi', 'blue bird', 'bus', 'kereta',
-          'commuter line', 'krl', 'mrt', 'lrt', 'transjakarta', 'tj', 'damri',
-          'travel', 'tiket pesawat', 'garuda', 'lion air', 'citilink', 'air asia'
+        'keywords' => ['transport',
+          'transportasi',
+          'bensin',
+          'pertamina',
+          'shell',
+          'bp',
+          'vivo',
+          'spbu',
+          'bbm',
+          'bahan bakar',
+          'parkir',
+          'tol',
+          'e-toll',
+          'flazz',
+          'brizzi',
+          'gojek',
+          'grab',
+          'maxim',
+          'ojek',
+          'taksi',
+          'blue bird',
+          'bus',
+          'kereta',
+          'commuter line',
+          'krl',
+          'mrt',
+          'lrt',
+          'transjakarta',
+          'tj',
+          'damri',
+          'travel',
+          'tiket pesawat',
+          'garuda',
+          'lion air',
+          'citilink',
+          'air asia'],
+        'metadata' => ['tags' => ['kebutuhan_pokok',
+          'mobilitas']],
+        'children' => [
+          ['name' => 'Bahan Bakar',
+            'icon' => 'bi-fuel-pump',
+            'color' => '#4BC0C0',
+            'keywords' => ['bensin',
+              'pertamax',
+              'pertalite',
+              'dex',
+              'solar',
+              'spbu',
+              'bbm',
+              'fuel',
+              'shell',
+              'bp',
+              'vivo',
+              'pengisian',
+              'isi bensin'],
+            'metadata' => ['tags' => ['rutin']]],
+          ['name' => 'Transportasi Umum',
+            'icon' => 'bi-bus-front',
+            'color' => '#9966FF',
+            'keywords' => ['bus',
+              'kereta',
+              'krl',
+              'commuter',
+              'mrt',
+              'lrt',
+              'transjakarta',
+              'tj',
+              'damri',
+              'angkot',
+              'angkutan',
+              'tiket kereta',
+              'tiket bus'],
+            'metadata' => ['tags' => ['rutin']]],
+          ['name' => 'Ojek Online / Taksi',
+            'icon' => 'bi-bicycle',
+            'color' => '#FF9F40',
+            'keywords' => ['gojek',
+              'grab',
+              'maxim',
+              'ojol',
+              'ojek',
+              'goride',
+              'gocar',
+              'grabbike',
+              'taksi',
+              'blue bird',
+              'express',
+              'silver bird',
+              'taksi online'],
+            'metadata' => ['tags' => ['sekunder',
+              'mobilitas']]],
+          ['name' => 'Parkir & Tol',
+            'icon' => 'bi-p-circle',
+            'color' => '#8AC24A',
+            'keywords' => ['parkir',
+              'parking',
+              'tol',
+              'e-toll',
+              'flazz',
+              'brizzi',
+              'jalan tol',
+              'jasa marga',
+              'rest area'],
+            'metadata' => ['tags' => ['insidental']]],
+          ['name' => 'Tarik Tunai',
+            'icon' => 'bi-cash',
+            'color' => '#FF6384',
+            'keywords' => ['tarik tunai',
+              'penarikan tunai',
+              'atm',
+              'cardless',
+              'tarik tunai di atm',
+              'tarik tunai cardless',
+              'tarik tunai tanpa kartu',
+              'penarikan tunai di atm']],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Bahan Bakar'],
+      ],
       [
-        'icon' => 'bi-fuel-pump',
-        'color' => '#4BC0C0',
+        'name' => 'Belanja',
         'type' => CategoryType::EXPENSE,
-        'parent_id' => $transportParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['rutin']],
-        'keywords' => [
-          'bensin', 'pertamax', 'pertalite', 'dex', 'solar', 'spbu', 'bbm', 'fuel',
-          'shell', 'bp', 'vivo', 'pengisian', 'isi bensin'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Transportasi Umum'],
-      [
-        'icon' => 'bi-bus-front',
-        'color' => '#9966FF',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $transportParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['rutin']],
-        'keywords' => [
-          'bus', 'kereta', 'krl', 'commuter', 'mrt', 'lrt', 'transjakarta', 'tj',
-          'damri', 'angkot', 'angkutan', 'tiket kereta', 'tiket bus'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Ojek Online / Taksi'],
-      [
-        'icon' => 'bi-bicycle',
-        'color' => '#FF9F40',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $transportParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['sekunder', 'mobilitas']],
-        'keywords' => [
-          'gojek', 'grab', 'maxim', 'ojol', 'ojek', 'goride', 'gocar', 'grabbike',
-          'taksi', 'blue bird', 'express', 'silver bird', 'taksi online'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Parkir & Tol'],
-      [
-        'icon' => 'bi-p-circle',
-        'color' => '#8AC24A',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $transportParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['insidental']],
-        'keywords' => [
-          'parkir', 'parking', 'tol', 'e-toll', 'flazz', 'brizzi', 'jalan tol',
-          'jasa marga', 'rest area'
-        ]
-      ]
-    );
-
-    // 3. Belanja
-    $shoppingParent = Category::updateOrCreate(
-      ['name' => 'Belanja'],
-      [
         'icon' => 'bi-cart',
         'color' => '#FFCE56',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
+        'keywords' => ['belanja',
+          'shopping',
+          'mall',
+          'plaza',
+          'supermarket',
+          'minimarket',
+          'indomaret',
+          'alfamart',
+          'alfamidi',
+          'circle k',
+          'lawson',
+          'family mart',
+          'transmart',
+          'carrefour',
+          'hypermart',
+          'giant',
+          'lotte mart',
+          'aeon',
+          'toko',
+          'shopee',
+          'tokopedia',
+          'lazada',
+          'blibli',
+          'bukalapak',
+          'amazon',
+          'e-commerce',
+          'online shop'],
         'metadata' => ['tags' => ['sekunder']],
-        'keywords' =>
-        [
-          'belanja', 'shopping', 'mall', 'plaza', 'supermarket', 'minimarket',
-          'indomaret', 'alfamart', 'alfamidi', 'circle k', 'lawson', 'family mart',
-          'transmart', 'carrefour', 'hypermart', 'giant', 'lotte mart', 'aeon',
-          'toko', 'shopee', 'tokopedia', 'lazada', 'blibli', 'bukalapak', 'amazon',
-          'e-commerce', 'online shop'
+        'children' => [
+          ['name' => 'Kebutuhan Rumah Tangga',
+            'icon' => 'bi-house',
+            'color' => '#4DB6AC',
+            'keywords' => ['sembako',
+              'beras',
+              'minyak goreng',
+              'gula',
+              'garam',
+              'tepung',
+              'telur',
+              'susu',
+              'roti',
+              'sabun',
+              'deterjen',
+              'pembersih',
+              'tisu',
+              'popok',
+              'kebutuhan rumah',
+              'perlengkapan rumah',
+              'alat dapur',
+              'perabot'],
+            'metadata' => ['tags' => ['kebutuhan_pokok']]],
+          ['name' => 'Pakaian',
+            'icon' => 'bi-bag',
+            'color' => '#F06292',
+            'keywords' => ['baju',
+              'celana',
+              'sepatu',
+              'sandal',
+              'tas',
+              'dompet',
+              'aksesoris',
+              'fashion',
+              'pakaian',
+              'kaos',
+              'kemeja',
+              'dress',
+              'rok',
+              'jaket',
+              'h&m',
+              'uniqlo',
+              'zara',
+              'mango',
+              'pull&bear',
+              'stradivarius',
+              'bershka'],
+            'metadata' => ['tags' => ['sekunder',
+              'tersier']]],
+          ['name' => 'Elektronik & Gadget',
+            'icon' => 'bi-laptop',
+            'color' => '#7986CB',
+            'keywords' => ['hp',
+              'handphone',
+              'smartphone',
+              'laptop',
+              'komputer',
+              'tablet',
+              'ipad',
+              'iphone',
+              'samsung',
+              'xiaomi',
+              'oppo',
+              'vivo',
+              'realme',
+              'macbook',
+              'elektronik',
+              'gadget',
+              'aksesoris hp',
+              'charger',
+              'headset',
+              'earphone'],
+            'metadata' => ['tags' => ['tersier',
+              'investasi']]],
+          ['name' => 'E-Wallet',
+            'icon' => 'bi-wallet2',
+            'color' => '#36A2EB',
+            'keywords' => ['gopay',
+              'shopeepay',
+              'ovo',
+              'dana',
+              'linkaja',
+              'ipaymu',
+              'doku',
+              'pembayaran gopay customer',
+              'pembayaran shopee pay',
+              'pembayaran shopee indonesia',
+              'pembayaran ovo',
+              'pembayaran danatopup',
+              'pembayaran tokopedia',
+              'pembayaran ipaymu',
+              'pembayaran doku va',
+              'qr pay',
+              'qris']],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Kebutuhan Rumah Tangga'],
+      ],
       [
-        'icon' => 'bi-house',
-        'color' => '#4DB6AC',
+        'name' => 'Tagihan & Utilitas',
         'type' => CategoryType::EXPENSE,
-        'parent_id' => $shoppingParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok']],
-        'keywords' => [
-          'sembako', 'beras', 'minyak goreng', 'gula', 'garam', 'tepung', 'telur',
-          'susu', 'roti', 'sabun', 'deterjen', 'pembersih', 'tisu', 'popok',
-          'kebutuhan rumah', 'perlengkapan rumah', 'alat dapur', 'perabot'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Pakaian'],
-      [
-        'icon' => 'bi-bag',
-        'color' => '#F06292',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $shoppingParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['sekunder', 'tersier']],
-        'keywords' => [
-          'baju', 'celana', 'sepatu', 'sandal', 'tas', 'dompet', 'aksesoris',
-          'fashion', 'pakaian', 'kaos', 'kemeja', 'dress', 'rok', 'jaket',
-          'h&m', 'uniqlo', 'zara', 'mango', 'pull&bear', 'stradivarius', 'bershka'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Elektronik & Gadget'],
-      [
-        'icon' => 'bi-laptop',
-        'color' => '#7986CB',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $shoppingParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['tersier', 'investasi']],
-        'keywords' => [
-          'hp', 'handphone', 'smartphone', 'laptop', 'komputer', 'tablet', 'ipad',
-          'iphone', 'samsung', 'xiaomi', 'oppo', 'vivo', 'realme', 'macbook',
-          'elektronik', 'gadget', 'aksesoris hp', 'charger', 'headset', 'earphone'
-        ]
-      ]
-    );
-
-    // 4. Tagihan & Utilitas
-    $billsParent = Category::updateOrCreate(
-      ['name' => 'Tagihan & Utilitas'],
-      [
         'icon' => 'bi-receipt',
         'color' => '#4BC0C0',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok', 'rutin']],
-        'keywords' =>
-        [
-          'tagihan', 'bill', 'pln', 'listrik', 'pdam', 'air', 'pgn', 'gas',
-          'internet', 'wifi', 'indihome', 'first media', 'biznet', 'myrepublic',
-          'pulsa', 'telkomsel', 'xl', 'indosat', 'tri', 'smartfren', 'axis',
-          'paket data', 'kuota', 'bpjs', 'asuransi', 'premi', 'sewa', 'kontrakan',
-          'kost', 'kos', 'apartemen', 'rumah', 'cicilan', 'kpr', 'leasing'
+        'keywords' => ['tagihan',
+          'bill',
+          'pln',
+          'listrik',
+          'pdam',
+          'air',
+          'pgn',
+          'gas',
+          'internet',
+          'wifi',
+          'indihome',
+          'first media',
+          'biznet',
+          'myrepublic',
+          'pulsa',
+          'telkomsel',
+          'xl',
+          'indosat',
+          'tri',
+          'smartfren',
+          'axis',
+          'paket data',
+          'kuota',
+          'bpjs',
+          'asuransi',
+          'premi',
+          'sewa',
+          'kontrakan',
+          'kost',
+          'kos',
+          'apartemen',
+          'rumah',
+          'cicilan',
+          'kpr',
+          'leasing'],
+        'metadata' => ['tags' => ['kebutuhan_pokok',
+          'rutin']],
+        'children' => [
+          ['name' => 'Listrik',
+            'icon' => 'bi-lightning',
+            'color' => '#FFCE56',
+            'keywords' => ['pln',
+              'listrik',
+              'token listrik',
+              'prabayar',
+              'pascabayar',
+              'pembayaran pln prabayar']],
+          ['name' => 'Air',
+            'icon' => 'bi-droplet',
+            'color' => '#36A2EB',
+            'keywords' => ['pdam',
+              'air',
+              'pam',
+              'palang',
+              'palapa']],
+          ['name' => 'Internet & Pulsa',
+            'icon' => 'bi-wifi',
+            'color' => '#9966FF',
+            'keywords' => ['internet',
+              'wifi',
+              'indihome',
+              'first media',
+              'biznet',
+              'myrepublic',
+              'telkom',
+              'indihome',
+              'pembayaran telkom/indihome']],
+          ['name' => 'Pulsa',
+            'icon' => 'bi-phone',
+            'color' => '#4BC0C0',
+            'keywords' => ['pulsa',
+              'telkomsel',
+              'xl',
+              'indosat',
+              'tri',
+              'smartfren',
+              'axis',
+              'im3',
+              'ooredoo',
+              'prepaid',
+              'pascabayar',
+              'paket data',
+              'kuota',
+              'pembayaran telkomsel prepaid',
+              'pembayaran im3 ooredoo',
+              'pembayaran 3 prepaid',
+              'pembayaran xl axiata']],
+          ['name' => 'Sewa / KPR',
+            'icon' => 'bi-building',
+            'color' => '#FF6384',
+            'keywords' => ['sewa',
+              'kontrakan',
+              'kost',
+              'kos',
+              'apartemen',
+              'rumah',
+              'kpr',
+              'cicilan rumah',
+              'angsuran',
+              'pembayaran sewa',
+              'rent',
+              'sewa kontrakan',
+              'uang sewa rumah']],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Listrik'],
+      ],
       [
-        'icon' => 'bi-lightning',
-        'color' => '#FFCE56',
+        'name' => 'Hiburan',
         'type' => CategoryType::EXPENSE,
-        'parent_id' => $billsParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['wajib']],
-        'keywords' => ['pln', 'listrik', 'token listrik', 'pascabayar', 'prabayar']
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Air'],
-      [
-        'icon' => 'bi-droplet',
-        'color' => '#36A2EB',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $billsParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['wajib']],
-        'keywords' => ['pdam', 'air', 'pam', 'palang', 'palapa']
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Internet & Pulsa'],
-      [
-        'icon' => 'bi-wifi',
-        'color' => '#9966FF',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $billsParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok', 'digital']],
-        'keywords' =>
-        [
-          'internet', 'wifi', 'indihome', 'first media', 'biznet', 'myrepublic',
-          'pulsa', 'telkomsel', 'xl', 'indosat', 'tri', 'smartfren', 'axis',
-          'paket data', 'kuota', 'isi ulang', 'voucher'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Sewa / KPR'],
-      [
-        'icon' => 'bi-building',
-        'color' => '#FF6384',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $billsParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['wajib', 'besar']],
-        'keywords' =>
-        [
-          'sewa', 'kontrakan', 'kost', 'kos', 'apartemen', 'rumah', 'kpr',
-          'cicilan rumah', 'angsuran', 'pembayaran sewa', 'rent'
-        ]
-      ]
-    );
-
-    // 5. Hiburan
-    $entertainmentParent = Category::updateOrCreate(
-      ['name' => 'Hiburan'],
-      [
         'icon' => 'bi-film',
         'color' => '#9966FF',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['tersier', 'non-esensial']],
-        'keywords' => [
-          'hiburan', 'entertainment', 'bioskop', 'cinema', 'xxi', 'cgv', 'cinepolis',
-          'netflix', 'spotify', 'youtube', 'disney', 'hbo', 'vidio', 'viki', 'iqiyi',
-          'we tv', 'langganan', 'subscription', 'game', 'steam', 'playstation',
-          'nintendo', 'xbox', 'mobile legend', 'pubg', 'free fire', 'genshin',
-          'konser', 'event', 'tiket', 'pertunjukan', 'teater', 'museum', 'wisata'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Streaming & Langganan'],
-      [
-        'icon' => 'bi-play-circle',
-        'color' => '#FF9F40',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $entertainmentParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['digital',
-          'bulanan']],
-        'keywords' => [
-          'netflix',
-          'spotify',
-          'youtube premium',
-          'disney+',
-          'hbo go',
-          'vidio',
-          'viki',
-          'iqiyi',
-          'we tv',
-          'langganan',
-          'subscription'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Bioskop & Acara'],
-      [
-        'icon' => 'bi-ticket-perforated',
-        'color' => '#F06292',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $entertainmentParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['insidental']],
-        'keywords' => [
+        'keywords' => ['hiburan',
+          'entertainment',
           'bioskop',
           'cinema',
           'xxi',
           'cgv',
           'cinepolis',
-          'tiket',
-          'nonton',
-          'konser',
-          'event',
-          'pertunjukan',
-          'teater',
-          'stand up',
-          'comedy'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Game'],
-      [
-        'icon' => 'bi-controller',
-        'color' => '#7986CB',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $entertainmentParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['digital']],
-        'keywords' => [
+          'netflix',
+          'spotify',
+          'youtube',
+          'disney',
+          'hbo',
+          'vidio',
+          'viki',
+          'iqiyi',
+          'we tv',
+          'langganan',
+          'subscription',
           'game',
           'steam',
           'playstation',
-          'psn',
           'nintendo',
           'xbox',
-          'game pass',
           'mobile legend',
           'pubg',
           'free fire',
-          'genshin impact',
-          'valorant',
-          'top up',
-          'diamond',
-          'uc',
-          'skin',
-          'item game',
-          'dlc'
+          'genshin',
+          'konser',
+          'event',
+          'tiket',
+          'pertunjukan',
+          'teater',
+          'museum',
+          'wisata'],
+        'metadata' => ['tags' => ['tersier',
+          'non-esensial']],
+        'children' => [
+          ['name' => 'Streaming & Langganan',
+            'icon' => 'bi-play-circle',
+            'color' => '#FF9F40',
+            'keywords' => ['netflix',
+              'spotify',
+              'youtube premium',
+              'disney+',
+              'hbo go',
+              'vidio',
+              'viki',
+              'iqiyi',
+              'we tv',
+              'langganan',
+              'subscription']],
+          ['name' => 'Bioskop & Acara',
+            'icon' => 'bi-ticket-perforated',
+            'color' => '#F06292',
+            'keywords' => ['bioskop',
+              'cinema',
+              'xxi',
+              'cgv',
+              'cinepolis',
+              'tiket',
+              'nonton',
+              'konser',
+              'event',
+              'pertunjukan',
+              'teater',
+              'stand up',
+              'comedy']],
+          ['name' => 'Game',
+            'icon' => 'bi-controller',
+            'color' => '#7986CB',
+            'keywords' => ['game',
+              'steam',
+              'playstation',
+              'psn',
+              'nintendo',
+              'xbox',
+              'game pass',
+              'mobile legend',
+              'pubg',
+              'free fire',
+              'genshin impact',
+              'valorant',
+              'top up',
+              'diamond',
+              'uc',
+              'skin',
+              'item game',
+              'dlc']],
         ]
-      ]
-    );
-
-    // 6. Kesehatan
-    $healthParent = Category::updateOrCreate(
-      ['name' => 'Kesehatan'],
+      ],
       [
+        'name' => 'Kesehatan',
+        'type' => CategoryType::EXPENSE,
         'icon' => 'bi-heart-pulse',
         'color' => '#FF9F40',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['kebutuhan_pokok',
-          'darurat']],
-        'keywords' => [
-          'kesehatan',
+        'keywords' => ['kesehatan',
           'health',
           'dokter',
           'rumah sakit',
@@ -452,74 +613,46 @@ class CategorySeeder extends Seeder
           'behel',
           'kacamata',
           'softlens',
-          'optik'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Obat & Vitamin'],
-      [
-        'icon' => 'bi-capsule',
-        'color' => '#8AC24A',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $healthParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['rutin']],
-        'keywords' => [
-          'obat',
-          'vitamin',
-          'suplemen',
-          'apotek',
-          'kimia farma',
-          'century',
-          'guardian',
-          'watson',
-          'obat resep',
-          'obat bebas'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Dokter & Rumah Sakit'],
-      [
-        'icon' => 'bi-hospital',
-        'color' => '#FF6384',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $healthParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['insidental',
+          'optik'],
+        'metadata' => ['tags' => ['kebutuhan_pokok',
           'darurat']],
-        'keywords' => [
-          'dokter',
-          'rumah sakit',
-          'rs ',
-          'klinik',
-          'puskesmas',
-          'ugd',
-          'igd',
-          'rawat inap',
-          'operasi',
-          'bedah',
-          'poli',
-          'spesialis'
+        'children' => [
+          ['name' => 'Obat & Vitamin',
+            'icon' => 'bi-capsule',
+            'color' => '#8AC24A',
+            'keywords' => ['obat',
+              'vitamin',
+              'suplemen',
+              'apotek',
+              'kimia farma',
+              'century',
+              'guardian',
+              'watson',
+              'obat resep',
+              'obat bebas']],
+          ['name' => 'Dokter & Rumah Sakit',
+            'icon' => 'bi-hospital',
+            'color' => '#FF6384',
+            'keywords' => ['dokter',
+              'rumah sakit',
+              'rs ',
+              'klinik',
+              'puskesmas',
+              'ugd',
+              'igd',
+              'rawat inap',
+              'operasi',
+              'bedah',
+              'poli',
+              'spesialis']],
         ]
-      ]
-    );
-
-    // 7. Pendidikan
-    $educationParent = Category::updateOrCreate(
-      ['name' => 'Pendidikan'],
+      ],
       [
+        'name' => 'Pendidikan',
+        'type' => CategoryType::EXPENSE,
         'icon' => 'bi-book',
         'color' => '#8AC24A',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['investasi',
-          'sekunder']],
-        'keywords' => [
-          'pendidikan',
+        'keywords' => ['pendidikan',
           'education',
           'sekolah',
           'kuliah',
@@ -547,75 +680,48 @@ class CategorySeeder extends Seeder
           'coursera',
           'dicoding',
           'harisenin',
-          'revou'
+          'revou'],
+        'metadata' => ['tags' => ['investasi',
+          'sekunder']],
+        'children' => [
+          ['name' => 'Kursus & Pelatihan',
+            'icon' => 'bi-mortarboard',
+            'color' => '#4DB6AC',
+            'keywords' => ['kursus',
+              'les',
+              'bimbel',
+              'pelatihan',
+              'training',
+              'sertifikasi',
+              'bootcamp',
+              'online course',
+              'udemy',
+              'coursera',
+              'dicoding']],
+          ['name' => 'Buku & Materi',
+            'icon' => 'bi-journal',
+            'color' => '#36A2EB',
+            'keywords' => ['buku',
+              'novel',
+              'komik',
+              'majalah',
+              'ebook',
+              'kindle',
+              'gramedia',
+              'periplus',
+              'alat tulis',
+              'stationery',
+              'pensil',
+              'pulpen',
+              'binder']],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Kursus & Pelatihan'],
+      ],
       [
-        'icon' => 'bi-mortarboard',
-        'color' => '#4DB6AC',
+        'name' => 'Transfer & Keuangan',
         'type' => CategoryType::EXPENSE,
-        'parent_id' => $educationParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['investasi_diri']],
-        'keywords' => [
-          'kursus',
-          'les',
-          'bimbel',
-          'pelatihan',
-          'training',
-          'sertifikasi',
-          'bootcamp',
-          'online course',
-          'udemy',
-          'coursera',
-          'dicoding'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Buku & Materi'],
-      [
-        'icon' => 'bi-journal',
-        'color' => '#36A2EB',
-        'type' => CategoryType::EXPENSE,
-        'parent_id' => $educationParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['pengetahuan']],
-        'keywords' => [
-          'buku',
-          'novel',
-          'komik',
-          'majalah',
-          'ebook',
-          'kindle',
-          'gramedia',
-          'periplus',
-          'alat tulis',
-          'stationery',
-          'pensil',
-          'pulpen',
-          'binder'
-        ]
-      ]
-    );
-
-    // 8. Transfer & Keuangan
-    $transferParent = Category::updateOrCreate(
-      ['name' => 'Transfer & Keuangan'],
-      [
         'icon' => 'bi-arrow-left-right',
         'color' => '#6c757d',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['transfer',
-          'keuangan']],
-        'keywords' => [
-          'transfer',
+        'keywords' => ['transfer',
           'trsf',
           'bi fast',
           'kliring',
@@ -630,58 +736,85 @@ class CategorySeeder extends Seeder
           'bunga',
           'denda',
           'penalty',
-          'fee'
+          'fee'],
+        'metadata' => ['tags' => ['transfer',
+          'keuangan']],
+        'children' => [
+          ['name' => 'Biaya Admin & Pajak',
+            'icon' => 'bi-calculator',
+            'color' => '#6c757d',
+            'keywords' => ['biaya admin',
+              'administrasi',
+              'admin bank',
+              'biaya transfer',
+              'pajak',
+              'pph',
+              'ppn',
+              'bunga',
+              'denda',
+              'penalty',
+              'fee',
+              'biaya',
+              'biaya transaksi',
+              'biaya pembayaran',
+              'biaya layanan',
+              'biaya administrasi rekening',
+              'biaya administrasi kartu debit',
+              'biaya administrasi kartu kredit',
+              'biaya transfer bi fast',
+              'biaya transfer',
+              'biaya pembayaran telkomsel prepaid',
+              'biaya pembayaran pln prabayar',
+              'biaya pembayaran gopay customer',
+              'biaya pembayaran shopee pay',
+              'biaya pembayaran im3 ooredoo',
+              'biaya pembayaran xl axiata',
+              'biaya pembayaran 3 prepaid',
+              'biaya penarikan tunai di atm link',
+              'biaya penggantian kartu atm',
+              'biaya saldo minimum',
+              'pendebitan otomatis']],
+          ['name' => 'Transfer Keluar',
+            'icon' => 'bi-arrow-right-circle',
+            'color' => '#FF9F40',
+            'keywords' => ['transfer ke',
+              'trsf ke',
+              'kirim uang',
+              'transfer keluar',
+              'bayar hutang',
+              'bayar utang',
+              'pinjaman',
+              'pinjem',
+              'nafkah istri',
+              'uang istri',
+              'transfer istri',
+              'kirim mertua',
+              'kirim orang tua',
+              'bayar arisan',
+              'iuran',
+              'kas bulanan',
+              'teman pinjem',
+              'teman pinjam']],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Biaya Admin & Pajak'],
+      ],
       [
-        'icon' => 'bi-calculator',
-        'color' => '#6c757d',
+        'name' => 'Lainnya',
         'type' => CategoryType::EXPENSE,
-        'parent_id' => $transferParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['wajib']],
-        'keywords' => [
-          'biaya admin', 'administrasi', 'admin bank', 'biaya transfer',
-          'pajak', 'pph', 'ppn', 'bunga', 'denda', 'penalty', 'fee',
-          'biaya', 'biaya transaksi', 'biaya pembayaran', 'biaya layanan'
-        ]
-      ]
-    );
-
-    // 9. Lainnya (Expense)
-    Category::updateOrCreate(
-      ['name' => 'Lainnya'],
-      [
         'icon' => 'bi-three-dots',
         'color' => '#7986CB',
-        'type' => CategoryType::EXPENSE,
-        'is_system' => true,
-        'metadata' => ['tags' => ['tidak_terkategori']],
         'keywords' => ['lainnya',
           'other',
-          'uncategorized']
-      ]
-    );
+          'uncategorized'],
+        'metadata' => ['tags' => ['tidak_terkategori']],
+      ],
 
-    // ==================== KATEGORI PEMASUKAN (INCOME) ====================
-
-    // 1. Pendapatan Utama
-    $incomeParent = Category::updateOrCreate(
-      ['name' => 'Pendapatan Utama'],
+      // ========== INCOME ==========
       [
+        'name' => 'Pendapatan Utama',
+        'type' => CategoryType::INCOME,
         'icon' => 'bi-cash-stack',
         'color' => '#4DB6AC',
-        'type' => CategoryType::INCOME,
-        'is_system' => true,
-        'metadata' => ['tags' => ['gaji',
-          'rutin',
-          'primer']],
-        'keywords' => [
-          'gaji',
+        'keywords' => ['gaji',
           'salary',
           'upah',
           'wage',
@@ -694,64 +827,55 @@ class CategorySeeder extends Seeder
           'lembur',
           'overtime',
           'pensiun',
-          'pension'
+          'pension'],
+        'metadata' => ['tags' => ['gaji',
+          'rutin',
+          'primer']],
+        'children' => [
+          ['name' => 'Gaji',
+            'icon' => 'bi-briefcase',
+            'color' => '#36A2EB',
+            'keywords' => ['gaji',
+              'salary',
+              'payroll',
+              'gajian',
+              'upah',
+              'wage',
+              'gaji januari',
+              'gaji februari',
+              'gaji maret',
+              'gaji april',
+              'gaji mei',
+              'gaji juni',
+              'gaji juli',
+              'gaji agustus',
+              'gaji september',
+              'gaji oktober',
+              'gaji november',
+              'gaji desember']],
+          ['name' => 'Bonus & THR',
+            'icon' => 'bi-gift',
+            'color' => '#FFCE56',
+            'keywords' => ['bonus',
+              'insentif',
+              'thr',
+              'tunjangan hari raya',
+              'reward',
+              'komisi']],
+          ['name' => 'Uang Cuti',
+            'icon' => 'bi-calendar-heart',
+            'color' => '#FFCE56',
+            'keywords' => ['uang cuti',
+              'uang perjalanan cuti',
+              'cuti']],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Gaji'],
+      ],
       [
-        'icon' => 'bi-briefcase',
-        'color' => '#36A2EB',
+        'name' => 'Investasi',
         'type' => CategoryType::INCOME,
-        'parent_id' => $incomeParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['bulanan',
-          'tetap']],
-        'keywords' => [
-          'gaji',
-          'salary',
-          'payroll',
-          'gajian',
-          'upah',
-          'wage'
-        ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Bonus & THR'],
-      [
-        'icon' => 'bi-gift',
-        'color' => '#FFCE56',
-        'type' => CategoryType::INCOME,
-        'parent_id' => $incomeParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['tidak_tetap']],
-        'keywords' => [
-          'bonus',
-          'insentif',
-          'thr',
-          'tunjangan hari raya',
-          'reward',
-          'komisi'
-        ]
-      ]
-    );
-
-    // 2. Investasi
-    $investmentParent = Category::updateOrCreate(
-      ['name' => 'Investasi'],
-      [
         'icon' => 'bi-graph-up',
         'color' => '#F06292',
-        'type' => CategoryType::INCOME,
-        'is_system' => true,
-        'metadata' => ['tags' => ['pasif',
-          'modal']],
-        'keywords' => [
-          'investasi',
+        'keywords' => ['investasi',
           'investment',
           'dividen',
           'dividend',
@@ -769,54 +893,31 @@ class CategorySeeder extends Seeder
           'ethereum',
           'forex',
           'trading',
-          'profit'
+          'profit'],
+        'metadata' => ['tags' => ['pasif',
+          'modal']],
+        'children' => [
+          ['name' => 'Dividen',
+            'icon' => 'bi-pie-chart',
+            'color' => '#7986CB',
+            'keywords' => ['dividen',
+              'dividend',
+              'pembagian laba']],
+          ['name' => 'Bunga Deposito',
+            'icon' => 'bi-bank',
+            'color' => '#8AC24A',
+            'keywords' => ['bunga',
+              'deposito',
+              'interest',
+              'tabungan']],
         ]
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Dividen'],
+      ],
       [
-        'icon' => 'bi-pie-chart',
-        'color' => '#7986CB',
+        'name' => 'Pendapatan Sampingan',
         'type' => CategoryType::INCOME,
-        'parent_id' => $investmentParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['saham']],
-        'keywords' => ['dividen',
-          'dividend',
-          'pembagian laba']
-      ]
-    );
-
-    Category::updateOrCreate(
-      ['name' => 'Bunga Deposito'],
-      [
-        'icon' => 'bi-bank',
-        'color' => '#8AC24A',
-        'type' => CategoryType::INCOME,
-        'parent_id' => $investmentParent->id,
-        'is_system' => true,
-        'metadata' => ['tags' => ['perbankan']],
-        'keywords' => ['bunga',
-          'deposito',
-          'interest',
-          'tabungan']
-      ]
-    );
-
-    // 3. Pendapatan Sampingan
-    Category::updateOrCreate(
-      ['name' => 'Pendapatan Sampingan'],
-      [
         'icon' => 'bi-brush',
         'color' => '#FF9F40',
-        'type' => CategoryType::INCOME,
-        'is_system' => true,
-        'metadata' => ['tags' => ['freelance',
-          'tidak_tetap']],
-        'keywords' => [
-          'freelance',
+        'keywords' => ['freelance',
           'side hustle',
           'sampingan',
           'proyek',
@@ -831,22 +932,16 @@ class CategorySeeder extends Seeder
           'editing',
           'ngajar',
           'private',
-          'tutor'
-        ]
-      ]
-    );
-
-    // 4. Hadiah & Transfer Masuk
-    Category::updateOrCreate(
-      ['name' => 'Hadiah & Transfer Masuk'],
+          'tutor'],
+        'metadata' => ['tags' => ['freelance',
+          'tidak_tetap']],
+      ],
       [
+        'name' => 'Hadiah & Transfer Masuk',
+        'type' => CategoryType::INCOME,
         'icon' => 'bi-gift-fill',
         'color' => '#FF6384',
-        'type' => CategoryType::INCOME,
-        'is_system' => true,
-        'metadata' => ['tags' => ['insidental']],
-        'keywords' => [
-          'hadiah',
+        'keywords' => ['hadiah',
           'gift',
           'transfer masuk',
           'incoming transfer',
@@ -856,40 +951,93 @@ class CategorySeeder extends Seeder
           'remittance',
           'pemberian',
           'angpao',
-          'amplop'
+          'amplop'],
+        'metadata' => ['tags' => ['insidental']],
+        'children' => [
+          ['name' => 'Transfer Masuk',
+            'icon' => 'bi-arrow-left-circle',
+            'color' => '#4DB6AC',
+            'keywords' => ['transfer dari',
+              'trsf dari',
+              'transfer masuk',
+              'incoming transfer',
+              'dari shopee',
+              'dari airpay',
+              'dari modal',
+              'teman bayar hutang',
+              'bayar hutang',
+              'pinjem uang',
+              'pinjaman',
+              'refund',
+              'uang tiket refund',
+              'kembalian']],
         ]
-      ]
-    );
-
-    // 5. Lainnya (Income)
-    Category::updateOrCreate(
-      ['name' => 'Lainnya (Pemasukan)'],
+      ],
       [
+        'name' => 'Lainnya (Pemasukan)',
+        'type' => CategoryType::INCOME,
         'icon' => 'bi-three-dots',
         'color' => '#6c757d',
-        'type' => CategoryType::INCOME,
-        'is_system' => true,
-        'metadata' => ['tags' => ['tidak_terkategori']],
         'keywords' => ['lainnya',
           'other',
-          'uncategorized income']
-      ]
-    );
+          'uncategorized income'],
+        'metadata' => ['tags' => ['tidak_terkategori']],
+      ],
 
-    // ==================== KATEGORI BOTH (Transfer Internal) ====================
-
-    Category::updateOrCreate(
-      ['name' => 'Transfer Internal'],
+      // ========== BOTH ==========
       [
+        'name' => 'Transfer Internal',
+        'type' => CategoryType::BOTH,
         'icon' => 'bi-arrow-left-right',
         'color' => '#17a2b8',
-        'type' => CategoryType::BOTH,
-        'is_system' => true,
+        'keywords' => ['transfer antar dompet',
+          'internal transfer'],
         'metadata' => ['tags' => ['transfer',
           'internal']],
-        'keywords' => ['transfer antar dompet',
-          'internal transfer']
-      ]
-    );
+      ],
+    ];
+  }
+
+  /**
+  * Seed categories dengan efisien.
+  */
+  protected function seedCategories(): void
+  {
+    // 1. Seed semua parent terlebih dahulu
+    $parents = [];
+    foreach ($this->categories as $cat) {
+      $children = $cat['children'] ?? [];
+      unset($cat['children']);
+      $parents[] = $cat;
+    }
+
+    // Upsert parents
+    foreach (array_chunk($parents, 50) as $chunk) {
+      Category::upsert($chunk, ['name', 'type'], ['icon', 'color', 'metadata', 'keywords']);
+    }
+
+    // 2. Seed children dengan parent_id
+    $childrenData = [];
+    foreach ($this->categories as $cat) {
+      if (empty($cat['children'])) continue;
+
+      $parent = Category::where('name', $cat['name'])
+      ->where('type', $cat['type'])
+      ->first();
+
+      if (!$parent) continue;
+
+      foreach ($cat['children'] as $child) {
+        $child['parent_id'] = $parent->id;
+        $child['type'] = $cat['type'];
+        $child['is_system'] = true;
+        $childrenData[] = $child;
+      }
+    }
+
+    // Upsert children
+    foreach (array_chunk($childrenData, 50) as $chunk) {
+      Category::upsert($chunk, ['name', 'type', 'parent_id'], ['icon', 'color', 'metadata', 'keywords']);
+    }
   }
 }

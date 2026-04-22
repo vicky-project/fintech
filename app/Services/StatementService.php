@@ -148,7 +148,7 @@ class StatementService
           'statement_id' => $statement->id,
           'transaction_date' => $trx['date'],
           'description' => $desc,
-          // insert harus mengkalikan manual
+          // insert harus mengkalikan manual untuk nilai sen/float
           'amount' => (int) $trx['amount'] * 100,
           'type' => $type,
           'category_id' => $categoryId,
