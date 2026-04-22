@@ -297,7 +297,7 @@
     document.getElementById('upload-progress')?.classList.remove('d-none');
     const submitBtn = form.closest('.modal').querySelector('.btn-primary');
     submitBtn.disabled = true;
-    alert(formData);
+    alert(JSON.stringify(formData));
 
     try {
       const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/statements/upload', {
