@@ -113,7 +113,6 @@ class StatementService
       }
 
       $result = $this->parserManager->parse($processedPath);
-      \Log::debug("Parser result", $result);
 
       $statement->update([
         'bank_code' => $result['bank_code'],
@@ -123,11 +122,11 @@ class StatementService
 
       // Kumpulkan semua deskripsi unik
       $uniqueDescriptions = [];
-      foreach ($result['transactions'] as $trx) {
-        $desc = $trx['description'];
+      foreach ($result['transactions'] as $item) {
+        $desc = $item['description'];
         if (!isset($uniqueDescriptions[$desc])) {
           $uniqueDescriptions[$desc] = [
-            'type' => $trx['type'] ?? StatementType::fromDescription($desc, $trx['amount']),
+            'type' => $item['type'] ?? StatementType::fromDescription($desc, $item['amount']),
           ];
         }
       }
@@ -161,6 +160,7 @@ class StatementService
       \Log::debug("Process total rows: " . count($insertData));
 
       foreach (array_chunk($insertData, 500) as $chunk) {
+        \Log::debug($chunk);
         StatementTransaction::insert($chunk);
       }
 
