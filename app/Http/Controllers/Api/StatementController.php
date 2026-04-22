@@ -5,84 +5,39 @@ namespace Modules\FinTech\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Modules\FinTech\Services\StatementService;
 use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
-use Modules\FinTech\Services\PdfDecryptor;
-use Modules\FinTech\Services\BankParserManager;
-use Modules\FinTech\Services\CategorizationService;
-use Modules\FinTech\Services\TransactionService;
-use Modules\FinTech\Enums\StatementStatus;
-use Modules\FinTech\Enums\StatementType;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 
 class StatementController extends Controller
 {
-  protected PdfDecryptor $decryptor;
-  protected BankParserManager $parserManager;
-  protected CategorizationService $categorizationService;
-  protected TransactionService $transactionService;
+  protected StatementService $statementService;
 
-  public function __construct(
-    PdfDecryptor $decryptor,
-    BankParserManager $parserManager,
-    CategorizationService $categorizationService,
-    TransactionService $transactionService
-  ) {
-    $this->decryptor = $decryptor;
-    $this->parserManager = $parserManager;
-    $this->categorizationService = $categorizationService;
-    $this->transactionService = $transactionService;
+  public function __construct(StatementService $statementService) {
+    $this->statementService = $statementService;
   }
 
-  /**
-  * List all statements for the user.
-  */
   public function index(Request $request): JsonResponse
   {
-    $statements = BankStatement::where('user_id', $request->user()->id)
-    ->with(['wallet'])
-    ->orderBy('created_at', 'desc')
-    ->paginate($request->input('per_page', 20));
-
-    $transformed = $statements->through(fn($s) => [
-      'id' => $s->id,
-      'original_filename' => $s->original_filename,
-      'bank_code' => $s->bank_code,
-      'status' => $s->status->value,
-      'status_label' => $s->status->label(),
-      'wallet' => $s->wallet ? [
-        'id' => $s->wallet->id,
-        'name' => $s->wallet->name,
-      ] : null,
-      'meta_data' => $s->meta_data,
-      'processed_at' => $s->processed_at?->toDateTimeString(),
-      'created_at' => $s->created_at->toDateTimeString(),
-      'remaining_count' => $s->transactions()->notImported()->count(),
-    ]);
+    $statements = $this->statementService->getPaginatedStatements(
+      $request->user()->id,
+      $request->input('per_page', 20)
+    );
 
     return response()->json([
       'success' => true,
-      'data' => $transformed
+      'data' => $statements
     ]);
   }
 
-  /**
-  * Delete a statement and its file.
-  */
   public function destroy(BankStatement $statement): JsonResponse
   {
     if ($statement->user_id !== request()->user()->id) {
       return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    // Hapus file fisik
-    if ($statement->file_path) {
-      Storage::delete($statement->file_path);
-    }
-
-    $statement->delete();
+    $this->statementService->deleteStatement($statement->user_id, $statement->id);
 
     return response()->json([
       'success' => true,
@@ -90,9 +45,6 @@ class StatementController extends Controller
     ]);
   }
 
-  /**
-  * Upload dan proses file statement bank.
-  */
   public function upload(Request $request): JsonResponse
   {
     $validator = Validator::make($request->all(), [
@@ -108,154 +60,41 @@ class StatementController extends Controller
       ], 422);
     }
 
-    $user = $request->user();
-    $file = $request->file('file');
-    $password = $request->input('password');
-    $walletId = $request->input('wallet_id');
-
-    $wallet = \Modules\FinTech\Models\Wallet::where('user_id', $user->id)
-    ->where('id', $walletId)
-    ->first();
-
-    if (!$wallet) {
-      return response()->json([
-        'success' => false,
-        'message' => 'Dompet tidak valid.'
-      ], 422);
-    }
-
-    $tempPath = $file->storeAs(
-      'temp/statements/' . $user->id,
-      uniqid() . '_' . $file->getClientOriginalName()
-    );
-
-    $fullPath = Storage::path($tempPath);
-    $processedPath = $fullPath;
-
-    $statement = BankStatement::create([
-      'user_id' => $user->id,
-      'wallet_id' => $walletId,
-      'original_filename' => $file->getClientOriginalName(),
-      'file_path' => $tempPath,
-      'status' => StatementStatus::UPLOADED,
-    ]);
-
     try {
-      if ($file->getClientOriginalExtension() === 'pdf' && $this->decryptor->isEncrypted($fullPath)) {
-        if (!$password) {
-          throw new \Exception("File PDF ini diproteksi password. Silakan masukkan password.");
-        }
-
-        $processedPath = $this->decryptor->decrypt($fullPath, $password);
-        $statement->updateStatus(StatementStatus::DECRYPTED);
-      }
-
-      $result = $this->parserManager->parse($processedPath);
-      \Log::debug("Parser result", $result);
-
-      $statement->update([
-        'bank_code' => $result['bank_code'],
-        'meta_data' => ['transaction_count' => count($result['transactions'])],
-      ]);
-      $statement->updateStatus(StatementStatus::PARSED);
-
-      foreach ($result['transactions'] as $trx) {
-        $type = $trx['type'] ?? StatementType::fromDescription($trx['description'], $trx['amount']);
-        $category = $this->categorizationService->categorize($trx['description'], $type);
-
-        StatementTransaction::create([
-          'statement_id' => $statement->id,
-          'transaction_date' => $trx['date'],
-          'description' => $trx['description'],
-          'amount' => $trx['amount'],
-          'type' => $type,
-          'category_id' => $category?->id,
-          'raw_data' => $trx,
-        ]);
-      }
+      $result = $this->statementService->uploadStatement(
+        $request->user()->id,
+        $request->file('file'),
+        $request->input('password'),
+        $request->input('wallet_id')
+      );
 
       return response()->json([
         'success' => true,
         'message' => 'Statement berhasil diproses.',
-        'data' => [
-          'statement_id' => $statement->id,
-          'bank_code' => $result['bank_code'],
-          'transaction_count' => count($result['transactions']),
-        ]
+        'data' => $result
       ]);
-
     } catch (\Exception $e) {
-      \Log::error("Failed to process upload statement.", [
-        "message" => $e->getMessage(),
-        "filepath" => $fullPath,
-        "user" => $user,
-        "trace" => $e->getTraceAsString()
-      ]);
-
-      $statement->updateStatus(StatementStatus::FAILED, ['error' => $e->getMessage()]);
-
       return response()->json([
         'success' => false,
         'message' => $e->getMessage()
       ], 422);
-    } finally {
-      if (isset($processedPath) && $processedPath !== $fullPath && file_exists($processedPath)) {
-        @unlink($processedPath);
-      }
     }
   }
 
-  /**
-  * Preview transaksi hasil parsing.
-  */
   public function preview(BankStatement $statement): JsonResponse
   {
     if ($statement->user_id !== request()->user()->id) {
       return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    $transactions = $statement->transactions()
-    ->with('category')
-    ->notImported()
-    ->get()
-    ->map(fn($trx) => [
-      'id' => $trx->id,
-      'date' => $trx->transaction_date->toDateString(),
-      'description' => $trx->description,
-      'amount' => $trx->getAmountFloat(),
-      'formatted_amount' => $trx->getFormattedAmount(),
-      'type' => $trx->type?->value,
-      'type_label' => $trx->type?->label(),
-      'category' => $trx->category ? [
-        'id' => $trx->category->id,
-        'name' => $trx->category->name,
-        'icon' => $trx->category->icon,
-        'color' => $trx->category->color,
-      ] : null,
-    ]);
-
-    // Ambil semua kategori untuk dropdown edit
-    $categories = \Modules\FinTech\Models\Category::active()
-    ->orderBy('name')
-    ->get(['id', 'name', 'type', 'icon', 'color']);
+    $data = $this->statementService->previewStatement($statement->user_id, $statement->id);
 
     return response()->json([
       'success' => true,
-      'data' => [
-        'statement_id' => $statement->id,
-        'wallet' => [
-          'id' => $statement->wallet->id,
-          'name' => $statement->wallet->name,
-        ],
-        'transactions' => $transactions,
-        'categories' => $categories,
-      ]
+      'data' => $data
     ]);
   }
 
-  /**
-  * Import transaksi terpilih.
-  */
   public function import(Request $request, BankStatement $statement): JsonResponse
   {
     if ($statement->user_id !== $request->user()->id) {
@@ -267,91 +106,24 @@ class StatementController extends Controller
       'transaction_ids.*' => 'required|exists:fintech_statement_transactions,id',
     ]);
 
-    $wallet = $statement->wallet;
-    $transactions = $statement->transactions()
-    ->notImported()
-    ->whereIn('id', $request->transaction_ids)
-    ->orderBy('transaction_date', 'asc')
-    ->orderBy('id', 'asc')
-    ->get();
-
-    if ($transactions->isEmpty()) {
-      return response()->json([
-        'success' => false,
-        'message' => 'Tidak ada transaksi yang valid untuk diimpor.'
-      ], 422);
-    }
-
-    $imported = 0;
-    $skipped = 0;
-    $skippedReasons = [];
-
-    DB::beginTransaction();
     try {
-      foreach ($transactions as $trx) {
-        $transactionType = $trx->type?->toTransactionType();
-        if (!$transactionType) {
-          $skipped++;
-          $skippedReasons[] = "{$trx->description}: tipe tidak dikenali";
-          continue;
-        }
+      $result = $this->statementService->importStatement(
+        $statement->user_id,
+        $statement->id,
+        $request->transaction_ids
+      );
 
-        $wallet->fresh();
-
-        // Cek saldo untuk expense
-        if ($transactionType === \Modules\FinTech\Enums\TransactionType::EXPENSE) {
-          if ($wallet->balance->isLessThan($trx->amount)) {
-            \Log::warning("Saldo kurang.", ["amount" => $trx->getFormattedAmount(), "saldo" => $wallet->getFormattedBalance()]);
-            $skipped++;
-            $skippedReasons[] = "{$trx->description}: saldo tidak mencukupi (butuh {$trx->getFormattedAmount()}, saldo {$wallet->getFormattedBalance()})";
-            continue;
-          }
-        }
-
-        // Buat transaksi utama
-        $this->transactionService->createTransaction($request->user(), [
-          'wallet_id' => $wallet->id,
-          'category_id' => $trx->category_id,
-          'type' => $transactionType->value,
-          'amount' => $trx->amount->getAmount()->toFloat(),
-          'transaction_date' => $trx->transaction_date,
-          'description' => $trx->description,
-          'metadata' => ['imported_from_statement_id' => $statement->id],
-        ]);
-
-        $trx->markAsImported();
-        $imported++;
-      }
-
-      // Update status statement
-      $remaining = $statement->transactions()->notImported()->count();
-      if ($remaining === 0) {
-        $statement->updateStatus(StatementStatus::IMPORTED);
-      }
-
-      DB::commit();
-
-      $message = "{$imported} transaksi berhasil diimpor.";
-      if ($skipped > 0) {
-        $message .= " {$skipped} transaksi dilewati.";
-        // Bisa kirim detail skipped reasons jika perlu
+      $message = "{$result['imported']} transaksi berhasil diimpor.";
+      if ($result['skipped'] > 0) {
+        $message .= " {$result['skipped']} transaksi dilewati.";
       }
 
       return response()->json([
         'success' => true,
         'message' => $message,
-        'data' => [
-          'imported' => $imported,
-          'skipped' => $skipped,
-          'skipped_reasons' => $skippedReasons
-        ]
+        'data' => $result
       ]);
     } catch (\Exception $e) {
-      DB::rollBack();
-      \Log::error("Failed to import statement.", [
-        "message" => $e->getMessage(),
-        "trace" => $e->getTraceAsString()
-      ]);
       return response()->json([
         'success' => false,
         'message' => 'Gagal mengimpor: ' . $e->getMessage()
@@ -359,9 +131,6 @@ class StatementController extends Controller
     }
   }
 
-  /**
-  * Update kategori transaksi statement.
-  */
   public function updateCategory(Request $request, StatementTransaction $transaction): JsonResponse
   {
     if ($transaction->statement->user_id !== $request->user()->id) {
@@ -372,21 +141,16 @@ class StatementController extends Controller
       'category_id' => 'required|exists:fintech_categories,id',
     ]);
 
-    $transaction->category_id = $request->category_id;
-    $transaction->save();
+    $data = $this->statementService->updateTransactionCategory(
+      $transaction->statement->user_id,
+      $transaction->id,
+      $request->category_id
+    );
 
     return response()->json([
       'success' => true,
       'message' => 'Kategori diperbarui',
-      'data' => [
-        'id' => $transaction->id,
-        'category' => [
-          'id' => $transaction->category->id,
-          'name' => $transaction->category->name,
-          'icon' => $transaction->category->icon,
-          'color' => $transaction->category->color,
-        ]
-      ]
+      'data' => $data
     ]);
   }
 }
