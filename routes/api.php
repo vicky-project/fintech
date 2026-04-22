@@ -55,6 +55,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
     Route::get('monthly', [ReportController::class, 'monthly'])->name('monthly');
     Route::get('yearly', [ReportController::class, 'yearly'])->name('yearly');
     Route::get('doughnut-weekly', [ReportController::class, 'doughnutWeekly'])->name('doughnut-weekly');
+    Route::get('category-summary', [ReportController::class, 'categorySummary'])->name('category-summary');
     Route::get('all_years', [ReportController::class, 'allYears'])->name('all_years');
   });
 

@@ -166,4 +166,25 @@ class ReportController extends Controller
       ], 500);
     }
   }
+
+  /**
+  * Category summary report.
+  */
+  public function categorySummary(Request $request): JsonResponse
+  {
+    $request->validate([
+      'wallet_id' => 'nullable|exists:fintech_wallets,id',
+      'period_type' => 'in:monthly,yearly,all_years',
+      'year' => 'integer|min:2000|max:2100',
+      'month' => 'integer|min:1|max:12',
+      'type' => 'in:income,expense'
+    ]);
+
+    $data = $this->reportService->getCategorySummary($request, $request->user()->id);
+
+    return response()->json([
+      'success' => true,
+      'data' => $data
+    ]);
+  }
 }

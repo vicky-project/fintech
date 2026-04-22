@@ -343,6 +343,76 @@ class ReportService
   }
 
   /**
+  * Get category summary for a given period (expense or income).
+  */
+  public function getCategorySummary(Request $request, int $userId): array
+  {
+    $walletId = $request->input('wallet_id');
+    $periodType = $request->input('period_type', 'monthly'); // 'monthly', 'yearly', 'all_years'
+    $year = (int) $request->input('year', now()->year);
+    $month = (int) $request->input('month', now()->month);
+    $type = $request->input('type', 'expense'); // 'income' or 'expense'
+
+    $cacheKey = "report_category_{$userId}_{$periodType}_{$year}_{$month}_{$walletId}_{$type}";
+
+    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($userId,
+      $walletId,
+      $periodType,
+      $year,
+      $month,
+      $type) {
+      $query = Transaction::whereHas('wallet',
+        fn($q) => $q->where('user_id', $userId));
+
+      if ($walletId) {
+        $query->where('wallet_id', $walletId);
+      }
+
+      // Filter by period
+      if ($periodType === 'monthly') {
+        $query->whereYear('transaction_date', $year)
+        ->whereMonth('transaction_date', $month);
+      } elseif ($periodType === 'yearly') {
+        $query->whereYear('transaction_date', $year);
+      }
+
+      // Filter by type (income/expense)
+      if ($type === 'income') {
+        $query->income();
+      } else {
+        $query->expense();
+      }
+
+      $rawData = $query->with('category')
+      ->select('category_id', DB::raw('SUM(amount) as total_raw'))
+      ->groupBy('category_id')
+      ->orderByDesc('total_raw')
+      ->get();
+
+      $currency = $this->getCurrency($userId, $walletId);
+
+      $labels = [];
+      $values = [];
+      $colors = [];
+
+      foreach ($rawData as $item) {
+        $category = $item->category;
+        $labels[] = $category->name;
+        $values[] = (int) $item->total_raw / 100;
+        $colors[] = $category->color ?? '#7986CB';
+      }
+
+      return [
+        'labels' => $labels,
+        'values' => $values,
+        'colors' => $colors,
+        'currency' => $currency,
+        'total' => array_sum($values),
+      ];
+    });
+  }
+
+  /**
   * Clear all report caches for a user (call this when transactions/wallets change).
   */
   public static function clearReportCaches(int $userId): void
@@ -365,16 +435,22 @@ class ReportService
   /**
   * Build base query for transactions.
   */
-  protected function buildBaseQuery(int $userId, ?int $walletId, $startDate, $endDate) {
-    $query = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
-    ->whereHas('wallet', function ($q) use ($userId,
-      $walletId) {
-      $q->where('user_id',
-        $userId);
-      if ($walletId) {
-        $q->where('id', $walletId);
-      }
-    });
+  protected function buildBaseQuery(int $userId,
+    ?int $walletId,
+    $startDate,
+    $endDate) {
+    $query = Transaction::whereBetween('transaction_date',
+      [$startDate,
+        $endDate])
+    ->whereHas('wallet',
+      function ($q) use ($userId,
+        $walletId) {
+        $q->where('user_id',
+          $userId);
+        if ($walletId) {
+          $q->where('id', $walletId);
+        }
+      });
     return $query;
   }
 

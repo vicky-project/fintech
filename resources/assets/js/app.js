@@ -22,7 +22,11 @@ const state = {
     type: '',
     month: ''
   },
-  chartInstances: {},
+  chartInstances: {
+    home: null,
+    report: null,
+    category: null
+  },
   userSettings: null,
   reportFilter: {
     wallet_id: '',
@@ -692,10 +696,27 @@ function renderReportsPage() {
   <canvas id="reportBarChart"></canvas>
   </div>
   <div id="trend-summary" class="mt-3"></div>
+
+  <!-- Category Chart -->
+  <hr class="my-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+  <h6>Distribusi Kategori</h6>
+  <div class="btn-group btn-group-sm" role="group">
+  <button type="button" class="btn btn-outline-primary active" data-cat-type="expense" onclick="switchCategoryType('expense')">Pengeluaran</button>
+  <button type="button" class="btn btn-outline-success" data-cat-type="income" onclick="switchCategoryType('income')">Pemasukan</button>
+  </div>
+  </div>
+  <div style="height: 250px;">
+  <canvas id="categoryChart"></canvas>
+  </div>
+  <div id="category-total" class="text-center mt-2 small text-muted"></div>
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;
-  setTimeout(loadReportCharts, 50);
+  setTimeout(() => {
+    loadReportCharts();
+    loadCategoryChart(); // panggil chart kategori
+  }, 50);
 }
 
 function showReportFilterModal() {
@@ -776,6 +797,7 @@ function applyReportFilter() {
 
   bootstrap.Modal.getInstance(document.getElementById('reportFilterModal')).hide();
   loadReportCharts();
+  loadCategoryChart();
 }
 
 async function loadReportCharts() {
@@ -842,6 +864,95 @@ async function loadReportCharts() {
   } catch (error) {
     tgApp.showToast('Gagal memuat laporan. ' + error.message, 'danger');
   }
+}
+
+let currentCategoryType = 'expense';
+async function loadCategoryChart() {
+  const filter = state.reportFilter;
+  const params = new URLSearchParams();
+
+  if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
+  params.append('period_type', filter.periodType);
+  params.append('type', currentCategoryType);
+
+  if (filter.periodType === 'monthly' && filter.month) {
+    const [year,
+      month] = filter.month.split('-');
+    params.append('year', parseInt(year, 10));
+    params.append('month', parseInt(month, 10));
+  } else if (filter.periodType === 'yearly' && filter.year) {
+    params.append('year', parseInt(filter.year, 10));
+  }
+  // all_years tidak perlu year/month
+
+  const url = `${BASE_URL}/api/fintech/reports/category-summary?${params.toString()}`;
+
+  try {
+    const res = await tgApp.fetchWithAuth(url);
+    const data = res.data;
+
+    const ctx = document.getElementById('categoryChart')?.getContext('2d');
+    if (!ctx) return;
+
+    if (state.chartInstances.category) {
+      state.chartInstances.category.destroy();
+    }
+
+    if (data.values.length === 0) {
+      // Tampilkan pesan kosong
+      document.getElementById('category-total').innerHTML = 'Tidak ada data untuk periode ini.';
+      return;
+    }
+
+    state.chartInstances.category = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          data: data.values,
+          backgroundColor: data.colors,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const value = context.raw;
+                const total = context.dataset.data.reduce((a, b) => a+b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                const symbol = getCurrencySymbol(data.currency);
+                return `${context.label}: ${symbol} ${formatNumber(value)} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const symbol = getCurrencySymbol(data.currency);
+    document.getElementById('category-total').innerHTML =
+    `Total ${currentCategoryType === 'expense' ? 'Pengeluaran': 'Pemasukan'}: ${symbol} ${formatNumber(data.total)}`;
+
+  } catch (error) {
+    console.error('Gagal memuat kategori:', error);
+  }
+}
+
+function switchCategoryType(type) {
+  currentCategoryType = type;
+  // Update active button
+  document.querySelectorAll('[data-cat-type]').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelector(`[data-cat-type="${type}"]`).classList.add('active');
+  loadCategoryChart();
 }
 
 // ==================== SETTINGS PAGE ====================
