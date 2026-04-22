@@ -320,7 +320,7 @@
       }
     } catch (error) {
       console.error('Upload error:', error);
-      tgApp.showToast('Terjadi kesalahan jaringan', 'danger');
+      tgApp.showToast('Terjadi kesalahan jaringan. ' + error.message, 'danger');
     } finally {
       document.getElementById('upload-progress')?.classList.add('d-none');
       submitBtn.disabled = false;
