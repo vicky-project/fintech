@@ -130,10 +130,10 @@
     onchange="updateSelectedCount()">
     </div>
     <div class="flex-grow-1">
+    <small class="text-muted">${formatDate(trx.date)}</small>
     <div class="d-flex justify-content-between align-items-start">
     <div class="me-2" style="max-width: 70%;">
     <div class="fw-semibold text-truncate" title="${trx.description}">${trx.description}</div>
-    <small class="text-muted">${formatDate(trx.date)}</small>
     </div>
     <span class="${amountClass} fw-bold">${trx.formatted_amount}</span>
     </div>
