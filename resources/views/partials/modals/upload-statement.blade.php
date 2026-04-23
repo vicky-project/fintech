@@ -112,7 +112,7 @@
     </div>
     </div>
     </div>
-    <div class="list-group" id="preview-transaction-list" style="max-height: 55vh; overflow-y: auto;">
+    <div class="list-group" id="preview-transaction-list" style="max-height: 80vh; overflow-y: auto;">
     `;
 
     previewTransactions.forEach((trx, index) => {
