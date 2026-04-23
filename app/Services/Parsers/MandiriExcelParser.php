@@ -21,6 +21,7 @@ class MandiriExcelParser extends AbstractBankParser
     if (empty($rows)) {
       return [];
     }
+    \Log::debug($rows);
 
     // Cari header untuk menentukan indeks kolom
     $headerIndices = $this->findHeaderIndices($rows);
