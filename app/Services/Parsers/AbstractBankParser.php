@@ -3,6 +3,7 @@
 namespace Modules\FinTech\Services\Parsers;
 
 use Modules\FinTech\Contracts\BankParserInterface;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 abstract class AbstractBankParser implements BankParserInterface
 {
@@ -34,8 +35,10 @@ abstract class AbstractBankParser implements BankParserInterface
     }
 
     // Untuk Excel, gunakan Maatwebsite
-    $spreadsheet = \Maatwebsite\Excel\Facades\Excel::toArray([], $filePath);
-    return $spreadsheet[0] ?? [];
+    $fileType = IOFactory::identify($filePath);
+    $reader = IOFactory::createReader($fileType);
+    $reader->setReadDataOnly(true);
+    return $reader->load($filePath);
   }
 
   /**
