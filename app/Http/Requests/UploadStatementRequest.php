@@ -21,6 +21,8 @@ class UploadStatementRequest extends FormRequest
           "application/pdf",
           "application/vnd.ms-excel",
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/octet-stream",
+          "application/vnd.ms-office"
         ]),
       ],
       "password" => "nullable|string|max:50",
