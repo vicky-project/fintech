@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Services\Decryptors\PdfDecryptor;
 use Modules\FinTech\Services\Decryptors\ExcelDecryptor;
+use Carbon\Carbon;
 
 class StatementService
 {
@@ -163,7 +164,7 @@ class StatementService
 
         $insertData[] = [
           'statement_id' => $statement->id,
-          'transaction_date' => date('Y-m-d', $trx['date']),
+          'transaction_date' => Carbon::create($trx['date'])->format('Y-m-d'),
           'description' => $desc,
           // insert harus mengkalikan manual untuk nilai sen/float
           'amount' => (int) $trx['amount'] * 100,
