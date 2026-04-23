@@ -4,14 +4,15 @@ namespace Modules\FinTech\Services;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\StatementStatus;
 use Modules\FinTech\Enums\StatementType;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Services\Decryptors\PdfDecryptor;
 use Modules\FinTech\Services\Decryptors\ExcelDecryptor;
@@ -249,9 +250,12 @@ class StatementService
   /**
   * Import transaksi statement terpilih.
   */
-  public function importStatement(int $userId, int $statementId, array $transactionIds): array
+  public function importStatement(
+    Authenticatable $user,
+    BankStatement $statement,
+    array $transactionIds
+  ): array
   {
-    $statement = BankStatement::where('user_id', $userId)->findOrFail($statementId);
     $wallet = $statement->wallet;
 
     $transactions = $statement->transactions()
@@ -279,7 +283,7 @@ class StatementService
           continue;
         }
 
-        $wallet->refresh();
+        $wallet->fresh();
 
         if ($transactionType === TransactionType::EXPENSE) {
           if ($wallet->balance->isLessThan($trx->amount)) {
@@ -291,7 +295,7 @@ class StatementService
         }
 
         $this->transactionService->createTransaction(
-          (object) ['id' => $userId], // Adapt user object sesuai kebutuhan
+          $user,
           [
             'wallet_id' => $wallet->id,
             'category_id' => $trx->category_id,

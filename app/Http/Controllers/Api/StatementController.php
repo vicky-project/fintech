@@ -101,8 +101,8 @@ class StatementController extends Controller
 
     try {
       $result = $this->statementService->importStatement(
-        $statement->user_id,
-        $statement->id,
+        $request->user(),
+        $statement,
         $request->transaction_ids
       );
 
