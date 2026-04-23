@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
-// Load library manual untuk enkripsi AES-256 yang digunakan Office 2016+
-require_once __DIR__ . '/PHPDecryptXLSXWithPassword.php';
-
 class ExcelDecryptor
 {
   public function isEncrypted(string $filePath): bool
@@ -34,7 +31,7 @@ class ExcelDecryptor
     }
   }
 
-  public function decrypts(string $inputPath, string $password): string
+  public function decrypt(string $inputPath, string $password): string
   {
     if (!file_exists($inputPath)) {
       throw new \Exception("File input tidak ditemukan: {$inputPath}");
@@ -84,7 +81,7 @@ class ExcelDecryptor
   {
     try {
       // Panggil fungsi global `decrypt` yang disediakan oleh library
-      \decrypt($inputPath, $password, $outputPath);
+      Modules\FinTech\Services\Decryptors\decrypt($inputPath, $password, $outputPath);
 
       if (file_exists($outputPath) && filesize($outputPath) > 0) {
         Log::info("Excel berhasil didekripsi dengan PHPDecryptXLSXWithPassword", ['output' => $outputPath]);
