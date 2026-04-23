@@ -25,7 +25,13 @@ class UploadStatementRequest extends FormRequest
         "required",
         "file",
         Rule::file()->types([
-          "text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,application/vnd.ms-office"
+          "text/csv",
+          "text/plain",
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/octet-stream",
+          "application/vnd.ms-office",
+          "application/encrypted"
         ])->max(10240)
       ],
       "password" => "nullable|string|max:50",
