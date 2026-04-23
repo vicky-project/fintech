@@ -287,10 +287,6 @@
       return;
     }
 
-    for (let [key, value] of formData.entries()) {
-      alert("key: " + key +" value: " + value);
-    }
-
     const walletId = formData.get('wallet_id');
     if (!walletId) {
       tgApp.showToast('Pilih dompet tujuan', 'danger');
@@ -303,9 +299,12 @@
     submitBtn.disabled = true;
 
     try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/statements/upload', {
-      method: 'POST',
-      body: formData
+      const res = await fetch(BASE_URL + '/api/fintech/statements/upload', {
+        headers: {
+          'Authorization': `Bearer ${tgApp.getToken()}`
+        },
+        method: 'POST',
+        body: formData
       });
 
       const data = await res.json();
