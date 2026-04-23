@@ -122,6 +122,7 @@ class StatementService
         }
         $processedPath = $this->excelDecryptor->decrypt($fullPath, $password);
         $statement->updateStatus(StatementStatus::DECRYPTED);
+        \Log::debug("Processed file.", ['path' => $processedPath]);
       }
 
       $result = $this->parserManager->parse($processedPath);
