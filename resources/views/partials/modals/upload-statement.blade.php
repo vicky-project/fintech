@@ -17,6 +17,9 @@
             <label class="form-label">File Statement <span class="text-danger">*</span></label>
             <input type="file" class="form-control" name="file" required>
             <small class="text-muted">PDF, Excel, CSV (maks 10MB)</small>
+            <p>
+              <small>Saat ini hanya mendukung Bank Mandiri</small>
+            </p>
           </div>
           <div class="mb-3">
             <label class="form-label">Password PDF (Opsional)</label>
@@ -59,7 +62,7 @@
     <div class="spinner-border text-primary" role="status"></div>
     <p class="mt-2">Memuat data...</p>
     </div>
-    <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-transparent border-top p-3 d-none" style="padding-bottom: 70px !important;">
+    <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-transparent p-3 d-none" style="padding-bottom: 70px !important;">
     <button class="btn btn-primary opacity-75 w-100" onclick="importSelectedTransactions()">
     <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
     </button>
