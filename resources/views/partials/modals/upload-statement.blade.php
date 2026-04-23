@@ -60,7 +60,7 @@
     <p class="mt-2">Memuat data...</p>
     </div>
     <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-transparent border-top p-3 d-none" style="padding-bottom: 70px !important;">
-    <button class="btn btn-primary opacity-50 w-100" onclick="importSelectedTransactions()">
+    <button class="btn btn-primary opacity-75 w-100" onclick="importSelectedTransactions()">
     <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
     </button>
     </div>
@@ -115,6 +115,7 @@
     previewTransactions.forEach((trx, index) => {
     const amountClass = trx.type === 'credit' ? 'text-success' : 'text-danger';
     const typeLabel = trx.type === 'credit' ? 'Masuk' : 'Keluar';
+    const typeClass = trx.type === 'credit' ? 'bg-success' : 'bg-danger';
 
     html += `
     <div class="list-group-item" id="trx-${trx.id}">
@@ -134,7 +135,7 @@
     <span class="${amountClass} fw-bold">${trx.formatted_amount}</span>
     </div>
     <div class="mt-2 d-flex align-items-center flex-wrap">
-    <span class="badge bg-secondary me-2">${typeLabel}</span>
+    <span class="badge ${typeClass} me-2">${typeLabel}</span>
     <select class="form-select form-select-sm category-select"
     style="width: auto; min-width: 150px;"
     data-transaction-id="${trx.id}"
