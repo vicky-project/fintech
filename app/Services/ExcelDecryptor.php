@@ -3,50 +3,40 @@
 namespace Modules\FinTech\Services;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Reader\Xls;
-use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class ExcelDecryptor
 {
   /**
-  * Cek apakah file Excel terproteksi password.
+  * Cek apakah file Excel terenkripsi (bukan hanya proteksi sheet).
   */
   public function isEncrypted(string $filePath): bool
   {
-    $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
     try {
-      $reader = $this->createReaderByExtension($extension);
-      if (!$reader) {
-        $reader = IOFactory::createReaderForFile($filePath);
-      }
+      $reader = IOFactory::createReaderForFile($filePath);
       $reader->setReadDataOnly(true);
-      // Coba buka tanpa password – jika gagal dengan pesan terkait password, berarti terproteksi
       $reader->load($filePath);
       return false;
     } catch (ReaderException $e) {
       $message = strtolower($e->getMessage());
-      Log::error("Failed to open file.", [
-        'message' => $message,
-        'trace' => $e->getTraceAsString()
-      ]);
-
-      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected') || str_contains($message, 'zip');
-    } catch(\Exception $e) {
-      Log::warning("Excel isEncrypted fallback: ". $e->getMessage());
-      return true;
+      return str_contains($message, 'password') ||
+      str_contains($message, 'encrypted') ||
+      str_contains($message, 'protected');
+    } catch (\Exception $e) {
+      $message = strtolower($e->getMessage());
+      // Jika gagal karena ZIP, anggap terenkripsi
+      if (str_contains($message, 'zip') || str_contains($message, '_rels')) {
+        return true;
+      }
+      throw $e;
     }
   }
 
   /**
   * Dekripsi file Excel dengan password.
-  * Mengembalikan path file baru yang sudah didekripsi (tanpa password).
-  *
-  * @param string $inputPath
-  * @param string $password
-  * @return string Path file hasil dekripsi
-  * @throws \Exception
   */
   public function decrypt(string $inputPath, string $password): string
   {
@@ -57,52 +47,89 @@ class ExcelDecryptor
     $extension = strtolower(pathinfo($inputPath, PATHINFO_EXTENSION));
     $outputPath = dirname($inputPath) . '/' . uniqid('decrypted_') . '.' . $extension;
 
+    // 1. Coba dengan msoffcrypto-tool jika tersedia (lebih robust)
+    if ($this->isMsoffcryptoAvailable()) {
+      try {
+        return $this->decryptWithMsoffcrypto($inputPath, $password, $outputPath);
+      } catch (\Exception $e) {
+        Log::warning("msoffcrypto-tool failed: " . $e->getMessage());
+      }
+    }
+
+    // 2. Coba dengan PhpSpreadsheet
     try {
-      $reader = $this->createReaderByExtension($extension);
-      if (!$reader) {
-        $reader = IOFactory::createReaderForFile($inputPath);
+      return $this->decryptWithPhpSpreadsheet($inputPath, $password, $outputPath);
+    } catch (\Exception $e) {
+      // Jika gagal karena ZIP, beri tahu user untuk simpan ulang
+      if (str_contains($e->getMessage(), 'zip') || str_contains($e->getMessage(), '_rels')) {
+        throw new \Exception(
+          "File Excel ini menggunakan enkripsi yang tidak didukung. " .
+          "Silakan buka file dengan Microsoft Excel, simpan ulang tanpa password (Save As -> Tools -> General Options -> hapus password), lalu upload kembali."
+        );
       }
-      $reader->setReadDataOnly(true);
+      throw $e;
+    }
+  }
 
-      // Set password untuk membuka file (PhpSpreadsheet)
-      if (method_exists($reader, 'setPassword')) {
-        $reader->setPassword($password);
-      }
+  protected function isMsoffcryptoAvailable(): bool
+  {
+    $process = new Process(['msoffcrypto-tool', '--version']);
+    $process->run();
+    return $process->isSuccessful();
+  }
 
-      $spreadsheet = $reader->load($inputPath, $password);
+  protected function decryptWithMsoffcrypto(string $inputPath, string $password, string $outputPath): string
+  {
+    $command = [
+      'msoffcrypto-tool',
+      $inputPath,
+      $outputPath,
+      '--password=' . $password
+    ];
 
-      // Tentukan writer berdasarkan ekstensi
-      $writerType = ucfirst($extension);
-      $writer = IOFactory::createWriter($spreadsheet, $writerType);
-      $writer->save($outputPath);
+    $process = new Process($command);
+    $process->setTimeout(120);
+
+    try {
+      $process->mustRun();
 
       if (file_exists($outputPath) && filesize($outputPath) > 0) {
-        Log::info("Excel berhasil didekripsi", ['input' => $inputPath, 'output' => $outputPath]);
+        Log::info("Excel didekripsi dengan msoffcrypto-tool", ['output' => $outputPath]);
         return $outputPath;
       }
 
-      throw new \Exception("File output tidak valid atau kosong.");
-    } catch (ReaderException $e) {
-      $error = $e->getMessage();
-      Log::error("Excel decryption failed", ['error' => $error, 'file' => $inputPath, 'trace' => $e->getTraceAsString()]);
+      throw new \Exception("File output tidak valid.");
+    } catch (ProcessFailedException $e) {
+      $error = $process->getErrorOutput();
+      Log::error("msoffcrypto-tool error: " . $error);
 
       if (str_contains(strtolower($error), 'password')) {
         throw new \Exception("Password Excel yang dimasukkan salah.");
       }
 
-      throw new \Exception("Gagal mendekripsi file Excel: " . $error);
-    } catch (\Exception $e) {
-      Log::error("Excel processing error", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-      throw new \Exception("Gagal memproses file Excel: " . $e->getMessage());
+      throw new \Exception("Gagal mendekripsi dengan msoffcrypto-tool.");
     }
   }
 
-  protected function createReaderByExtension(string $extension): ?object
+  protected function decryptWithPhpSpreadsheet(string $inputPath, string $password, string $outputPath): string
   {
-    return match($extension) {
-      'xlsx' => new Xlsx(),
-      'xls' => new Xls(),
-      default => null,
-      };
+    $reader = IOFactory::createReaderForFile($inputPath);
+    $reader->setReadDataOnly(true);
+
+    if (method_exists($reader, 'setPassword')) {
+      $reader->setPassword($password);
     }
+
+    $spreadsheet = $reader->load($inputPath);
+
+    $writer = IOFactory::createWriter($spreadsheet, ucfirst(pathinfo($inputPath, PATHINFO_EXTENSION)));
+    $writer->save($outputPath);
+
+    if (file_exists($outputPath) && filesize($outputPath) > 0) {
+      Log::info("Excel didekripsi dengan PhpSpreadsheet", ['output' => $outputPath]);
+      return $outputPath;
+    }
+
+    throw new \Exception("File output tidak valid.");
   }
+}
