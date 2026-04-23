@@ -89,7 +89,6 @@ class StatementService
     if (!$wallet) {
       throw new \Exception('Dompet tidak valid.');
     }
-    \Log::debug("Wallet found.", $wallet);
 
     $tempPath = $file->storeAs(
       'temp/statements/' . $userId,
