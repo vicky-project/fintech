@@ -87,8 +87,8 @@ class ExcelDecryptor
       'msoffcrypto-tool',
       '-p',
       $password,
-      escapeshellarg($inputPath),
-      escapeshellarg($outputPath)
+      $inputPath,
+      $outputPath
     ];
 
     $process = new Process($command);
