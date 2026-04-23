@@ -129,16 +129,16 @@
     ${trx.category ? 'checked' : ''}
     onchange="updateSelectedCount()">
     </div>
-    <div class="flex-grow-1">
+    <div class="flex-grow-1" style="min-width: 0;">
     <!-- Baris 1: Tanggal dan Jumlah -->
     <div class="d-flex justify-content-between align-items-start mb-2">
     <small class="text-muted">${formatDate(trx.date)}</small>
-    <span class="${amountClass} fw-bold ms-2">${trx.formatted_amount}</span>
+    <span class="${amountClass} fw-bold ms-2 text-end">${trx.formatted_amount}</span>
     </div>
 
     <!-- Baris 2: Deskripsi -->
     <div class="mb-2">
-    <div class="fw-semibold" style="word-wrap: break-word; white-space: normal;" title="${trx.description}">${trx.description}</div>
+    <div class="fw-semibold text-break" title="${trx.description}">${trx.description}</div>
     </div>
 
     <!-- Baris 3: Badge Tipe + Pilih Kategori -->
