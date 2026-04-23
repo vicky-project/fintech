@@ -34,7 +34,7 @@ class ExcelDecryptor
     }
   }
 
-  public function decrypt(string $inputPath, string $password): string
+  public function decrypts(string $inputPath, string $password): string
   {
     if (!file_exists($inputPath)) {
       throw new \Exception("File input tidak ditemukan: {$inputPath}");

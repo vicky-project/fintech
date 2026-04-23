@@ -122,7 +122,7 @@ class StatementService
         if (!$password) {
           throw new \Exception("File Excel ini diproteksi password.Silakan masukkan password.");
         }
-        $processedPath = $this->excelDecryptor->decrypt($fullPath, $password);
+        $processedPath = $this->excelDecryptor->decrypts($fullPath, $password);
         $statement->updateStatus(StatementStatus::DECRYPTED);
         \Log::debug("Processed file.", ['path' => $processedPath]);
       }
