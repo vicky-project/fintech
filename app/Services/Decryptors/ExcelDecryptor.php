@@ -27,15 +27,13 @@ class ExcelDecryptor
         throw new \Exception("Unknown file format. Only .xls and xlsx allowed");
       }
       $reader = IOFactory::createReader($fileType);
-      $reader->setReadDataOnly(true);
+      // $reader->setReadDataOnly(true);
       $reader->load($filePath);
       return false;
     } catch (ReaderException $e) {
       Log::debug("Reader Exception: " . $e->getMessage(), ["path" => $filePath]);
       $message = strtolower($e->getMessage());
-      return str_contains($message, 'password') ||
-      str_contains($message, 'encrypted') ||
-      str_contains($message, 'protected');
+      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected') || str_contains($message, 'zip') || str_contains($message, '_rels');
     } catch (\Exception $e) {
       $message = strtolower($e->getMessage());
       Log::debug("Exception: ". $message);
