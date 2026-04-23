@@ -110,8 +110,8 @@ class ExcelDecryptor
       $passwordWrongPatterns = [
         '/The file could not be decrypted with this password/i',
         '/The password is incorrect/i',
-        '/File is password-free/i'
-        '/Incorrect password/i'
+        '/File is password-free/i',
+        '/Incorrect password/i',
         '/Wrong password/i'
       ];
 
