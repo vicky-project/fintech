@@ -12,7 +12,7 @@ class UploadStatementRequest extends FormRequest
   *
   * @var bool
   */
-  protected $stopOnFirstFailure = true;
+  // protected $stopOnFirstFailure = true;
 
   /**
   * Get the validation rules that apply to the request.
