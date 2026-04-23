@@ -110,6 +110,7 @@ class StatementService
       ]);
 
       $extension = strtolower($file->getClientOriginalExtension());
+      \Log::debug($extension);
       if ($extension === 'pdf' && $this->pdfDecryptor->isEncrypted($fullPath)) {
         if (!$password) {
           throw new \Exception("File PDF ini diproteksi password. Silakan masukkan password.");
