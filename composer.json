@@ -33,5 +33,18 @@
     "psr-4": {
       "Modules\\FinTech\\Tests\\": "tests/"
     }
+  },
+  "suggest": {
+    "msoffcrypto-tool": "Diperlukan untuk mendekripsi file Excel yang terproteksi password"
+  },
+  "scripts": {
+    "post-install-cmd": [
+      "@php artisan package:discover --ansi",
+      "Modules\\FinTech\\Composer\\CheckMsoffcrypto::check"
+    ],
+    "post-update-cmd": [
+      "@php artisan package:discover --ansi",
+      "Modules\\FinTech\\Composer\\CheckMsoffcrypto::check"
+    ]
   }
 }
