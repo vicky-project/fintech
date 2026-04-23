@@ -163,7 +163,7 @@ class StatementService
 
         $insertData[] = [
           'statement_id' => $statement->id,
-          'transaction_date' => date($trx['date']),
+          'transaction_date' => date('Y-m-d', $trx['date']),
           'description' => $desc,
           // insert harus mengkalikan manual untuk nilai sen/float
           'amount' => (int) $trx['amount'] * 100,
