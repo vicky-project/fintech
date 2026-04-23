@@ -22,12 +22,13 @@ class ExcelDecryptor
   public function isEncrypted(string $filePath): bool
   {
     try {
-      $reader = IOFactory::createReaderForFile($filePath);
+      $fileType = IOFactory::identify($filePath);
+      $reader = IOFactory::createReader($fileType);
       $reader->setReadDataOnly(true);
       $reader->load($filePath);
       return false;
     } catch (ReaderException $e) {
-      Log::debug($e->getMessage());
+      Log::debug("Reader Exception: " . $e->getMessage());
       $message = strtolower($e->getMessage());
       return str_contains($message, 'password') ||
       str_contains($message, 'encrypted') ||
