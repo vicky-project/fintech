@@ -28,7 +28,7 @@ class ExcelDecryptor
       $reader->load($filePath);
       return false;
     } catch (ReaderException $e) {
-      Log::debug("Reader Exception: " . $e->getMessage());
+      Log::debug("Reader Exception: " . $e->getMessage(), ["path" => $filePath]);
       $message = strtolower($e->getMessage());
       return str_contains($message, 'password') ||
       str_contains($message, 'encrypted') ||
