@@ -35,10 +35,8 @@ abstract class AbstractBankParser implements BankParserInterface
     }
 
     // Untuk Excel, gunakan Maatwebsite
-    $fileType = IOFactory::identify($filePath);
-    $reader = IOFactory::createReader($fileType);
-    $reader->setReadDataOnly(true);
-    return $reader->load($filePath);
+    $spreadsheet = \Maatwebsite\Excel\Facades\Excel::toArray([], $filePath);
+    return $spreadsheet[0] ?? [];
   }
 
   /**
