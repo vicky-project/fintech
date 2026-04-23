@@ -49,7 +49,7 @@ class UploadStatementRequest extends FormRequest
       "XLSX"
     ];
     $uploadedFileName = $this->file("file")?->getClientOriginalName() ?? "";
-    $uploadedFileExt = $this->file("file")?->extension() ?? "unknown";
+    $uploadedFileExt = $this->file("file")?->getMimeType() ?? "unknown";
 
     return [
       "file.required" => "File statement wajib diunggah",
