@@ -2,7 +2,6 @@
 
 namespace Modules\FinTech\Http\Requests;
 
-use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UploadStatementRequest extends FormRequest
@@ -32,18 +31,5 @@ class UploadStatementRequest extends FormRequest
   public function authorize(): bool
   {
     return true;
-  }
-
-  /**
-  * Get the error messages for the defined validation rules.
-  *
-  * @return array<string, string>
-  */
-  public function messages(): array
-  {
-    return [
-      "file.required" => "The file is required",
-      "file.file" => "The file was failed to upload"
-    ];
   }
 }
