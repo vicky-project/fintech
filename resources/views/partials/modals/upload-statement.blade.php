@@ -137,7 +137,7 @@
     </div>
 
     <!-- Baris 2: Deskripsi -->
-    <div class="mb-2">
+    <div class="mb-2" style="max-width: 70%">
     <div class="fw-semibold text-truncate" title="${trx.description}">${trx.description}</div>
     </div>
 
