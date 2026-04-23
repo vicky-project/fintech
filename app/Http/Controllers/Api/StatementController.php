@@ -48,7 +48,6 @@ class StatementController extends Controller
   public function upload(UploadStatementRequest $request): JsonResponse
   {
     try {
-      \Log::debug("Memproses...", $request->validated());
       $result = $this->statementService->uploadStatement(
         $request->user()->id,
         $request->file('file'),

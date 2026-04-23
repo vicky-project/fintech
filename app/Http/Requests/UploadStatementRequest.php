@@ -2,6 +2,7 @@
 
 namespace Modules\FinTech\Http\Requests;
 
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UploadStatementRequest extends FormRequest
@@ -11,17 +12,22 @@ class UploadStatementRequest extends FormRequest
   *
   * @var bool
   */
-  // protected $stopOnFirstFailure = true;
+  protected $stopOnFirstFailure = true;
 
   /**
   * Get the validation rules that apply to the request.
   */
   public function rules(): array
   {
-    \Log::debug($this->all());
     return [
       "wallet_id" => "required|exists:fintech_wallets,id",
-      "file" => "required|file|max:10240|mimetypes:text/csv,text/plain,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,application/vnd.ms-office",
+      "file" => [
+        "required",
+        "file",
+        Rule::file()->types([
+          "text/csv,text/plain,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,application/vnd.ms-office"
+        ])->max(10240)
+      ],
       "password" => "nullable|string|max:50",
     ];
   }
