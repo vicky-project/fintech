@@ -93,9 +93,13 @@ class StatementService
       throw new \Exception('Dompet tidak valid.');
     }
 
+    $originalName = $file->getClientOriginalName();
+    $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+    $safeName = preg_replace('/_+/', '_', $safeName);
+
     $tempPath = $file->storeAs(
       'temp/statements/' . $userId,
-      uniqid() . '_' . $file->getClientOriginalName()
+      uniqid() . '_' . $safeName
     );
 
     $fullPath = Storage::path($tempPath);
@@ -111,7 +115,6 @@ class StatementService
       ]);
 
       $extension = strtolower($file->getClientOriginalExtension());
-      \Log::debug($extension);
       if ($extension === 'pdf' && $this->pdfDecryptor->isEncrypted($fullPath)) {
         if (!$password) {
           throw new \Exception("File PDF ini diproteksi password. Silakan masukkan password.");
@@ -126,11 +129,9 @@ class StatementService
         }
         $processedPath = $this->excelDecryptor->decrypt($fullPath, $password);
         $statement->updateStatus(StatementStatus::DECRYPTED);
-        \Log::debug("Processed file.", ['path' => $processedPath]);
       }
 
       $result = $this->parserManager->parse($processedPath);
-      \Log::debug("File parsed.", $result);
 
       $statement->update([
         'bank_code' => $result['bank_code'],
