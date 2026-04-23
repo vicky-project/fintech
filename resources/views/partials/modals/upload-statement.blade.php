@@ -287,13 +287,16 @@
       return;
     }
 
+    for (let [key, value] of formData.entries()) {
+      alert("key: " + key +" value: " + value);
+    }
+
     const walletId = formData.get('wallet_id');
     if (!walletId) {
       tgApp.showToast('Pilih dompet tujuan', 'danger');
       return;
     }
 
-    alert(JSON.stringify(formData.entries()) + ' ' + formData.get('wallet_id') + ' ' + JSON.stringify(formData.get('file')));
     // Tampilkan progress
     document.getElementById('upload-progress')?.classList.remove('d-none');
     const submitBtn = form.closest('.modal').querySelector('.btn-primary');
