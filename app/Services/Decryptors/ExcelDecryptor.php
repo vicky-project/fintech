@@ -161,7 +161,7 @@ class ExcelDecryptor
     return $outputPath;
   }
 
-  protected function determineType(string $fileType): ?string
+  protected function determineType(string $filePath): ?string
   {
     $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
     return match($ext) {
