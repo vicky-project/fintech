@@ -22,13 +22,12 @@ class MandiriExcelParser extends AbstractBankParser
       return [];
     }
 
-    \Log::debug("Result read spreadsheet", ["data" => $rows]);
-
-    // Cari baris header yang mengandung "No", "Tanggal", "Keterangan"
+    // Cari baris header transaksi: mengandung "No" di kolom 0 dan "Tanggal" di kolom 4
     $headerRowIndex = null;
     foreach ($rows as $i => $row) {
-      $line = implode(' ', array_slice($row, 0, 10));
-      if (str_contains($line, 'No') && str_contains($line, 'Tanggal') && str_contains($line, 'Keterangan')) {
+      $col0 = strtolower(trim($row[0] ?? ''));
+      $col4 = strtolower(trim($row[4] ?? ''));
+      if ($col0 === 'no' && (str_contains($col4, 'tanggal') || str_contains($col4, 'date'))) {
         $headerRowIndex = $i;
         break;
       }
@@ -38,116 +37,49 @@ class MandiriExcelParser extends AbstractBankParser
       throw new \Exception("Format Excel Bank Mandiri tidak dikenali: header kolom tidak ditemukan.");
     }
 
-    // Tentukan indeks kolom berdasarkan baris header (bisa 2 baris header)
-    $headerRow1 = $rows[$headerRowIndex];
-    $headerRow2 = ($headerRowIndex + 1 < count($rows)) ? $rows[$headerRowIndex + 1] : [];
-
-    // Gabungkan informasi dari dua baris header untuk mendapatkan nama kolom yang lebih lengkap
-    $colNames = [];
-    for ($j = 0; $j < max(count($headerRow1), count($headerRow2)); $j++) {
-      $part1 = isset($headerRow1[$j]) ? trim($headerRow1[$j]) : '';
-      $part2 = isset($headerRow2[$j]) ? trim($headerRow2[$j]) : '';
-      $colNames[$j] = trim($part1 . ' ' . $part2);
-    }
-
-    $colIndex = [
-      'tanggal' => null,
-      'keterangan' => null,
-      'debit' => null,
-      'credit' => null,
-    ];
-
-    foreach ($colNames as $j => $name) {
-      $lower = strtolower($name);
-      if (str_contains($lower, 'tanggal') || str_contains($lower, 'date')) {
-        $colIndex['tanggal'] = $j;
-      } elseif (str_contains($lower, 'keterangan') || str_contains($lower, 'remarks')) {
-        $colIndex['keterangan'] = $j;
-      } elseif (str_contains($lower, 'dana keluar') || str_contains($lower, 'outgoing')) {
-        $colIndex['debit'] = $j;
-      } elseif (str_contains($lower, 'dana masuk') || str_contains($lower, 'incoming')) {
-        $colIndex['credit'] = $j;
-      }
-    }
-
-    if ($colIndex['tanggal'] === null || $colIndex['keterangan'] === null) {
-      throw new \Exception("Kolom Tanggal dan Keterangan wajib ditemukan.");
-    }
-
     $transactions = [];
-    $currentTransaction = null;
     $stopKeywords = ['total',
       'saldo akhir',
       'closing balance',
       'saldo awal',
-      'initial balance',
-      'dana masuk',
-      'incoming transactions',
-      'dana keluar',
-      'outgoing transactions'];
+      'initial balance'];
 
-    for ($i = $headerRowIndex + 2; $i < count($rows); $i++) {
+    for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
       $row = $rows[$i];
 
       // Abaikan baris kosong
-      if (empty(array_filter($row, fn($cell) => $cell !== null && $cell !== ''))) {
+      $hasContent = false;
+      foreach ($row as $cell) {
+        if ($cell !== null && trim($cell) !== '') {
+          $hasContent = true;
+          break;
+        }
+      }
+      if (!$hasContent) {
         continue;
       }
 
-      // Deteksi baris ringkasan
-      $firstCell = strtolower(trim($row[0] ?? ''));
+      // Deteksi baris ringkasan → berhenti
+      $col0 = strtolower(trim($row[0] ?? ''));
+      $col6 = strtolower(trim($row[6] ?? ''));
+      $stopText = $col0 . ' ' . $col6;
       foreach ($stopKeywords as $kw) {
-        if (str_contains($firstCell, $kw)) {
-          break 2; // keluar dari loop utama
+        if (str_contains($stopText, $kw)) {
+          break 2;
         }
       }
 
-      // Cek apakah baris ini adalah awal transaksi baru (kolom pertama adalah angka)
-      $isNewTransaction = is_numeric($row[0]);
-
-      if ($isNewTransaction) {
-        // Simpan transaksi sebelumnya jika ada
-        if ($currentTransaction !== null) {
-          $transactions[] = $currentTransaction;
-        }
-
-        // Ambil tanggal, nominal, dan deskripsi awal
-        $dateStr = $row[$colIndex['tanggal']] ?? null;
-        $descParts = [];
-        if (isset($colIndex['keterangan'])) {
-          $descParts[] = $row[$colIndex['keterangan']] ?? '';
-        }
-        $debitAmount = $row[$colIndex['debit']] ?? null;
-        $creditAmount = $row[$colIndex['credit']] ?? null;
-
-        $currentTransaction = [
-          'date' => $dateStr,
-          'description_parts' => $descParts,
-          'debit' => $debitAmount,
-          'credit' => $creditAmount,
-        ];
-      } else {
-        // Lanjutan deskripsi transaksi sebelumnya
-        if ($currentTransaction !== null && isset($colIndex['keterangan'])) {
-          $currentTransaction['description_parts'][] = $row[$colIndex['keterangan']] ?? '';
-        }
+      // Kolom 0 harus berupa angka (nomor urut transaksi)
+      if (!is_numeric($row[0])) {
+        continue;
       }
-    }
 
-    // Simpan transaksi terakhir
-    if ($currentTransaction !== null) {
-      $transactions[] = $currentTransaction;
-    }
+      $dateStr = trim($row[4] ?? '');
+      $description = trim($row[6] ?? '');
+      $creditStr = trim($row[16] ?? ''); // Dana Masuk
+      $debitStr = trim($row[19] ?? ''); // Dana Keluar
 
-    // Format hasil akhir
-    $result = [];
-    foreach ($transactions as $trx) {
-      $dateStr = $trx['date'];
-      $description = implode(' ', array_filter($trx['description_parts'], fn($s) => !empty(trim($s))));
-      $debit = $trx['debit'];
-      $credit = $trx['credit'];
-
-      if (empty($dateStr) || (empty($debit) && empty($credit))) {
+      if (empty($dateStr) || (empty($debitStr) && empty($creditStr))) {
         continue;
       }
 
@@ -156,33 +88,33 @@ class MandiriExcelParser extends AbstractBankParser
         continue;
       }
 
-      if (!empty($debit)) {
-        $amount = $this->parseAmount($debit);
+      if (!empty($debitStr)) {
+        $amount = $this->parseAmount($debitStr);
         $type = StatementType::DEBIT;
       } else {
-        $amount = $this->parseAmount($credit);
+        $amount = $this->parseAmount($creditStr);
         $type = StatementType::CREDIT;
       }
 
-      $result[] = [
+      $transactions[] = [
         'date' => $date,
-        'description' => trim($description),
+        'description' => $description,
         'amount' => $amount,
         'type' => $type,
       ];
     }
 
-    return $result;
+    return $transactions;
   }
 
   private function normalizeDate(string $date): ?string
   {
     try {
-      $formats = ['d/m/Y',
+      $formats = ['d M Y',
+        'd/m/Y',
         'Y-m-d',
         'd-m-Y',
-        'm/d/Y',
-        'd M Y'];
+        'm/d/Y'];
       foreach ($formats as $format) {
         $carbon = Carbon::createFromFormat($format, trim($date));
         if ($carbon) {
