@@ -20,7 +20,7 @@ class ExcelDecryptor
     } catch (ReaderException $e) {
       Log::debug("Reader Exception: " . $e->getMessage(), ["path" => $filePath]);
       $message = strtolower($e->getMessage());
-      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected') || str_contains($message, 'Unable to identify');
+      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected') || str_contains($message, 'unable to identify');
     } catch (\Exception $e) {
       $message = strtolower($e->getMessage());
       Log::debug("Exception: ". $message);
