@@ -82,22 +82,55 @@ class ExcelDecryptor
 
   protected function decryptWithMsoffcrypto(string $inputPath, string $password, string $outputPath): string
   {
-    $command = ['msoffcrypto-tool',
+    // Escape argumen dengan benar untuk shell
+    $command = [
+      'msoffcrypto-tool',
       '-p',
       $password,
-      $inputPath,
-      $outputPath];
+      escapeshellarg($inputPath),
+      escapeshellarg($outputPath)
+    ];
+
     $process = new Process($command);
     $process->setTimeout(120);
 
     try {
       $process->mustRun();
+
       if (file_exists($outputPath) && filesize($outputPath) > 0) {
         return $outputPath;
       }
-      throw new \Exception("File output tidak valid.");
+
+      throw new \Exception("File output tidak valid atau kosong.");
     } catch (ProcessFailedException $e) {
-      throw new \Exception("msoffcrypto-tool error: " . $process->getErrorOutput());
+      $exitCode = $process->getExitCode();
+      $errorOutput = $process->getErrorOutput();
+      $stdOutput = $process->getOutput();
+
+      Log::error("msoffcrypto-tool gagal", [
+        'command' => $process->getCommandLine(),
+        'exit_code' => $exitCode,
+        'error' => $errorOutput,
+        'output' => $stdOutput
+      ]);
+
+      // Analisis error untuk memberi pesan yang tepat
+      if (str_contains($errorOutput, 'The password is incorrect') ||
+        str_contains($errorOutput, 'File is password-free')) {
+        throw new \Exception("Password yang dimasukkan salah, atau file tidak terproteksi.");
+      }
+
+      if (str_contains($errorOutput, 'not a valid OLE file') ||
+        str_contains($errorOutput, 'not a valid Office Open XML file')) {
+        throw new \Exception("File tidak valid atau bukan file Excel yang didukung.");
+      }
+
+      if (str_contains($errorOutput, 'unsupported encryption')) {
+        throw new \Exception("Enkripsi file ini tidak didukung oleh msoffcrypto-tool.");
+      }
+
+      // Fallback
+      throw new \Exception("Gagal mendekripsi file Excel. Silakan coba buka manual dengan Excel dan simpan ulang tanpa password.");
     }
   }
 
