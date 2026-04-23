@@ -52,13 +52,13 @@
     state.currentPage = 'statement-preview';
 
     const html = `
-    <div class="d-flex align-items-center">
+    <div class="d-flex align-items-center mb-2">
     <button class="btn btn-link me-2" onclick="navigateTo('statements')">
     <i class="bi bi-arrow-left"></i>
     </button>
     <h5 class="mb-0">Preview Statement</h5>
     </div>
-    <div id="preview-content" class="text-center py-5">
+    <div id="preview-content" class="text-center">
     <div class="spinner-border text-primary" role="status"></div>
     <p class="mt-2">Memuat data...</p>
     </div>
@@ -112,7 +112,7 @@
     </div>
     </div>
     </div>
-    <div class="list-group" id="preview-transaction-list">
+    <div class="list-group" id="preview-transaction-list" style="max-height: 55vh; overflow-y: auto;">
     `;
 
     previewTransactions.forEach((trx, index) => {
