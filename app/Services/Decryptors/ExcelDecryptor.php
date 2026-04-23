@@ -97,7 +97,7 @@ class ExcelDecryptor
 
     try {
       // Memanggil fungsi global decrypt(input, password, output) dari library yang diunduh
-      excel_decrypt($inputPath, $password, $outputPath);
+      \excel_decrypt($inputPath, $password, $outputPath);
 
       if (file_exists($outputPath) && filesize($outputPath) > 0) {
         Log::info("Excel berhasil didekripsi dengan PHPDecryptXLSXWithPassword", ['output' => $outputPath]);
