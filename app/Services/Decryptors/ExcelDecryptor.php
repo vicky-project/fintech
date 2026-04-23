@@ -53,6 +53,8 @@ class ExcelDecryptor
     try {
       return $this->decryptWithPhpSpreadsheet($inputPath, $password, $outputPath);
     } catch (\Exception $e) {
+      Log::error("PhpSpreadsheet failed decrypt.", [
+        'message' => $e->getMessage()]);
       if (str_contains($e->getMessage(), 'zip') || str_contains($e->getMessage(), '_rels')) {
         Log::warning("PhpSpreadsheet gagal karena enkripsi ZIP, mencoba PHPDecryptXLSXWithPassword...");
         // Jangan lempar error dulu, coba metode terakhir
