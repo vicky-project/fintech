@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\FinTech\Services;
+namespace Modules\FinTech\Services\Decryptors;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
+// Load library manual untuk enkripsi AES-256 yang digunakan Office 2016+
+require_once __DIR__ . '/PHPDecryptXLSXWithPassword.php';
+
 class ExcelDecryptor
 {
-  /**
-  * Cek apakah file Excel terenkripsi (bukan hanya proteksi sheet).
-  */
   public function isEncrypted(string $filePath): bool
   {
     try {
@@ -24,10 +24,9 @@ class ExcelDecryptor
       $message = strtolower($e->getMessage());
       return str_contains($message, 'password') ||
       str_contains($message, 'encrypted') ||
-      str_contains($message, 'protected') || true;
+      str_contains($message, 'protected');
     } catch (\Exception $e) {
       $message = strtolower($e->getMessage());
-      // Jika gagal karena ZIP, anggap terenkripsi
       if (str_contains($message, 'zip') || str_contains($message, '_rels')) {
         return true;
       }
@@ -35,9 +34,6 @@ class ExcelDecryptor
     }
   }
 
-  /**
-  * Dekripsi file Excel dengan password.
-  */
   public function decrypt(string $inputPath, string $password): string
   {
     if (!file_exists($inputPath)) {
@@ -47,12 +43,12 @@ class ExcelDecryptor
     $extension = strtolower(pathinfo($inputPath, PATHINFO_EXTENSION));
     $outputPath = dirname($inputPath) . '/' . uniqid('decrypted_') . '.' . $extension;
 
-    // 1. Coba dengan msoffcrypto-tool jika tersedia (lebih robust)
+    // 1. Coba dengan msoffcrypto-tool jika tersedia
     if ($this->isMsoffcryptoAvailable()) {
       try {
         return $this->decryptWithMsoffcrypto($inputPath, $password, $outputPath);
       } catch (\Exception $e) {
-        Log::warning("msoffcrypto-tool failed: " . $e->getMessage());
+        Log::warning("msoffcrypto-tool gagal: " . $e->getMessage());
       }
     }
 
@@ -60,14 +56,52 @@ class ExcelDecryptor
     try {
       return $this->decryptWithPhpSpreadsheet($inputPath, $password, $outputPath);
     } catch (\Exception $e) {
-      // Jika gagal karena ZIP, beri tahu user untuk simpan ulang
       if (str_contains($e->getMessage(), 'zip') || str_contains($e->getMessage(), '_rels')) {
-        throw new \Exception(
-          "File Excel ini menggunakan enkripsi yang tidak didukung. " .
-          "Silakan buka file dengan Microsoft Excel, simpan ulang tanpa password (Save As -> Tools -> General Options -> hapus password), lalu upload kembali."
-        );
+        Log::info("PhpSpreadsheet gagal karena enkripsi ZIP, mencoba PHPDecryptXLSXWithPassword...");
+        // Jangan lempar error dulu, coba metode terakhir
+      } else {
+        throw $e;
       }
-      throw $e;
+    }
+
+    // 3. Coba dengan PHPDecryptXLSXWithPassword (metode terakhir)
+    try {
+      return $this->decryptWithCustomLibrary($inputPath, $password, $outputPath);
+    } catch (\Exception $e) {
+      throw new \Exception(
+        "File Excel ini menggunakan enkripsi yang tidak dapat didekripsi secara otomatis. " .
+        "Silakan buka file dengan Microsoft Excel, simpan ulang tanpa password, lalu upload kembali. " .
+        "Error: " . $e->getMessage()
+      );
+    }
+  }
+
+  /**
+  * Dekripsi menggunakan PHPDecryptXLSXWithPassword.
+  * Library ini mengimplementasikan dekripsi AES-256 murni dengan PHP.
+  */
+  protected function decryptWithCustomLibrary(string $inputPath, string $password, string $outputPath): string
+  {
+    try {
+      // Panggil fungsi global `decrypt` yang disediakan oleh library
+      \decrypt($inputPath, $password, $outputPath);
+
+      if (file_exists($outputPath) && filesize($outputPath) > 0) {
+        Log::info("Excel berhasil didekripsi dengan PHPDecryptXLSXWithPassword", ['output' => $outputPath]);
+        return $outputPath;
+      }
+
+      throw new \Exception("File output tidak valid.");
+    } catch (\Exception $e) {
+      Log::error("PHPDecryptXLSXWithPassword gagal: " . $e->getMessage());
+
+      // Periksa apakah error terkait password
+      if (str_contains(strtolower($e->getMessage()), 'password') ||
+        str_contains(strtolower($e->getMessage()), 'decrypt')) {
+        throw new \Exception("Password Excel yang dimasukkan salah atau file rusak.");
+      }
+
+      throw new \Exception("Gagal mendekripsi dengan library kustom: " . $e->getMessage());
     }
   }
 

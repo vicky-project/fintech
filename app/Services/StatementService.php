@@ -13,6 +13,8 @@ use Modules\FinTech\Enums\StatementType;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Enums\TransactionType;
+use Modules\FinTech\Services\Decryptors\PdfDecryptor;
+use Modules\FinTech\Services\Decryptors\ExcelDecryptor;
 
 class StatementService
 {

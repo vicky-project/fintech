@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\FinTech\Services;
+namespace Modules\FinTech\Services\Decryptors;
 
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
