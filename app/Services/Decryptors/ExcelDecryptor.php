@@ -52,19 +52,11 @@ class ExcelDecryptor
           throw $e;
         }
         Log::warning("msoffcrypto-tool gagal: " . $errorMsg);
+        throw $e;
       }
     }
 
-    // 2. Coba dengan PhpSpreadsheet
-    try {
-      return $this->decryptWithPhpSpreadsheet($inputPath, $password, $outputPath);
-    } catch (\Exception $e) {
-      $message = $e->getMessage();
-      if (str_contains($message, 'password') || str_contains($message, 'Password')) {
-        throw new \Exception("Password Excel yang dimasukkan salah.");
-      }
-      throw $e;
-    }
+    throw new \Exception("Decryptor not support. Unable to decrypt file Excel currently.");
   }
 
   protected function isMsoffcryptoAvailable(): bool
@@ -131,30 +123,6 @@ class ExcelDecryptor
       }
 
       throw new \Exception("Gagal mendekripsi file Excel. Silakan coba buka manual dengan Excel dan simpan ulang tanpa password.");
-    }
-  }
-
-  protected function decryptWithPhpSpreadsheet(string $inputPath, string $password, string $outputPath): string
-  {
-    try {
-      $reader = IOFactory::createReaderForFile($inputPath);
-      $reader->setReadDataOnly(true);
-
-      if (method_exists($reader, 'setPassword')) {
-        $reader->setPassword($password);
-      }
-
-      $spreadsheet = $reader->load($inputPath);
-      $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-      $writer->save($outputPath);
-
-      return $outputPath;
-    } catch (ReaderException $e) {
-      Log::error("PhpSpreadsheet decryption failed: " . $e->getMessage());
-      if (str_contains($e->getMessage(), 'password') || str_contains($e->getMessage(), 'Password')) {
-        throw new \Exception("Password Excel yang dimasukkan salah.");
-      }
-      throw new \Exception("Gagal mendekripsi file Excel: " . $e->getMessage());
     }
   }
 }
