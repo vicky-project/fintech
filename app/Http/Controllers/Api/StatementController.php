@@ -48,11 +48,12 @@ class StatementController extends Controller
   public function upload(UploadStatementRequest $request): JsonResponse
   {
     try {
+      $validated = $request->validated();
       $result = $this->statementService->uploadStatement(
         $request->user()->id,
-        $request->file('file'),
-        $request->input('password'),
-        $request->input('wallet_id')
+        $validated['file'],
+        $validated['password'],
+        $validated['wallet_id']
       );
 
       return response()->json([

@@ -39,4 +39,23 @@ class UploadStatementRequest extends FormRequest
   {
     return true;
   }
+
+  public function messages(): array
+  {
+    $allowedExt = [
+      "PDF",
+      "CSV",
+      "XLS",
+      "XLSX"
+    ];
+    $uploadedFileName = $this->file("file")?->getClientOriginalName() ?? "";
+    $uploadedFileExt = $this->file("file")?->extension();
+
+    return [
+      "file.required" => "File statement wajib diunggah",
+      "file.file" => "Berkas tidak valid",
+      "file.mimes" => "File :input ({$uploadedFileName}) tidak didukung. File anda bertipe: {$uploadedFileExt}. Format yang diizinkan: {$allowedExt}",
+      "file.max" => "Ukuran file maximal 10Mb"
+    ];
+  }
 }
