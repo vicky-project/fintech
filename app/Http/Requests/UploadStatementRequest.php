@@ -21,11 +21,7 @@ class UploadStatementRequest extends FormRequest
   {
     return [
       "wallet_id" => "required|exists:fintech_wallets,id",
-      "file" => [
-        "required",
-        "file",
-        "mimetypes:text/csv,text/plain,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,application/vnd.ms-office"
-      ],
+      "file" => "required|file|mimetypes:text/csv,text/plain,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,application/vnd.ms-office",
       "password" => "nullable|string|max:50",
     ];
   }
