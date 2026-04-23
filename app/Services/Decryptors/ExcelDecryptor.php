@@ -22,7 +22,10 @@ class ExcelDecryptor
   public function isEncrypted(string $filePath): bool
   {
     try {
-      $fileType = $this->determineType($fileType);
+      $fileType = $this->determineType($filePath);
+      if (!$fileType) {
+        throw new \Exception("Unknown file format. Only .xls and xlsx allowed");
+      }
       $reader = IOFactory::createReader($fileType);
       $reader->setReadDataOnly(true);
       $reader->load($filePath);
