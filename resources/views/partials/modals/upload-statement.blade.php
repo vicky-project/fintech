@@ -301,7 +301,8 @@
     try {
       const res = await fetch(BASE_URL + '/api/fintech/statements/upload', {
         headers: {
-          'Authorization': `Bearer ${tgApp.getToken()}`
+          'Authorization': `Bearer ${tgApp.getToken()}`,
+          'Accept': 'application/json'
         },
         method: 'POST',
         body: formData
