@@ -122,7 +122,7 @@
 
     html += `
     <div class="list-group-item" id="trx-${trx.id}">
-    <div class="d-flex align-items-start" style="overflow-x: scroll;">
+    <div class="d-flex align-items-start">
     <div class="form-check me-3 mt-1">
     <input class="form-check-input transaction-checkbox" type="checkbox"
     value="${trx.id}" id="chk-${trx.id}"
@@ -130,16 +130,19 @@
     onchange="updateSelectedCount()">
     </div>
     <div class="flex-grow-1">
-    <div class="mb-1 d-flex align-items-start">
+    <!-- Baris 1: Tanggal dan Jumlah -->
+    <div class="d-flex justify-content-between align-items-start mb-2">
     <small class="text-muted">${formatDate(trx.date)}</small>
+    <span class="${amountClass} fw-bold ms-2">${trx.formatted_amount}</span>
     </div>
-    <div class="d-flex justify-content-between align-items-start">
-    <div class="me-2" style="max-width: 70%;">
+
+    <!-- Baris 2: Deskripsi -->
+    <div class="mb-2">
     <div class="fw-semibold text-truncate" title="${trx.description}">${trx.description}</div>
     </div>
-    <span class="${amountClass} fw-bold">${trx.formatted_amount}</span>
-    </div>
-    <div class="mt-2 d-flex align-items-center flex-wrap">
+
+    <!-- Baris 3: Badge Tipe + Pilih Kategori -->
+    <div class="d-flex align-items-center flex-wrap">
     <span class="badge ${typeClass} me-2">${typeLabel}</span>
     <select class="form-select form-select-sm category-select"
     style="width: auto; min-width: 150px;"
