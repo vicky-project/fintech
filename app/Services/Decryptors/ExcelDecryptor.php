@@ -22,7 +22,7 @@ class ExcelDecryptor
   public function isEncrypted(string $filePath): bool
   {
     try {
-      $fileType = IOFactory::identify($filePath, [IOFactory::READER_XLS, IOFactory::READER_XLSX]);
+      $fileType = $this->determineType($fileType);
       $reader = IOFactory::createReader($fileType);
       $reader->setReadDataOnly(true);
       $reader->load($filePath);
@@ -157,4 +157,14 @@ class ExcelDecryptor
 
     return $outputPath;
   }
-}
+
+  protected function determineType(string $fileType): ?string
+  {
+    $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+    return match($ext) {
+      'xls' => 'Xls',
+      'xlsx' => 'Xlsx',
+      default => null
+      };
+    }
+  }
