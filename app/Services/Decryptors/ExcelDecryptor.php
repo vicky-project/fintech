@@ -83,9 +83,10 @@ class ExcelDecryptor
   protected function decryptWithMsoffcrypto(string $inputPath, string $password, string $outputPath): string
   {
     $command = ['msoffcrypto-tool',
+      '-p',
+      $password,
       $inputPath,
-      $outputPath,
-      '--password' . $password];
+      $outputPath];
     $process = new Process($command);
     $process->setTimeout(120);
 
