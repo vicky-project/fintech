@@ -1,5 +1,4 @@
 <?php
-namespace Modules\FinTech\Services\Decryptors;
 
 // add lib folder to include path -- required by some files in OLE package
 ini_set('include_path', ini_get('include_path') . PATH_SEPARATOR . './lib' . PATH_SEPARATOR . './include/lib');
@@ -18,7 +17,7 @@ function getDataByName($oleObj, $name) {
   return $oleObj -> getData(array_values($objArray)[0] -> No, 0, -1);
 }
 
-function decrypt($encryptedFilePath, $password, $decryptedFilePath) {
+function excel_decrypt($encryptedFilePath, $password, $decryptedFilePath) {
   $oleObj = new OLE();
   $oleObj -> read($encryptedFilePath);
 

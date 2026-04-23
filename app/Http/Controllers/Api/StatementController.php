@@ -62,7 +62,7 @@ class StatementController extends Controller
         'data' => $result
       ]);
     } catch (\Exception $e) {
-      \Log::error("Gagal upload memproses upload statement.", [
+      \Log::error("Gagal memproses upload statement.", [
         'message' => $e->getMessage(),
         'trace' => $e->getTraceAsString()
       ]);
