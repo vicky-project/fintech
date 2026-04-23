@@ -21,6 +21,7 @@ class MandiriExcelParser extends AbstractBankParser
     if (empty($rows)) {
       return [];
     }
+    \Log::debug("Result read spreadsheet:", ['data' => $rows]);
 
     // Cari baris header transaksi: mengandung "No" di kolom 0 dan "Tanggal" di kolom 4
     $headerRowIndex = null;
