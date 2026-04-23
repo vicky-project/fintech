@@ -137,8 +137,8 @@
     </div>
 
     <!-- Baris 2: Deskripsi -->
-    <div class="mb-2" style="max-width: 70%">
-    <div class="fw-semibold text-truncate" title="${trx.description}">${trx.description}</div>
+    <div class="mb-2">
+    <div class="fw-semibold" style="word-wrap: break-word; white-space: normal;" title="${trx.description}">${trx.description}</div>
     </div>
 
     <!-- Baris 3: Badge Tipe + Pilih Kategori -->
