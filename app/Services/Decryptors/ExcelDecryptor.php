@@ -72,11 +72,10 @@ class ExcelDecryptor
   {
     // Suppress error jika command tidak ditemukan
     try {
-      $process = new Process(['msoffcrypto-tool', '--help']);
+      $process = new Process(['which', 'msoffcrypto-tool']);
       $process->run();
       return $process->isSuccessful();
     } catch (\Exception $e) {
-      Log::error("msoffcrypto-tool not found. Message: ". $e->getmessage());
       return false;
     }
   }
