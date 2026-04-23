@@ -12,7 +12,7 @@ class ExcelDecryptor
 {
   public function __construct() {
     // Pastikan path ini sesuai dengan tempat Anda menyimpan file yang diunduh
-    $libPath = base_path(__DIR__ .'/PHPDecryptXLSXWithPassword.php');
+    $libPath = __DIR__ .'/PHPDecryptXLSXWithPassword.php';
 
     if (file_exists($libPath)) {
       require_once $libPath;
