@@ -88,7 +88,7 @@ class ExcelDecryptor
   protected function decryptWithCustomLibrary(string $inputPath, string $password, string $outputPath): string
   {
     // Cek apakah fungsi decrypt dari library sudah terload (fungsi global)
-    if (!function_exists('decrypt')) {
+    if (!function_exists('excel_decrypt')) {
       throw new \Exception("Fungsi dekripsi library kustom tidak ditemukan. Periksa pemuatan file PHPDecryptXLSXWithPassword.php.");
     }
 
