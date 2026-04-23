@@ -54,7 +54,7 @@ class UploadStatementRequest extends FormRequest
     return [
       "file.required" => "File statement wajib diunggah",
       "file.file" => "Berkas tidak valid",
-      "file.mimes" => "File :input ({$uploadedFileName}) tidak didukung. File anda bertipe: {$uploadedFileExt}. Format yang diizinkan: ".implode(", ", $allowedExt),
+      "file.mimes" => "File :input ({$uploadedFileName}) tidak didukung. File anda bertipe: {$uploadedFileExt}. Format yang diizinkan: ".collect($allowedExt)->join(", ", " and "),
       "file.max" => "Ukuran file maximal 10Mb"
     ];
   }
