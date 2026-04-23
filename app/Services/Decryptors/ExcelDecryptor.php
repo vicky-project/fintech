@@ -10,15 +10,6 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class ExcelDecryptor
 {
-  public function __construct() {
-    // Pastikan path ini sesuai dengan tempat Anda menyimpan file yang diunduh
-    $libPath = module_path('fintech', 'PHPDecryptXLSXWithPassword/PHPDecryptXLSXWithPassword.php');
-
-    if (file_exists($libPath)) {
-      require_once $libPath;
-    }
-  }
-
   public function isEncrypted(string $filePath): bool
   {
     try {
@@ -63,15 +54,7 @@ class ExcelDecryptor
       }
     }
 
-    // 2. Coba dengan PHPDecryptXLSXWithPassword (Metode Utama untuk ZIP Error)
-    // Kita prioritaskan ini sebelum PhpSpreadsheet karena PhpSpreadsheet sering gagal pada ZIP/Agile Encryption
-    try {
-      return $this->decryptWithCustomLibrary($inputPath, $password, $outputPath);
-    } catch (\Exception $e) {
-      Log::warning("PHPDecryptXLSXWithPassword gagal, mencoba PhpSpreadsheet sebagai fallback: " . $e->getMessage());
-    }
-
-    // 3. Coba dengan PhpSpreadsheet (Fallback terakhir)
+    // 2. Coba dengan PhpSpreadsheet (Fallback terakhir)
     try {
       return $this->decryptWithPhpSpreadsheet($inputPath, $password, $outputPath);
     } catch (\Exception $e) {
@@ -82,32 +65,6 @@ class ExcelDecryptor
         "Silakan buka file dengan Microsoft Excel, simpan ulang tanpa password, lalu upload kembali. " .
         "Error: " . $e->getMessage()
       );
-    }
-  }
-
-  /**
-  * Dekripsi menggunakan PHPDecryptXLSXWithPassword.
-  */
-  protected function decryptWithCustomLibrary(string $inputPath, string $password, string $outputPath): string
-  {
-    // Cek apakah fungsi decrypt dari library sudah terload (fungsi global)
-    if (!function_exists('excel_decrypt')) {
-      throw new \Exception("Fungsi dekripsi library kustom tidak ditemukan. Periksa pemuatan file PHPDecryptXLSXWithPassword.php.");
-    }
-
-    try {
-      // Memanggil fungsi global decrypt(input, password, output) dari library yang diunduh
-      \excel_decrypt($inputPath, $password, $outputPath);
-
-      if (file_exists($outputPath) && filesize($outputPath) > 0) {
-        Log::info("Excel berhasil didekripsi dengan PHPDecryptXLSXWithPassword", ['output' => $outputPath]);
-        return $outputPath;
-      }
-
-      throw new \Exception("File output tidak dihasilkan oleh library kustom.");
-    } catch (\Exception $e) {
-      Log::error("PHPDecryptXLSXWithPassword gagal: " . $e->getMessage());
-      throw $e;
     }
   }
 
