@@ -69,7 +69,7 @@ class ExcelDecryptor
         $reader->setPassword($password);
       }
 
-      $spreadsheet = $reader->load($inputPath);
+      $spreadsheet = $reader->load($inputPath, $password);
 
       // Tentukan writer berdasarkan ekstensi
       $writerType = ucfirst($extension);
@@ -90,7 +90,7 @@ class ExcelDecryptor
         throw new \Exception("Password Excel yang dimasukkan salah.");
       }
 
-      throw new \Exception("Gagal mendekripsi file Excel: " . $e->getMessage());
+      throw new \Exception("Gagal mendekripsi file Excel: " . $error);
     } catch (\Exception $e) {
       Log::error("Excel processing error", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
       throw new \Exception("Gagal memproses file Excel: " . $e->getMessage());
