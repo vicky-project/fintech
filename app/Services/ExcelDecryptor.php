@@ -32,7 +32,7 @@ class ExcelDecryptor
         'trace' => $e->getTraceAsString()
       ]);
 
-      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected') || str_contains($message, 'not a valid zip');
+      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected') || str_contains($message, 'zip');
     } catch(\Exception $e) {
       Log::warning("Excel isEncrypted fallback: ". $e->getMessage());
       return true;
