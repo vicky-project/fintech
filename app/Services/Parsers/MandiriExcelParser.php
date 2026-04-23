@@ -26,7 +26,7 @@ class MandiriExcelParser extends AbstractBankParser
     // Cari baris header transaksi: mengandung "No" di kolom 0 dan "Tanggal" di kolom 4
     $headerRowIndex = null;
     foreach ($rows as $i => $row) {
-      $col0 = strtolower(trim($row[0] ?? ''));
+      $col0 = strtolower(trim($row[1] ?? ''));
       $col4 = strtolower(trim($row[4] ?? ''));
       if ($col0 === 'no' && (str_contains($col4, 'tanggal') || str_contains($col4, 'date'))) {
         $headerRowIndex = $i;
@@ -39,11 +39,13 @@ class MandiriExcelParser extends AbstractBankParser
     }
 
     $transactions = [];
-    $stopKeywords = ['total',
+    $stopKeywords = [
+      'total',
       'saldo akhir',
       'closing balance',
       'saldo awal',
-      'initial balance'];
+      'initial balance'
+    ];
 
     for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
       $row = $rows[$i];
@@ -76,9 +78,9 @@ class MandiriExcelParser extends AbstractBankParser
       }
 
       $dateStr = trim($row[4] ?? '');
-      $description = trim($row[6] ?? '');
-      $creditStr = trim($row[16] ?? ''); // Dana Masuk
-      $debitStr = trim($row[19] ?? ''); // Dana Keluar
+      $description = trim($row[7] ?? '');
+      $creditStr = trim($row[15] ?? ''); // Dana Masuk
+      $debitStr = trim($row[18] ?? ''); // Dana Keluar
 
       if (empty($dateStr) || (empty($debitStr) && empty($creditStr))) {
         continue;
