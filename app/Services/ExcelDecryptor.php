@@ -3,6 +3,8 @@
 namespace Modules\FinTech\Services;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Xls;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
 use Illuminate\Support\Facades\Log;
 
@@ -13,8 +15,12 @@ class ExcelDecryptor
   */
   public function isEncrypted(string $filePath): bool
   {
+    $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
     try {
-      $reader = IOFactory::createReaderForFile($filePath);
+      $reader = $this->createReaderByExtension($extension);
+      if (!$reader) {
+        $reader = IOFactory::createReaderForFile($filePath);
+      }
       $reader->setReadDataOnly(true);
       // Coba buka tanpa password – jika gagal dengan pesan terkait password, berarti terproteksi
       $reader->load($filePath);
@@ -26,7 +32,10 @@ class ExcelDecryptor
         'trace' => $e->getTraceAsString()
       ]);
 
-      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected');
+      return str_contains($message, 'password') || str_contains($message, 'encrypted') || str_contains($message, 'protected') || str_contains($message, 'not a valid zip');
+    } catch(\Exception $e) {
+      Log::warning("Excel isEncrypted fallback: ". $e->getMessage());
+      return true;
     }
   }
 
@@ -49,7 +58,10 @@ class ExcelDecryptor
     $outputPath = dirname($inputPath) . '/' . uniqid('decrypted_') . '.' . $extension;
 
     try {
-      $reader = IOFactory::createReaderForFile($inputPath);
+      $reader = $this->createReaderByExtension($extension);
+      if (!$reader) {
+        $reader = IOFactory::createReaderForFile($inputPath);
+      }
       $reader->setReadDataOnly(true);
 
       // Set password untuk membuka file (PhpSpreadsheet)
@@ -84,4 +96,13 @@ class ExcelDecryptor
       throw new \Exception("Gagal memproses file Excel: " . $e->getMessage());
     }
   }
-}
+
+  protected function createReaderByExtension(string $extension): ?object
+  {
+    return match($extension) {
+      'xlsx' => new Xlsx(),
+      'xls' => new Xls(),
+      default => null,
+      };
+    }
+  }
