@@ -35,6 +35,7 @@ class ExcelDecryptor
       str_contains($message, 'protected');
     } catch (\Exception $e) {
       $message = strtolower($e->getMessage());
+      Log::debug("Exception: ". $message);
       // Error ZIP/_rels biasanya indikasi kuat file terenkripsi Agile
       if (str_contains($message, 'zip') || str_contains($message, '_rels')) {
         return true;
