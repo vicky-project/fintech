@@ -218,7 +218,7 @@ class StatementService
     ->get()
     ->map(fn($trx) => [
       'id' => $trx->id,
-      'date' => $trx->transaction_date->toDateString(),
+      'date' => $trx->transaction_date->setTimezone(config('app.timezone'))->toFormattedDateString(),
       'description' => $trx->description,
       'amount' => $trx->getAmountFloat(),
       'formatted_amount' => $trx->getFormattedAmount(),
