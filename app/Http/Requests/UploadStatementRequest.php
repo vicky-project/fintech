@@ -1,4 +1,5 @@
 <?php
+
 namespace Modules\FinTech\Http\Requests;
 
 use Illuminate\Validation\Rule;
