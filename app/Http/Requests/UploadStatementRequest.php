@@ -45,9 +45,7 @@ class UploadStatementRequest extends FormRequest
   {
     return [
       "file.required" => "The file is required",
-      "file.file" => "The file was failed to upload",
-      "file.mimetypes" =>
-      "File support available now: PDF, Excel, Spreadsheet, and CSV types",
+      "file.file" => "The file was failed to upload"
     ];
   }
 }
