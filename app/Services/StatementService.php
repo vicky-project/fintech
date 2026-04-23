@@ -61,8 +61,8 @@ class StatementService
         'name' => $s->wallet->name,
       ] : null,
       'meta_data' => $s->meta_data,
-      'processed_at' => $s->processed_at?->toDateTimeString(),
-      'created_at' => $s->created_at->toDateTimeString(),
+      'processed_at' => $s->processed_at?->setTimezone(config('app.timezone'))->toDateTimeString(),
+      'created_at' => $s->created_at->setTimezone(config('app.timezone'))->toDateTimeString(),
       'remaining_count' => $s->transactions()->notImported()->count(),
     ]);
 
