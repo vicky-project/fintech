@@ -983,6 +983,7 @@ function applyReportFilter() {
   updateReportPeriodIndicator();
   loadReportCharts();
   loadCategoryChart();
+  loadCategoryTable();
 }
 
 async function loadReportCharts() {
@@ -1183,12 +1184,12 @@ function updateReportPeriodIndicator() {
 }
 
 async function loadCategoryTable() {
-  const filter = state.reportFilter;
-  const params = new URLSearchParams();
-  if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
-  params.append('type', state.categoryChartType);
-
   try {
+    const filter = state.reportFilter;
+    const params = new URLSearchParams();
+    if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
+    params.append('type', state.categoryChartType);
+
     const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/reports/category-table?' + params.toString());
     const data = res.data;
     renderCategoryTable(data);
