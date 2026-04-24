@@ -583,7 +583,7 @@ function renderTransactionList() {
     </div>
     </div>
     ${trx.description ? `
-    <div class="mt-1" style="overflow-x: auto; white-space: nowrap; max-width: 100%; -webkit-overflow-scrolling: touch;">
+    <div class="mt-1" style="word-break: break-word; overflow-wrap: anywhere;">
     <small class="text-muted">${trx.description}</small>
     </div>`: ''}
     </div>
