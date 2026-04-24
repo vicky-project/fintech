@@ -13,7 +13,7 @@ class InsightService
 {
   protected BudgetService $budgetService;
 
-  public funcion __construct(BudgetService $budgetService) {
+  public function __construct(BudgetService $budgetService) {
     $this->budgetService = $budgetService;
   }
   /**
