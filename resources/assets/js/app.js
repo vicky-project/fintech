@@ -99,28 +99,45 @@ async function checkPinRequired() {
 function showPinModal(callback) {
   const modal = new bootstrap.Modal(document.getElementById('pinModal'));
   modal.show();
-  document.getElementById('pinForm').reset();
+  const form = document.getElementById('pinForm');
+  const pinInput = document.getElementById('pinInput');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
   document.getElementById('pinError').classList.add('d-none');
   document.getElementById('pinLockedInfo').classList.add('d-none');
-  document.getElementById('pinInput').disabled = false;
-  document.getElementById('pinInput').focus();
 
-  const form = document.getElementById('pinForm');
+  form.reset();
+  pinInput.focus();
+  pinInput.disabled = false;
+  pinInput.addEventListener('input', () => {
+    if (pinInput.value.length === 6) {
+      submitPin(callback);
+    }
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     await submitPin(callback);
   };
-  form.addEventListener('submit', handleSubmit);
-  document.getElementById('pinModal').addEventListener('hidden.bs.modal', () => {
-    form.removeEventListener('submit', handleSubmit);
-    if (!state.pinVerified) callback(false);
-  });
+  form.addEventListener('submit',
+    handleSubmit);
+  document.getElementById('pinModal').addEventListener('hidden.bs.modal',
+    () => {
+      form.removeEventListener('submit', handleSubmit);
+      if (!state.pinVerified) callback(false);
+    });
 }
 
 async function submitPin(callback) {
   const pinInput = document.getElementById('pinInput');
   const pin = pinInput.value;
   if (!pin || pin.length < 4) return;
+
+  const submitBtn = document.querySelector('#pinForm button[type="submit"]');
+  const spinner = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Memverifikasi...';
+  const originalText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = spinner;
 
   try {
     const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
@@ -148,9 +165,12 @@ async function submitPin(callback) {
     }
   } catch (error) {
     const errorEl = document.getElementById('pinError');
-    //errorEl.textContent = 'Terjadi kesalahan. Coba lagi.';
+    errorEl.textContent = 'Terjadi kesalahan. Coba lagi.';
     errorEl.classList.remove('d-none');
     tgApp.showToast(error.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
   }
 }
 
