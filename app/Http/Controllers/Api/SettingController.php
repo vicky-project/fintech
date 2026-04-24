@@ -84,20 +84,17 @@ class SettingController extends Controller
         ]);
       }
 
-      if ($settings->locked_until && now()->lt($settings->locked_until)) {
-        $remaining = now()->diffForHumans($settings->locked_until, true);
+      if ($settings->isLocked()) {
+        $remaining = $settings->getLockoutRemaining();
         return response()->json([
           'success' => false,
-          'message' => "Akun terkunci selama {$remaining}. Silakan coba lagi nanti.",
+          'message' => "Akun terkunci. Silakan coba lagi dalam {$remaining}.",
           'locked_until' => $settings->locked_until->toDateTimeString()
         ], 429);
       }
 
       if ($settings->verifyPin($request->pin)) {
-        $settings->update([
-          'pin_attempts' => 0,
-          'locked_until' => null
-        ]);
+        $settings->resetAttempts();
         session(['pin_verified_at' => now()]);
         return response()->json([
           'success' => true,
@@ -105,23 +102,22 @@ class SettingController extends Controller
         ]);
       }
 
-      $attempts = $settings->pin_attempts + 1;
-      $data['pin_attempts' => $attempts];
+      $settings->recordFailedAttempt();
+      $attempts = $settings->pin_attempts;
+      $remainingAttempts = 5 - $attempts;
 
-      if ($attempts >= 5) {
-        $data['locked_until'] = now()->addMinutes(15);
+      if ($settings->isLocked()) {
         $message = "PIN salah sebanyak 5 kali. Akun dikunci selama 15 menit";
+        $lockedUntil = $settings->locked_until->toDateTimeString();
       } else {
-        $remainingAttempts = 5 - $attempts;
-        $message = "PIN salah. {$remainingAttempts} percobaab tersis.";
+        $message = "PIN salah. {$remainingAttempts} percobaab tersisa.";
       }
-
-      $settings->update($data);
 
       return response()->json([
         'success' => false,
         'message' => $message,
-        'locked_until' => $data['locked_until'] ?? null
+        'attempts' => $attempts,
+        'locked_until' => $lockedUntil
       ], 401);
     } catch(\Exception $e) {
       \Log::error("Failed to verify PIN", [

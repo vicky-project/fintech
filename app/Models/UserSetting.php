@@ -24,7 +24,8 @@ class UserSetting extends Model
   protected $casts = [
     'preferences' => 'array',
     'pin_enabled' => 'boolean',
-    'locked_until' => 'datetime'
+    'pin_attempts' => 'integer',
+    'locked_until' => 'datetime',
   ];
 
   protected $hidden = ['pin'];
@@ -39,7 +40,7 @@ class UserSetting extends Model
   */
   public function setPinAttribute(?string $value): void
   {
-    if ($value !== null) {
+    if (!empty($value)) {
       $this->attributes['pin'] = Hash::make($value);
     } else {
       $this->attributes['pin'] = null;
@@ -51,9 +52,59 @@ class UserSetting extends Model
   */
   public function verifyPin(string $inputPin): bool
   {
-    if (!$this->pin) {
+    if (empty($this->pin)) {
       return false;
     }
     return Hash::check($inputPin, $this->pin);
+  }
+
+  /**
+  * Catat percobaan PIN gagal.
+  */
+  public function recordFailedAttempt(): void
+  {
+    $this->pin_attempts = ($this->pin_attempts ?? 0) + 1;
+
+    if ($this->pin_attempts >= 5) {
+      $this->locked_until = now()->addMinutes(15);
+    }
+
+    $this->save();
+  }
+
+  /**
+  * Reset percobaan PIN setelah berhasil.
+  */
+  public function resetAttempts(): void
+  {
+    $this->pin_attempts = 0;
+    $this->locked_until = null;
+    $this->save();
+  }
+
+  /**
+  * Cek apakah akun sedang terkunci.
+  */
+  public function isLocked(): bool
+  {
+    if (empty($this->locked_until)) {
+      return false;
+    }
+    if (now()->gte($this->locked_until)) {
+      $this->resetAttempts();
+      return false;
+    }
+    return true;
+  }
+
+  /**
+  * Dapatkan sisa waktu kunci dalam format yang bisa dibaca manusia.
+  */
+  public function getLockoutRemaining(): ?string
+  {
+    if (!$this->isLocked()) {
+      return null;
+    }
+    return now()->diffForHumans($this->locked_until, true);
   }
 }
