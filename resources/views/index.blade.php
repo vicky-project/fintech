@@ -169,6 +169,7 @@
             <div id="pinError" class="text-danger small mb-2 d-none">
               PIN salah. Silakan coba lagi.
             </div>
+            <div id="pinLockedInfo" class="text-danger small mb-2 d-none"></div>
             <button type="submit" class="btn btn-primary w-100">Verifikasi</button>
           </form>
         </div>

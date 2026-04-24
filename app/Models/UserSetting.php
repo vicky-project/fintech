@@ -16,12 +16,15 @@ class UserSetting extends Model
     'default_wallet_id',
     'preferences',
     'pin',
-    'pin_enabled'
+    'pin_enabled',
+    'pin_attempts',
+    'locked_until'
   ];
 
   protected $casts = [
     'preferences' => 'array',
     'pin_enabled' => 'boolean',
+    'locked_until' => 'datetime'
   ];
 
   protected $hidden = ['pin'];

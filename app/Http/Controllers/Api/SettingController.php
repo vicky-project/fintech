@@ -84,7 +84,20 @@ class SettingController extends Controller
         ]);
       }
 
+      if ($settings->locked_until && now()->lt($settings->locked_until)) {
+        $remaining = now()->diffForHumans($settings->locked_until, true);
+        return response()->json([
+          'success' => false,
+          'message' => "Akun terkunci selama {$remaining}. Silakan coba lagi nanti.",
+          'locked_until' => $settings->locked_until->toDateTimeString()
+        ], 429);
+      }
+
       if ($settings->verifyPin($request->pin)) {
+        $settings->update([
+          'pin_attempts' => 0,
+          'locked_until' => null
+        ]);
         session(['pin_verified_at' => now()]);
         return response()->json([
           'success' => true,
@@ -92,9 +105,23 @@ class SettingController extends Controller
         ]);
       }
 
+      $attempts = $settings->pin_attempts + 1;
+      $data['pin_attempts' => $attempts];
+
+      if ($attempts >= 5) {
+        $data['locked_until'] = now()->addMinutes(15);
+        $message = "PIN salah sebanyak 5 kali. Akun dikunci selama 15 menit";
+      } else {
+        $remainingAttempts = 5 - $attempts;
+        $message = "PIN salah. {$remainingAttempts} percobaab tersis.";
+      }
+
+      $settings->update($data);
+
       return response()->json([
         'success' => false,
-        'message' => 'PIN yang Anda masukan salah'
+        'message' => $message,
+        'locked_until' => $data['locked_until'] ?? null
       ], 401);
     } catch(\Exception $e) {
       \Log::error("Failed to verify PIN", [

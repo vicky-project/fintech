@@ -38,7 +38,12 @@ const state = {
   statementPage: 1,
   statementLastPage: 1,
   statements: [],
+  categoryChartType: 'expense',
   pinVerified: false
+  pinVerifiedAt: null,
+  sessionTimeout: 3 * 60 * 1000,
+  // 3 menit
+  sessionTimer: null,
 };
 
 // ==================== INITIALIZATION ====================
@@ -46,69 +51,125 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initializeApp();
   setupNavigation();
   setupFabOpacity();
+
+  ['click', 'scroll'].forEach(eventType => {
+    document.addEventListener(eventType, resetSessionTimer, {
+      passive: true
+    });
+  });
+  startSessionTimer();
 });
+
+// Fungsi untuk memulai timeout session
+function startSessionTimer() {
+  state.pinVerifiedAt = Date.now();
+  clearTimeout(state.sessionTimer);
+  state.sessionTimer = setTimeout(checkSessionTimeout, state.sessionTimeout);
+}
+
+function resetSessionTimer() {
+  state.pinVerifiedAt = Date.now();
+  clearTimeout(state.sessionTimer);
+  state.sessionTimer = setTimeout(checkSessionTimeout, state.sessionTimeout);
+}
+
+function checkSessionTimeout() {
+  const now = Date.now();
+  if (state.pinVerified && (now - state.pinVerifiedAt) > state.sessionTimeout) {
+    // Session habis, tampilkan modal PIN
+    state.pinVerified = false;
+    showPinModal((success) => {
+      if (success) startSessionTimer();
+    });
+  }
+}
 
 // Cek apakah PIN diperlukan saat aplikasi dibuka
 async function checkPinRequired() {
   // Ambil pengaturan user
   const settings = state.userSettings;
   if (settings && settings.pin_enabled) {
-    document.getElementById('loading-overlay').classList.add('d-none')
-    // Tampilkan modal PIN
-    return new Promise((resolve) => {
-      const modal = new bootstrap.Modal(document.getElementById('pinModal'));
-      modal.show();
-
-      const form = document.getElementById('pinForm');
-      const pinInput = document.getElementById('pinInput');
-      const pinError = document.getElementById('pinError');
-
-      const handleSubmit = async (e) => {
-        e.preventDefault();
-        const pin = pinInput.value;
-
-        if (!pin || pin.length < 4) return;
-
-        try {
-          const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
-            method: 'POST',
-            body: JSON.stringify({
-              pin
-            })
-          });
-
-          if (res.success) {
-            state.pinVerified = true;
-            pinError.classList.add('d-none');
-            modal.hide();
-            resolve(true);
-          } else {
-            pinError.classList.remove('d-none');
-            pinInput.value = '';
-            pinInput.focus();
-          }
-        } catch (error) {
-          pinError.classList.remove('d-none');
-          pinInput.value = '';
-          pinInput.focus();
-          tgApp.showToast(error.message, 'danger');
-        }
-      };
-
-      form.addEventListener('submit', handleSubmit);
-
-      // Bersihkan event listener setelah modal ditutup
-      document.getElementById('pinModal').addEventListener('hidden.bs.modal', () => {
-        form.removeEventListener('submit', handleSubmit);
-        if (!state.pinVerified) {
-          // Jika user menutup modal tanpa verifikasi, bisa diarahkan ke halaman tertentu
-          // atau tetap di halaman loading
-          resolve(false);
-        }
-      });
-    });
+    return new Promise((resolve)=> showPinModal(resolve));
   }
   return true;
+}
+
+function showPinModal(callback) {
+  const modal = new bootstrap.Modal(document.getElementById('pinModal'));
+  modal.show();
+  document.getElementById('pinForm').reset();
+  document.getElementById('pinError').classList.add('d-none');
+  document.getElementById('pinLockedInfo').classList.add('d-none');
+  document.getElementById('pinInput').disabled = false;
+  document.getElementById('pinInput').focus();
+
+  const form = document.getElementById('pinForm');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await submitPin(callback);
+  };
+  form.addEventListener('submit', handleSubmit);
+  document.getElementById('pinModal').addEventListener('hidden.bs.modal', () => {
+    form.removeEventListener('submit', handleSubmit);
+    if (!state.pinVerified) callback(false);
+  });
+}
+
+async function submitPin(callback) {
+  const pinInput = document.getElementById('pinInput');
+  const pin = pinInput.value;
+  if (!pin || pin.length < 4) return;
+
+  try {
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
+      method: 'POST',
+      body: JSON.stringify({
+        pin
+      })
+    });
+    if (res.success) {
+      state.pinVerified = true;
+      resetSessionTimer();
+      document.getElementById('pinError').classList.add('d-none');
+      bootstrap.Modal.getInstance(document.getElementById('pinModal')).hide();
+      callback(true);
+    } else {
+      const errorEl = document.getElementById('pinError');
+      errorEl.textContent = res.message;
+      errorEl.classList.remove('d-none');
+      pinInput.value = '';
+      pinInput.focus();
+
+      if (res.locked_until) {
+        showLockoutTimer(res.locked_until);
+      }
+    }
+  } catch (error) {
+    const errorEl = document.getElementById('pinError');
+    errorEl.textContent = 'Terjadi kesalahan. Coba lagi.';
+    errorEl.classList.remove('d-none');
+  }
+}
+
+function showLockoutTimer(lockedUntil) {
+  const lockedEl = document.getElementById('pinLockedInfo');
+  lockedEl.classList.remove('d-none');
+  document.getElementById('pinInput').disabled = true;
+  const timer = setInterval(() => {
+    const now = new Date();
+    const lock = new Date(lockedUntil);
+    const diff = Math.max(0, lock - now);
+    if (diff <= 0) {
+      clearInterval(timer);
+      lockedEl.classList.add('d-none');
+      document.getElementById('pinInput').disabled = false;
+    } else {
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      lockedEl.textContent = `Akun terkunci. Silakan coba lagi dalam ${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  },
+    1000);
 }
 
 async function initializeApp() {
@@ -123,16 +184,10 @@ async function initializeApp() {
     `;
 
     await Promise.all([
-      loadWallets().catch(e => {
-        throw new Error('Gagal memuat dompet: ' + e.message);
-      }),
-      loadUserSettings().catch(e => console.warn(e)),
-      loadCategories().catch(e => {
-        throw new Error('Gagal memuat kategori: ' + e.message);
-      }),
-      loadCurrencies().catch(e => {
-        throw new Error('Gagal memuat mata uang: ' + e.message);
-      })
+      loadWallets(),
+      loadUserSettings(),
+      loadCategories(),
+      loadCurrencies()
     ]);
 
     const pinOk = await checkPinRequired();
@@ -1131,6 +1186,7 @@ function renderSettingsPage() {
   populateSelectWithCurrencies(document.getElementById('setting-currency'), settings.default_currency);
   if (settings.default_wallet_id) document.getElementById('setting-wallet').value = settings.default_wallet_id;
 }
+
 function togglePinInput() {
   const pinEnabled = document.getElementById('pin-enabled').checked;
   document.getElementById('pin-field-group').style.display = pinEnabled ? 'block': 'none';

@@ -62,8 +62,11 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::post('category-suggestions', [CategorySuggestionController::class, 'store']);
 
   Route::get('settings', [SettingController::class, 'show']);
-  Route::post('settings/verify-pin', [SettingController::class, 'verifyPin']);
   Route::put('settings', [SettingController::class, 'update']);
+
+  Route::middleware(['auth:sanctum', 'throttle:10,1'])->group(function() {
+    Route::post('settings/verify-pin', [SettingController::class, 'verifyPin']);
+  });
 
   Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
 
