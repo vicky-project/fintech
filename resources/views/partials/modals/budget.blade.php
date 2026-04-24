@@ -111,7 +111,7 @@
     const isEdit = !!id;
 
     if (!data.category_id || !data.amount) {
-      toast('Harap isi semua field wajib', 'danger');
+      tgApp.showToast('Harap isi semua field wajib', 'danger');
       return;
     }
 
@@ -132,7 +132,7 @@
       tgApp.showLoading('Menyimpan...');
       await tgApp.fetchWithAuth(BASE_URL + url, { method, body: JSON.stringify(data) });
       await refreshBudgetList();
-      loading.hide();
+      tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Budget diupdate': 'Budget dibuat');
       bootstrap.Modal.getInstance(document.getElementById('budgetModal')).hide();
     } catch (error) {
