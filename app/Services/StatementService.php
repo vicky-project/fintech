@@ -117,7 +117,6 @@ class StatementService
 
       $extension = strtolower($file->getClientOriginalExtension());
       if ($extension === 'pdf' && $this->pdfDecryptor->isEncrypted($fullPath)) {
-        \Log::debug("Pdf is encrypt.");
         if (!$password) {
           throw new \Exception("File PDF ini diproteksi password. Silakan masukkan password.");
         }
@@ -133,7 +132,6 @@ class StatementService
         $statement->updateStatus(StatementStatus::DECRYPTED);
       }
 
-      \Log::debug("Start to process file");
       $result = $this->parserManager->parse($processedPath);
       \Log::debug("Result parse.", ['data' => $result]);
 

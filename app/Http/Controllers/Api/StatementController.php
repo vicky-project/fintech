@@ -49,7 +49,6 @@ class StatementController extends Controller
   {
     try {
       $validated = $request->validated();
-      \Log::debug("Validated data", ["data" => $validated]);
       $result = $this->statementService->uploadStatement(
         $request->user()->id,
         $validated['file'],
