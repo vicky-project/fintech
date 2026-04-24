@@ -68,27 +68,39 @@ class SettingController extends Controller
       'pin' => 'required|string|min:4|max:6'
     ]);
 
-    $user = $request->user();
-    $settings = UserSetting::firstOrCreate(['user_id', $user->id], ['default_currency' => config('fintect.default_currency', 'IDR')]);
+    try {
+      $user = $request->user();
+      $settings = UserSetting::firstOrCreate(['user_id', $user->id], ['default_currency' => config('fintect.default_currency', 'IDR')]);
 
-    if (!$settings->pin_enabled) {
+      if (!$settings->pin_enabled) {
+        return response()->json([
+          'success' => true,
+          'message' => 'PIN tidak diaktifkan'
+        ]);
+      }
+
+      if ($settings->verifyPin($request->pin)) {
+        session(['pin_verified_at' => now()]);
+        return response()->json([
+          'success' => true,
+          'message' => 'PIN valid'
+        ]);
+      }
+
       return response()->json([
-        'success' => true,
-        'message' => 'PIN tidak diaktifkan'
+        'success' => false,
+        'message' => 'PIN yang Anda masukan salah'
+      ], 401);
+    } catch(\Exception $e) {
+      \Log::error("Failed to verify PIN", [
+        'message' => $e->getMessage(),
+        'trace' => $e->getTraceAsString()
       ]);
-    }
 
-    if ($settings->verifyPin($request->pin)) {
-      session(['pin_verified_at' => now()]);
       return response()->json([
-        'success' => true,
-        'message' => 'PIN valid'
-      ]);
+        'success' => false,
+        'message' => 'Internal Server Error'
+      ], 500);
     }
-
-    return response()->json([
-      'success' => false,
-      'message' => 'PIN yang Anda masukan salah'
-    ], 401);
   }
 }
