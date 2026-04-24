@@ -51,7 +51,25 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::apiResource('transfers', TransferController::class)->except(['show']);
 
   // ==================== REPORTS ====================
-  Route::prefix('reports')->name('reports.')->group(function () {
+
+  Route::post('category-suggestions', [CategorySuggestionController::class, 'store']);
+
+  Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
+
+  Route::apiResource('budgets', BudgetController::class)->except(['show']);
+
+  Route::get('settings', [SettingController::class, 'show']);
+  Route::put('settings', [SettingController::class, 'update']);
+
+
+  Route::middleware(['auth:sanctum', 'throttle:10,1'])->group(function() {
+    Route::post('settings/verify-pin', [SettingController::class, 'verifyPin']);
+  });
+
+  Route::middleware('auth:sanctum')
+  ->prefix('reports')
+  ->name('reports.')
+  ->group(function () {
     Route::get('weekly', [ReportController::class, 'weekly'])->name('weekly');
     Route::get('monthly', [ReportController::class, 'monthly'])->name('monthly');
     Route::get('yearly', [ReportController::class, 'yearly'])->name('yearly');
@@ -60,18 +78,9 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
     Route::get('all_years', [ReportController::class, 'allYears'])->name('all_years');
   });
 
-  Route::post('category-suggestions', [CategorySuggestionController::class, 'store']);
-
-  Route::get('settings', [SettingController::class, 'show']);
-  Route::put('settings', [SettingController::class, 'update']);
-
-  Route::middleware(['auth:sanctum', 'throttle:10,1'])->group(function() {
-    Route::post('settings/verify-pin', [SettingController::class, 'verifyPin']);
-  });
-
-  Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
-
-  Route::prefix('statements')->middleware('auth:sanctum')->group(function() {
+  Route::prefix('statements')
+  ->middleware('auth:sanctum')
+  ->group(function() {
     Route::get('', [StatementController::class, 'index']);
     Route::post('upload', [StatementController::class, 'upload']);
     Route::put("transactions/{transaction}/category", [StatementController::class, 'updateCategory']);
@@ -79,6 +88,4 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
     Route::post('{statement}/import', [StatementController::class, 'import']);
     Route::delete('{statement}', [StatementController::class, 'destroy']);
   });
-
-  Route::apiResource('budgets', BudgetController::class)->except(['show']);
 });
