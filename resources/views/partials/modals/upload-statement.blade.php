@@ -121,7 +121,7 @@
     const typeClass = trx.type === 'credit' ? 'bg-success' : 'bg-danger';
 
     html += `
-    <div class="list-group-item" id="trx-${trx.id}">
+    <div class="list-group-item" id="trx-${trx.id}" style="border-bottom: 2px solid var(--tg-theme-section-separator-color);">
     <div class="d-flex align-items-start">
     <div class="form-check me-3 mt-1">
     <input class="form-check-input transaction-checkbox" type="checkbox"
