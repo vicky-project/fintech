@@ -128,9 +128,9 @@ class TransactionService
 
     $amount = Money::of($data['amount'], $wallet->currency);
 
-    $transaction = DB::transaction(function () use ($wallet, $data, $amount, $user) {
+    $transaction = DB::transaction(function () use ($wallet, $data, $amount) {
       $transaction = new Transaction($data);
-      $transaction->amount = $amount->getAmount()->toInt();
+      $transaction->amount = $amount;
       $transaction->save();
 
       if ($data['type'] === TransactionType::INCOME->value) {
@@ -147,6 +147,7 @@ class TransactionService
       $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+
     return $transaction;
   }
 

@@ -254,8 +254,7 @@ class StatementService
     Authenticatable $user,
     BankStatement $statement,
     array $transactionIds
-  ): array
-  {
+  ): array {
     $wallet = $statement->wallet;
 
     $transactions = $statement->transactions()
@@ -283,32 +282,26 @@ class StatementService
           continue;
         }
 
-        $wallet->fresh();
+        try {
+          $this->transactionService->createTransaction(
+            $user,
+            [
+              'wallet_id' => $wallet->id,
+              'category_id' => $trx->category_id,
+              'type' => $transactionType->value,
+              'amount' => $trx->amount->getAmount()->toFloat(),
+              'transaction_date' => $trx->transaction_date,
+              'description' => $trx->description,
+              'metadata' => ['imported_from_statement_id' => $statement->id],
+            ]
+          );
 
-        if ($transactionType === TransactionType::EXPENSE) {
-          if ($wallet->balance->isLessThan($trx->amount)) {
-            \Log::warning("Saldo kurang.", ["amount" => $trx->getFormattedAmount(), "saldo" => $wallet->getFormattedBalance()]);
-            $skipped++;
-            $skippedReasons[] = "{$trx->description}: saldo tidak mencukupi (butuh {$trx->getFormattedAmount()}, saldo {$wallet->getFormattedBalance()})";
-            continue;
-          }
+          $trx->markAsImported();
+          $imported++;
+        } catch (\Exception $e) {
+          $skipped++;
+          $skippedReasons[] = "{$trx->description}: {$e->getMessage()}";
         }
-
-        $this->transactionService->createTransaction(
-          $user,
-          [
-            'wallet_id' => $wallet->id,
-            'category_id' => $trx->category_id,
-            'type' => $transactionType->value,
-            'amount' => $trx->amount->getAmount()->toFloat(),
-            'transaction_date' => $trx->transaction_date,
-            'description' => $trx->description,
-            'metadata' => ['imported_from_statement_id' => $statement->id],
-          ]
-        );
-
-        $trx->markAsImported();
-        $imported++;
       }
 
       $remaining = $statement->transactions()->notImported()->count();
@@ -325,10 +318,6 @@ class StatementService
       ];
     } catch (\Exception $e) {
       DB::rollBack();
-      \Log::error("Failed to import statement.", [
-        "message" => $e->getMessage(),
-        "trace" => $e->getTraceAsString()
-      ]);
       throw $e;
     }
   }
