@@ -18,7 +18,7 @@
             <input type="file" class="form-control" name="file" required>
             <small class="text-muted">PDF, Excel, CSV (maks 10MB)</small>
             <p>
-              <small>Saat ini hanya mendukung Bank Mandiri</small>
+              <small class="small text-muted">Saat ini hanya mendukung Bank Mandiri</small>
             </p>
           </div>
           <div class="mb-3">
@@ -121,7 +121,7 @@
     const typeClass = trx.type === 'credit' ? 'bg-success' : 'bg-danger';
 
     html += `
-    <div class="list-group-item" id="trx-${trx.id}" style="border-bottom: 2px solid var(--tg-theme-section-separator-color);">
+    <div class="list-group-item" id="trx-${trx.id}" style="border-bottom: 3px solid var(--tg-theme-section-separator-color);">
     <div class="d-flex align-items-start">
     <div class="form-check me-3 mt-1">
     <input class="form-check-input transaction-checkbox" type="checkbox"
