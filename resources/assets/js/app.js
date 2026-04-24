@@ -38,6 +38,7 @@ const state = {
   statementPage: 1,
   statementLastPage: 1,
   statements: [],
+  pinVerified: false
 };
 
 // ==================== INITIALIZATION ====================
@@ -46,6 +47,64 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   setupFabOpacity();
 });
+
+// Cek apakah PIN diperlukan saat aplikasi dibuka
+async function checkPinRequired() {
+  // Ambil pengaturan user
+  const settings = state.userSettings;
+  if (settings && settings.pin_enabled) {
+    // Tampilkan modal PIN
+    return new Promise((resolve) => {
+      const modal = new bootstrap.Modal(document.getElementById('pinModal'));
+      modal.show();
+
+      const form = document.getElementById('pinForm');
+      const pinInput = document.getElementById('pinInput');
+      const pinError = document.getElementById('pinError');
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        const pin = pinInput.value;
+
+        if (!pin || pin.length < 4) return;
+
+        try {
+          const res = await api.post('/api/fintech/settings/verify-pin', {
+            pin
+          });
+
+          if (res.success) {
+            state.pinVerified = true;
+            pinError.classList.add('d-none');
+            modal.hide();
+            resolve(true);
+          } else {
+            pinError.classList.remove('d-none');
+            pinInput.value = '';
+            pinInput.focus();
+          }
+        } catch (error) {
+          pinError.classList.remove('d-none');
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      };
+
+      form.addEventListener('submit', handleSubmit);
+
+      // Bersihkan event listener setelah modal ditutup
+      document.getElementById('pinModal').addEventListener('hidden.bs.modal', () => {
+        form.removeEventListener('submit', handleSubmit);
+        if (!state.pinVerified) {
+          // Jika user menutup modal tanpa verifikasi, bisa diarahkan ke halaman tertentu
+          // atau tetap di halaman loading
+          resolve(false);
+        }
+      });
+    });
+  }
+  return true;
+}
 
 async function initializeApp() {
   const loadingOverlay = document.getElementById('loading-overlay');
@@ -70,6 +129,12 @@ async function initializeApp() {
         throw new Error('Gagal memuat mata uang: ' + e.message);
       })
     ]);
+
+    const pinOk = await checkPinRequired();
+    if (!pinOk) {
+      loadingOverlay.innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
+      return;
+    }
 
     if (state.wallets.length > 0) {
       await loadHomeSummary().catch(e => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
@@ -1007,9 +1072,10 @@ function updateReportPeriodIndicator() {
 function renderSettingsPage() {
   const settings = state.userSettings || {
     default_currency: 'IDR',
-    default_wallet_id: ''
+    default_wallet_id: '',
+    pin_enabled: false
   };
-  const symbol = getCurrencySymbol(settings.default_currency);
+
   const html = `
   <div class="container py-3">
   <div class="d-flex align-items-center mb-3">
@@ -1022,7 +1088,6 @@ function renderSettingsPage() {
   <select class="form-select" name="default_currency" id="setting-currency">
   <option value="">Pilih Mata Uang</option>
   </select>
-  <small class="text-muted">Digunakan sebagai default saat membuat dompet baru.</small>
   </div>
   <div class="mb-3">
   <label class="form-label">Dompet Default</label>
@@ -1030,8 +1095,26 @@ function renderSettingsPage() {
   <option value="">Tidak Ada</option>
   ${state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
   </select>
-  <small class="text-muted">Dompet yang otomatis terpilih saat menambah transaksi.</small>
   </div>
+
+  <hr>
+  <h6>Keamanan</h6>
+  <div class="mb-3">
+  <div class="form-check form-switch">
+  <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled"
+  value="1" ${settings.pin_enabled ? 'checked': ''}
+  onchange="togglePinInput()">
+  <label class="form-check-label" for="pin-enabled">Aktifkan PIN</label>
+  </div>
+  </div>
+  <div class="mb-3" id="pin-field-group" style="display: ${settings.pin_enabled ? 'block': 'none'};">
+  <label class="form-label">PIN (4-6 digit)</label>
+  <input type="password" class="form-control" name="pin" id="pin-field"
+  inputmode="numeric" pattern="[0-9]*" maxlength="6" minlength="4"
+  placeholder="Masukkan PIN baru">
+  <small class="text-muted">Kosongkan jika tidak ingin mengubah PIN.</small>
+  </div>
+
   <button type="button" class="btn btn-primary w-100" onclick="saveSettings()">
   Simpan Pengaturan
   </button>
@@ -1040,21 +1123,28 @@ function renderSettingsPage() {
   `;
   document.getElementById('main-content').innerHTML = html;
 
-  // Isi dropdown mata uang
-  const currencySelect = document.getElementById('setting-currency');
-  populateSelectWithCurrencies(currencySelect,
-    settings.default_currency);
-
-  // Isi dropdown dompet
-  const walletSelect = document.getElementById('setting-wallet');
-  if (settings.default_wallet_id) {
-    walletSelect.value = settings.default_wallet_id;
+  populateSelectWithCurrencies(document.getElementById('setting-currency'), settings.default_currency);
+  if (settings.default_wallet_id) document.getElementById('setting-wallet').value = settings.default_wallet_id;
+}
+function togglePinInput() {
+  const pinEnabled = document.getElementById('pin-enabled').checked;
+  document.getElementById('pin-field-group').style.display = pinEnabled ? 'block': 'none';
+  if (!pinEnabled) {
+    document.getElementById('pin-field').value = '';
   }
 }
 async function saveSettings() {
   const form = document.getElementById('settingsForm');
   const formData = new FormData(form);
   const data = Object.fromEntries(formData.entries());
+
+  // Konversi pin_enabled ke boolean
+  data.pin_enabled = data.pin_enabled === '1';
+
+  // Hapus pin jika tidak diisi
+  if (!data.pin || data.pin.length === 0) {
+    delete data.pin;
+  }
 
   try {
     tgApp.showLoading('Menyimpan...');

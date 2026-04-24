@@ -147,6 +147,34 @@
       </div>
     </div>
   </div>
+
+  {{-- Modal Verifikasi PIN --}}
+  <div class="modal fade" id="pinModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Masukkan PIN</h5>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small">
+            PIN diperlukan untuk membuka aplikasi.
+          </p>
+          <form id="pinForm">
+            <div class="mb-3">
+              <input type="password" class="form-control form-control-lg text-center"
+              id="pinInput" name="pin" inputmode="numeric"
+              pattern="[0-9]*" maxlength="6" minlength="4" required
+              placeholder="Masukkan PIN">
+            </div>
+            <div id="pinError" class="text-danger small mb-2 d-none">
+              PIN salah. Silakan coba lagi.
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Verifikasi</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {{-- Modals --}}
