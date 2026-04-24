@@ -43,11 +43,11 @@ class SettingController extends Controller
           $query->where('user_id', $request->user()->id);
         }),
       ],
-      'pin_enabled' => 'sometimes|boolean'
+      'pin_enabled' => 'sometimes|boolean',
       'pin' => 'nullable|string|min:4|max:6|required_if:pin_enabled,true',
     ]);
 
-    if (isset($validated['pin_enabled']) && $validated['pin_enabled'] == false) {
+    if (isset($validated['pin_enabled']) && $validated['pin_enabled'] === false) {
       $validated['pin'] = null;
     }
 
