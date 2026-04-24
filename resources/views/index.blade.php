@@ -45,6 +45,7 @@
           <li><button class="dropdown-item nav-btn" data-page="transfers"><i class="bi bi-arrow-left-right me-2"></i>Transfer</button></li>
           <li><button class="dropdown-item nav-btn" data-page="statements"><i class="bi bi-file-text me-2"></i>Statement</button></li>
           <li><button class="dropdown-item nav-btn" data-page="insights"><i class="bi bi-bar-chart me-2"></i>Insight</button></li>
+          <li><button class="dropdown-item nav-btn" data-page="budgets"><i class="bi bi-pie-chart me-2"></i>Budget</button></li>
         </ul>
       </div>
     </div>

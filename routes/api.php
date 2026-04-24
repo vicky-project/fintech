@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\FinTech\Http\Controllers\Api\ {
+  BudgetController,
   CategoryController,
   CategorySuggestionController,
   CurrencyController,
@@ -78,4 +79,6 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
     Route::post('{statement}/import', [StatementController::class, 'import']);
     Route::delete('{statement}', [StatementController::class, 'destroy']);
   });
+
+  Route::apiResource('budgets', BudgetController::class)->except(['show']);
 });

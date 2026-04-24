@@ -44,6 +44,7 @@ const state = {
   sessionTimeout: 3 * 60 * 1000,
   // 3 menit
   sessionTimer: null,
+  budgets: [],
 };
 
 // ==================== INITIALIZATION ====================
@@ -336,6 +337,7 @@ function navigateTo(page) {
     settings: renderSettingsPage,
     insights: renderInsightsPage,
     statements: renderStatementsPage,
+    budgets: renderBudgetsPage,
   };
   if (pages[page]) pages[page]();
 }
@@ -1477,6 +1479,85 @@ async function deleteStatement(id) {
     tgApp.hideLoading();
     tgApp.showToast(error.message || 'Gagal menghapus', 'danger');
   }
+}
+
+// ==================== BUDGETS PAGE ====================
+async function renderBudgetsPage() {
+  await renderListPage( {
+    title: 'Budget & Target',
+    icon: 'bi bi-pie-chart',
+    listContainerId: 'budget-list',
+    paginationId: 'budget-pagination',
+    extraHeaderButtons: `<button class="btn btn-sm btn-primary" onclick="showAddBudgetModal()"><i class="bi bi-plus"></i></button>`,
+    loadFn: refreshBudgetList
+  });
+}
+
+async function refreshBudgetList() {
+  await loadBudgets();
+  renderBudgetList();
+}
+
+async function loadBudgets() {
+  try {
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/budgets');
+    state.budgets = res.data || [];
+  } catch (error) {
+    state.budgets = [];
+    tgApp.showToast('Gagal memuat budget', 'danger');
+  }
+}
+
+function renderBudgetList() {
+  const container = document.getElementById('budget-list');
+  if (!container) return;
+
+  if (state.budgets.length === 0) {
+    container.innerHTML = '<p class="text-muted text-center py-4">Belum ada budget.</p>';
+    return;
+  }
+
+  let html = '';
+  state.budgets.forEach(b => {
+    const progressClass = b.is_overspent ? 'bg-danger': (b.is_near_limit ? 'bg-warning': 'bg-success');
+    html += `
+    <div class="card mb-3">
+    <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+    <div>
+    <i class="${b.category.icon} me-2" style="color:${b.category.color}"></i>
+    <span class="fw-semibold">${b.category.name}</span>
+    ${b.wallet ? `<small class="text-muted d-block">${b.wallet.name}</small>`: ''}
+    <small class="text-muted">${b.period_label}</small>
+    </div>
+    <div class="dropdown">
+    <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
+    <i class="bi bi-three-dots-vertical"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="#" onclick="showEditBudgetModal(${b.id})">
+    <i class="bi bi-pencil me-2"></i>Edit
+    </a></li>
+    <li><a class="dropdown-item text-danger" href="#" onclick="deleteBudget(${b.id})">
+    <i class="bi bi-trash me-2"></i>Hapus
+    </a></li>
+    </ul>
+    </div>
+    </div>
+    <div class="mt-2">
+    <div class="d-flex justify-content-between small">
+    <span>${b.formatted_spending} / ${b.formatted_amount}</span>
+    <span class="${b.is_overspent ? 'text-danger': (b.is_near_limit ? 'text-warning': '')}">${b.percentage}%</span>
+    </div>
+    <div class="progress" style="height: 8px;">
+    <div class="progress-bar ${progressClass}" style="width: ${b.percentage}%"></div>
+    </div>
+    </div>
+    </div>
+    </div>
+    `;
+  });
+  container.innerHTML = html;
 }
 
 // ==================== TRASH PAGES ====================
