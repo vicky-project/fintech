@@ -334,6 +334,7 @@ function renderPagination(containerId, page, lastPage, onPageChange) {
 
 // ==================== HOME PAGE ====================
 async function renderHomePage() {
+  alert(JSON.stringify(state.userSettings))
   await loadHomeSummary();
   const summary = state.homeSummary;
   if (!summary) {
