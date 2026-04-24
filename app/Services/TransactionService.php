@@ -147,6 +147,7 @@ class TransactionService
       $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+    BudgetService::clearBudgetCaches($user->id);
 
     return $transaction;
   }
@@ -225,6 +226,7 @@ class TransactionService
       $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+    BudgetService::clearBudgetCaches($user->id);
 
     return $transaction->fresh();
   }

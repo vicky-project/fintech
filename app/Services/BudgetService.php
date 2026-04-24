@@ -36,7 +36,7 @@ class BudgetService
   {
     $data['user_id'] = $user->id;
     $budget = Budget::create($data);
-    $this->clearBudgetCaches($user->id);
+    self::clearBudgetCaches($user->id);
     return $budget;
   }
 
@@ -49,7 +49,7 @@ class BudgetService
       abort(403, 'Unauthorized');
     }
     $budget->update($data);
-    $this->clearBudgetCaches($user->id);
+    self::learBudgetCaches($user->id);
     return $budget;
   }
 
@@ -62,7 +62,7 @@ class BudgetService
       abort(403, 'Unauthorized');
     }
     $budget->delete();
-    $this->clearBudgetCaches($user->id);
+    self::clearBudgetCaches($user->id);
   }
 
   /**
@@ -97,7 +97,7 @@ class BudgetService
   /**
   * Clear budget caches for a user.
   */
-  protected function clearBudgetCaches(int $userId): void
+  public static function clearBudgetCaches(int $userId): void
   {
     Cache::forget("budgets_user_{$userId}");
   }

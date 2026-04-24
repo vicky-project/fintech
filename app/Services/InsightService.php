@@ -11,6 +11,11 @@ use Carbon\Carbon;
 
 class InsightService
 {
+  protected BudgetService $budgetService;
+
+  public funcion __construct(BudgetService $budgetService) {
+    $this->budgetService = $budgetService;
+  }
   /**
   * Mendapatkan analisis lengkap untuk user dengan caching.
   */
@@ -72,6 +77,8 @@ class InsightService
       $spendingRatio
     );
 
+    $budgets = $this->budgetService->getBudgets($userId);
+
     return [
       'currency' => $currency,
       'trend' => $trend,
@@ -85,7 +92,8 @@ class InsightService
         'total_expense_this_month' => $trend['current_month_total'],
         'avg_expense_3months' => $trend['avg_last_3months'],
         'change_percentage' => $trend['change_percentage'],
-      ]
+      ],
+      'budgets' $budgets,
     ];
   }
 

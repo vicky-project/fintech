@@ -1312,6 +1312,39 @@ function renderInsightsContent(data) {
   <small class="text-muted">Rata-rata 3 bulan: ${symbol} ${formatNumber(trend.avg_last_3months)}</small>
   </div>
   </div>
+  <!-- Budgets -->
+  ${data.budgets && data.budgets.length > 0 ? `
+  <div class="card mb-3">
+  <div class="card-header">💰 Status Budget</div>
+  <div class="list-group list-group-flush">
+  ${data.budgets.map(b => {
+    const progressClass = b.is_overspent ? 'bg-danger': (b.is_near_limit ? 'bg-warning': 'bg-success');
+    return `
+    <div class="list-group-item">
+    <div class="d-flex justify-content-between align-items-start">
+    <div>
+    <i class="${b.category.icon} me-2" style="color:${b.category.color}"></i>
+    <span class="fw-semibold">${b.category.name}</span>
+    ${b.wallet ? `<small class="text-muted d-block">${b.wallet.name}</small>`: ''}
+    </div>
+    </div>
+    <div class="mt-2">
+    <div class="d-flex justify-content-between small">
+    <span>${b.formatted_spending} / ${b.formatted_amount}</span>
+    <span class="${b.is_overspent ? 'text-danger': (b.is_near_limit ? 'text-warning': '')}">${b.percentage}%</span>
+    </div>
+    <div class="progress" style="height: 6px;">
+    <div class="progress-bar ${progressClass}" style="width: ${b.percentage}%"></div>
+    </div>
+    </div>
+    ${b.is_overspent ? '<small class="text-danger">⚠️ Budget terlampaui!</small>': ''}
+    ${b.is_near_limit ? '<small class="text-warning">⚡ Mendekati batas budget</small>': ''}
+    </div>
+    `;
+  }).join('')}
+  </div>
+  </div>
+  `: ''}
 
   <!-- Recommendations -->
   ${data.recommendations.length > 0 ? `
