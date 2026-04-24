@@ -302,6 +302,12 @@
       return;
     }
 
+    const token = tgApp.getToken();
+    if (!token) {
+      tgApp.showToast("Token tidak ditemukan. Silakan refresh aplikasi.", 'danger');
+      return;
+    }
+
     // Tampilkan progress
     document.getElementById('upload-progress')?.classList.remove('d-none');
     const submitBtn = form.closest('.modal').querySelector('.btn-primary');
@@ -310,7 +316,7 @@
     try {
       const res = await fetch(BASE_URL + '/api/fintech/statements/upload', {
         headers: {
-          'Authorization': `Bearer ${tgApp.getToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
         },
         method: 'POST',
@@ -330,7 +336,11 @@
       }
     } catch (error) {
       console.error('Upload error:', error);
-      tgApp.showToast('Terjadi kesalahan jaringan. ' + error.message, 'danger');
+      if (error.name === 'SyntaxError') {
+        tgApp.showToast('Response dari server tidak Valid. Cek kembali file dan password', 'danger');
+      } else {
+        tgApp.showToast('Terjadi kesalahan jaringan. ' + error.message, 'danger');
+      }
     } finally {
       document.getElementById('upload-progress')?.classList.add('d-none');
       submitBtn.disabled = false;
