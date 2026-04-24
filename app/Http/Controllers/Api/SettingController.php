@@ -110,7 +110,7 @@ class SettingController extends Controller
         $message = "PIN salah sebanyak 5 kali. Akun dikunci selama 15 menit";
         $lockedUntil = $settings->locked_until->toDateTimeString();
       } else {
-        $message = "PIN salah. {$remainingAttempts} percobaab tersisa.";
+        $message = "PIN salah. {$remainingAttempts} percobaan tersisa.";
       }
 
       return response()->json([
