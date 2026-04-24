@@ -71,7 +71,10 @@ async function checkPinRequired() {
 
         try {
           const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
-            pin
+            method: 'POST',
+            body: JSON.stringify({
+              pin
+            })
           });
 
           if (res.success) {
