@@ -93,7 +93,7 @@ class InsightService
         'avg_expense_3months' => $trend['avg_last_3months'],
         'change_percentage' => $trend['change_percentage'],
       ],
-      'budgets' $budgets,
+      'budgets' => $budgets,
     ];
   }
 
