@@ -63,9 +63,10 @@ async function interceptAndFetch(requestFn) {
     return await requestFn();
   } catch(error) {
     if (error.status === 403 && (error.code === 'PIN_REQUIRED' || error.code === 'PIN_EXPIRED')) {
-      const pinOk = await new Promise(()=> {
+      tgApp.hideLoading();
+      const pinOk = await new Promise((resolve) => {
         showPinModal(resolve);
-      })
+      });
       if (pinOk) {
         return await requestFn();
       }
@@ -114,11 +115,17 @@ function checkSessionTimeout() {
 
 // Cek apakah PIN diperlukan saat aplikasi dibuka
 async function checkPinRequired() {
-  // Ambil pengaturan user
   const settings = state.userSettings;
   if (settings && settings.pin_enabled) {
-    //document.getElementById('loading-overlay').classList.add('d-none');
-    return new Promise((resolve)=> showPinModal(resolve));
+    document.getElementById('loading-overlay').classList.add('d-none');
+    const pinOk = await new Promise((resolve) => showPinModal(resolve));
+    if (!pinOk) {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      document.getElementById('loading-overlay').innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
+      return false;
+    }
+    document.getElementById('loading-overlay').classList.remove('d-none');
+    document.getElementById('loading-overlay').innerHTML = `<div class="text-center"><div class="spinner-border text-primary mb-3"></div><p class="text-muted">Memuat data keuangan...</p></div>`;
   }
   return true;
 }
@@ -167,7 +174,7 @@ async function submitPin(callback) {
   submitBtn.innerHTML = spinner;
 
   try {
-    const res = await api.post(+ '/api/fintech/settings/verify-pin', {
+    const res = await api.post('/api/fintech/settings/verify-pin', {
       pin
     });
     if (res.success) {
@@ -1356,9 +1363,7 @@ async function saveSettings() {
 
   try {
     tgApp.showLoading('Menyimpan...');
-    await api.put('/api/fintech/settings', {
-      data
-    });
+    await api.put('/api/fintech/settings', data);
     await loadUserSettings();
     tgApp.hideLoading();
     tgApp.showToast('Pengaturan disimpan');
