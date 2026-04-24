@@ -167,7 +167,7 @@ async function submitPin(callback) {
   submitBtn.innerHTML = spinner;
 
   try {
-    const res = await api.post.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
+    const res = await api.post(+ '/api/fintech/settings/verify-pin', {
       pin
     });
     if (res.success) {
@@ -726,15 +726,14 @@ async function executeBulkDelete() {
 
   try {
     tgApp.showLoading('Menghapus...');
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions/bulk-destroy', {
-      method: 'POST',
-      body: JSON.stringify({
-        wallet_id: walletId, month
-      })
+    const res = await api.post('/api/fintech/transactions/bulk-destroy', {
+      wallet_id: walletId,
+      month
     });
 
     tgApp.hideLoading();
-    tgApp.showToast(res.message, res.success ? 'success': 'warning');
+    tgApp.showToast(res.message,
+      res.success ? 'success': 'warning');
 
     if (res.success) {
       bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal')).hide();
@@ -826,9 +825,7 @@ async function deleteTransfer(id) {
   if (!confirm('Pindahkan transfer ke tempat sampah?')) return;
   try {
     tgApp.showLoading('Menghapus...');
-    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transfers/${id}`, {
-      method: 'DELETE'
-    });
+    await api.delete(`/api/fintech/transfers/${id}`);
     await loadWallets();
     await loadHomeSummary();
     tgApp.hideLoading();
@@ -1010,7 +1007,7 @@ function applyReportFilter() {
 async function loadReportCharts() {
   try {
     const filter = state.reportFilter;
-    let url = `${BASE_URL}/api/fintech/reports/${filter.periodType}`;
+    let url = `/api/fintech/reports/${filter.periodType}`;
     const params = new URLSearchParams();
 
     if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
@@ -1027,7 +1024,7 @@ async function loadReportCharts() {
 
     if (params.toString()) url += '?' + params.toString();
 
-    const res = await tgApp.fetchWithAuth(url);
+    const res = await api.get(url);
     const data = res.data;
     const ctx = document.getElementById('reportBarChart')?.getContext('2d');
     if (ctx) {
@@ -1091,10 +1088,10 @@ async function loadCategoryChart() {
   }
   // all_years tidak perlu year/month
 
-  const url = `${BASE_URL}/api/fintech/reports/category-summary?${params.toString()}`;
+  const url = `/api/fintech/reports/category-summary?${params.toString()}`;
 
   try {
-    const res = await tgApp.fetchWithAuth(url);
+    const res = await api.get(url);
     const data = res.data;
 
     const ctx = document.getElementById('categoryChart')?.getContext('2d');
@@ -1211,7 +1208,7 @@ async function loadCategoryTable() {
     if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
     params.append('type', state.categoryChartType);
 
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/reports/category-table?' + params.toString());
+    const res = await api.get('/api/fintech/reports/category-table?' + params.toString());
     const data = res.data;
     renderCategoryTable(data);
   } catch (error) {
