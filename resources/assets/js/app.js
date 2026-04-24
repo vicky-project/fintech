@@ -983,7 +983,6 @@ function applyReportFilter() {
   updateReportPeriodIndicator();
   loadReportCharts();
   loadCategoryChart();
-  loadCategoryTable();
 }
 
 async function loadReportCharts() {
