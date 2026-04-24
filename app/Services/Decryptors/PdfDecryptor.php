@@ -79,6 +79,8 @@ class PdfDecryptor
       return false;
     } catch (\Exception $e) {
       $message = strtolower($e->getMessage());
+      Log::error("Error to parse pdf file. Error: " . $message);
+
       return str_contains($message,
         'password') ||
       str_contains($message,
