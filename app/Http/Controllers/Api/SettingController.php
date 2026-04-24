@@ -105,7 +105,7 @@ class SettingController extends Controller
       $settings->recordFailedAttempt();
       $attempts = $settings->pin_attempts;
       $remainingAttempts = 5 - $attempts;
-
+      $lockedUntil = null;
       if ($settings->isLocked()) {
         $message = "PIN salah sebanyak 5 kali. Akun dikunci selama 15 menit";
         $lockedUntil = $settings->locked_until->toDateTimeString();
