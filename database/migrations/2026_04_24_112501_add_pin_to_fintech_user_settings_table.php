@@ -11,9 +11,9 @@ return new class extends Migration
     Schema::table("fintech_user_settings", function(Blueprint $table) {
       $table->string('pin', 60)->nullable()->after('default_wallet_id');
       $table->boolean('pin_enabled')->default(false)->after('pin');
+        $table->unsignedTinyInteger('pin_attempts')->default(0)->after('pin_enabled');
+        $table->timestamp('locked_until')->nullable()->after('pin_attempts');
       });
-      $table->unsignedTinyInteger('pin_attempts')->default(0)->after('pin_enabled');
-      $table->timestamp('locked_until')->nullable()->after('pin_attempts');
     }
 
     public function down(): void
