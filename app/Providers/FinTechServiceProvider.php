@@ -32,6 +32,8 @@ class FinTechServiceProvider extends ServiceProvider
     $this->registerConfig();
     $this->registerViews();
     $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+
+    $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
   }
 
   /**

@@ -22,7 +22,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(function () {
+Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fintech.')->group(function () {
   Route::get('home-summary', [HomeController::class, 'index']);
 
   // ==================== CATEGORIES ====================
@@ -45,9 +45,6 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 
   Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
 
-  Route::get('settings', [SettingController::class, 'show']);
-  Route::put('settings', [SettingController::class, 'update']);
-
   // ==================== WALLETS ====================
   Route::apiResource('wallets', WalletController::class)->names('wallets');
 
@@ -58,10 +55,6 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::apiResource('transfers', TransferController::class)->except(['show']);
 
   Route::apiResource('budgets', BudgetController::class)->except(['show']);
-
-  Route::middleware(['auth:sanctum', 'throttle:10,1'])->group(function() {
-    Route::post('settings/verify-pin', [SettingController::class, 'verifyPin']);
-  });
 
   // ==================== REPORTS ====================
   Route::middleware('auth:sanctum')
@@ -87,4 +80,10 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
     Route::post('{statement}/import', [StatementController::class, 'import']);
     Route::delete('{statement}', [StatementController::class, 'destroy']);
   });
+});
+
+Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(function() {
+  Route::get('settings', [SettingController::class, 'show']);
+  Route::put('settings', [SettingController::class, 'update']);
+  Route::post('settings/verify-pin', [SettingController::class, 'verifyPin'])->middleware('throttle:10,1');
 });

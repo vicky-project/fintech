@@ -90,7 +90,7 @@ async function checkPinRequired() {
   // Ambil pengaturan user
   const settings = state.userSettings;
   if (settings && settings.pin_enabled) {
-    document.getElementById('loading-overlay').classList.add('d-none');
+    //document.getElementById('loading-overlay').classList.add('d-none');
     return new Promise((resolve)=> showPinModal(resolve));
   }
   return true;
@@ -1214,7 +1214,7 @@ function renderCategoryTable(data) {
 
   const symbol = getCurrencySymbol(currency);
   let html = `
-  <table class="table table-sm table-hover table-bordered">
+  <table class="table table-sm table-hover">
   <thead class="table-light sticky-top">
   <tr>
   <th style="min-width: 150px;">Kategori</th>

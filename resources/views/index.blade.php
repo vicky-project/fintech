@@ -196,3 +196,11 @@
   {!! file_get_contents(module_path('fintech', 'resources/assets/js/app.js')); !!}
 </script>
 @endpush
+
+@push('styles')
+<style>
+  #pinModal {
+    z-index: 10001 !important;
+  }
+</style>
+@endpush
