@@ -19,7 +19,7 @@ return new class extends Migration
     public function down(): void
     {
       Schema::table("fintech_user_settings", function(Blueprint $table) {
-        $table->dropColumn(['pin', 'pin_enabled']);
+        $table->dropColumn(['pin', 'pin_enabled', 'pin_attempts', 'locked_until']);
       });
     }
   };
