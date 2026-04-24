@@ -39,7 +39,7 @@ const state = {
   statementLastPage: 1,
   statements: [],
   categoryChartType: 'expense',
-  pinVerified: false
+  pinVerified: false,
   pinVerifiedAt: null,
   sessionTimeout: 3 * 60 * 1000,
   // 3 menit
