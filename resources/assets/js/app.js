@@ -62,7 +62,7 @@ async function interceptAndFetch(requestFn) {
   try {
     return await requestFn();
   } catch(error) {
-    if (error.status === 403 && (error.data.code === 'PIN_REQUIRED' || error.data.code === 'PIN_EXPIRED')) {
+    if (error.status === 403 && error.data && (error.data.code === 'PIN_REQUIRED' || error.data.code === 'PIN_EXPIRED')) {
       tgApp.hideLoading();
       const pinOk = await new Promise((resolve) => {
         showPinModal(resolve);
@@ -120,7 +120,7 @@ async function checkPinRequired() {
     document.getElementById('loading-overlay').classList.add('d-none');
     const pinOk = await new Promise((resolve) => showPinModal(resolve));
     if (!pinOk) {
-      document.getElementById('loading-overlay').classList.remove('d-none');.
+      document.getElementById('loading-overlay').classList.remove('d-none');
       document.getElementById('loading-overlay').innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
       return false;
     }
