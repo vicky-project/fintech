@@ -1220,7 +1220,7 @@ function renderCategoryTable(data) {
   <tr>
   <th>Kategori</th>
   ${years.map(y => `<th class="text-end">${y}</th>`).join('')}
-  <th class="text-end">Total</th>
+  <th class="text-end" width="100">Total</th>
   </tr>
   </thead>
   <tbody>
