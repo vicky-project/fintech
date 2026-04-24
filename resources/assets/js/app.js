@@ -89,6 +89,7 @@ async function checkPinRequired() {
   // Ambil pengaturan user
   const settings = state.userSettings;
   if (settings && settings.pin_enabled) {
+    document.getElementById('loading-overlay').classList.add('d-none');
     return new Promise((resolve)=> showPinModal(resolve));
   }
   return true;
