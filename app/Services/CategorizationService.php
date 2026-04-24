@@ -103,27 +103,28 @@ class CategorizationService
     $lowerDesc = strtolower($description);
     $catName = strtolower($category->name);
 
-    if (str_contains($lowerDesc, 'biaya')) {
+    // === BIAYA / ADMIN ===
+    if (str_contains($lowerDesc, 'biaya') || str_contains($lowerDesc, 'admin') || str_contains($lowerDesc, 'administrasi') || str_contains($lowerDesc, 'fee')) {
       if (str_contains($catName, 'biaya') || str_contains($catName, 'admin') || str_contains($catName, 'pajak')) {
         $bonus += 50;
       }
     }
 
-    // Pola Transfer
-    if (str_contains($lowerDesc, 'transfer') || str_contains($lowerDesc, 'trsf') || str_contains($lowerDesc, 'bi fast')) {
+    // === TRANSFER ===
+    if (preg_match('/\b(transfer|trsf|trf|kirim|bifast)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'transfer') || str_contains($catName, 'keuangan')) {
         $bonus += 20;
       }
     }
 
-    // Pola Tarik Tunai / ATM
+    // === TARIK TUNAI / ATM ===
     if (str_contains($lowerDesc, 'tarik') || str_contains($lowerDesc, 'atm') || str_contains($lowerDesc, 'penarikan')) {
       if (str_contains($catName, 'tarik') || str_contains($catName, 'tunai') || str_contains($catName, 'atm')) {
         $bonus += 25;
       }
     }
 
-    // Pola Belanja Online / Marketplace
+    // === BELANJA ONLINE / MARKETPLACE ===
     if (str_contains($lowerDesc, 'shopee') || str_contains($lowerDesc, 'tokopedia') ||
       str_contains($lowerDesc, 'lazada') || str_contains($lowerDesc, 'bukalapak')) {
       if (str_contains($catName, 'belanja') || str_contains($catName, 'online')) {
@@ -131,45 +132,111 @@ class CategorizationService
       }
     }
 
-    // Pola Pembayaran Tagihan (PLN, PDAM, BPJS, Telkom, dll)
+    // === TAGIHAN (PLN, PDAM, BPJS, Telkom, Indihome, Pulsa) ===
     if (preg_match('/\b(pln|pdam|bpjs|telkom|indihome|listrik|air|internet|pulsa)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'tagihan') || str_contains($catName, 'utilitas')) {
         $bonus += 30;
       }
     }
 
-    // Pola Makanan / Kuliner
+    // === MAKANAN / KULINER ===
     if (preg_match('/\b(resto|restaurant|cafe|kafe|mcd|kfc|pizza|burger|sushi|steak|martabak|bakso|sate|nasi goreng|mie ayam|kopi|coffee)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'makanan') || str_contains($catName, 'minuman')) {
         $bonus += 30;
       }
     }
 
-    // Pola Transportasi / BBM
+    // === TRANSPORTASI / BBM ===
     if (preg_match('/\b(bensin|pertamina|shell|spbu|bbm|gojek|grab|taksi|parkir|tol)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'transportasi') || str_contains($catName, 'bahan bakar')) {
         $bonus += 30;
       }
     }
 
-    // Pola Pendidikan / Kursus
+    // === PENDIDIKAN / KURSUS ===
     if (preg_match('/\b(kursus|les|bimbel|sekolah|kuliah|universitas|spp|bootcamp|pelatihan)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'pendidikan') || str_contains($catName, 'kursus')) {
         $bonus += 30;
       }
     }
 
-    // Pola Kesehatan
+    // === KESEHATAN ===
     if (preg_match('/\b(dokter|rumah sakit|klinik|apotek|obat|vitamin|bpjs kesehatan|medical)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'kesehatan')) {
         $bonus += 30;
       }
     }
 
-    // Pola Hiburan / Streaming
+    // === HIBURAN / STREAMING ===
     if (preg_match('/\b(netflix|spotify|youtube|disney|hbo|vidio|bioskop|cinema|xxi|cgv)\b/i', $lowerDesc)) {
       if (str_contains($catName, 'hiburan') || str_contains($catName, 'streaming')) {
         $bonus += 30;
+      }
+    }
+
+    // === POLA SPESIFIK BNI ===
+    // BY TRX BIFAST → Biaya Admin
+    if (str_contains($lowerDesc, 'by trx bifast')) {
+      if ($catName === 'biaya admin & pajak') {
+        $bonus += 60;
+      }
+    }
+
+    // TRF/PAY/TOP-UP ECHANNEL KARTU → bisa Pulsa, E-Wallet, atau Transfer
+    if (str_contains($lowerDesc, 'trf/pay/top-up echannel kartu')) {
+      if (str_contains($catName, 'pulsa') || str_contains($catName, 'e-wallet')) {
+        $bonus += 30;
+      } elseif (str_contains($catName, 'transfer')) {
+        $bonus += 15;
+      }
+    }
+
+    // TRANSFER KE ESPAY → E-Wallet
+    if (str_contains($lowerDesc, 'transfer ke espay')) {
+      if (str_contains($catName, 'e-wallet') || str_contains($catName, 'belanja')) {
+        $bonus += 35;
+      }
+    }
+
+    // TRANSFER KE AIRPAY → Shopee/ Belanja
+    if (str_contains($lowerDesc, 'airpay international')) {
+      if (str_contains($catName, 'e-wallet') || str_contains($catName, 'belanja')) {
+        $bonus += 35;
+      }
+    }
+
+    // TARIK TUNAI KARTU (BNI) → Tarik Tunai
+    if (str_contains($lowerDesc, 'tarik tunai kartu')) {
+      if (str_contains($catName, 'tarik tunai') || str_contains($catName, 'atm')) {
+        $bonus += 40;
+      }
+    }
+
+    // SETOR TUNAI KARTU (BNI) → Pendapatan/Setor Tunai
+    if (str_contains($lowerDesc, 'setor tunai kartu')) {
+      if (str_contains($catName, 'setor tunai') || str_contains($catName, 'pendapatan')) {
+        $bonus += 40;
+      }
+    }
+
+    // TRANSFER KE GOPAY / OVO / DANA → E-Wallet
+    if (preg_match('/\btransfer ke (gopay|ovo|dana|linkaja)\b/i', $lowerDesc)) {
+      if (str_contains($catName, 'e-wallet')) {
+        $bonus += 35;
+      }
+    }
+
+    // QRIS → Belanja atau E-Wallet
+    if (str_contains($lowerDesc, 'qris')) {
+      if (str_contains($catName, 'belanja') || str_contains($catName, 'e-wallet')) {
+        $bonus += 30;
+      }
+    }
+
+    // Pembayaran ke SIMSEM/POS PURCHASE → Belanja
+    if (str_contains($lowerDesc, 'simesem pos') || str_contains($lowerDesc, 'purchase')) {
+      if (str_contains($catName, 'belanja')) {
+        $bonus += 25;
       }
     }
 

@@ -59,12 +59,6 @@ class BniPdfParser extends AbstractBankParser
   public function parse(string $filePath): array
   {
     $text = $this->extractText($filePath);
-    $pdfText = $this->extractPdfText($filePath);
-    \Log::debug("Pdf parser.", [
-      'text' => $text,
-      'pdf-text' => $pdfText
-    ]);
-
     $transactions = $this->extractTransactions($text);
     return $this->formatTransactions($transactions);
   }

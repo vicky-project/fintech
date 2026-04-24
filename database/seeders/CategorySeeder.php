@@ -89,6 +89,7 @@ class CategorySeeder extends Seeder
               'sayur',
               'resto',
               'restaurant',
+              'restoran',
               'rm',
               'warung makan',
               'warteg',
@@ -243,14 +244,19 @@ class CategorySeeder extends Seeder
           ['name' => 'Tarik Tunai',
             'icon' => 'bi-cash',
             'color' => '#FF6384',
-            'keywords' => ['tarik tunai',
+            'keywords' => [
+              'tarik tunai',
               'penarikan tunai',
               'atm',
               'cardless',
               'tarik tunai di atm',
               'tarik tunai cardless',
               'tarik tunai tanpa kartu',
-              'penarikan tunai di atm']],
+              'penarikan tunai di atm',
+              'tarik tunai kartu',
+              'tarik tunai di atm link',
+            ]
+          ],
         ]
       ],
       [
@@ -363,7 +369,8 @@ class CategorySeeder extends Seeder
           ['name' => 'E-Wallet',
             'icon' => 'bi-wallet2',
             'color' => '#36A2EB',
-            'keywords' => ['gopay',
+            'keywords' => [
+              'gopay',
               'shopeepay',
               'ovo',
               'dana',
@@ -379,7 +386,15 @@ class CategorySeeder extends Seeder
               'pembayaran ipaymu',
               'pembayaran doku va',
               'qr pay',
-              'qris']],
+              'qris',
+              'transfer ke espay debit indonesia',
+              'pembayaran qr',
+              'transfer ke airpay international indonesia',
+              'transfer ke gopay',
+              'transfer ke shopee pay',
+              'transfer ke ovo',
+            ]
+          ],
         ]
       ],
       [
@@ -457,7 +472,8 @@ class CategorySeeder extends Seeder
           ['name' => 'Pulsa',
             'icon' => 'bi-phone',
             'color' => '#4BC0C0',
-            'keywords' => ['pulsa',
+            'keywords' => [
+              'pulsa',
               'telkomsel',
               'xl',
               'indosat',
@@ -473,7 +489,10 @@ class CategorySeeder extends Seeder
               'pembayaran telkomsel prepaid',
               'pembayaran im3 ooredoo',
               'pembayaran 3 prepaid',
-              'pembayaran xl axiata']],
+              'pembayaran xl axiata',
+              'trf/pay/top-up echannel kartu'
+            ]
+          ],
           ['name' => 'Sewa / KPR',
             'icon' => 'bi-building',
             'color' => '#FF6384',
@@ -489,7 +508,11 @@ class CategorySeeder extends Seeder
               'pembayaran sewa',
               'rent',
               'sewa kontrakan',
-              'uang sewa rumah']],
+              'uang sewa rumah',
+              'bayar kontrakan',
+              'iuran komplek'
+            ]
+          ],
         ]
       ],
       [
@@ -738,13 +761,17 @@ class CategorySeeder extends Seeder
           'denda',
           'penalty',
           'fee'],
-        'metadata' => ['tags' => ['transfer',
-          'keuangan']],
+        'metadata' => [
+          'tags' => ['transfer',
+            'keuangan']
+        ],
         'children' => [
-          ['name' => 'Biaya Admin & Pajak',
+          [
+            'name' => 'Biaya Admin & Pajak',
             'icon' => 'bi-calculator',
             'color' => '#6c757d',
-            'keywords' => ['biaya admin',
+            'keywords' => [
+              'biaya admin',
               'administrasi',
               'admin bank',
               'biaya transfer',
@@ -763,6 +790,7 @@ class CategorySeeder extends Seeder
               'biaya administrasi kartu debit',
               'biaya administrasi kartu kredit',
               'biaya transfer bi fast',
+              'by trx bifast',
               'biaya transfer',
               'biaya pembayaran telkomsel prepaid',
               'biaya pembayaran pln prabayar',
@@ -775,11 +803,17 @@ class CategorySeeder extends Seeder
               'biaya penggantian kartu atm',
               'biaya saldo minimum',
               'pendebitan otomatis',
-              'pembayaran kartu kredit']],
-          ['name' => 'Transfer Keluar',
+              'pembayaran kartu kredit',
+              'biaya admin (gopay)',
+              'biaya admin gopay'
+            ]
+          ],
+          [
+            'name' => 'Transfer Keluar',
             'icon' => 'bi-arrow-right-circle',
             'color' => '#FF9F40',
-            'keywords' => ['transfer ke',
+            'keywords' => [
+              'transfer ke',
               'trsf ke',
               'kirim uang',
               'transfer keluar',
@@ -796,7 +830,15 @@ class CategorySeeder extends Seeder
               'iuran',
               'kas bulanan',
               'teman pinjem',
-              'teman pinjam']],
+              'teman pinjam',
+              'transfer ke bank',
+              'trf/pay/top-up echannel kartu',
+              'transfer ke bri',
+              'transfer ke bsi',
+              'transfer ke bca',
+              'transfer ke mandiri',
+            ]
+          ],
         ]
       ],
       [
@@ -854,7 +896,12 @@ class CategorySeeder extends Seeder
               'gaji september',
               'gaji oktober',
               'gaji november',
-              'gaji desember']],
+              'gaji desember',
+              'uang gaji',
+              'trf gaji',
+              'transfer gaji',
+            ]
+          ],
           ['name' => 'Bonus & THR',
             'icon' => 'bi-gift',
             'color' => '#FFCE56',
