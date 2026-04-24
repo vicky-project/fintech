@@ -3,6 +3,7 @@
 namespace Modules\FinTech\Services\Decryptors;
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
@@ -42,6 +43,7 @@ class PdfDecryptor
       // Verifikasi output
       if (file_exists($outputPath) && filesize($outputPath) > 0) {
         Log::info("PDF berhasil didekripsi", ['input' => $inputPath, 'output' => $outputPath]);
+        Storage::delete($inputPath);
         return $outputPath;
       }
 

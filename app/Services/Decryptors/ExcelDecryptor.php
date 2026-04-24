@@ -5,6 +5,7 @@ namespace Modules\FinTech\Services\Decryptors;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
@@ -86,6 +87,7 @@ class ExcelDecryptor
     try {
       $process->mustRun();
       if (file_exists($outputPath) && filesize($outputPath) > 0) {
+        Storage::delete($inputPath);
         return $outputPath;
       }
       throw new \Exception("File output tidak valid atau kosong.");
