@@ -17,7 +17,7 @@
             <label class="form-label">File Statement <span class="text-danger">*</span></label>
             <input type="file" class="form-control" name="file" required>
             <small class="text-muted">PDF, Excel, CSV (maks 10MB)</small>
-            <p>
+            <p class="mt-0">
               <small class="small text-muted">Saat ini hanya mendukung Bank Mandiri</small>
             </p>
           </div>
