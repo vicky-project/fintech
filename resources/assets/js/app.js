@@ -172,11 +172,8 @@ async function submitPin(callback) {
   submitBtn.innerHTML = spinner;
 
   try {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
-      method: 'POST',
-      body: JSON.stringify({
-        pin
-      })
+    const res = await api.post(BASE_URL + '/api/fintech/settings/verify-pin', {
+      pin
     });
     if (res.success) {
       state.pinVerified = true;
