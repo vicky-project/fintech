@@ -71,6 +71,8 @@ async function interceptAndFetch(requestFn) {
         return await requestFn();
       }
     }
+
+    alert(JSON.stringify(error))
     throw error;
   }
 }
