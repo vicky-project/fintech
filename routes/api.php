@@ -71,7 +71,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 
   Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
 
-  Route::prefix('statements')->group(function() {
+  Route::prefix('statements')->middleware('auth:sanctum')->group(function() {
     Route::get('', [StatementController::class, 'index']);
     Route::post('upload', [StatementController::class, 'upload']);
     Route::put("transactions/{transaction}/category", [StatementController::class, 'updateCategory']);
