@@ -1217,9 +1217,9 @@ function renderCategoryTable(data) {
   <table class="table table-sm table-hover">
   <thead class="table-light sticky-top">
   <tr>
-  <th>Kategori</th>
-  ${years.map(y => `<th class="text-end">${y}</th>`).join('')}
-  <th class="text-end w-100">Total</th>
+  <th style="min-width: 150px;">Kategori</th>
+  ${years.map(y => `<th class="text-end" style="min-width: 80px;">${y}</th>`).join('')}
+  <th class="text-end" style="min-width: 110px; white-space: nowrap;">Total</th>
   </tr>
   </thead>
   <tbody>
@@ -1229,16 +1229,16 @@ function renderCategoryTable(data) {
     let rowTotal = 0;
     html += `
     <tr>
-    <td>
+    <td style="min-width: 150px;">
     <i class="${cat.icon} me-1" style="color:${cat.color}"></i>
     <small>${cat.name}</small>
     </td>
     ${years.map(y => {
       const val = cat.data[y] || 0;
       rowTotal += val;
-      return `<td class="text-end">${val ? formatNumberShort(val): '-'}</td>`;
+      return `<td class="text-end" style="80px;">${val ? formatNumberShort(val): '-'}</td>`;
     }).join('')}
-    <td class="text-end fw-semibold">${symbol} ${formatNumberShort(rowTotal)}</td>
+    <td class="text-end fw-semibold" style="min-width: 110px; white-space: nowrap;">${symbol} ${formatNumberShort(rowTotal)}</td>
     </tr>
     `;
   });
@@ -1246,9 +1246,9 @@ function renderCategoryTable(data) {
   // Baris total
   html += `
   <tr class="table-primary fw-bold">
-  <td>Total</td>
-  ${years.map(y => `<td class="text-end">${symbol} ${formatNumberShort(totals[y] || 0)}</td>`).join('')}
-  <td class="text-end">${symbol} ${formatNumberShort(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
+  <td style="min-width: 150px;">Total</td>
+  ${years.map(y => `<td class="text-end" style="min-width: 80px;">${symbol} ${formatNumberShort(totals[y] || 0)}</td>`).join('')}
+  <td class="text-end" style="min-width: 110px; white-space: nowrap;">${symbol} ${formatNumberShort(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
   </tr>
   </tbody>
   </table>
