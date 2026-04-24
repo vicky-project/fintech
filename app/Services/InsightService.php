@@ -102,7 +102,7 @@ class InsightService
   */
   public static function clearCache(int $userId): void
   {
-    if ((new self)->supportsTags()) {
+    if (self::supportsTags()) {
       Cache::tags(['fintech_insights', "user_{$userId}"])->flush();
     } else {
       Cache::forget("fintech_insights_user_{$userId}");
@@ -112,7 +112,7 @@ class InsightService
   /**
   * Cek apakah cache driver mendukung tags.
   */
-  private function supportsTags(): bool
+  private static function supportsTags(): bool
   {
     return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
   }

@@ -107,8 +107,8 @@ function showPinModal(callback) {
   document.getElementById('pinLockedInfo').classList.add('d-none');
 
   form.reset();
-  pinInput.focus();
   pinInput.disabled = false;
+  pinInput.focus();
   pinInput.addEventListener('input', () => {
     if (pinInput.value.length === 6) {
       submitPin(callback);
