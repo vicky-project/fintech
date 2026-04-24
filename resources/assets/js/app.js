@@ -147,8 +147,9 @@ async function submitPin(callback) {
     }
   } catch (error) {
     const errorEl = document.getElementById('pinError');
-    errorEl.textContent = 'Terjadi kesalahan. Coba lagi.';
+    //errorEl.textContent = 'Terjadi kesalahan. Coba lagi.';
     errorEl.classList.remove('d-none');
+    tgApp.showToast(error.message);
   }
 }
 
@@ -998,14 +999,13 @@ async function loadReportCharts() {
   }
 }
 
-let currentCategoryType = 'expense';
 async function loadCategoryChart() {
   const filter = state.reportFilter;
   const params = new URLSearchParams();
 
   if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
   params.append('period_type', filter.periodType);
-  params.append('type', currentCategoryType);
+  params.append('type', state.categoryChartType);
 
   if (filter.periodType === 'monthly' && filter.month) {
     const [year,
@@ -1070,7 +1070,7 @@ async function loadCategoryChart() {
 
     const symbol = getCurrencySymbol(data.currency);
     document.getElementById('category-total').innerHTML =
-    `Total ${currentCategoryType === 'expense' ? 'Pengeluaran': 'Pemasukan'}: ${symbol} ${formatNumber(data.total)}`;
+    `Total ${state.categoryChartType === 'expense' ? 'Pengeluaran': 'Pemasukan'}: ${symbol} ${formatNumber(data.total)}`;
 
   } catch (error) {
     console.error('Gagal memuat kategori:', error);
@@ -1078,7 +1078,7 @@ async function loadCategoryChart() {
 }
 
 function switchCategoryType(type) {
-  currentCategoryType = type;
+  state.categoryChartType = type;
   // Update active button
   document.querySelectorAll('[data-cat-type]').forEach(btn => {
     btn.classList.remove('active');
