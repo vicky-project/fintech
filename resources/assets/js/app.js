@@ -62,7 +62,7 @@ async function interceptAndFetch(requestFn) {
   try {
     return await requestFn();
   } catch(error) {
-    if (error.status === 403 && (error.code === 'PIN_REQUIRED' || error.code === 'PIN_EXPIRED')) {
+    if (error.status === 403 && (error.data.code === 'PIN_REQUIRED' || error.data.code === 'PIN_EXPIRED')) {
       tgApp.hideLoading();
       const pinOk = await new Promise((resolve) => {
         showPinModal(resolve);
@@ -71,8 +71,6 @@ async function interceptAndFetch(requestFn) {
         return await requestFn();
       }
     }
-
-    alert(JSON.stringify(error))
     throw error;
   }
 }
