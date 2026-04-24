@@ -70,7 +70,7 @@ async function checkPinRequired() {
         if (!pin || pin.length < 4) return;
 
         try {
-          const res = await api.post('/api/fintech/settings/verify-pin', {
+          const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
             pin
           });
 
