@@ -120,7 +120,7 @@ async function checkPinRequired() {
     document.getElementById('loading-overlay').classList.add('d-none');
     const pinOk = await new Promise((resolve) => showPinModal(resolve));
     if (!pinOk) {
-      document.getElementById('loading-overlay').classList.remove('d-none');
+      document.getElementById('loading-overlay').classList.remove('d-none');.
       document.getElementById('loading-overlay').innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
       return false;
     }
@@ -172,8 +172,11 @@ async function submitPin(callback) {
   submitBtn.innerHTML = spinner;
 
   try {
-    const res = await api.post('/api/fintech/settings/verify-pin', {
-      pin
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
+      method: 'POST',
+      body: JSON.stringify({
+        pin
+      })
     });
     if (res.success) {
       state.pinVerified = true;
