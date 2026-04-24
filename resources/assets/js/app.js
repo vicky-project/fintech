@@ -53,6 +53,7 @@ async function checkPinRequired() {
   // Ambil pengaturan user
   const settings = state.userSettings;
   if (settings && settings.pin_enabled) {
+    document.getElementById('loading-overlay').classList.add('d-none')
     // Tampilkan modal PIN
     return new Promise((resolve) => {
       const modal = new bootstrap.Modal(document.getElementById('pinModal'));
