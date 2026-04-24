@@ -76,7 +76,7 @@
 
   async function loadPreviewData() {
     try {
-      const res = await tgApp.fetchWithAuth(BASE_URL + `/api/fintech/statements/${currentStatementId}/preview`);
+      const res = await api.get(`/api/fintech/statements/${currentStatementId}/preview`);
       const data = res.data;
 
       previewTransactions = data.transactions;
@@ -187,11 +187,9 @@
     if (!categoryId) return;
 
     try {
-      await tgApp.fetchWithAuth(
-      BASE_URL + `/api/fintech/statements/transactions/${transactionId}/category`,
+      await api.put(`/api/fintech/statements/transactions/${transactionId}/category`,
       {
-      method: 'PUT',
-      body: JSON.stringify({ category_id: categoryId })
+      category_id: categoryId
       }
       );
 
@@ -237,11 +235,9 @@
     try {
       tgApp.showLoading('Mengimpor...');
 
-      const res = await tgApp.fetchWithAuth(
-      BASE_URL + `/api/fintech/statements/${currentStatementId}/import`,
+      const res = await api.post(`/api/fintech/statements/${currentStatementId}/import`,
       {
-      method: 'POST',
-      body: JSON.stringify({ transaction_ids: selectedIds })
+      transaction_ids: selectedIds
       }
       );
 

@@ -108,9 +108,13 @@
 
     try {
       tgApp.showLoading('Menyimpan...');
-      const url = isEdit ? `${BASE_URL}/api/fintech/wallets/${id}`: `${BASE_URL}/api/fintech/wallets`;
-      const method = isEdit ? 'PUT': 'POST';
-      await tgApp.fetchWithAuth(url, { method, body: JSON.stringify(data) });
+      const url = isEdit ? `/api/fintech/wallets/${id}`: `/api/fintech/wallets`;
+
+      if (isEdit) {
+        await api.put(url, data });
+      } else {
+        await api.post(url, {data})
+      }
 
       await loadWallets();
       await loadHomeSummary();

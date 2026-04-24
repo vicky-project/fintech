@@ -126,11 +126,15 @@
     }
 
     const url = isEdit ? `/api/fintech/budgets/${id}`: `/api/fintech/budgets`;
-    const method = isEdit ? 'PUT': 'POST';
 
     try {
       tgApp.showLoading('Menyimpan...');
-      await tgApp.fetchWithAuth(BASE_URL + url, { method, body: JSON.stringify(data) });
+      if (isEdit) {
+        await api.put(url, {data});
+      } else {
+        api.post(url, {data});
+      }
+
       await refreshBudgetList();
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Budget diupdate': 'Budget dibuat');
@@ -144,7 +148,7 @@
   async function deleteBudget(id) {
     if (!confirm('Hapus budget ini?')) return;
     try {
-      await tgApp.fetchWithAuth(BASE_URL + `/api/fintech/budgets/${id}`, { method: 'DELETE' });
+      await ap8.delete(`/api/fintech/budgets/${id}`});
       await refreshBudgetList();
       tgApp.showToast('Budget dihapus');
     } catch (error) {

@@ -147,9 +147,12 @@
 
     try {
       tgApp.showLoading('Memproses...');
-      const url = isEdit ? `${BASE_URL}/api/fintech/transfers/${id}`: `${BASE_URL}/api/fintech/transfers`;
-      const method = isEdit ? 'PUT': 'POST';
-      await tgApp.fetchWithAuth(url, { method, body: JSON.stringify(data) });
+      const url = isEdit ? `/api/fintech/transfers/${id}`: `/api/fintech/transfers`;
+      if (isEdit) {
+        await api.put(url, {data})
+      } else {
+        await api.post(url, {data})
+      }
 
       await loadWallets();
       await loadHomeSummary();

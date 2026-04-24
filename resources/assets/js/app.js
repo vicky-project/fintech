@@ -47,6 +47,33 @@ const state = {
   budgets: [],
 };
 
+const api = {
+  get: (url) => interceptAndFetch(() => tgApp.fetchWithAuth(BASE_URL + url)),
+  post: (url, data) => interceptAndFetch(()=> tgApp.fetchWithAuth(BASE_URL + url, {
+    method: 'POST', body: JSON.stringify(data)})),
+  put: (url, data) => interceptAndFetch(()=> tgApp.fetchWithAuth(BASE_URL + url, {
+    method: 'PUT', body: JSON.stringify(data)})),
+  delete: (url) => interceptAndFetch(()=> tgApp.fetchWithAuth(BASE_URL + url, {
+    method: 'DELETE'
+  }))
+};
+
+async function interceptAndFetch(requestFn) {
+  try {
+    return await requestFn();
+  } catch(error) {
+    if (error.status === 403 && (error.code === 'PIN_REQUIRED' || error.code === 'PIN_EXPIRED')) {
+      const pinOk = await new Promise(()=> {
+        showPinModal(resolve);
+      })
+      if (pinOk) {
+        return await requestFn();
+      }
+    }
+    throw error;
+  }
+}
+
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async () => {
   await initializeApp();
@@ -140,11 +167,8 @@ async function submitPin(callback) {
   submitBtn.innerHTML = spinner;
 
   try {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
-      method: 'POST',
-      body: JSON.stringify({
-        pin
-      })
+    const res = await api.post.fetchWithAuth(BASE_URL + '/api/fintech/settings/verify-pin', {
+      pin
     });
     if (res.success) {
       state.pinVerified = true;
@@ -261,33 +285,33 @@ function setupFabOpacity() {
 
 // ==================== DATA LOADING ====================
 async function loadWallets() {
-  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/wallets');
+  const res = await api.get('/api/fintech/wallets');
   state.wallets = res.data || [];
   state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
 }
 
 async function loadCategories() {
-  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/categories');
+  const res = await api.get('/api/fintech/categories');
   state.categories = res.data || [];
 }
 
 async function loadCurrencies() {
-  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/currencies');
+  const res = await api.get('/api/fintech/currencies');
   state.currencies = res.data || [];
 }
 
 async function loadHomeSummary() {
-  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/home-summary');
+  const res = await api.get('/api/fintech/home-summary');
   state.homeSummary = res.data;
 }
 
 async function loadTransactionsPage(page, filters) {
-  let url = `${BASE_URL}/api/fintech/transactions?per_page=20&page=${page}`;
+  let url = `/api/fintech/transactions?per_page=20&page=${page}`;
   if (filters.wallet_id) url += `&wallet_id=${filters.wallet_id}`;
   if (filters.type) url += `&type=${filters.type}`;
   if (filters.month) url += `&month=${filters.month}`;
 
-  const res = await tgApp.fetchWithAuth(url);
+  const res = await api.get(url);
   state.transactions = res.data.data;
   state.transactionPage = res.data.current_page;
   state.transactionLastPage = res.data.last_page;
@@ -296,9 +320,9 @@ async function loadTransactionsPage(page, filters) {
 
 async function loadTransfersPage(page, walletId) {
   try {
-    let url = `${BASE_URL}/api/fintech/transfers?per_page=20&page=${page}`;
+    let url = `/api/fintech/transfers?per_page=20&page=${page}`;
     if (walletId) url += `&wallet_id=${walletId}`;
-    const res = await tgApp.fetchWithAuth(url);
+    const res = await api.get(url);
     const data = res.data;
     state.transfers = data.data;
     state.transferPage = data.current_page;
@@ -310,7 +334,7 @@ async function loadTransfersPage(page, walletId) {
 
 async function loadUserSettings() {
   try {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings');
+    const res = await api.get('/api/fintech/settings');
     state.userSettings = res.data;
   } catch (error) {
     console.warn('Gagal memuat pengaturan:', error);
@@ -323,7 +347,7 @@ async function loadUserSettings() {
 
 async function loadStatements(page = 1) {
   try {
-    const res = await tgApp.fetchWithAuth(BASE_URL + `/api/fintech/statements?page=${page}`);
+    const res = await api.get(`/api/fintech/statements?page=${page}`);
     state.statements = res.data.data;
     state.statementPage = res.data.current_page;
     state.statementLastPage = res.data.last_page;
@@ -645,9 +669,7 @@ async function deleteTransaction(id) {
   if (!confirm('Pindahkan transaksi ke tempat sampah?')) return;
   try {
     tgApp.showLoading('Menghapus...');
-    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}`, {
-      method: 'DELETE'
-    });
+    await api.delete(`/api/fintech/transactions/${id}`);
     await loadWallets();
     await loadHomeSummary();
     tgApp.hideLoading();
@@ -1337,9 +1359,8 @@ async function saveSettings() {
 
   try {
     tgApp.showLoading('Menyimpan...');
-    await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/settings', {
-      method: 'PUT',
-      body: JSON.stringify(data)
+    await api.put('/api/fintech/settings', {
+      data
     });
     await loadUserSettings();
     tgApp.hideLoading();
@@ -1374,7 +1395,7 @@ async function renderInsightsPage() {
 }
 async function loadInsights() {
   try {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/insights/full');
+    const res = await api.get('/api/fintech/insights/full');
     renderInsightsContent(res.data);
   } catch (error) {
     document.getElementById('insights-content').innerHTML = `
@@ -1627,9 +1648,7 @@ async function deleteStatement(id) {
   if (!confirm('Hapus statement ini? File dan data transaksi terkait akan dihapus permanen.')) return;
   try {
     tgApp.showLoading('Menghapus...');
-    await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/statements/${id}`, {
-      method: 'DELETE'
-    });
+    await api.delete(`/api/fintech/statements/${id}`);
     tgApp.hideLoading();
     tgApp.showToast('Statement dihapus');
     await refreshStatementList(state.statementPage);
@@ -1658,7 +1677,7 @@ async function refreshBudgetList() {
 
 async function loadBudgets() {
   try {
-    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/budgets');
+    const res = await api.get('/api/fintech/budgets');
     state.budgets = res.data || [];
   } catch (error) {
     state.budgets = [];
@@ -1735,7 +1754,7 @@ async function renderTrashPage() {
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;
-  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transactions/trashed');
+  const res = await api.get('/api/fintech/transactions/trashed');
   const trashed = res.data.data || [];
   const container = document.getElementById('trash-list');
   if (!trashed.length) {
@@ -1760,18 +1779,14 @@ async function renderTrashPage() {
     `).join('');
 }
 async function restoreTransaction(id) {
-  await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/restore`, {
-    method: 'POST'
-  });
+  await api.post(`/api/fintech/transactions/${id}/restore`);
   await loadWallets();
   await loadHomeSummary();
   renderTrashPage();
 }
 async function forceDeleteTransaction(id) {
   if (!confirm('Hapus permanen?')) return;
-  await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transactions/${id}/force`, {
-    method: 'DELETE'
-  });
+  await api.delete(`/api/fintech/transactions/${id}/force`);
   renderTrashPage();
 }
 function navigateToTransferTrash() {
@@ -1790,7 +1805,7 @@ async function renderTransferTrashPage() {
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;
-  const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/transfers/trashed');
+  const res = await api.get('/api/fintech/transfers/trashed');
   const trashed = res.data.data || [];
   const container = document.getElementById('transfer-trash-list');
   if (!trashed.length) {
@@ -1816,18 +1831,14 @@ async function renderTransferTrashPage() {
     `).join('');
 }
 async function restoreTransfer(id) {
-  await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transfers/${id}/restore`, {
-    method: 'POST'
-  });
+  await api.post(`/api/fintech/transfers/${id}/restore`);
   await loadWallets();
   await loadHomeSummary();
   renderTransferTrashPage();
 }
 async function forceDeleteTransfer(id) {
   if (!confirm('Hapus permanen?')) return;
-  await tgApp.fetchWithAuth(`${BASE_URL}/api/fintech/transfers/${id}/force`, {
-    method: 'DELETE'
-  });
+  await api.delete(`/api/fintech/transfers/${id}/force`);
   renderTransferTrashPage();
 }
 
