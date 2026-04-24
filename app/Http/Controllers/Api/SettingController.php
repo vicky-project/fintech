@@ -16,7 +16,7 @@ class SettingController extends Controller
     $settings = UserSetting::firstOrCreate(
       ['user_id' => $request->user()->id],
       [
-        'default_currency' => config('fintect.default_currency', 'IDR'),
+        'default_currency' => config('fintech.default_currency', 'IDR'),
         'pin_enabled' => false
       ]
     );
@@ -70,7 +70,12 @@ class SettingController extends Controller
 
     try {
       $user = $request->user();
-      $settings = UserSetting::firstOrCreate(['user_id', $user->id], ['default_currency' => config('fintect.default_currency', 'IDR')]);
+      $settings = UserSetting::firstOrCreate(
+        ['user_id' => $user->id],
+        [
+          'default_currency' => config('fintech.default_currency', 'IDR')
+        ]
+      );
 
       if (!$settings->pin_enabled) {
         return response()->json([
