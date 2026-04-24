@@ -282,6 +282,84 @@ class ReportService
   }
 
   /**
+  * Get category table summary for all years.
+  */
+  public function getCategoryTable(Request $request,
+    int $userId): array
+  {
+    $walletId = $request->input('wallet_id');
+    $type = $request->input('type',
+      'expense'); // 'income' or 'expense'
+
+    $cacheKey = $this->generateCategoryTableCache(
+      $userId,
+      $walletId,
+      $type
+    );
+
+    return Cache::remember($cacheKey,
+      $this->cacheTtl,
+      function () use ($userId, $walletId, $type) {
+        $query = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $userId));
+
+        if ($walletId) {
+          $query->where('wallet_id', $walletId);
+        }
+
+        if ($type === 'income') {
+          $query->income();
+        } else {
+          $query->expense();
+        }
+
+        $rawData = $query->with('category')
+        ->select(
+          'category_id',
+          DB::raw('YEAR(transaction_date) as year'),
+          DB::raw('SUM(amount) as total_raw')
+        )
+        ->groupBy('category_id', 'year')
+        ->orderBy('category_id')
+        ->orderBy('year')
+        ->get();
+
+        $currency = $this->getCurrency($userId, $walletId);
+
+        // Kumpulkan semua tahun yang muncul
+        $years = $rawData->pluck('year')->unique()->sort()->values();
+
+        // Kumpulkan kategori
+        $categories = [];
+        foreach ($rawData as $item) {
+          $catId = $item->category_id;
+          if (!isset($categories[$catId])) {
+            $categories[$catId] = [
+              'id' => $item->category->id,
+              'name' => $item->category->name,
+              'icon' => $item->category->icon,
+              'color' => $item->category->color,
+              'data' => [],
+            ];
+          }
+          $categories[$catId]['data'][$item->year] = (int) $item->total_raw / 100;
+        }
+
+        // Hitung total per tahun
+        $totals = [];
+        foreach ($years as $year) {
+          $totals[$year] = collect($categories)->sum(fn($cat) => $cat['data'][$year] ?? 0);
+        }
+
+        return [
+          'years' => $years,
+          'categories' => array_values($categories),
+          'totals' => $totals,
+          'currency' => $currency,
+        ];
+      });
+  }
+
+  /**
   * Doughnut chart data for weekly expenses by category.
   */
   public function getDoughnutWeeklyReport(Request $request,
@@ -503,5 +581,10 @@ class ReportService
   protected function generateAllYearCacheKey(int $userId, ?int $walletId): string
   {
     return "report_all_years_{$userId}_" . ($walletId ?? 'all');
+  }
+
+  protected function generateCategoryTableCache(int $userId, ?int $walletId, ?string $type): string
+  {
+    return "report_category_table_{$userId}_{$walletId}_{$type}";
   }
 }

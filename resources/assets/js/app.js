@@ -360,6 +360,9 @@ function navigateTo(page) {
     budgets: renderBudgetsPage,
   };
   if (pages[page]) pages[page]();
+  window.scrollTo({
+    top: 0, behavior: 'smooth'
+  });
 }
 
 function renderEmptyState() {
@@ -871,7 +874,7 @@ function renderReportsPage() {
   <div class="d-flex justify-content-between align-items-center mb-2">
   <h6>Distribusi Kategori</h6>
   <div class="btn-group btn-group-sm" role="group">
-  <button type="button" class="btn btn-outline-primary active" data-cat-type="expense" onclick="switchCategoryType('expense')">Pengeluaran</button>
+  <button type="button" class="btn btn-outline-danger active" data-cat-type="expense" onclick="switchCategoryType('expense')">Pengeluaran</button>
   <button type="button" class="btn btn-outline-success" data-cat-type="income" onclick="switchCategoryType('income')">Pemasukan</button>
   </div>
   </div>
@@ -879,13 +882,24 @@ function renderReportsPage() {
   <canvas id="categoryChart"></canvas>
   </div>
   <div id="category-total" class="text-center mt-2 small text-muted"></div>
+  <!-- Category Table -->
+  <div class="mt-4">
+  <h6>Detail per Tahun</h6>
+  <div id="category-table-container" class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+  <div class="text-center py-3">
+  <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+  <span class="ms-2">Memuat tabel...</span>
+  </div>
+  </div>
+  </div>
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;
   setTimeout(() => {
     updateReportPeriodIndicator();
     loadReportCharts();
-    loadCategoryChart(); // panggil chart kategori
+    loadCategoryChart();
+    loadCategoryTable();
   }, 50);
 }
 
@@ -1123,6 +1137,7 @@ function switchCategoryType(type) {
   });
   document.querySelector(`[data-cat-type="${type}"]`).classList.add('active');
   loadCategoryChart();
+  loadCategoryTable();
 }
 
 function updateReportPeriodIndicator() {
@@ -1165,6 +1180,80 @@ function updateReportPeriodIndicator() {
   }
 
   indicatorEl.innerHTML = `<i class="${icon} me-1"></i> ${text}`;
+}
+
+async function loadCategoryTable() {
+  const filter = state.reportFilter;
+  const params = new URLSearchParams();
+  if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
+  params.append('type', currentCategoryType);
+
+  try {
+    const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/reports/category-table?' + params.toString());
+    const data = res.data;
+    renderCategoryTable(data);
+  } catch (error) {
+    document.getElementById('category-table-container').innerHTML = '<p class="text-muted text-center">Gagal memuat tabel.</p>';
+  }
+}
+
+function renderCategoryTable(data) {
+  const container = document.getElementById('category-table-container');
+  if (!container) return;
+
+  const {
+    years,
+    categories,
+    totals,
+    currency
+  } = data;
+  if (categories.length === 0) {
+    container.innerHTML = '<p class="text-muted text-center">Tidak ada data untuk ditampilkan.</p>';
+    return;
+  }
+
+  const symbol = getCurrencySymbol(currency);
+  let html = `
+  <table class="table table-sm table-hover">
+  <thead class="table-light sticky-top">
+  <tr>
+  <th>Kategori</th>
+  ${years.map(y => `<th class="text-end">${y}</th>`).join('')}
+  <th class="text-end">Total</th>
+  </tr>
+  </thead>
+  <tbody>
+  `;
+
+  categories.forEach(cat => {
+    let rowTotal = 0;
+    html += `
+    <tr>
+    <td>
+    <i class="${cat.icon} me-1" style="color:${cat.color}"></i>
+    <small>${cat.name}</small>
+    </td>
+    ${years.map(y => {
+      const val = cat.data[y] || 0;
+      rowTotal += val;
+      return `<td class="text-end">${val ? formatNumberShort(val): '-'}</td>`;
+    }).join('')}
+    <td class="text-end fw-semibold">${symbol} ${formatNumberShort(rowTotal)}</td>
+    </tr>
+    `;
+  });
+
+  // Baris total
+  html += `
+  <tr class="table-primary fw-bold">
+  <td>Total</td>
+  ${years.map(y => `<td class="text-end">${symbol} ${formatNumberShort(totals[y] || 0)}</td>`).join('')}
+  <td class="text-end">${symbol} ${formatNumberShort(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
+  </tr>
+  </tbody>
+  </table>
+  `;
+  container.innerHTML = html;
 }
 
 // ==================== SETTINGS PAGE ====================

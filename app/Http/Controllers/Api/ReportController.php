@@ -187,4 +187,17 @@ class ReportController extends Controller
       'data' => $data
     ]);
   }
+
+  /**
+  * Category table report.
+  */
+  public function categoryTable(Request $request): JsonResponse
+  {
+    $data = $this->reportService->getCategoryTable($request, $request->user()->id);
+
+    return response()->json([
+      'success' => true,
+      'data' => $data
+    ]);
+  }
 }
