@@ -185,6 +185,7 @@
 @include('fintech::partials.modals.transfer')
 @include('fintech::partials.modals.suggest-category')
 @include('fintech::partials.modals.upload-statement')
+@include('fintech::partials.modals.budget')
 @endsection
 
 @push('scripts')
