@@ -1446,19 +1446,19 @@ function renderStatementList() {
     html += `
     <div class="list-group-item">
     <div class="d-flex justify-content-between align-items-start">
-    <div class="flex-grow-1">
-    <div class="d-flex align-items-center">
-    <i class="${icon} me-2 text-${statusClass}"></i>
-    <span class="fw-semibold">${s.original_filename}</span>
+    <div class="flex-grow-1 me-2" style="min-width: 0;">
+    <div class="d-flex align-items-start">
+    <i class="${icon} me-2 text-${statusClass} flex-shrink-0"></i>
+    <span class="fw-semibold" style="overflow-wrap: anywhere;">${s.original_filename}</span>
     </div>
-    <small class="text-muted">Bank: ${s.bank_code || '-'} | Dompet: ${s.wallet?.name || '-'}</small>
-    <div>
+    <small class="text-muted d-block mt-1">Bank: ${s.bank_code || '-'} | Dompet: ${s.wallet?.name || '-'}</small>
+    <div class="mt-1">
     <span class="badge bg-${statusClass}">${s.status_label}</span>
     ${s.remaining_count > 0 ? `<span class="badge bg-warning ms-1">${s.remaining_count} belum diimpor</span>`: ''}
     </div>
-    <small class="text-muted d-block">${formatDateTime(s.created_at)}</small>
+    <small class="text-muted d-block mt-1">${formatDateTime(s.created_at)}</small>
     </div>
-    <div class="dropdown">
+    <div class="dropdown flex-shrink-0">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
     <i class="bi bi-three-dots-vertical"></i>
     </button>
