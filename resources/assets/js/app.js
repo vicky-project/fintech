@@ -1214,7 +1214,7 @@ function renderCategoryTable(data) {
 
   const symbol = getCurrencySymbol(currency);
   let html = `
-  <table class="table table-sm table-hover">
+  <table class="table table-sm table-hover table-bordered">
   <thead class="table-light sticky-top">
   <tr>
   <th style="min-width: 150px;">Kategori</th>
