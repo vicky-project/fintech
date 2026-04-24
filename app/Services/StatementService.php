@@ -133,6 +133,7 @@ class StatementService
       }
 
       $result = $this->parserManager->parse($processedPath);
+      \Log::debug("Result parse.", ['data' => $result]);
 
       $statement->update([
         'bank_code' => $result['bank_code'],

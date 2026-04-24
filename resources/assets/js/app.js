@@ -475,13 +475,20 @@ async function renderTransactionsPage() {
     filterHtml: `
     <div class="row g-2 mb-3" id="transaction-stats"></div>
     <div class="row g-2 mb-3">
-    <div class="col-6">
+    <div class="col-4">
     <select class="form-select form-select-sm" id="filter-wallet">
     <option value="">Semua Dompet</option>
     ${state.wallets.map(w => `<option value="${w.id}" ${w.id == state.filters.wallet_id ? 'selected': ''}>${w.name}</option>`).join('')}
     </select>
     </div>
-    <div class="col-6">
+    <div class="col-4">
+    <select class="form-select form-select-sm" id="filter-type">
+    <option value="">Semua Tipe</option>
+    <option value="income" ${state.filters?.type === 'income' ? 'selected': ''}>Pemasukan</option>
+    <option value="expense" ${state.filters?.type === 'expense' ? 'selected': ''}>Pengeluaran</option>
+    </select>
+    </div>
+    <div class="col-4">
     <input type="month" class="form-control form-control-sm" id="filter-month"
     value="${state.filters.month || currentMonth}">
     </div>
@@ -571,6 +578,7 @@ function renderTransactionList() {
 
 function applyTransactionFilter() {
   state.filters.wallet_id = document.getElementById('filter-wallet')?.value || '';
+  state.filters.type = document.getElementById('filter-type')?.value || '';
   state.filters.month = document.getElementById('filter-month')?.value || '';
   state.transactionPage = 1;
   refreshTransactionList();
