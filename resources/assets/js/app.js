@@ -124,8 +124,6 @@ async function checkPinRequired() {
       document.getElementById('loading-overlay').innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
       return false;
     }
-    document.getElementById('loading-overlay').classList.remove('d-none');
-    document.getElementById('loading-overlay').innerHTML = `<div class="text-center"><div class="spinner-border text-primary mb-3"></div><p class="text-muted">Memuat data keuangan...</p></div>`;
   }
   return true;
 }
