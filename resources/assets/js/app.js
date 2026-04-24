@@ -551,16 +551,20 @@ function renderTransactionList() {
     const amountClass = trx.type === 'income' ? 'text-success': 'text-danger';
     const sign = trx.type === 'income' ? '': '-';
     return `
-    <div class="card mb-2"><div class="card-body p-3">
+    <div class="card mb-2" style="overflow: hidden;">
+    <div class="card-body p-3">
     <div class="d-flex justify-content-between align-items-start">
-    <div class="flex-grow-1" onclick="showTransactionDetailModal(${trx.id})" style="cursor: pointer;">
+    <div class="flex-grow-1 me-2" onclick="showTransactionDetailModal(${trx.id})" style="cursor: pointer; min-width: 0;">
     <div class="d-flex align-items-center">
-    <i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>
-    <div><div class="fw-semibold">${trx.category.name}</div><small class="text-muted">${trx.wallet.name} · ${formatDate(trx.transaction_date)}</small></div>
+    <i class="${trx.category.icon} me-2" style="color:${trx.category.color}; flex-shrink: 0;"></i>
+    <div style="min-width: 0;">
+    <div class="fw-semibold text-truncate">${trx.category.name}</div>
+    <small class="text-muted text-truncate d-block">${trx.wallet.name} · ${formatDate(trx.transaction_date)}</small>
     </div>
-    ${trx.description ? `<small class="text-muted d-block mt-1">${trx.description}</small>`: ''}
     </div>
-    <div class="d-flex align-items-center">
+    ${trx.description ? `<small class="text-muted d-block mt-1 text-truncate">${trx.description}</small>`: ''}
+    </div>
+    <div class="d-flex align-items-center flex-shrink-0">
     <span class="${amountClass} fw-bold me-2" title="${trx.formatted_amount}">${sign}${formatNumberShort(trx.amount)}</span>
     <div class="dropdown" onclick="event.stopPropagation()">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
@@ -571,7 +575,8 @@ function renderTransactionList() {
     </div>
     </div>
     </div>
-    </div></div>
+    </div>
+    </div>
     `;
   }).join('');
 }
