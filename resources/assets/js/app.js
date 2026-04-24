@@ -91,7 +91,6 @@ async function checkPinRequired() {
           pinError.classList.remove('d-none');
           pinInput.value = '';
           pinInput.focus();
-          tgApp.showToast(error.message);
         }
       };
 
