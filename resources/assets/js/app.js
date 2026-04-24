@@ -1186,7 +1186,7 @@ async function loadCategoryTable() {
   const filter = state.reportFilter;
   const params = new URLSearchParams();
   if (filter.wallet_id) params.append('wallet_id', filter.wallet_id);
-  params.append('type', currentCategoryType);
+  params.append('type', state.categoryChartType);
 
   try {
     const res = await tgApp.fetchWithAuth(BASE_URL + '/api/fintech/reports/category-table?' + params.toString());
