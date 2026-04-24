@@ -562,7 +562,10 @@ function renderTransactionList() {
     <small class="text-muted text-truncate d-block">${trx.wallet.name} · ${formatDate(trx.transaction_date)}</small>
     </div>
     </div>
-    ${trx.description ? `<small class="text-muted d-block mt-1 text-truncate">${trx.description}</small>`: ''}
+    ${trx.description ? `
+    <div class="mt-1" style="overflow-x: auto; white-space: nowrap; max-width: 100%; -webkit-overflow-scrolling: touch;">
+    <small class="text-muted">${trx.description}</small>
+    </div>`: ''}
     </div>
     <div class="d-flex align-items-center flex-shrink-0">
     <span class="${amountClass} fw-bold me-2" title="${trx.formatted_amount}">${sign}${formatNumberShort(trx.amount)}</span>
