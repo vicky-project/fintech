@@ -726,8 +726,7 @@ class CategorySeeder extends Seeder
         'name' => 'Transfer & Keuangan',
         'type' => CategoryType::EXPENSE,
         'icon' => 'bi-arrow-left-right',
-        'color' => '#6c757d',
-        // Abu‑abu netral
+        'color' => '#708090',
         'keywords' => ['transfer',
           'trsf',
           'bi fast',
