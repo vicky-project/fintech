@@ -80,6 +80,7 @@ class MandiriPdfParser extends AbstractBankParser
   {
     $text = $this->extractText($filePath);
     $currency = $this->extractCurrency($text);
+    \Log::debug("Found currency: ". $currency);
     $this->currency = $currency;
     $lines = $this->prepareLines($text);
     $transactions = $this->extractTransactions($lines);
