@@ -51,7 +51,7 @@
   // Simpan ID budget yang sedang diedit
   let editingBudgetId = null;
 
-  function showAddBudgetModal() {
+  window.showAddBudgetModal = function() {
     editingBudgetId = null;
     document.getElementById('budget-id').value = '';
     document.getElementById('budgetModalTitle').textContent = 'Tambah Budget';
@@ -63,7 +63,7 @@
     new bootstrap.Modal(document.getElementById('budgetModal')).show();
   }
 
-  async function showEditBudgetModal(budgetId) {
+  window.showEditBudgetModal = function(budgetId) {
     const budget = state.budgets.find(b => b.id === budgetId);
     if (!budget) return;
 
