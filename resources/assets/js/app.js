@@ -138,9 +138,6 @@ async function checkPinRequired() {
       `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
       return false;
     }
-
-    // PIN berhasil, state sudah di-update oleh submitPin
-    // Sembunyikan loading overlay (jika masih terlihat)
     document.getElementById('loading-overlay').classList.add('d-none');
   }
   return true;
@@ -161,7 +158,9 @@ function showPinModal(callback) {
   pinInput.disabled = false;
 
   modalEl.addEventListener('shown.bs.modal', () => {
-    pinInput.focus();
+    setTimeout(()=> {
+      pinInput.focus();
+    }, 150);
   }, {
     once: true
   });

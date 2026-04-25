@@ -165,7 +165,7 @@
               <input type="password" class="form-control form-control-lg text-center"
               id="pinInput" name="pin" inputmode="numeric"
               pattern="[0-9]*" maxlength="6" minlength="4" required
-              placeholder="Masukkan PIN">
+              placeholder="Masukkan PIN" autofocus>
             </div>
             <div id="pinError" class="text-danger small mb-2 d-none">
               PIN salah. Silakan coba lagi.
