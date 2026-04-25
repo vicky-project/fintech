@@ -587,7 +587,7 @@ async function renderTransactionsPage() {
     <button class="btn btn-sm btn-outline-warning me-1" onclick="showBulkDeleteModal()" title="Hapus Massal">
     <i class="bi bi-calendar-x"></i>
     </button>
-    <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTrash()">
+    <button class="btn btn-sm btn-outline-danger me-1" onclick="navigateToTrash()">
     <i class="bi bi-trash"></i>
     </button>
     <button class="btn btn-sm btn-primary" onclick="showAddTransactionModal()">
@@ -800,7 +800,7 @@ async function renderTransfersPage() {
     listContainerId: 'transfer-list',
     paginationId: 'transfer-pagination',
     extraHeaderButtons: `
-    <button class="btn btn-sm btn-outline-secondary me-1" onclick="navigateToTransferTrash()"><i class="bi bi-trash"></i></button>
+    <button class="btn btn-sm btn-outline-danger me-1" onclick="navigateToTransferTrash()"><i class="bi bi-trash"></i></button>
     <button class="btn btn-sm btn-primary" onclick="showAddTransferModal()"><i class="bi bi-plus"></i></button>
     `,
     loadFn: refreshTransferList
