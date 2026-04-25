@@ -583,11 +583,11 @@ async function renderTransactionsPage() {
     </div>
     <div class="mb-3">
     <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="applyTransactionFilter()">
-    <i class="bi bi-funnel me-1"></i>Terapkan
-    </button>
     <button class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="resetTransactionFilter()">
     <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+    </button>
+    <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="applyTransactionFilter()">
+    <i class="bi bi-funnel me-1"></i>Terapkan
     </button>
     </div>
     </div>
