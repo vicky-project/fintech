@@ -69,6 +69,8 @@ async function interceptAndFetch(requestFn) {
       });
       if (pinOk) {
         return await requestFn();
+      } else {
+        throw new Error('Verifikasi PIN diperlukan');
       }
     }
     throw error;
@@ -118,12 +120,21 @@ async function checkPinRequired() {
   const settings = state.userSettings;
   if (settings && settings.pin_enabled) {
     document.getElementById('loading-overlay').classList.add('d-none');
+
+    // Tampilkan modal PIN dan tunggu hasilnya
     const pinOk = await new Promise((resolve) => showPinModal(resolve));
+
     if (!pinOk) {
+      // PIN tidak berhasil, tampilkan pesan terkunci
       document.getElementById('loading-overlay').classList.remove('d-none');
-      document.getElementById('loading-overlay').innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
+      document.getElementById('loading-overlay').innerHTML =
+      `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
       return false;
     }
+
+    // PIN berhasil, state sudah di-update oleh submitPin
+    // Sembunyikan loading overlay (jika masih terlihat)
+    document.getElementById('loading-overlay').classList.add('d-none');
   }
   return true;
 }
