@@ -576,9 +576,14 @@ async function renderTransactionsPage() {
     </div>
     </div>
     <div class="mb-3">
-    <button class="btn btn-sm btn-outline-primary w-100" onclick="applyTransactionFilter()">
-    <i class="bi bi-funnel me-1"></i>Terapkan Filter
+    <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="applyTransactionFilter()">
+    <i class="bi bi-funnel me-1"></i>Terapkan
     </button>
+    <button class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="resetTransactionFilter()">
+    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+    </button>
+    </div>
     </div>
     `,
     listContainerId: 'transaction-list',
@@ -597,6 +602,22 @@ async function renderTransactionsPage() {
     loadFn: refreshTransactionList
   });
   updateTransactionStats();
+}
+
+function resetTransactionFilter() {
+  // Reset state filter ke default
+  state.filters.wallet_id = '';
+  state.filters.type = '';
+  state.filters.month = '';
+  state.transactionPage = 1;
+
+  // Reset tampilan elemen input/select
+  document.getElementById('filter-wallet').value = '';
+  document.getElementById('filter-type').value = '';
+  document.getElementById('filter-month').value = new Date().toISOString().slice(0, 7); // set ke bulan ini
+
+  // Muat ulang data transaksi tanpa filter
+  refreshTransactionList();
 }
 
 async function refreshTransactionList(page) {
