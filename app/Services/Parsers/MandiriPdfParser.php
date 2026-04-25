@@ -97,7 +97,7 @@ class MandiriPdfParser extends AbstractBankParser
     $normalized = preg_replace('/\s+/', '', $text);
     \Log::debug("Normalized", [
       'text' => $normalized]);
-    if (preg_match('/Mata\s*Uang\s*\/?\s*Currency\s*.*?:\s*([A-Z]{3})/i', $normalized, $matches)) {
+    if (preg_match('/Currency.*?([A-Z]{3})/i', $normalized, $matches)) {
       return strtoupper($matches[1]);
     }
 
@@ -129,7 +129,7 @@ class MandiriPdfParser extends AbstractBankParser
   private function extractTransactions(array $lines): array
   {
     if (empty($lines)) {
-      dd($lines);
+      return [];
     }
     $transactions = [];
     $lastDateIndex = 0;
