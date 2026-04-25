@@ -19,6 +19,29 @@ class TransferService
   }
 
   /**
+  * Cek apakah cache driver mendukung tags.
+  */
+  private static function supportsTags(): bool
+  {
+    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
+  }
+
+  /**
+  * Simpan cache dengan tags jika didukung, jika tidak pakai cache polos.
+  * Tag dikunci: untuk transfer aktif ['transfers', "user_{userId}"]
+  *               untuk trash ['transfers_trashed', "user_{userId}"]
+  */
+  private function rememberWithFallback(int $userId, string $cacheKey, int $ttl, callable $callback, string $tagType = 'transfers'): mixed
+  {
+    $tags = [$tagType,
+      "user_{$userId}"];
+    if (self::supportsTags()) {
+      return Cache::tags($tags)->remember($cacheKey, $ttl, $callback);
+    }
+    return Cache::remember($cacheKey, $ttl, $callback);
+  }
+
+  /**
   * Get paginated transfers for user (cached).
   */
   public function getTransfers(Authenticatable $user, array $filters, int $perPage = 20): array
@@ -28,7 +51,7 @@ class TransferService
     $filterHash = md5(json_encode($filters));
     $cacheKey = "transfers_user_{$userId}_filter_{$filterHash}_page_{$page}_per_{$perPage}";
 
-    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($user, $filters, $perPage) {
+    return $this->rememberWithFallback($userId, $cacheKey, $this->cacheTtl, function () use ($user, $filters, $perPage) {
       $query = Transfer::with(['fromWallet', 'toWallet'])
       ->where(function ($q) use ($user) {
         $q->whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
@@ -71,7 +94,8 @@ class TransferService
       1);
     $cacheKey = "transfers_trashed_user_{$userId}_page_{$page}_per_{$perPage}";
 
-    return Cache::remember($cacheKey,
+    return $this->rememberWithFallback($userId,
+      $cacheKey,
       $this->cacheTtl,
       function () use ($user, $perPage) {
         $query = Transfer::onlyTrashed()
@@ -304,10 +328,16 @@ class TransferService
   */
   protected function clearTransferCaches(int $userId, int $fromWalletId, int $toWalletId): void
   {
-    Cache::forget("transfers_user_{$userId}_filter_" . md5(json_encode([])) . "_page_1_per_20");
-    Cache::forget("transfers_trashed_user_{$userId}_page_1_per_20");
+    if (self::supportsTags()) {
+      Cache::tags(['transfers', "user_{$userId}"])->flush();
+      Cache::tags(['transfers_trashed', "user_{$userId}"])->flush();
+    } else {
+      // Fallback hapus beberapa key yang mungkin (tidak sempurna, tapi cukup)
+      Cache::forget("transfers_user_{$userId}_filter_" . md5(json_encode([])) . "_page_1_per_20");
+      Cache::forget("transfers_trashed_user_{$userId}_page_1_per_20");
+    }
 
-    // Juga clear cache wallet
+    // Clear wallet caches (tetap)
     $this->walletService->clearWalletCaches($fromWalletId, $userId);
     $this->walletService->clearWalletCaches($toWalletId, $userId);
   }

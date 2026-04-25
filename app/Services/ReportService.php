@@ -9,83 +9,102 @@ use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
-use Brick\Money\Money;
 
 class ReportService
 {
   protected int $cacheTtl = 3600; // 1 hour
 
   /**
+  * Cek apakah cache driver mendukung tags.
+  */
+  private static function supportsTags(): bool
+  {
+    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
+  }
+
+  /**
+  * Simpan cache dengan tags jika didukung, jika tidak pakai cache polos.
+  * Tag sudah dikunci: ['report', "user_{userId}"].
+  */
+  private function rememberWithFallback(int $userId, string $cacheKey, int $ttl, callable $callback): mixed
+  {
+    if (self::supportsTags()) {
+      return Cache::tags(['report', "user_{$userId}"])->remember($cacheKey, $ttl, $callback);
+    }
+    return Cache::remember($cacheKey, $ttl, $callback);
+  }
+
+  /**
+  * Clear semua cache laporan untuk user tertentu.
+  */
+  public static function clearReportCaches(int $userId): void
+  {
+    try {
+      if (self::supportsTags()) {
+        Cache::tags(['report', "user_{$userId}"])->flush();
+      }
+      // Untuk driver non-taggable, kita tidak bisa menghapus spesifik.
+    } catch (\Exception $e) {
+      \Log::warning('Failed to clear report caches: ' . $e->getMessage());
+    }
+  }
+
+  /**
   * Weekly report data.
   */
-  public function getWeeklyReport(Request $request,
-    int $userId): array
+  public function getWeeklyReport(Request $request, int $userId): array
   {
-    $year = $request->input('year',
-      now()->year);
-    $week = $request->input('week',
-      now()->weekOfYear);
+    $year = (int) $request->input('year', now()->year);
+    $week = (int) $request->input('week', now()->weekOfYear);
     $walletId = $request->input('wallet_id');
 
-    $cacheKey = $this->generateWeeklyCacheKey($userId,
-      $year,
-      $week,
-      $walletId);
+    $cacheKey = $this->generateWeeklyCacheKey($userId, $year, $week, $walletId);
 
-    return Cache::remember($cacheKey,
-      $this->cacheTtl,
-      function () use ($userId, $year, $week, $walletId) {
-        $startDate = now()->setISODate($year, $week)->startOfWeek();
-        $endDate = now()->setISODate($year, $week)->endOfWeek();
+    return $this->rememberWithFallback($userId, $cacheKey, $this->cacheTtl, function () use ($userId, $year, $week, $walletId) {
+      $startDate = now()->setISODate($year, $week)->startOfWeek();
+      $endDate = now()->setISODate($year, $week)->endOfWeek();
 
-        $query = $this->buildBaseQuery($userId, $walletId, $startDate, $endDate);
+      $query = $this->buildBaseQuery($userId, $walletId, $startDate, $endDate);
+      $currency = $this->getCurrency($userId, $walletId);
 
-        $currency = $this->getCurrency($userId, $walletId);
+      $dailyData = [];
+      $currentDate = $startDate->copy();
+      while ($currentDate <= $endDate) {
+        $dailyData[$currentDate->toDateString()] = ['income' => 0,
+          'expense' => 0];
+        $currentDate->addDay();
+      }
 
-        // Initialize daily data
-        $dailyData = [];
-        $currentDate = $startDate->copy();
-        while ($currentDate <= $endDate) {
-          $dailyData[$currentDate->toDateString()] = ['income' => 0,
-            'expense' => 0];
-          $currentDate->addDay();
+      $rawData = $query->select('transaction_date', 'type', DB::raw('SUM(amount) as total_raw'))
+      ->groupBy('transaction_date', 'type')
+      ->get();
+
+      foreach ($rawData as $item) {
+        $date = $item->transaction_date->toDateString();
+        $amount = (int) $item->total_raw / 100;
+        if ($item->type === TransactionType::INCOME) {
+          $dailyData[$date]['income'] += $amount;
+        } elseif ($item->type === TransactionType::EXPENSE) {
+          $dailyData[$date]['expense'] += $amount;
         }
+      }
 
-        $rawData = $query->select(
-          'transaction_date',
-          'type',
-          DB::raw('SUM(amount) as total_raw')
-        )
-        ->groupBy('transaction_date', 'type')
-        ->get();
+      $labels = [];
+      $income = [];
+      $expense = [];
+      foreach ($dailyData as $date => $values) {
+        $labels[] = date('D', strtotime($date));
+        $income[] = $values['income'];
+        $expense[] = $values['expense'];
+      }
 
-        foreach ($rawData as $item) {
-          $date = $item->transaction_date->toDateString();
-          $amount = (int) $item->total_raw / 100;
-          if ($item->type === TransactionType::INCOME) {
-            $dailyData[$date]['income'] += $amount;
-          } elseif ($item->type === TransactionType::EXPENSE) {
-            $dailyData[$date]['expense'] += $amount;
-          }
-        }
-
-        $labels = [];
-        $income = [];
-        $expense = [];
-
-        foreach ($dailyData as $date => $values) {
-          $labels[] = date('D', strtotime($date));
-          $income[] = $values['income'];
-          $expense[] = $values['expense'];
-        }
-
-        return [
-          'labels' => $labels,
-          'income' => $income,
-          'expense' => $expense,
-          'currency' => $currency,
-        ];
-      });
+      return [
+        'labels' => $labels,
+        'income' => $income,
+        'expense' => $expense,
+        'currency' => $currency,
+      ];
+    });
   }
 
   /**
@@ -94,9 +113,9 @@ class ReportService
   public function getMonthlyReport(Request $request,
     int $userId): array
   {
-    $year = $request->input('year',
+    $year = (int) $request->input('year',
       now()->year);
-    $month = $request->input('month',
+    $month = (int) $request->input('month',
       now()->month);
     $walletId = $request->input('wallet_id');
 
@@ -105,14 +124,14 @@ class ReportService
       $month,
       $walletId);
 
-    return Cache::remember($cacheKey,
+    return $this->rememberWithFallback($userId,
+      $cacheKey,
       $this->cacheTtl,
       function () use ($userId, $year, $month, $walletId) {
         $startDate = now()->setDate($year, $month, 1)->startOfDay();
         $endDate = now()->setDate($year, $month, 1)->endOfMonth()->endOfDay();
 
         $query = $this->buildBaseQuery($userId, $walletId, $startDate, $endDate);
-
         $currency = $this->getCurrency($userId, $walletId);
 
         $daysInMonth = $endDate->day;
@@ -124,11 +143,7 @@ class ReportService
           $labels[] = (string) $i;
         }
 
-        $rawData = $query->select(
-          DB::raw('DAY(transaction_date) as day'),
-          'type',
-          DB::raw('SUM(amount) as total_raw')
-        )
+        $rawData = $query->select(DB::raw('DAY(transaction_date) as day'), 'type', DB::raw('SUM(amount) as total_raw'))
         ->groupBy('day', 'type')
         ->get();
 
@@ -157,7 +172,7 @@ class ReportService
   public function getYearlyReport(Request $request,
     int $userId): array
   {
-    $year = $request->input('year',
+    $year = (int) $request->input('year',
       now()->year);
     $walletId = $request->input('wallet_id');
 
@@ -165,14 +180,14 @@ class ReportService
       $year,
       $walletId);
 
-    return Cache::remember($cacheKey,
+    return $this->rememberWithFallback($userId,
+      $cacheKey,
       $this->cacheTtl,
       function () use ($userId, $year, $walletId) {
         $startDate = now()->setDate($year, 1, 1)->startOfDay();
         $endDate = now()->setDate($year, 12, 31)->endOfDay();
 
         $query = $this->buildBaseQuery($userId, $walletId, $startDate, $endDate);
-
         $currency = $this->getCurrency($userId, $walletId);
 
         $labels = ['Jan',
@@ -190,11 +205,7 @@ class ReportService
         $income = array_fill(1, 12, 0);
         $expense = array_fill(1, 12, 0);
 
-        $rawData = $query->select(
-          DB::raw('MONTH(transaction_date) as month'),
-          'type',
-          DB::raw('SUM(amount) as total_raw')
-        )
+        $rawData = $query->select(DB::raw('MONTH(transaction_date) as month'), 'type', DB::raw('SUM(amount) as total_raw'))
         ->groupBy('month', 'type')
         ->get();
 
@@ -228,7 +239,8 @@ class ReportService
     $cacheKey = $this->generateAllYearCacheKey($userId,
       $walletId);
 
-    return Cache::remember($cacheKey,
+    return $this->rememberWithFallback($userId,
+      $cacheKey,
       $this->cacheTtl,
       function () use ($userId, $walletId) {
         $query = Transaction::whereHas('wallet', function ($q) use ($userId, $walletId) {
@@ -241,11 +253,9 @@ class ReportService
         $currency = $this->getCurrency($userId,
           $walletId);
 
-        $rawData = $query->select(
-          DB::raw('YEAR(transaction_date) as year'),
+        $rawData = $query->select(DB::raw('YEAR(transaction_date) as year'),
           'type',
-          DB::raw('SUM(amount) as total_raw')
-        )
+          DB::raw('SUM(amount) as total_raw'))
         ->groupBy('year',
           'type')
         ->orderBy('year')
@@ -289,15 +299,14 @@ class ReportService
   {
     $walletId = $request->input('wallet_id');
     $type = $request->input('type',
-      'expense'); // 'income' or 'expense'
+      'expense');
 
-    $cacheKey = $this->generateCategoryTableCache(
-      $userId,
+    $cacheKey = $this->generateCategoryTableCache($userId,
       $walletId,
-      $type
-    );
+      $type);
 
-    return Cache::remember($cacheKey,
+    return $this->rememberWithFallback($userId,
+      $cacheKey,
       $this->cacheTtl,
       function () use ($userId, $walletId, $type) {
         $query = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $userId));
@@ -313,11 +322,7 @@ class ReportService
         }
 
         $rawData = $query->with('category')
-        ->select(
-          'category_id',
-          DB::raw('YEAR(transaction_date) as year'),
-          DB::raw('SUM(amount) as total_raw')
-        )
+        ->select('category_id', DB::raw('YEAR(transaction_date) as year'), DB::raw('SUM(amount) as total_raw'))
         ->groupBy('category_id', 'year')
         ->orderBy('category_id')
         ->orderBy('year')
@@ -325,10 +330,8 @@ class ReportService
 
         $currency = $this->getCurrency($userId, $walletId);
 
-        // Kumpulkan semua tahun yang muncul
         $years = $rawData->pluck('year')->unique()->sort()->values();
 
-        // Kumpulkan kategori
         $categories = [];
         foreach ($rawData as $item) {
           $catId = $item->category_id;
@@ -344,7 +347,6 @@ class ReportService
           $categories[$catId]['data'][$item->year] = (int) $item->total_raw / 100;
         }
 
-        // Hitung total per tahun
         $totals = [];
         foreach ($years as $year) {
           $totals[$year] = collect($categories)->sum(fn($cat) => $cat['data'][$year] ?? 0);
@@ -373,7 +375,8 @@ class ReportService
       $weekOffset,
       $walletId);
 
-    return Cache::remember($cacheKey,
+    return $this->rememberWithFallback($userId,
+      $cacheKey,
       $this->cacheTtl,
       function () use ($userId, $weekOffset, $walletId) {
         $startDate = now()->subWeeks($weekOffset)->startOfWeek();
@@ -389,10 +392,8 @@ class ReportService
           }
         });
 
-        $rawData = $query->select(
-          'category_id',
-          DB::raw('SUM(amount) as total_raw')
-        )
+        $rawData = $query->select('category_id',
+          DB::raw('SUM(amount) as total_raw'))
         ->groupBy('category_id')
         ->orderByDesc('total_raw')
         ->get();
@@ -426,14 +427,14 @@ class ReportService
   public function getCategorySummary(Request $request, int $userId): array
   {
     $walletId = $request->input('wallet_id');
-    $periodType = $request->input('period_type', 'monthly'); // 'monthly', 'yearly', 'all_years'
+    $periodType = $request->input('period_type', 'monthly');
     $year = (int) $request->input('year', now()->year);
     $month = (int) $request->input('month', now()->month);
-    $type = $request->input('type', 'expense'); // 'income' or 'expense'
+    $type = $request->input('type', 'expense');
 
-    $cacheKey = "report_category_{$userId}_{$periodType}_{$year}_{$month}_{$walletId}_{$type}";
+    $cacheKey = sprintf("report_category_%d_%s_%d_%d_%s_%s", $userId, $periodType, $year, $month, $walletId ?? 'all', $type);
 
-    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($userId,
+    return $this->rememberWithFallback($userId, $cacheKey, $this->cacheTtl, function () use ($userId,
       $walletId,
       $periodType,
       $year,
@@ -446,15 +447,12 @@ class ReportService
         $query->where('wallet_id', $walletId);
       }
 
-      // Filter by period
       if ($periodType === 'monthly') {
-        $query->whereYear('transaction_date', $year)
-        ->whereMonth('transaction_date', $month);
+        $query->whereYear('transaction_date', $year)->whereMonth('transaction_date', $month);
       } elseif ($periodType === 'yearly') {
         $query->whereYear('transaction_date', $year);
       }
 
-      // Filter by type (income/expense)
       if ($type === 'income') {
         $query->income();
       } else {
@@ -490,51 +488,27 @@ class ReportService
     });
   }
 
-  /**
-  * Clear all report caches for a user (call this when transactions/wallets change).
-  */
-  public static function clearReportCaches(int $userId): void
-  {
-    try {
-      $redis = Cache::store('redis')->getRedis();
-      $keys = $redis->keys("report_*_{$userId}_*");
-      foreach ($keys as $key) {
-        Cache::forget($key);
-      }
-    } catch (\Exception $e) {
-      Cache::flush();
-    }
-  }
-
   // ------------------------------------------------------------------------
   // Helper methods
   // ------------------------------------------------------------------------
 
-  /**
-  * Build base query for transactions.
-  */
   protected function buildBaseQuery(int $userId,
     ?int $walletId,
     $startDate,
-    $endDate) {
-    $query = Transaction::whereBetween('transaction_date',
+    $endDate): \Illuminate\Database\Eloquent\Builder
+  {
+    return Transaction::whereBetween('transaction_date',
       [$startDate,
         $endDate])
     ->whereHas('wallet',
-      function ($q) use ($userId,
-        $walletId) {
-        $q->where('user_id',
-          $userId);
+      function ($q) use ($userId, $walletId) {
+        $q->where('user_id', $userId);
         if ($walletId) {
           $q->where('id', $walletId);
         }
       });
-    return $query;
   }
 
-  /**
-  * Get currency code.
-  */
   protected function getCurrency(int $userId,
     ?int $walletId): string
   {
@@ -545,46 +519,33 @@ class ReportService
     return config('fintech.default_currency', 'IDR');
   }
 
-  /**
-  * Generate cache key for weekly report.
-  */
   protected function generateWeeklyCacheKey(int $userId, int $year, int $week, ?int $walletId): string
   {
-    return "report_weekly_{$userId}_{$year}_{$week}_" . ($walletId ?? 'all');
+    return sprintf("report_weekly_%d_%d_%d_%s", $userId, $year, $week, $walletId ?? 'all');
   }
 
-
-  /**
-  * Generate cache key for monthly report.
-  */
   protected function generateMonthlyCacheKey(int $userId, int $year, int $month, ?int $walletId): string
   {
-    return "report_monthly_{$userId}_{$year}_{$month}_" . ($walletId ?? 'all');
+    return sprintf("report_monthly_%d_%d_%d_%s", $userId, $year, $month, $walletId ?? 'all');
   }
 
-  /**
-  * Generate cache key for yearly report.
-  */
   protected function generateYearlyCacheKey(int $userId, int $year, ?int $walletId): string
   {
-    return "report_yearly_{$userId}_{$year}_" . ($walletId ?? 'all');
+    return sprintf("report_yearly_%d_%d_%s", $userId, $year, $walletId ?? 'all');
   }
 
-  /**
-  * Generate cache key for doughnut weekly report.
-  */
   protected function generateDoughnutCacheKey(int $userId, int $weekOffset, ?int $walletId): string
   {
-    return "report_doughnut_{$userId}_{$weekOffset}_" . ($walletId ?? 'all');
+    return sprintf("report_doughnut_%d_%d_%s", $userId, $weekOffset, $walletId ?? 'all');
   }
 
   protected function generateAllYearCacheKey(int $userId, ?int $walletId): string
   {
-    return "report_all_years_{$userId}_" . ($walletId ?? 'all');
+    return sprintf("report_all_years_%d_%s", $userId, $walletId ?? 'all');
   }
 
   protected function generateCategoryTableCache(int $userId, ?int $walletId, ?string $type): string
   {
-    return "report_category_{$userId}_{$walletId}_{$type}";
+    return sprintf("report_category_table_%d_%s_%s", $userId, $walletId ?? 'all', $type ?? 'expense');
   }
 }

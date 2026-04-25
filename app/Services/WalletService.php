@@ -10,22 +10,36 @@ use Illuminate\Support\Facades\DB;
 
 class WalletService
 {
+  protected int $cacheTtl = 3600; // 1 hour
+
   /**
-  * Cache TTL in seconds (1 hour).
+  * Cek apakah cache driver mendukung tags.
   */
-  protected int $cacheTtl = 3600;
+  private static function supportsTags(): bool
+  {
+    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
+  }
+
+  /**
+  * Simpan cache dengan tags jika didukung, jika tidak pakai cache polos.
+  * Tag sudah dikunci: ['wallets', "user_{userId}"].
+  */
+  private function rememberWithFallback(int $userId, string $cacheKey, int $ttl, callable $callback): mixed
+  {
+    if (self::supportsTags()) {
+      return Cache::tags(['wallets', "user_{$userId}"])->remember($cacheKey, $ttl, $callback);
+    }
+    return Cache::remember($cacheKey, $ttl, $callback);
+  }
 
   /**
   * Get all active wallets for a user with formatting (cached).
-  *
-  * @param \Illuminate\Contracts\Auth\Authenticatable $user
-  * @return array
   */
   public function getUserWallets($user): array
   {
     $cacheKey = $this->getUserWalletsCacheKey($user->id);
 
-    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($user) {
+    return $this->rememberWithFallback($user->id, $cacheKey, $this->cacheTtl, function () use ($user) {
       return Wallet::where('user_id', $user->id)
       ->where('is_active', true)
       ->with('currencyDetails')
@@ -38,11 +52,6 @@ class WalletService
 
   /**
   * Create a new wallet, clear related caches.
-  *
-  * @param \Illuminate\Contracts\Auth\Authenticatable $user
-  * @param array $data
-  * @return Wallet
-  * @throws MoneyMismatchException
   */
   public function createWallet($user, array $data): Wallet
   {
@@ -63,7 +72,7 @@ class WalletService
       return $wallet;
     });
 
-    $this->clearUserWalletsCache($user->id);
+    $this->clearWalletCaches($wallet->id, $user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
 
@@ -72,11 +81,6 @@ class WalletService
 
   /**
   * Get detailed wallet information (cached).
-  *
-  * @param \Illuminate\Contracts\Auth\Authenticatable $user
-  * @param Wallet $wallet
-  * @return array
-  * @throws \Symfony\Component\HttpKernel\Exception\HttpException
   */
   public function getWalletDetail($user, Wallet $wallet): array
   {
@@ -84,7 +88,7 @@ class WalletService
 
     $cacheKey = $this->getWalletDetailCacheKey($wallet->id);
 
-    $data = Cache::remember($cacheKey, $this->cacheTtl, function () use ($wallet) {
+    return $this->rememberWithFallback($user->id, $cacheKey, $this->cacheTtl, function () use ($wallet) {
       $wallet->load('currencyDetails');
 
       $formatted = $this->formatWalletData($wallet);
@@ -92,22 +96,10 @@ class WalletService
 
       return $formatted;
     });
-
-    // Re-attach transaction_count fresh? Already included in cache.
-    // If you need real-time transaction count, you can disable caching for count.
-    // But for consistency, we cache it.
-
-    return $data;
   }
 
   /**
   * Update wallet, clear related caches.
-  *
-  * @param \Illuminate\Contracts\Auth\Authenticatable $user
-  * @param Wallet $wallet
-  * @param array $data
-  * @return Wallet
-  * @throws \Symfony\Component\HttpKernel\Exception\HttpException
   */
   public function updateWallet($user, Wallet $wallet, array $data): Wallet
   {
@@ -127,12 +119,7 @@ class WalletService
   }
 
   /**
-  * Delete a wallet (soft delete or force delete) and clear caches.
-  *
-  * @param \Illuminate\Contracts\Auth\Authenticatable $user
-  * @param Wallet $wallet
-  * @return bool|null
-  * @throws \Symfony\Component\HttpKernel\Exception\HttpException
+  * Delete a wallet and clear caches.
   */
   public function deleteWallet($user, Wallet $wallet): ?bool
   {
@@ -151,9 +138,6 @@ class WalletService
 
   /**
   * Format wallet data for API response.
-  *
-  * @param Wallet $wallet
-  * @return array
   */
   protected function formatWalletData(Wallet $wallet): array
   {
@@ -177,10 +161,6 @@ class WalletService
 
   /**
   * Ensure the authenticated user owns the wallet.
-  *
-  * @param \Illuminate\Contracts\Auth\Authenticatable $user
-  * @param Wallet $wallet
-  * @throws \Symfony\Component\HttpKernel\Exception\HttpException
   */
   protected function ensureUserOwnsWallet($user, Wallet $wallet): void
   {
@@ -191,9 +171,6 @@ class WalletService
 
   /**
   * Get cache key for user's wallets list.
-  *
-  * @param int $userId
-  * @return string
   */
   protected function getUserWalletsCacheKey(int $userId): string
   {
@@ -202,9 +179,6 @@ class WalletService
 
   /**
   * Get cache key for single wallet detail.
-  *
-  * @param int $walletId
-  * @return string
   */
   protected function getWalletDetailCacheKey(int $walletId): string
   {
@@ -212,37 +186,17 @@ class WalletService
   }
 
   /**
-  * Clear cache for user's wallets list.
-  *
-  * @param int $userId
-  * @return void
-  */
-  public function clearUserWalletsCache(int $userId): void
-  {
-    Cache::forget($this->getUserWalletsCacheKey($userId));
-  }
-
-  /**
-  * Clear cache for a specific wallet detail.
-  *
-  * @param int $walletId
-  * @return void
-  */
-  public function clearWalletDetailCache(int $walletId): void
-  {
-    Cache::forget($this->getWalletDetailCacheKey($walletId));
-  }
-
-  /**
   * Clear all caches related to a wallet (detail + user list).
-  *
-  * @param int $walletId
-  * @param int $userId
-  * @return void
   */
   public function clearWalletCaches(int $walletId, int $userId): void
   {
-    $this->clearWalletDetailCache($walletId);
-    $this->clearUserWalletsCache($userId);
+    // Hapus tag cache jika didukung
+    if (self::supportsTags()) {
+      Cache::tags(['wallets', "user_{$userId}"])->flush();
+    } else {
+      // Fallback: hapus masing-masing key
+      Cache::forget($this->getUserWalletsCacheKey($userId));
+      Cache::forget($this->getWalletDetailCacheKey($walletId));
+    }
   }
 }

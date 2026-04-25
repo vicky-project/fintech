@@ -993,7 +993,9 @@ class CategorySeeder extends Seeder
               'pinjem uang',
               'pinjaman',
               'refund',
+              'refund tiket',
               'uang tiket refund',
+              'uang kembali',
               'kembalian']],
         ]
       ],
