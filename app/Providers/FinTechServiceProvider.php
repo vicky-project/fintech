@@ -13,6 +13,7 @@ use Modules\FinTech\Services\Parsers\MandiriPdfParser;
 use Modules\FinTech\Services\Parsers\MandiriExcelParser;
 use Modules\FinTech\Services\Parsers\MandiriCsvParser;
 use Modules\FinTech\Services\Parsers\BniPdfParser;
+use Modules\FinTech\Services\Parsers\BriPdfParser;
 
 class FinTechServiceProvider extends ServiceProvider
 {
