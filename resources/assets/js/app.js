@@ -44,6 +44,7 @@ const state = {
   sessionTimeout: 3 * 60 * 1000,
   // 3 menit
   sessionTimer: null,
+  isPinModalShowing: false,
   budgets: [],
 };
 
@@ -63,14 +64,21 @@ async function interceptAndFetch(requestFn) {
     return await requestFn();
   } catch(error) {
     if (error.status === 403 && error.data && (error.data.code === 'PIN_REQUIRED' || error.data.code === 'PIN_EXPIRED')) {
-      tgApp.hideLoading();
-      const pinOk = await new Promise((resolve) => {
-        showPinModal(resolve);
-      });
-      if (pinOk) {
-        return await requestFn();
+      if (!state.isPinModalShowing) {
+        state.isPinModalShowing = true;
+        tgApp.hideLoading();
+        const pinOk = await new Promise((resolve) => {
+          showPinModal(resolve);
+        });
+        state.isPinModalShowing = false;
+        if (pinOk) {
+          return await requestFn();
+        } else {
+          throw new Error('Verifikasi PIN diperlukan');
+        }
       } else {
-        throw new Error('Verifikasi PIN diperlukan');
+        throw new Error("PIN sedang di verifikasi");
+        throw new Error("PIN sedang di verifikasi");
       }
     }
     throw error;
@@ -246,18 +254,30 @@ async function initializeApp() {
     </div>
     `;
 
-    await Promise.all([
-      loadWallets(),
-      loadUserSettings(),
-      loadCategories(),
-      loadCurrencies()
-    ]);
+    await loadUserSettings().catch(e => {
+      tgApp.showToast("Gagal memuat pengaturan", 'danger');
+      state.userSettings = {
+        default_currency: 'IDR',
+        default_wallet_id: null
+      };
+    });
 
     const pinOk = await checkPinRequired();
     if (!pinOk) {
-      loadingOverlay.innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
+      loadingOverlay.innerHTML = `
+      <div class="text-center p-4">
+      <i class="bi bi-lock fs-1"></i>
+      <h5 class="mt-3">Aplikasi Terkunci</h5>
+      <p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p>
+      </div>`;
       return;
     }
+
+    await Promise.all([
+      loadWallets(),
+      loadCategories(),
+      loadCurrencies()
+    ]);
 
     if (state.wallets.length > 0) {
       await loadHomeSummary().catch(e => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
