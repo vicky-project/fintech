@@ -46,7 +46,7 @@
 <script>
   let editingWalletId = null;
 
-  function showAddWalletModal() {
+  window.showAddWalletModal = function() {
     editingWalletId = null;
     const form = document.getElementById('walletForm');
     form.reset();
@@ -111,9 +111,9 @@
       const url = isEdit ? `/api/fintech/wallets/${id}`: `/api/fintech/wallets`;
 
       if (isEdit) {
-        await api.put(url, data });
+        await api.put(url, data );
       } else {
-        await api.post(url, {data})
+        await api.post(url, data);
       }
 
       await loadWallets();
