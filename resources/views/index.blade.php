@@ -202,5 +202,32 @@
   #pinModal {
     z-index: 10001 !important;
   }
+
+  /* Pastikan dropdown mengikuti tema Telegram */
+  .dropdown-menu {
+    background-color: var(--tg-theme-secondary-bg-color) !important;
+    color: var(--tg-theme-text-color) !important;
+    border: 1px solid var(--tg-theme-section-separator-color) !important;
+  }
+
+  .dropdown-menu .dropdown-item {
+    color: var(--tg-theme-text-color) !important;
+  }
+
+  .dropdown-menu .dropdown-item:hover,
+  .dropdown-menu .dropdown-item:focus {
+    background-color: var(--tg-theme-button-color) !important;
+    color: var(--tg-theme-button-text-color) !important;
+  }
+
+  .dropdown-menu .dropdown-item.active,
+  .dropdown-menu .dropdown-item:active {
+    background-color: var(--tg-theme-button-color) !important;
+    color: var(--tg-theme-button-text-color) !important;
+  }
+
+  .dropdown-divider {
+    border-top-color: var(--tg-theme-section-separator-color) !important;
+  }
 </style>
 @endpush
