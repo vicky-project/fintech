@@ -59,7 +59,7 @@ class FinTechServiceProvider extends ServiceProvider
       $manager->addParser(new MandiriExcelParser());
       $manager->addParser(new MandiriCsvParser());
       $manager->addParser(new BniPdfParser());
-      $manager->addParser(new BriPdfParser());
+      // $manager->addParser(new BriPdfParser()); // Belum ada contoh file
       return $manager;
     });
   }

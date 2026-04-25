@@ -147,7 +147,8 @@ async function checkPinRequired() {
 }
 
 function showPinModal(callback) {
-  const modal = new bootstrap.Modal(document.getElementById('pinModal'));
+  const modalEl = document.getElementById('pinModal');
+  const modal = new bootstrap.Modal(modalEl);
   modal.show();
   const form = document.getElementById('pinForm');
   const pinInput = document.getElementById('pinInput');
@@ -158,7 +159,13 @@ function showPinModal(callback) {
 
   form.reset();
   pinInput.disabled = false;
-  pinInput.focus();
+
+  modalEl.addEventListener('shown.bs.modal', () => {
+    pinInput.focus();
+  }, {
+    once: true
+  });
+
   pinInput.addEventListener('input', () => {
     if (pinInput.value.length === 6) {
       submitPin(callback);
@@ -171,7 +178,7 @@ function showPinModal(callback) {
   };
   form.addEventListener('submit',
     handleSubmit);
-  document.getElementById('pinModal').addEventListener('hidden.bs.modal',
+  modalEl.addEventListener('hidden.bs.modal',
     () => {
       form.removeEventListener('submit', handleSubmit);
       if (!state.pinVerified) callback(false);
