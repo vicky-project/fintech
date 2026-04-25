@@ -180,24 +180,24 @@
     try {
       tgApp.showLoading('Menyimpan...');
       const url = isEdit ? `/api/fintech/transactions/${id}`: `/api/fintech/transactions`;
-      if (isEdit)
-      await api.put(url, {data});
-    } else {
-      await api.post(url, {data})
+      if (isEdit) {
+        await api.put(url, {data});
+      } else {
+        await api.post(url, {data})
+      }
+
+      await loadWallets();
+      await loadHomeSummary();
+      if (state.currentPage === 'transactions') await refreshTransactionList();
+
+      tgApp.hideLoading();
+      tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil', 'success');
+      bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
+
+      if (state.currentPage === 'home') renderHomePage();
+    } catch (error) {
+      tgApp.hideLoading();
+      tgApp.showToast(error.message || 'Gagal menyimpan', 'danger');
     }
-
-    await loadWallets();
-    await loadHomeSummary();
-    if (state.currentPage === 'transactions') await refreshTransactionList();
-
-    tgApp.hideLoading();
-    tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil', 'success');
-    bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
-
-    if (state.currentPage === 'home') renderHomePage();
-  } catch (error) {
-    tgApp.hideLoading();
-    tgApp.showToast(error.message || 'Gagal menyimpan', 'danger');
   }
-}
 </script>
