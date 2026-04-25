@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
@@ -14,12 +15,14 @@ use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\StatementStatus;
 use Modules\FinTech\Enums\StatementType;
 use Modules\FinTech\Enums\TransactionType;
+use Modules\FinTech\Services\CurrencyConverter;
 use Modules\FinTech\Services\Decryptors\PdfDecryptor;
 use Modules\FinTech\Services\Decryptors\ExcelDecryptor;
 use Carbon\Carbon;
 
 class StatementService
 {
+  protected CurrencyConverter $currencyConverter;
   protected PdfDecryptor $pdfDecryptor;
   protected ExcelDecryptor $excelDecryptor;
   protected BankParserManager $parserManager;
@@ -27,12 +30,14 @@ class StatementService
   protected TransactionService $transactionService;
 
   public function __construct(
+    CurrencyConverter $currencyConverter,
     PdfDecryptor $pdfDecryptor,
     ExcelDecryptor $excelDecryptor,
     BankParserManager $parserManager,
     CategorizationService $categorizationService,
     TransactionService $transactionService
   ) {
+    $this->currencyConverter = $currencyConverter;
     $this->pdfDecryptor = $pdfDecryptor;
     $this->excelDecryptor = $excelDecryptor;
     $this->parserManager = $parserManager;
@@ -133,13 +138,6 @@ class StatementService
       }
 
       $result = $this->parserManager->parse($processedPath);
-      \Log::debug("Result parse.", ['data' => $result]);
-
-      $statement->update([
-        'bank_code' => $result['bank_code'],
-        'meta_data' => ['transaction_count' => count($result['transactions'])],
-      ]);
-      $statement->updateStatus(StatementStatus::PARSED);
 
       // Kumpulkan semua deskripsi unik
       $uniqueDescriptions = [];
@@ -158,19 +156,33 @@ class StatementService
         $categoryCache[$desc] = $this->categorizationService->categorize($desc, $info['type'])?->id;
       }
 
+      // Deteksi mata uang
+      $statementCurrency = $result['currency'] ?? null;
+      $walletCurrency = $wallet->currency;
+      $conversionRate = null;
+
+      if ($statementCurrency && $statementCurrency !== $walletCurrency) {
+        $conversionRate = $this->currencyConverter->getExchangeRate($statementCurrency, $walletCurrency);
+      }
+
       $insertData = [];
       $now = now();
       foreach ($result['transactions'] as $trx) {
         $desc = $trx['description'];
         $type = $uniqueDescriptions[$desc]['type'];
         $categoryId = $categoryCache[$desc];
+        $amount = $trx['amount'];
+
+        if ($conversionRate) {
+          $amount = $this->currencyConverter->convert($amount, $statementCurrency, $walletCurrency);
+        }
 
         $insertData[] = [
           'statement_id' => $statement->id,
           'transaction_date' => Carbon::create($trx['date'])->format('Y-m-d'),
           'description' => $desc,
           // insert harus mengkalikan manual untuk nilai sen/float
-          'amount' => (int) $trx['amount'] * 100,
+          'amount' => (int) round($amount * 100),
           'type' => $type,
           'category_id' => $categoryId,
           // insert harus encode manual
@@ -184,13 +196,28 @@ class StatementService
         StatementTransaction::insert($chunk);
       }
 
+      $statement->update([
+        'bank_code' => $result['bank_code'],
+        'meta_data' => [
+          'transaction_count' => count($result['transactions']),
+          'original_currency' => $statementCurrency ?? $walletCurrency,
+          'converted_to' => $conversionRate ? $walletCurrency : null,
+          'conversion_rate' => $conversionRate
+        ],
+      ]);
+      $statement->updateStatus(StatementStatus::PARSED);
+
       return [
         'statement_id' => $statement->id,
         'bank_code' => $result['bank_code'],
         'transaction_count' => count($result['transactions']),
+        'converted' => $conversionRate ? true : false,
+        'rate' => $conversionRate,
+        'from_currency' => $statementCurrency,
+        'to_currency' => $conversionRate ? $walletCurrency : null
       ];
     } catch (\Exception $e) {
-      \Log::error("Failed to process upload statement.", [
+      Log::error("Failed to process upload statement.", [
         "message" => $e->getMessage(),
         "filepath" => $fullPath,
         "user_id" => $userId,
@@ -237,6 +264,16 @@ class StatementService
     ->orderBy('name')
     ->get(['id', 'name', 'type', 'icon', 'color']);
 
+    $meta = $statement->meta_data;
+    $conversion = null;
+    if (isset($meta['original_currency']) && isset($meta['converted_to']) && $meta['original_currency'] !== $meta['converted_to']) {
+      $conversion = [
+        'from' => $meta['original_currency'],
+        'to' => $meta['converted_to'],
+        'rate' => $meta['conversion_rate'] ?? 0,
+      ];
+    }
+
     return [
       'statement_id' => $statement->id,
       'wallet' => [
@@ -245,6 +282,7 @@ class StatementService
       ],
       'transactions' => $transactions,
       'categories' => $categories,
+      'conversion' => $conversion
     ];
   }
 

@@ -23,7 +23,8 @@ class BankParserManager
       if ($parser->canParse($filePath)) {
         return [
           'bank_code' => $parser->getBankCode(),
-          'transactions' => $parser->parse($filePath)
+          'transactions' => $parser->parse($filePath),
+          'currency' => $parser->getCurrency()
         ];
       }
     }

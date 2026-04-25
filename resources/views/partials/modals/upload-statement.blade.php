@@ -98,6 +98,18 @@
       return;
     }
 
+    // Notifikasi konversi
+    let conversionAlert = '';
+    if (data.conversion) {
+      conversionAlert = `
+      <div class="alert alert-info py-2 px-3 small mb-3">
+      <i class="bi bi-currency-exchange me-2"></i>
+      Mata uang asli: <strong>${data.conversion.from}</strong> dikonversi ke
+      <strong>${data.conversion.to}</strong> (kurs: ${data.conversion.rate})
+      </div>
+      `;
+    }
+
     let html = `
     <div class="mb-3">
     <div class="d-flex justify-content-between align-items-center">
@@ -112,16 +124,17 @@
     </div>
     </div>
     </div>
-    <div class="list-group" id="preview-transaction-list" style="max-height: 70vh; overflow-y: auto;">
+    ${conversionAlert}
+    <div class="list-group" id="preview-transaction-list" style="max-height: 55vh; overflow-y: auto;">
     `;
 
-    previewTransactions.forEach((trx, index) => {
+    previewTransactions.forEach((trx) => {
     const amountClass = trx.type === 'credit' ? 'text-success' : 'text-danger';
     const typeLabel = trx.type === 'credit' ? 'Masuk' : 'Keluar';
     const typeClass = trx.type === 'credit' ? 'bg-success' : 'bg-danger';
 
     html += `
-    <div class="list-group-item" id="trx-${trx.id}" style="border-bottom: 3px solid var(--tg-theme-section-separator-color);">
+    <div class="list-group-item" id="trx-${trx.id}">
     <div class="d-flex align-items-start">
     <div class="form-check me-3 mt-1">
     <input class="form-check-input transaction-checkbox" type="checkbox"
@@ -130,18 +143,13 @@
     onchange="updateSelectedCount()">
     </div>
     <div class="flex-grow-1" style="min-width: 0;">
-    <!-- Baris 1: Tanggal dan Jumlah -->
     <div class="d-flex justify-content-between align-items-start mb-2">
     <small class="text-muted">${formatDate(trx.date)}</small>
     <span class="${amountClass} fw-bold ms-2 text-end">${trx.formatted_amount}</span>
     </div>
-
-    <!-- Baris 2: Deskripsi -->
     <div class="mb-2">
     <div class="fw-semibold text-break" title="${trx.description}">${trx.description}</div>
     </div>
-
-    <!-- Baris 3: Badge Tipe + Pilih Kategori -->
     <div class="d-flex align-items-center flex-wrap">
     <span class="badge ${typeClass} me-2">${typeLabel}</span>
     <select class="form-select form-select-sm category-select"

@@ -4,6 +4,7 @@ namespace Modules\FinTech\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Schedule;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -66,7 +67,9 @@ class FinTechServiceProvider extends ServiceProvider
   */
   protected function registerCommands(): void
   {
-    // $this->commands([]);
+    $this->commands([
+      \Modules\FinTech\Console\FetchExchangeRates::class,
+    ]);
   }
 
   /**
@@ -74,10 +77,14 @@ class FinTechServiceProvider extends ServiceProvider
   */
   protected function registerCommandSchedules(): void
   {
-    // $this->app->booted(function () {
-    //     $schedule = $this->app->make(Schedule::class);
-    //     $schedule->command('inspire')->hourly();
-    // });
+    $this->app->booted(function () {
+      //     $schedule = $this->app->make(Schedule::class);
+      //     $schedule->command('inspire')->hourly();
+      Schedule::command('app:exchange-rates')
+      ->everySixHours()
+      ->withoutOverlapping()
+      ->timezone(config("app.timezone"));
+    });
   }
 
   /**

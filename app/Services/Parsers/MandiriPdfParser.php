@@ -2,11 +2,10 @@
 
 namespace Modules\FinTech\Services\Parsers;
 
-use Modules\FinTech\Contracts\BankParserInterface;
 use Carbon\Carbon;
 use Modules\FinTech\Enums\StatementType;
 
-class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
+class MandiriPdfParser extends AbstractBankParser
 {
   protected string $bankCode = 'mandiri';
 
@@ -80,6 +79,8 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
   public function parse(string $filePath): array
   {
     $text = $this->extractText($filePath);
+    $currency = $this->extractCurrency($text);
+    $this->currency = $currency;
     $lines = $this->prepareLines($text);
     $transactions = $this->extractTransactions($lines);
     return $this->formatTransactions($transactions);
@@ -88,6 +89,15 @@ class MandiriPdfParser extends AbstractBankParser implements BankParserInterface
   private function extractText(string $filePath): string
   {
     return parent::extractPdfText($filePath);
+  }
+
+  private function extractCurrency(string $text): string
+  {
+    if (preg_match('/Mata\s*Uang\s*\/?\s*Currency\s*:\s*([A-Z]{3})/i', $text, $matches)) {
+      return strtoupper($matches[1]);
+    }
+
+    return $this->currency;
   }
 
   private function prepareLines(string $content): array

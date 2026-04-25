@@ -13,11 +13,21 @@ abstract class AbstractBankParser implements BankParserInterface
   protected string $bankCode;
 
   /**
+  * Currency
+  */
+  protected string $currency = 'IDR';
+
+  /**
   * Mendapatkan kode bank.
   */
   public function getBankCode(): string
   {
     return $this->bankCode;
+  }
+
+  public function getCurrency(): string
+  {
+    return $this->currency;
   }
 
   /**

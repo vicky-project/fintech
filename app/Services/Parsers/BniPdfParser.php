@@ -59,6 +59,7 @@ class BniPdfParser extends AbstractBankParser
   public function parse(string $filePath): array
   {
     $text = $this->extractText($filePath);
+    $currency = $this->extractCurrency($text);
     $transactions = $this->extractTransactions($text);
     return $this->formatTransactions($transactions);
   }
@@ -80,6 +81,14 @@ class BniPdfParser extends AbstractBankParser
     $text = preg_replace('/===== Page \d+ =====/i', '', $text);
 
     return trim($text);
+  }
+
+  private function extractCurrency(string $text): string
+  {
+    if (preg_match('/\(([A-Z]{3})\)/', $text, $matches)) {
+      return strtoupper($matches[1]);
+    }
+    return $this->currency;
   }
 
   /**

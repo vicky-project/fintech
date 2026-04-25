@@ -23,4 +23,9 @@ interface BankParserInterface
   * Kode bank (bca, mandiri, dll).
   */
   public function getBankCode(): string;
+
+  /**
+  * Currency (IDR, USD, dll).
+  */
+  public function getCurrency(): string;
 }
