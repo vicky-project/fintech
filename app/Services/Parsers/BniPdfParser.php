@@ -60,7 +60,6 @@ class BniPdfParser extends AbstractBankParser
   {
     $text = $this->extractText($filePath);
     $currency = $this->extractCurrency($text);
-    \Log::debug('Found currency BnI: ' . $currency);
     $transactions = $this->extractTransactions($text);
     return $this->formatTransactions($transactions);
   }
