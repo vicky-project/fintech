@@ -585,6 +585,6 @@ class ReportService
 
   protected function generateCategoryTableCache(int $userId, ?int $walletId, ?string $type): string
   {
-    return "report_category_table_{$userId}_{$walletId}_{$type}";
+    return "report_category_{$userId}_{$walletId}_{$type}";
   }
 }
