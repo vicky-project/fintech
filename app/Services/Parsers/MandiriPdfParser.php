@@ -94,7 +94,7 @@ class MandiriPdfParser extends AbstractBankParser
 
   private function extractCurrency(string $text): string
   {
-    $normalized = preg_replace('/\s+/'n '', $text);
+    $normalized = preg_replace('/\s+/', '', $text);
     \Log::debug("Normalized", [
       'text' => $normalized]);
     if (preg_match('/Mata\s*Uang\s*\/?\s*Currency\s*.*?:\s*([A-Z]{3})/i', $normalized, $matches)) {
