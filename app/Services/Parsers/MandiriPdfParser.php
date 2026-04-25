@@ -80,7 +80,6 @@ class MandiriPdfParser extends AbstractBankParser
   {
     $text = $this->extractText($filePath);
     $currency = $this->extractCurrency($text);
-    \Log::debug('Found currency: '. $currency);
     $this->currency = $currency;
     $lines = $this->prepareLines($text);
     $transactions = $this->extractTransactions($lines);
@@ -95,8 +94,6 @@ class MandiriPdfParser extends AbstractBankParser
   private function extractCurrency(string $text): string
   {
     $normalized = preg_replace('/\s+/', '', $text);
-    \Log::debug("Normalized", [
-      'text' => $normalized]);
     if (preg_match('/Currency:.*?([A-Z]{3})(?![a-zA-Z])/', $normalized, $matches)) {
       return strtoupper($matches[1]);
     }
