@@ -130,9 +130,9 @@
     try {
       tgApp.showLoading('Menyimpan...');
       if (isEdit) {
-        await api.put(url, {data});
+        await api.put(url, data);
       } else {
-        api.post(url, {data});
+        await api.post(url, data);
       }
 
       await refreshBudgetList();
@@ -148,7 +148,7 @@
   async function deleteBudget(id) {
     if (!confirm('Hapus budget ini?')) return;
     try {
-      await ap8.delete(`/api/fintech/budgets/${id}`});
+      await api.delete(`/api/fintech/budgets/${id}`});
       await refreshBudgetList();
       tgApp.showToast('Budget dihapus');
     } catch (error) {
