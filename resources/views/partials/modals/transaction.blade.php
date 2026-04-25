@@ -181,9 +181,9 @@
       tgApp.showLoading('Menyimpan...');
       const url = isEdit ? `/api/fintech/transactions/${id}`: `/api/fintech/transactions`;
       if (isEdit) {
-        await api.put(url, {data});
+        await api.put(url, data);
       } else {
-        await api.post(url, {data})
+        await api.post(url, data);
       }
 
       await loadWallets();
