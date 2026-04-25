@@ -148,7 +148,7 @@
   async function deleteBudget(id) {
     if (!confirm('Hapus budget ini?')) return;
     try {
-      await api.delete(`/api/fintech/budgets/${id}`});
+      await api.delete(`/api/fintech/budgets/${id}`);
       await refreshBudgetList();
       tgApp.showToast('Budget dihapus');
     } catch (error) {
