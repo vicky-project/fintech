@@ -18,7 +18,8 @@ class UserSetting extends Model
     'pin',
     'pin_enabled',
     'pin_attempts',
-    'locked_until'
+    'locked_until',
+    'pin_verified_at'
   ];
 
   protected $casts = [
@@ -26,6 +27,7 @@ class UserSetting extends Model
     'pin_enabled' => 'boolean',
     'pin_attempts' => 'integer',
     'locked_until' => 'datetime',
+    'pin_verified_at' => 'datetime',
   ];
 
   protected $hidden = ['pin'];

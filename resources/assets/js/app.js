@@ -78,7 +78,6 @@ async function interceptAndFetch(requestFn) {
         }
       } else {
         throw new Error("PIN sedang di verifikasi");
-        throw new Error("PIN sedang di verifikasi");
       }
     }
     throw error;

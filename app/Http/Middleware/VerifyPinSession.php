@@ -8,26 +8,37 @@ use Modules\FinTech\Models\UserSetting;
 
 class VerifyPinSession
 {
-  /**
-  * Handle an incoming request.
-  */
   public function handle(Request $request, Closure $next) {
     $user = $request->user();
-    $settings = \Modules\FinTech\Models\UserSetting::where('user_id', $user->id)->first();
+    $settings = UserSetting::where('user_id', $user->id)->first();
 
-    // Jika PIN tidak diaktifkan, lewati middleware
+    // Jika PIN tidak diaktifkan, lewati
     if (!$settings || !$settings->pin_enabled) {
       return $next($request);
     }
 
-    // Hanya cek apakah session pin_verified_at ada
-    if (!session('pin_verified_at')) {
+    // Cek apakah PIN sudah diverifikasi
+    if (!$settings->pin_verified_at) {
       return response()->json([
         'success' => false,
         'message' => 'PIN belum diverifikasi.',
         'code' => 'PIN_REQUIRED'
       ], 403);
     }
+
+    // Opsional: cek timeout 3 menit
+    $timeout = 3 * 60;
+    if (now()->diffInSeconds($settings->pin_verified_at) > $timeout) {
+      $settings->update(['pin_verified_at' => null]);
+      return response()->json([
+        'success' => false,
+        'message' => 'Sesi PIN telah berakhir.',
+        'code' => 'PIN_EXPIRED'
+      ], 403);
+    }
+
+    // Perbarui timestamp terakhir
+    $settings->update(['pin_verified_at' => now()]);
 
     return $next($request);
   }

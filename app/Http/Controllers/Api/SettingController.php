@@ -95,7 +95,8 @@ class SettingController extends Controller
 
       if ($settings->verifyPin($request->pin)) {
         $settings->resetAttempts();
-        session(['pin_verified_at' => now()]);
+        $settings->update(['pin_verified_at' => now()]);
+
         return response()->json([
           'success' => true,
           'message' => 'PIN valid'

@@ -13,6 +13,11 @@ return new class extends Migration
       $table->foreignId('user_id')->constrained('telegram_users')->cascadeOnDelete();
       $table->string('default_currency', 3)->default('IDR');
         $table->foreignId('default_wallet_id')->nullable()->constrained('fintech_wallets')->nullOnDelete();
+        $table->string('pin', 60)->nullable();
+        $table->boolean('pin_enabled')->default(false);
+        $table->unsignedTinyInteger('pin_attempts')->default(0);
+        $table->timestamp('locked_until')->nullable();
+        $table->timestamp('pin_verified_at')->nullable();
         $table->json('preferences')->nullable(); // untuk pengaturan tambahan di masa depan
         $table->timestamps();
       });
