@@ -97,7 +97,7 @@ class MandiriPdfParser extends AbstractBankParser
     $normalized = preg_replace('/\s+/', '', $text);
     \Log::debug("Normalized", [
       'text' => $normalized]);
-    if (preg_match('/Currency:.*?([A-Z]{3})(?![a-zA-Z])/g', $normalized, $matches)) {
+    if (preg_match('/Currency:.*?([A-Z]{3})(?![a-zA-Z])/i', $normalized, $matches)) {
       return strtoupper($matches[1]);
     }
 
