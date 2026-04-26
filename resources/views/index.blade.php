@@ -304,6 +304,43 @@
     border-top-color: var(--tg-theme-section-separator-color) !important;
   }
 
+  /* Perbaikan ikon search */
+  #search-input-group .input-group-text {
+    background-color: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+    border-right: none;
+  }
+  #search-input {
+    border-left: none;
+  }
+
+  /* Filter button aktif */
+  .search-filter-btn.active {
+    background-color: var(--tg-theme-button-color) !important;
+    color: var(--tg-theme-button-text-color) !important;
+    border-color: var(--tg-theme-button-color) !important;
+  }
+  .search-filter-btn {
+    color: var(--tg-theme-button-color);
+    border-color: var(--tg-theme-button-color);
+  }
+
+  /* Badge di filter */
+  .filter-badge {
+    margin-left: 4px;
+    font-size: 0.7rem;
+  }
+
+  /* Item hasil pencarian */
+  .search-result-item {
+    border-radius: 12px;
+    margin-bottom: 8px;
+    transition: background-color 0.2s;
+  }
+  .search-result-item:hover {
+    background-color: var(--tg-theme-hint-color, rgba(0,0,0,0.03));
+  }
+
   .notification-title {
     color: var(--tg-theme-text-color) !important;
     font-weight: 600;

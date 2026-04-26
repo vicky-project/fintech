@@ -347,18 +347,25 @@ function toggleQuickActions() {
 async function renderSearchPage() {
   const html = `
   <div class="container py-3">
-  <div class="input-group mb-3">
+  <div class="input-group mb-3" id="search-input-group">
   <span class="input-group-text"><i class="bi bi-search"></i></span>
   <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer..."
   onkeydown="if(event.key==='Enter') performSearch()">
   <button class="btn btn-primary" onclick="performSearch()">Cari</button>
   </div>
-  <!-- Tab filter -->
-  <div id="search-filters" class="btn-group btn-group-sm mb-3 w-100 d-none" role="group">
-  <button class="btn btn-outline-primary active" data-filter="all" onclick="filterSearchResults('all')">Semua</button>
-  <button class="btn btn-outline-primary" data-filter="transaction" onclick="filterSearchResults('transaction')">Transaksi</button>
-  <button class="btn btn-outline-primary" data-filter="transfer" onclick="filterSearchResults('transfer')">Transfer</button>
-  <button class="btn btn-outline-primary" data-filter="statement" onclick="filterSearchResults('statement')">Statement</button>
+  <div id="search-filters" class="btn-group btn-group-sm w-100 mb-3 d-none" role="group">
+  <button class="btn btn-outline-primary search-filter-btn active" data-filter="all" onclick="filterSearchResults('all')">
+  Semua <span class="filter-badge" id="badge-all">0</span>
+  </button>
+  <button class="btn btn-outline-primary search-filter-btn" data-filter="transaction" onclick="filterSearchResults('transaction')">
+  Transaksi <span class="filter-badge" id="badge-transaction">0</span>
+  </button>
+  <button class="btn btn-outline-primary search-filter-btn" data-filter="transfer" onclick="filterSearchResults('transfer')">
+  Transfer <span class="filter-badge" id="badge-transfer">0</span>
+  </button>
+  <button class="btn btn-outline-primary search-filter-btn" data-filter="statement" onclick="filterSearchResults('statement')">
+  Statement <span class="filter-badge" id="badge-statement">0</span>
+  </button>
   </div>
   <div id="search-results">
   <p class="text-muted text-center">Ketik minimal 2 karakter untuk mencari.</p>
@@ -382,7 +389,9 @@ async function performSearch() {
   try {
     const res = await api.get(`/api/fintech/search?q=${encodeURIComponent(q)}`);
     state.searchResults = res.data || [];
-    renderSearchResults(state.searchResults);
+    updateFilterBadges(state.searchResults);
+    document.getElementById('search-filters').classList.remove('d-none');
+    filterSearchResults('all'); // tampilkan semua & set active
   } catch (error) {
     container.innerHTML = '<p class="text-muted text-center">Gagal mencari.</p>';
   }
@@ -390,10 +399,17 @@ async function performSearch() {
 
 function filterSearchResults(filter) {
   state.currentFilter = filter;
-  document.querySelectorAll('#search-filters .btn').forEach(btn => {
+  document.querySelectorAll('.search-filter-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === filter);
   });
   renderSearchResults(state.searchResults);
+}
+
+function updateFilterBadges(results) {
+  document.getElementById('badge-all').textContent = results.length;
+  document.getElementById('badge-transaction').textContent = results.filter(i => i.type === 'transaction').length;
+  document.getElementById('badge-transfer').textContent = results.filter(i => i.type === 'transfer').length;
+  document.getElementById('badge-statement').textContent = results.filter(i => i.type === 'statement').length;
 }
 
 function renderSearchResults(results) {
@@ -402,8 +418,6 @@ function renderSearchResults(results) {
   if (state.currentFilter !== 'all') {
     filtered = results.filter(item => item.type === state.currentFilter);
   }
-
-  document.getElementById('search-filters')?.classList.toggle('d-none', results.length === 0);
 
   if (!filtered.length) {
     container.innerHTML = '<p class="text-muted text-center py-5">Tidak ditemukan.</p>';
@@ -414,8 +428,8 @@ function renderSearchResults(results) {
     const desc = highlightText(item.description || '', state.searchKeyword);
     if (item.type === 'transaction') {
       return `
-      <div class="list-group-item" onclick="showSearchDetail('${item.type}', ${item.id})">
-      <div class="d-flex align-items-center">
+      <div class="card search-result-item" onclick="showSearchDetail('${item.type}', ${item.id})">
+      <div class="card-body d-flex align-items-center p-3">
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
       <div class="fw-semibold text-truncate">${desc}</div>
@@ -427,8 +441,8 @@ function renderSearchResults(results) {
       `;
     } else if (item.type === 'transfer') {
       return `
-      <div class="list-group-item" onclick="showSearchDetail('${item.type}', ${item.id})">
-      <div class="d-flex align-items-center">
+      <div class="card search-result-item" onclick="showSearchDetail('${item.type}', ${item.id})">
+      <div class="card-body d-flex align-items-center p-3">
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
       <div class="fw-semibold text-truncate">${desc}</div>
@@ -440,8 +454,8 @@ function renderSearchResults(results) {
       `;
     } else if (item.type === 'statement') {
       return `
-      <div class="list-group-item" onclick="showSearchDetail('${item.type}', ${item.id})">
-      <div class="d-flex align-items-center">
+      <div class="card search-result-item" onclick="showSearchDetail('${item.type}', ${item.id})">
+      <div class="card-body d-flex align-items-center p-3">
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
       <div class="fw-semibold text-truncate">${desc}</div>
