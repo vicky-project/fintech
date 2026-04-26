@@ -36,7 +36,10 @@
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-graph-up fs-5"></i></button>
       <button class="btn nav-btn position-relative" data-page="notifications">
         <i class="bi bi-bell fs-5"></i>
-        <span id="notification-badge" class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="display: none;font-size: 0.6rem;padding: 0.2em 0.4em;"></span>
+        <span id="notification-badge"
+          class="badge bg-danger rounded-circle position-absolute"
+          style="display: none; font-size: 0.6rem; padding: 0.2em 0.4em; top: 0; right: 0; transform: translate(30%, -30%);">
+        </span>
       </button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
 
