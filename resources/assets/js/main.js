@@ -1,10 +1,6 @@
 // ==================== MAIN.JS ====================
 // Entry point aplikasi, inisialisasi, event delegation, dan fungsi global
 
-window.showAddWalletModal = () => tgApp.showToast('Modal tambah dompet belum diimplementasikan', 'info');
-window.editWallet = (id) => tgApp.showToast(`Edit dompet ${id} belum diimplementasikan`, 'info');
-window.showAddTransactionModal = () => tgApp.showToast('Modal tambah transaksi belum diimplementasikan', 'info');
-window.editTransaction = (id) => tgApp.showToast(`Edit transaksi ${id} belum diimplementasikan`, 'info');
 window.showTransactionDetailModal = (id) => {
   // Implementasi sudah ada di pages.js, tapi kita butuh referensi global
   if (typeof showTransactionDetailModal === 'function') showTransactionDetailModal(id);
