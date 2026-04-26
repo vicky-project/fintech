@@ -288,9 +288,9 @@ async function initializeApp() {
 
     if (state.wallets.length > 0) {
       await loadHomeSummary().catch(e => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
+      loadUnreadNotificationCount();
     }
 
-    await loadUnreadNotificationCount();
 
     navigateTo('home');
     loadingOverlay.classList.add('d-none');
