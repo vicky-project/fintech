@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Modules\FinTech\Models\UserSetting;
+use Modules\FinTech\Http\Requests\UserSettingsRequest;
 
 class SettingController extends Controller
 {
@@ -27,33 +28,11 @@ class SettingController extends Controller
     ]);
   }
 
-  public function update(Request $request): JsonResponse
+  public function update(UserSettingsRequest $request): JsonResponse
   {
-    $validated = $request->validate([
-      'default_currency' => [
-        'sometimes',
-        'string',
-        'size:3',
-        Rule::exists('world_currencies', 'code')
-      ],
-      'default_wallet_id' => [
-        'sometimes',
-        'nullable',
-        Rule::exists('fintech_wallets', 'id')->where(function ($query) use ($request) {
-          $query->where('user_id', $request->user()->id);
-        }),
-      ],
-      'pin_enabled' => 'sometimes|boolean',
-      'pin' => 'nullable|string|min:4|max:6|required_if:pin_enabled,true',
-    ]);
-
-    if (isset($validated['pin_enabled']) && $validated['pin_enabled'] === false) {
-      $validated['pin'] = null;
-    }
-
     $settings = UserSetting::updateOrCreate(
       ['user_id' => $request->user()->id],
-      $validated
+      $request->validatedSettings();
     );
 
     return response()->json([
