@@ -282,7 +282,7 @@ async function initializeApp() {
       loadCategories(),
       loadCurrencies()
     ]);
-    alert(pinOk)
+    alert(Core.state.wallets)
 
     if (Core.state.wallets.length > 0) {
       await loadHomeSummary().catch(e => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
