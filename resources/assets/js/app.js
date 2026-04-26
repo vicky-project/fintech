@@ -51,6 +51,7 @@ const state = {
   searchResults: [],
   searchKeyword: '',
   currentFilter: 'all',
+  pendingAction: null
 };
 
 const api = {
@@ -493,11 +494,14 @@ function showSearchDetail(type, id) {
     </table>
     `;
     actionBtn.style.display = 'block';
-    actionBtn.textContent = 'Lihat Transaksi';
+    actionBtn.textContent = 'Edit Transaksi';
     actionBtn.onclick = () => {
+      state.pendingAction {
+        type: 'transaction',
+        id: item.id
+      };
       bootstrap.Modal.getInstance(document.getElementById('searchDetailModal')).hide();
       navigateTo('transactions');
-      // Keterangan: Anda bisa menambahkan logika untuk langsung membuka modal detail transaksi setelah halaman termuat
     };
   } else if (type === 'transfer') {
     title.textContent = 'Transfer';
@@ -515,8 +519,12 @@ function showSearchDetail(type, id) {
     </table>
     `;
     actionBtn.style.display = 'block';
-    actionBtn.textContent = 'Lihat Transfer';
+    actionBtn.textContent = 'Edit Transfer';
     actionBtn.onclick = () => {
+      state.pendingAction = {
+        type: 'transfer',
+        id: item.id
+      };
       bootstrap.Modal.getInstance(document.getElementById('searchDetailModal')).hide();
       navigateTo('transfers');
     };
@@ -1016,6 +1024,13 @@ async function refreshTransactionList(page) {
   updateTransactionStats();
   renderTransactionList();
   renderPagination('transaction-pagination', state.transactionPage, state.transactionLastPage, refreshTransactionList);
+
+  if (state.pendingAction && state.pendingAction.type === 'transaction') {
+    setTimeout(() => {
+      editTransaction(state.pendingAction.id);
+      state.pendingAction = null;
+    }, 100);
+  }
 }
 
 function updateTransactionStats() {
@@ -1220,6 +1235,12 @@ async function refreshTransferList(page = 1) {
   await loadTransfersPage(page, walletId);
   renderTransferList(state.transfers);
   renderPagination('transfer-pagination', state.transferPage, state.transferLastPage, refreshTransferList);
+  if (state.pendingAction && state.pendingAction.type === 'transfer') {
+    setTimeout(() => {
+      editTransfer(state.pendingAction.id);
+      state.pendingAction = null;
+    }, 100);
+  }
 }
 
 function renderTransferList(transfers) {
