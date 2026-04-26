@@ -244,5 +244,51 @@
   .dropdown-divider {
     border-top-color: var(--tg-theme-section-separator-color) !important;
   }
-</style>
-@endpush
+
+  .notification-row {
+    transition: background-color 0.2s;
+  }
+  .notification-row:hover {
+    background-color: var(--tg-theme-hint-color, rgba(0,0,0,0.03));
+  }
+  .notification-row.unread {
+    border-left: 3px solid var(--tg-theme-button-color, #007aff);
+    }
+    .notification-row.unread::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: var(--tg-theme-button-color, #007aff);
+    border-radius: 50%;
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    }
+    .notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+    }
+    .notification-time {
+    font-size: 0.75rem;
+    color: var(--tg-theme-hint-color, #8e8e93);
+    white-space: nowrap;
+    margin-left: 8px;
+    }
+    .notification-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    }
+    .notification-icon.budget-warning { background-color: rgba(255, 193, 7, 0.15); color: #f0ad4e; }
+    .notification-icon.cashflow-warning { background-color: rgba(220, 53, 69, 0.15); color: #dc3545; }
+    .notification-icon.subscription-reminder { background-color: rgba(13, 110, 253, 0.15); color: #0d6efd; }
+    </style>
+    @endpush
