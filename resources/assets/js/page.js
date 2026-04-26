@@ -744,8 +744,8 @@ async function loadCategoryChart() {
                 const value = context.raw;
                 const total = context.dataset.data.reduce((a, b) => a+b, 0);
                 const percentage = ((value / total) * 100).toFixed(1);
-                const symbol = getCurrencySymbol(data.currency);
-                return `${context.label}: ${symbol} ${formatNumber(value)} (${percentage}%)`;
+                const symbol = Core.getCurrencySymbol(data.currency);
+                return `${context.label}: ${symbol} ${Core.formatNumber(value)} (${percentage}%)`;
               }
             }
           }
@@ -753,9 +753,9 @@ async function loadCategoryChart() {
       }
     });
 
-    const symbol = getCurrencySymbol(data.currency);
+    const symbol = Core.getCurrencySymbol(data.currency);
     document.getElementById('category-total').innerHTML =
-    `Total ${Core.state.categoryChartType === 'expense' ? 'Pengeluaran': 'Pemasukan'}: ${symbol} ${formatNumber(data.total)}`;
+    `Total ${Core.state.categoryChartType === 'expense' ? 'Pengeluaran': 'Pemasukan'}: ${symbol} ${Core.formatNumber(data.total)}`;
 
   } catch (error) {
     console.error('Gagal memuat kategori:', error);
