@@ -48,6 +48,9 @@ const state = {
   budgets: [],
   unreadNotificationCount: 0,
   notifications: [],
+  searchResults: [],
+  searchKeyword: '',
+  currentFilter: 'all',
 };
 
 const api = {
@@ -345,7 +348,7 @@ async function renderSearchPage() {
   const html = `
   <div class="container py-3">
   <div class="input-group mb-3">
-  <span class="input-group-text"><i class="bi bi-search"></i></span>
+  <span class="input-group-text"><i class="bi bi-search bg-dark text-light"></i></span>
   <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer..."
   onkeydown="if(event.key==='Enter') performSearch()">
   <button class="btn btn-primary" onclick="performSearch()">Cari</button>
@@ -365,14 +368,14 @@ async function performSearch() {
     tgApp.showToast('Minimal 2 karakter', 'warning');
     return;
   }
-
+  state.searchKeyword = q;
   const container = document.getElementById('search-results');
   container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p>Mencari...</p></div>';
 
   try {
     const res = await api.get(`/api/fintech/search?q=${encodeURIComponent(q)}`);
-    const results = res.data || [];
-    renderSearchResults(results);
+    state.searchResults = res.data || [];
+    renderSearchResults(state.searchResults);
   } catch (error) {
     container.innerHTML = '<p class="text-muted text-center">Gagal mencari.</p>';
   }
@@ -380,20 +383,27 @@ async function performSearch() {
 
 function renderSearchResults(results) {
   const container = document.getElementById('search-results');
-  if (!results.length) {
+  let filtered = results;
+  if (state.currentFilter !== 'all') {
+    filtered = results.filter(item => item.type === state.currentFilter);
+  }
+
+  document.getElementById('search-filters')?.classList.toggle('d-none', results.length === 0);
+
+  if (!filtered.length) {
     container.innerHTML = '<p class="text-muted text-center py-5">Tidak ditemukan.</p>';
     return;
   }
 
-  let html = '<div class="list-group">';
-  results.forEach(item => {
+  container.innerHTML = filtered.map(item => {
+    const desc = highlightText(item.description || '', state.searchKeyword);
     if (item.type === 'transaction') {
-      html += `
-      <div class="list-group-item" onclick="showTransactionDetailModal(${item.id})">
+      return `
+      <div class="list-group-item" onclick="showSearchDetail('${item.type}', ${item.id})">
       <div class="d-flex align-items-center">
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
-      <div class="fw-semibold text-truncate">${item.description || item.category}</div>
+      <div class="fw-semibold text-truncate">${desc}</div>
       <small class="text-muted">${item.wallet} · ${formatDate(item.date)}</small>
       </div>
       <span class="${item.transaction_type === 'income' ? 'text-success': 'text-danger'} fw-bold ms-2">${item.amount}</span>
@@ -401,12 +411,12 @@ function renderSearchResults(results) {
       </div>
       `;
     } else if (item.type === 'transfer') {
-      html += `
-      <div class="list-group-item" onclick="editTransfer(${item.id})">
+      return `
+      <div class="list-group-item" onclick="showSearchDetail('${item.type}', ${item.id})">
       <div class="d-flex align-items-center">
-      <i class="bi bi-arrow-left-right me-3 fs-4 text-info"></i>
+      <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
-      <div class="fw-semibold text-truncate">${item.description}</div>
+      <div class="fw-semibold text-truncate">${desc}</div>
       <small class="text-muted">Transfer · ${formatDate(item.date)}</small>
       </div>
       <span class="fw-bold ms-2">${item.amount}</span>
@@ -414,12 +424,12 @@ function renderSearchResults(results) {
       </div>
       `;
     } else if (item.type === 'statement') {
-      html += `
-      <div class="list-group-item" onclick="renderPreviewStatementPage(${item.id})">
+      return `
+      <div class="list-group-item" onclick="showSearchDetail('${item.type}', ${item.id})">
       <div class="d-flex align-items-center">
-      <i class="bi bi-file-text me-3 fs-4 text-secondary"></i>
+      <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
-      <div class="fw-semibold text-truncate">${item.description}</div>
+      <div class="fw-semibold text-truncate">${desc}</div>
       <small class="text-muted">${item.bank_code} · ${item.wallet} · ${item.status}</small>
       </div>
       <small class="text-muted ms-2">${formatDate(item.date)}</small>
@@ -427,9 +437,84 @@ function renderSearchResults(results) {
       </div>
       `;
     }
-  });
-  html += '</div>';
-  container.innerHTML = html;
+  }).join('');
+}
+
+function showSearchDetail(type, id) {
+  const item = state.searchResults.find(i => i.type === type && i.id == id);
+  if (!item) return;
+
+  const title = document.getElementById('searchDetailModalTitle');
+  const body = document.getElementById('searchDetailBody');
+  const actionBtn = document.getElementById('searchDetailActionBtn');
+
+  if (type === 'transaction') {
+    title.textContent = item.category || 'Transaksi';
+    body.innerHTML = `
+    <div class="text-center mb-3">
+    <i class="${item.icon} fs-1" style="color:${item.color}"></i>
+    <h5 class="mt-2">${item.category}</h5>
+    <span class="badge bg-secondary">${item.transaction_type === 'income' ? 'Pemasukan': 'Pengeluaran'}</span>
+    </div>
+    <table class="table table-sm">
+    <tr><th>Jumlah</th><td class="${item.transaction_type === 'income' ? 'text-success': 'text-danger'} fw-bold">${item.amount}</td></tr>
+    <tr><th>Dompet</th><td>${item.wallet}</td></tr>
+    <tr><th>Tanggal</th><td>${formatDate(item.date)}</td></tr>
+    <tr><th>Deskripsi</th><td>${highlightText(item.description || '-', state.searchKeyword)}</td></tr>
+    </table>
+    `;
+    actionBtn.style.display = 'block';
+    actionBtn.textContent = 'Lihat Transaksi';
+    actionBtn.onclick = () => {
+      bootstrap.Modal.getInstance(document.getElementById('searchDetailModal')).hide();
+      navigateTo('transactions');
+      // Keterangan: Anda bisa menambahkan logika untuk langsung membuka modal detail transaksi setelah halaman termuat
+    };
+  } else if (type === 'transfer') {
+    title.textContent = 'Transfer';
+    body.innerHTML = `
+    <div class="text-center mb-3">
+    <i class="bi bi-arrow-left-right fs-1 text-info"></i>
+    <h5 class="mt-2">Transfer</h5>
+    </div>
+    <table class="table table-sm">
+    <tr><th>Dari</th><td>${item.from_wallet}</td></tr>
+    <tr><th>Ke</th><td>${item.to_wallet}</td></tr>
+    <tr><th>Jumlah</th><td class="fw-bold">${item.amount}</td></tr>
+    <tr><th>Tanggal</th><td>${formatDate(item.date)}</td></tr>
+    <tr><th>Deskripsi</th><td>${highlightText(item.description || '-', state.searchKeyword)}</td></tr>
+    </table>
+    `;
+    actionBtn.style.display = 'block';
+    actionBtn.textContent = 'Lihat Transfer';
+    actionBtn.onclick = () => {
+      bootstrap.Modal.getInstance(document.getElementById('searchDetailModal')).hide();
+      navigateTo('transfers');
+    };
+  } else if (type === 'statement') {
+    title.textContent = item.description;
+    body.innerHTML = `
+    <div class="text-center mb-3">
+    <i class="bi bi-file-text fs-1 text-secondary"></i>
+    <h5 class="mt-2">${item.description}</h5>
+    <span class="badge bg-secondary">${item.bank_code}</span>
+    </div>
+    <table class="table table-sm">
+    <tr><th>Bank</th><td>${item.bank_code}</td></tr>
+    <tr><th>Dompet</th><td>${item.wallet}</td></tr>
+    <tr><th>Status</th><td>${item.status}</td></tr>
+    <tr><th>Tanggal Upload</th><td>${formatDate(item.date)}</td></tr>
+    </table>
+    `;
+    actionBtn.style.display = 'block';
+    actionBtn.textContent = 'Lihat Statement';
+    actionBtn.onclick = () => {
+      bootstrap.Modal.getInstance(document.getElementById('searchDetailModal')).hide();
+      navigateTo('statements');
+    };
+  }
+
+  new bootstrap.Modal(document.getElementById('searchDetailModal')).show();
 }
 
 // ==================== DATA LOADING ====================
@@ -968,7 +1053,9 @@ function applyTransactionFilter() {
 
 function showTransactionDetailModal(id) {
   const trx = state.transactions.find(t => t.id === id);
-  if (!trx) return;
+  if (!trx) {
+    tgApp.showToast('Detail transaksi tidak ditemukan.', 'danger');
+  };
 
   const body = document.getElementById('transactionDetailBody');
   const typeLabel = trx.type === 'income' ? 'Pemasukan': 'Pengeluaran';
@@ -2195,4 +2282,11 @@ function formatNumberShort(num) {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'JT';
   if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
   return num.toString();
+}
+
+function highlightText(text, keyword) {
+  if (!keyword) return text;
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  return text.replace(regex, '<mark class="bg-warning p-0 rounded">$1</mark>');
 }
