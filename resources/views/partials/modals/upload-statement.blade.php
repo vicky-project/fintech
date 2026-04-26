@@ -144,7 +144,7 @@
     </div>
     <div class="flex-grow-1" style="min-width: 0;">
     <div class="d-flex justify-content-between align-items-start mb-2">
-    <small class="text-muted">${formatDate(trx.date)}</small>
+    <small class="text-muted">${Core.formatDate(trx.date)}</small>
     <span class="${amountClass} fw-bold ms-2 text-end">${trx.formatted_amount}</span>
     </div>
     <div class="mb-2">
