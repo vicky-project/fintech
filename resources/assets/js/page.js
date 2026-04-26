@@ -217,7 +217,7 @@ function renderTransactionList() {
     <div class="card mb-2" style="overflow: hidden;">
     <div class="card-body p-3">
     <div class="d-flex justify-content-between align-items-start">
-    <div class="flex-grow-1 me-2" data-action="detail-transaction" data-id="${trx.id}" style="cursor: pointer; min-width: 0;">
+    <div class="flex-grow-1 me-2" onclick="showTransactionDetailModal(${trx.id})" style="cursor: pointer; min-width: 0;">
     <div class="d-flex align-items-center">
     <i class="${trx.category.icon} me-2" style="color:${trx.category.color}; flex-shrink: 0;"></i>
     <div style="min-width: 0;">
