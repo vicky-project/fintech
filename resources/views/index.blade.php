@@ -245,6 +245,27 @@
     border-top-color: var(--tg-theme-section-separator-color) !important;
   }
 
+  .notification-title {
+    color: var(--tg-theme-text-color) !important;
+    font-weight: 600;
+  }
+
+  .notification-row.read .notification-title {
+    opacity: 0.7;
+  }
+
+  .notification-message {
+    color: var(--tg-theme-hint-color);
+    font-size: 0.875rem;
+  }
+
+  .notification-time {
+    font-size: 0.75rem;
+    color: var(--tg-theme-hint-color);
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+
   .notification-row {
     transition: background-color 0.2s;
   }

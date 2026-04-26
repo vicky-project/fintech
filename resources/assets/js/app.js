@@ -416,11 +416,10 @@ function renderNotificationList() {
   container.innerHTML = state.notifications.map(n => {
     const iconClass = getNotificationIcon(n.type);
     const colorClass = getNotificationColor(n.type);
-    const unreadClass = n.is_read ? '': 'unread';
     const timeAgo = formatTimeAgo(n.created_at);
 
     return `
-    <div class="card mb-2 notification-row ${unreadClass}"
+    <div class="card mb-2 notification-row ${n.is_read ? 'read': 'unread'}"
     style="cursor: pointer; border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
     onclick="markNotificationRead(${n.id})">
     <div class="card-body d-flex align-items-start p-3">
@@ -429,10 +428,10 @@ function renderNotificationList() {
     </div>
     <div class="flex-grow-1" style="min-width: 0;">
     <div class="notification-header">
-    <strong class="${n.is_read ? 'text-body': 'text-dark'}">${n.title}</strong>
+    <strong class="notification-title ${n.is_read ? 'read': ''}">${n.title}</strong>
     <span class="notification-time">${timeAgo}</span>
     </div>
-    <p class="text-muted small mb-0" style="word-wrap: break-word;">${n.message}</p>
+    <p class="notification-message mb-0" style="word-wrap: break-word;">${n.message}</p>
     </div>
     ${n.is_read ? '': '<span class="badge bg-primary rounded-pill ms-2" style="width: 8px; height: 8px; padding: 0;"></span>'}
     </div>
