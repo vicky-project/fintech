@@ -116,7 +116,7 @@ async function renderTransactionsPage() {
     <div class="row g-2 mb-3" id="transaction-stats"></div>
     <div class="row g-2 mb-3">
     <div class="col-4">
-    <select class="form-select form-select-sm" id="filter-wallet">
+    <select class="form-select form-select-sm" id="filter-wallet" data-action="apply-transaction-filter">
     <option value="">Semua Dompet</option>
     ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id == Core.state.filters.wallet_id ? 'selected': ''}>${w.name}</option>`).join('')}
     </select>
@@ -129,7 +129,7 @@ async function renderTransactionsPage() {
     </select>
     </div>
     <div class="col-4">
-    <input type="month" class="form-control form-control-sm" id="filter-month" value="${Core.state.filters.month || currentMonth}">
+    <input type="month" class="form-control form-control-sm" id="filter-month" value="${Core.state.filters.month || currentMonth}" data-action="apply-transaction-filter">
     </div>
     </div>
     <div class="mb-3">
@@ -244,11 +244,16 @@ function renderTransactionList() {
 }
 
 // Detail transaksi modal (singkat)
-window.showTransactionDetailModal = function(id) {
-  const trx = Core.state.transactions.find(t => t.id === id);
+window.showTransactionDetailModal = async function(id) {
+  let trx = Core.state.transactions.find(t => t.id === id);
   if (!trx) {
-    tgApp.showToast('Detail transaksi tidak ditemukan.', 'danger');
-    return;
+    const res = await loadTransactionItem(id);
+    if (res.success && res.data) {
+      trx = res.data;
+    } else {
+      tgApp.showToast('Detail transaksi tidak ditemukan.', 'danger');
+      return;
+    }
   }
   // ... buka modal detail (mengandalkan elemen transactionDetailModal)
   const body = document.getElementById('transactionDetailBody');
@@ -350,16 +355,20 @@ async function executeBulkDelete() {
 }
 
 async function loadAndEditTransaction(id) {
-  tgApp.showLoading('Mengambil data transaksi...');
-  const res = await Core.api.get(`/api/fintech/transactions/${id}`);
+  const res = await loadTransactionItem(id);
   if (res.success && res.data) {
     Core.state.transactions.push(res.data);
-    tgApp.hideLoading();
     setTimeout(() => editTransaction(id), 50);
   } else {
-    tgApp.hideLoading();
     tgApp.showToast('Transaksi tidak ditemukan', 'danger');
   }
+}
+
+async function loadTransactionItem(id) {
+  tgApp.showLoading('Mengambil data transaksi...');
+  const res = await Core.api.get(`/api/fintech/transactions/${id}`);
+  tgApp.hideLoading();
+  return res;
 }
 
 // ==================== TRANSFERS ====================
