@@ -1,12 +1,12 @@
 // ==================== MAIN.JS ====================
 // Entry point aplikasi, inisialisasi, event delegation, dan fungsi global
+window.performSearch = () => {
+  if (typeof performSearch === 'function') performSearch();
+};
 window.showAddTransferModal = () => tgApp.showToast('Modal tambah transfer belum diimplementasikan', 'info');
 window.editTransfer = (id) => tgApp.showToast(`Edit transfer ${id} belum diimplementasikan`, 'info');
 window.deleteTransfer = async (id) => {
   if (typeof deleteTransfer === 'function') await deleteTransfer(id);
-};
-window.navigateToTrash = () => {
-  if (typeof navigateToTrash === 'function') navigateToTrash();
 };
 window.navigateToTransferTrash = () => {
   if (typeof navigateToTransferTrash === 'function') navigateToTransferTrash();
