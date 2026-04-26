@@ -508,7 +508,7 @@ async function loadUnreadNotificationCount() {
   } catch (e) {
     console.error('Gagal memuat jumlah notifikasi:',
       e);
-    alert(e.message);
+    alert('Notification error: ' + e.message);
   }
 }
 async function loadUserSettings() {
@@ -2012,6 +2012,7 @@ async function forceDeleteTransfer(id) {
 // ===== 16. NOTIFICATION ======
 function updateNotificationBadge() {
   const badge = document.getElementById('notification-badge');
+  alert("Badge: " + JSON.stringify(badge));
   if (badge) {
     if (Core.state.unreadNotificationCount > 0) {
       badge.textContent = Core.state.unreadNotificationCount > 99 ? '99+': Core.state.unreadNotificationCount;
