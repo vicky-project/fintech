@@ -321,8 +321,7 @@ const Core = (() => {
     }
   }
 
-  async function loadTransactionsPage(page,
-    filters) {
+  async function loadTransactionsPage(page, filters) {
     let url = `/api/fintech/transactions?per_page=20&page=${page}`;
     if (filters.wallet_id) url += `&wallet_id=${filters.wallet_id}`;
     if (filters.type) url += `&type=${filters.type}`;

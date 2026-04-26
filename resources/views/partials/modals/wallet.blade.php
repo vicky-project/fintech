@@ -116,17 +116,17 @@
         await Core.api.post(url, data);
       }
 
-      await loadWallets();
-      await loadHomeSummary();
+      await Core.loadWallets();
+      await Core.loadHomeSummary();
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Dompet diperbarui' : 'Dompet dibuat');
       bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
 
       if (Core.state.currentPage === 'wallets') {
-        renderWalletsList();
+        Core.navigateTo('wallets');
       } else if (Core.state.currentPage === 'home') {
-        renderHomePage();
+        Core.navigateTo('home');
       }
     } catch (error) {
       tgApp.hideLoading();
