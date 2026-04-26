@@ -32,7 +32,7 @@ class SettingController extends Controller
   {
     $settings = UserSetting::updateOrCreate(
       ['user_id' => $request->user()->id],
-      $request->validatedSettings();
+      $request->validatedSettings()
     );
 
     return response()->json([
