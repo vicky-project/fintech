@@ -68,60 +68,53 @@
 
   {{-- Floating Action Button Modern --}}
   <div class="position-fixed bottom-0 end-0 mb-4 me-3" style="z-index: 1000; margin-bottom: 70px !important;">
-    <button id="fab-button" class="btn btn-primary rounded-circle shadow" style="width: 56px; height: 56px; opacity: 0.8;" onclick="toggleQuickActions()">
+    <button id="fab-button" class="btn btn-primary rounded-circle shadow" style="width: 56px; height: 56px; opacity: 0.8; transition: transform 0.3s ease;" onclick="toggleQuickActions()">
       <i id="fab-icon" class="bi bi-plus-lg fs-3"></i>
     </button>
   </div>
 
   {{-- Overlay Quick Actions --}}
-  <div id="quick-actions-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" style="z-index: 9999; background-color: rgba(0,0,0,0.5); transition: opacity 0.3s ease;" onclick="toggleQuickActions()">
+  <div id="quick-actions-overlay" class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 9999; background-color: rgba(0,0,0,0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity 0.3s ease;" onclick="toggleQuickActions()">
     <div class="d-flex flex-column justify-content-end h-100 pb-5" onclick="event.stopPropagation()">
-      <div class="container px-4 pb-4">
-        <div class="row g-3">
-          <div class="col-6">
-            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showAddWalletModal(); toggleQuickActions();">
-              <i class="bi bi-wallet fs-3 text-primary"></i>
-              <div class="small mt-1">
-                Dompet
-              </div>
-            </button>
-          </div>
-          <div class="col-6">
-            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showAddTransactionModal(); toggleQuickActions();">
-              <i class="bi bi-arrow-left-right fs-3 text-success"></i>
-              <div class="small mt-1">
-                Transaksi
-              </div>
-            </button>
-          </div>
-          <div class="col-6">
-            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showAddTransferModal(); toggleQuickActions();">
-              <i class="bi bi-send fs-3 text-info"></i>
-              <div class="small mt-1">
-                Transfer
-              </div>
-            </button>
-          </div>
-          <div class="col-6">
-            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showUploadStatementModal(); toggleQuickActions();">
-              <i class="bi bi-cloud-upload fs-3 text-warning"></i>
-              <div class="small mt-1">
-                Upload
-              </div>
-            </button>
-          </div>
-          <div class="col-12">
-            <button class="btn btn-light w-100 py-3 rounded-4 shadow-sm" onclick="showSuggestCategoryModal(); toggleQuickActions();">
-              <i class="bi bi-tags fs-3 text-secondary"></i>
-              <div class="small mt-1">
-                Usul Kategori
-              </div>
-            </button>
-          </div>
+      <div class="container px-4 pb-5">
+        <div class="d-flex justify-content-center flex-wrap gap-4 mb-4">
+          <!-- Tombol-tombol aksi hanya ikon -->
+          <button class="quick-action-btn btn btn-light rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            style="width: 64px; height: 64px; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+            onclick="showAddWalletModal(); toggleQuickActions();"
+            title="Tambah Dompet">
+            <i class="bi bi-wallet-fill fs-3 text-primary"></i>
+          </button>
+          <button class="quick-action-btn btn btn-light rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            style="width: 64px; height: 64px; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+            onclick="showAddTransactionModal(); toggleQuickActions();"
+            title="Tambah Transaksi">
+            <i class="bi bi-plus-circle-fill fs-3 text-success"></i>
+          </button>
+          <button class="quick-action-btn btn btn-light rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            style="width: 64px; height: 64px; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+            onclick="showAddTransferModal(); toggleQuickActions();"
+            title="Transfer">
+            <i class="bi bi-send-fill fs-3 text-info"></i>
+          </button>
+          <button class="quick-action-btn btn btn-light rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            style="width: 64px; height: 64px; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+            onclick="showUploadStatementModal(); toggleQuickActions();"
+            title="Upload Statement">
+            <i class="bi bi-cloud-upload-fill fs-3 text-warning"></i>
+          </button>
+          <button class="quick-action-btn btn btn-light rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            style="width: 64px; height: 64px; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+            onclick="showSuggestCategoryModal(); toggleQuickActions();"
+            title="Usulkan Kategori">
+            <i class="bi bi-tags-fill fs-3 text-secondary"></i>
+          </button>
         </div>
-        <button class="btn btn-outline-light w-100 mt-4 rounded-pill" onclick="toggleQuickActions()">
-          <i class="bi bi-x-lg me-1"></i>Tutup
-        </button>
+        <div class="text-center">
+          <button class="btn btn-outline-light rounded-circle" style="width: 48px; height: 48px;" onclick="toggleQuickActions()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -259,6 +252,11 @@
 <style>
   #pinModal {
     z-index: 10001 !important;
+  }
+
+  .quick-action-btn:hover {
+    transform: scale(1.15);
+    box-shadow: 0 8px 25px rgba(255,255,255,0.3) !important;
   }
 
   /* Pastikan dropdown mengikuti tema Telegram */

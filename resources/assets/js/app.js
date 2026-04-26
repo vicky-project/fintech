@@ -323,12 +323,14 @@ function toggleQuickActions() {
   const overlay = document.getElementById('quick-actions-overlay');
   const icon = document.getElementById('fab-icon');
 
-  if (overlay.classList.contains('d-none')) {
-    overlay.classList.remove('d-none');
+  if (overlay.style.opacity === '0' || overlay.style.opacity === '') {
+    overlay.style.opacity = '1';
+    overlay.style.pointerEvents = 'auto';
     icon.classList.remove('bi-plus-lg');
     icon.classList.add('bi-x-lg');
   } else {
-    overlay.classList.add('d-none');
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
     icon.classList.remove('bi-x-lg');
     icon.classList.add('bi-plus-lg');
   }
