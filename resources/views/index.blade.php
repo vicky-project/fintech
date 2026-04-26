@@ -258,6 +258,10 @@
 @endsection
 
 @push('scripts')
+<script src="//cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  eruda.init(); // Ikon Eruda akan muncul
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
   const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
