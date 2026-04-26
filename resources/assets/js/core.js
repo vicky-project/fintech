@@ -541,11 +541,11 @@ async function renderHomePage() {
     await loadHomeSummary();
   }
   const summary = Core.state.homeSummary;
+  alert(JSON.stringify(summary));
   if (!summary) {
     document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
     return;
   }
-  alert(JSON.stringify(summary));
 
   const symbol = getCurrencySymbol(summary.currency);
   const html = `
