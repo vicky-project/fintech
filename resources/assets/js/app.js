@@ -524,6 +524,7 @@ function navigateTo(page) {
     insights: renderInsightsPage,
     statements: renderStatementsPage,
     budgets: renderBudgetsPage,
+    notifications: renderNotificationsPage,
   };
   if (pages[page]) pages[page]();
   window.scrollTo({

@@ -71,6 +71,7 @@ class FinTechServiceProvider extends ServiceProvider
   {
     $this->commands([
       \Modules\FinTech\Console\FetchExchangeRates::class,
+      \Modules\FinTech\Console\GenerateNotifications::class,
     ]);
   }
 
@@ -84,6 +85,10 @@ class FinTechServiceProvider extends ServiceProvider
       //     $schedule->command('inspire')->hourly();
       Schedule::command('app:exchange-rates')
       ->everySixHours()
+      ->withoutOverlapping()
+      ->timezone(config("app.timezone"));
+      Schedule::command('app:notifications')
+      ->everyThreeHours()
       ->withoutOverlapping()
       ->timezone(config("app.timezone"));
     });

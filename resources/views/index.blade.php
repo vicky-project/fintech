@@ -34,6 +34,10 @@
       <button class="btn nav-btn" data-page="transactions"><i class="bi bi-list-ul fs-5"></i></button>
       <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-graph-up fs-5"></i></button>
+      <button class="btn nav-btn position-relative" data-page="notifications">
+        <i class="bi bi-bell fs-5"></i>
+        <span id="notification-badge" class="badge badge-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="display: none;font-size: 0.6rem;padding: 0.2em 0.4em;"></span>
+      </button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
 
       {{-- Dropup untuk menu lebih --}}
