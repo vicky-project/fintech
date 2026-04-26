@@ -90,7 +90,6 @@ async function interceptAndFetch(requestFn) {
 document.addEventListener('DOMContentLoaded', async () => {
   await initializeApp();
   setupNavigation();
-  setupFabOpacity();
 
   ['click', 'scroll'].forEach(eventType => {
     document.addEventListener(eventType, resetSessionTimer, {
@@ -320,12 +319,19 @@ function setupNavigation() {
   });
 }
 
-function setupFabOpacity() {
-  const fab = document.getElementById('fab-button');
-  if (!fab) return;
-  fab.style.opacity = '0.7';
-  fab.addEventListener('shown.bs.dropdown', () => fab.style.opacity = '1');
-  fab.addEventListener('hidden.bs.dropdown', () => fab.style.opacity = '0.7');
+function toggleQuickActions() {
+  const overlay = document.getElementById('quick-actions-overlay');
+  const icon = document.getElementById('fab-icon');
+
+  if (overlay.classList.contains('d-none')) {
+    overlay.classList.remove('d-none');
+    icon.classList.remove('bi-plus-lg');
+    icon.classList.add('bi-x-lg');
+  } else {
+    overlay.classList.add('d-none');
+    icon.classList.remove('bi-x-lg');
+    icon.classList.add('bi-plus-lg');
+  }
 }
 
 // ==================== DATA LOADING ====================

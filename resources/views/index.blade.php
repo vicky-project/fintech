@@ -66,20 +66,63 @@
     </div>
   </nav>
 
-  {{-- Floating Action Button (Quick Actions) --}}
+  {{-- Floating Action Button Modern --}}
   <div class="position-fixed bottom-0 end-0 mb-4 me-3" style="z-index: 1000; margin-bottom: 70px !important;">
-    <div class="dropup">
-      <button id="fab-button" class="btn btn-primary rounded-circle shadow opacity-50" style="width: 56px; height: 56px;" data-bs-toggle="dropdown">
-        <i class="bi bi-plus-lg fs-3"></i>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end mb-2">
-        <li><a class="dropdown-item" href="#" onclick="showAddWalletModal()"><i class="bi bi-wallet me-2"></i>Tambah Dompet</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showAddTransactionModal()"><i class="bi bi-plus-circle me-2"></i>Tambah Transaksi</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showAddTransferModal()"><i class="bi bi-send me-2"></i>Transfer</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showUploadStatementModal()">
-          <i class="bi bi-cloud-upload me-2"></i>Upload Statement</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showSuggestCategoryModal()"><i class="bi bi-tags me-2"></i>Category Recomendation</a></li>
-      </ul>
+    <button id="fab-button" class="btn btn-primary rounded-circle shadow" style="width: 56px; height: 56px; opacity: 0.8;" onclick="toggleQuickActions()">
+      <i id="fab-icon" class="bi bi-plus-lg fs-3"></i>
+    </button>
+  </div>
+
+  {{-- Overlay Quick Actions --}}
+  <div id="quick-actions-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" style="z-index: 9999; background-color: rgba(0,0,0,0.5); transition: opacity 0.3s ease;" onclick="toggleQuickActions()">
+    <div class="d-flex flex-column justify-content-end h-100 pb-5" onclick="event.stopPropagation()">
+      <div class="container px-4 pb-4">
+        <div class="row g-3">
+          <div class="col-6">
+            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showAddWalletModal(); toggleQuickActions();">
+              <i class="bi bi-wallet fs-3 text-primary"></i>
+              <div class="small mt-1">
+                Dompet
+              </div>
+            </button>
+          </div>
+          <div class="col-6">
+            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showAddTransactionModal(); toggleQuickActions();">
+              <i class="bi bi-arrow-left-right fs-3 text-success"></i>
+              <div class="small mt-1">
+                Transaksi
+              </div>
+            </button>
+          </div>
+          <div class="col-6">
+            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showAddTransferModal(); toggleQuickActions();">
+              <i class="bi bi-send fs-3 text-info"></i>
+              <div class="small mt-1">
+                Transfer
+              </div>
+            </button>
+          </div>
+          <div class="col-6">
+            <button class="btn btn-light w-100 py-4 rounded-4 shadow-sm" onclick="showUploadStatementModal(); toggleQuickActions();">
+              <i class="bi bi-cloud-upload fs-3 text-warning"></i>
+              <div class="small mt-1">
+                Upload
+              </div>
+            </button>
+          </div>
+          <div class="col-12">
+            <button class="btn btn-light w-100 py-3 rounded-4 shadow-sm" onclick="showSuggestCategoryModal(); toggleQuickActions();">
+              <i class="bi bi-tags fs-3 text-secondary"></i>
+              <div class="small mt-1">
+                Usul Kategori
+              </div>
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-outline-light w-100 mt-4 rounded-pill" onclick="toggleQuickActions()">
+          <i class="bi bi-x-lg me-1"></i>Tutup
+        </button>
+      </div>
     </div>
   </div>
 
