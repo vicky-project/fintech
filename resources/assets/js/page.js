@@ -936,10 +936,11 @@ async function loadInsights() {
     document.getElementById('insights-content').innerHTML = `
     <div class="alert alert-danger">Gagal memuat analisis</div>
     `;
+    tgApp.showToast(error.message || 'Gagal memuat data analisis.', 'danger');
   }
 }
 function renderInsightsContent(data) {
-  const symbol = getCurrencySymbol(data.currency || 'IDR');
+  const symbol = Core.getCurrencySymbol(data.currency || 'IDR');
   const trend = data.trend;
   const changeClass = trend.change_percentage > 0 ? 'text-danger': 'text-success';
   const changeIcon = trend.change_percentage > 0 ? '↑': '↓';
@@ -950,11 +951,11 @@ function renderInsightsContent(data) {
   <div class="card mb-3">
   <div class="card-body">
   <h6>Total Pengeluaran Bulan Ini</h6>
-  <h3>${symbol} ${formatNumber(trend.current_month_total)}</h3>
+  <h3>${symbol} ${Core.formatNumber(trend.current_month_total)}</h3>
   <p class="${changeClass} mb-0">
   ${changeIcon} ${Math.abs(trend.change_percentage)}% dari bulan lalu
   </p>
-  <small class="text-muted">Rata-rata 3 bulan: ${symbol} ${formatNumber(trend.avg_last_3months)}</small>
+  <small class="text-muted">Rata-rata 3 bulan: ${symbol} ${Core.formatNumber(trend.avg_last_3months)}</small>
   </div>
   </div>
   <!-- Budgets -->
@@ -1063,7 +1064,7 @@ function renderInsightsContent(data) {
   <p>Estimasi Pemasukan: <strong class="text-success">${data.projection.formatted_income}</strong></p>
   <p>Estimasi Pengeluaran: <strong class="text-danger">${data.projection.formatted_expense}</strong></p>
   <p>Surplus/Defisit: <strong class="${data.projection.projected_surplus >= 0 ? 'text-success': 'text-danger'}">
-  ${symbol} ${formatNumber(data.projection.projected_surplus)}
+  ${symbol} ${Core.formatNumber(data.projection.projected_surplus)}
   </strong></p>
   </div>
   </div>
@@ -1139,7 +1140,7 @@ function renderStatementList() {
     <span class="badge bg-${statusClass}">${s.status_label}</span>
     ${s.remaining_count > 0 ? `<span class="badge bg-warning ms-1">${s.remaining_count} belum diimpor</span>`: ''}
     </div>
-    <small class="text-muted d-block mt-1">${formatDateTime(s.created_at)}</small>
+    <small class="text-muted d-block mt-1">${Core.formatDateTime(s.created_at)}</small>
     </div>
     <div class="dropdown flex-shrink-0">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown">
