@@ -83,7 +83,7 @@ function handleGlobalClick(e) {
     'edit-wallet': () => window.editWallet(id),
     'add-transaction': window.showAddTransactionModal,
     'edit-transaction': () => window.editTransaction(id),
-    'detail-transaction' => () => window.showTransactionDetailModal(id),
+    'detail-transaction': () => window.showTransactionDetailModal(id),
     'delete-transaction': () => window.deleteTransaction(id),
     'add-transfer': window.showAddTransferModal,
     'edit-transfer': () => window.editTransfer(id),
