@@ -135,7 +135,7 @@
         await Core.api.post(url, data);
       }
 
-      await refreshBudgetList();
+      Core.navigateTo('budgets');
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Budget diupdate': 'Budget dibuat');
       bootstrap.Modal.getInstance(document.getElementById('budgetModal')).hide();
@@ -149,7 +149,7 @@
     if (!confirm('Hapus budget ini?')) return;
     try {
       await Core.api.delete(`/api/fintech/budgets/${id}`);
-      await refreshBudgetList();
+      Core.navigateTo('budgets');
       tgApp.showToast('Budget dihapus');
     } catch (error) {
       tgApp.showToast(error.message || 'Gagal menghapus', 'danger');

@@ -1102,9 +1102,9 @@ async function renderStatementsPage() {
   });
 }
 async function refreshStatementList(page = 1) {
-  await loadStatements(page);
+  await Core.loadStatements(page);
   renderStatementList();
-  renderPagination('statement-pagination', Core.state.statementPage, Core.state.statementLastPage, refreshStatementList);
+  Core.renderPagination('statement-pagination', Core.state.statementPage, Core.state.statementLastPage, refreshStatementList);
 }
 function renderStatementList() {
   const container = document.getElementById('statement-list');
@@ -1190,7 +1190,7 @@ async function renderBudgetsPage() {
   });
 }
 async function refreshBudgetList() {
-  await loadBudgets();
+  await Core.loadBudgets();
   renderBudgetList();
 }
 async function loadBudgets() {
