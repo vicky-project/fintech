@@ -95,7 +95,7 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
 
 
 Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(function() {
-  Route::get('search', [SearchController::class, 'global']):
+  Route::get('search', [SearchController::class, 'global']);
   Route::get('settings', [SettingController::class, 'show'])->middleware('pin.session');
   Route::put('settings', [SettingController::class, 'update']);
   Route::post('settings/verify-pin', [SettingController::class, 'verifyPin'])->middleware('throttle:10,1');
