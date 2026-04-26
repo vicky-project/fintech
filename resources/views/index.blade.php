@@ -38,7 +38,15 @@
         <i class="bi bi-bell fs-5"></i>
         <span id="notification-badge"
           class="badge bg-danger rounded-circle position-absolute"
-          style="display: none; font-size: 0.6rem; padding: 0.2em 0.4em; top: 0; right: 0; transform: translate(1%, -1%);">
+          style="display: none;
+          font-size: 0.6rem;
+          width: 14px;
+          height: 14px;
+          line-height: 14px;
+          text-align: center;
+          padding: 0;
+          top: -2px;
+          right: -2px;">
         </span>
       </button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
