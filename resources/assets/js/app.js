@@ -496,7 +496,7 @@ function showSearchDetail(type, id) {
     actionBtn.style.display = 'block';
     actionBtn.textContent = 'Edit Transaksi';
     actionBtn.onclick = () => {
-      state.pendingAction {
+      state.pendingAction = {
         type: 'transaction',
         id: item.id
       };
