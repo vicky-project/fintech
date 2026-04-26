@@ -45,8 +45,8 @@
           line-height: 14px;
           text-align: center;
           padding: 0;
-          top: 5px;
-          right: 5px;">
+          top: 7px;
+          right: 7px;">
         </span>
       </button>
       <button class="btn nav-btn" data-page="settings"><i class="bi bi-gear fs-5"></i></button>
