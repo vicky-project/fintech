@@ -488,6 +488,7 @@ async function loadCurrencies() {
 async function loadHomeSummary() {
   const res = await Core.api.get('/api/fintech/home-summary');
   Core.state.homeSummary = res.data;
+  alert(Core.state.homeSummary)
 }
 async function loadNotifications() {
   try {
