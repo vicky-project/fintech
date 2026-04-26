@@ -1439,7 +1439,7 @@ function renderSearchResults(results) {
   }
 
   container.innerHTML = filtered.map(item => {
-    const desc = highlightText(item.description || '', Core.state.searchKeyword);
+    const desc = Core.highlightText(item.description || '', Core.state.searchKeyword);
     if (item.type === 'transaction') {
       return `
       <div class="card search-result-item" onclick="showSearchDetail('${item.type}', ${item.id})">
@@ -1447,7 +1447,7 @@ function renderSearchResults(results) {
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
       <div class="fw-semibold text-truncate">${desc}</div>
-      <small class="text-muted">${item.wallet} · ${formatDate(item.date)}</small>
+      <small class="text-muted">${item.wallet} · ${Core.formatDate(item.date)}</small>
       </div>
       <span class="${item.transaction_type === 'income' ? 'text-success': 'text-danger'} fw-bold ms-2">${item.amount}</span>
       </div>
@@ -1460,7 +1460,7 @@ function renderSearchResults(results) {
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
       <div class="fw-semibold text-truncate">${desc}</div>
-      <small class="text-muted">Transfer · ${formatDate(item.date)}</small>
+      <small class="text-muted">Transfer · ${Core.formatDate(item.date)}</small>
       </div>
       <span class="fw-bold ms-2">${item.amount}</span>
       </div>
@@ -1475,7 +1475,7 @@ function renderSearchResults(results) {
       <div class="fw-semibold text-truncate">${desc}</div>
       <small class="text-muted">${item.bank_code} · ${item.wallet} · ${item.status}</small>
       </div>
-      <small class="text-muted ms-2">${formatDate(item.date)}</small>
+      <small class="text-muted ms-2">${Core.formatDate(item.date)}</small>
       </div>
       </div>
       `;
@@ -1501,8 +1501,8 @@ function showSearchDetail(type, id) {
     <table class="table table-sm">
     <tr><th>Jumlah</th><td class="${item.transaction_type === 'income' ? 'text-success': 'text-danger'} fw-bold">${item.amount}</td></tr>
     <tr><th>Dompet</th><td>${item.wallet}</td></tr>
-    <tr><th>Tanggal</th><td>${formatDate(item.date)}</td></tr>
-    <tr><th>Deskripsi</th><td>${highlightText(item.description || '-', Core.state.searchKeyword)}</td></tr>
+    <tr><th>Tanggal</th><td>${Core.formatDate(item.date)}</td></tr>
+    <tr><th>Deskripsi</th><td>${Core.highlightText(item.description || '-', Core.state.searchKeyword)}</td></tr>
     </table>
     `;
     actionBtn.style.display = 'block';
@@ -1526,8 +1526,8 @@ function showSearchDetail(type, id) {
     <tr><th>Dari</th><td>${item.from_wallet}</td></tr>
     <tr><th>Ke</th><td>${item.to_wallet}</td></tr>
     <tr><th>Jumlah</th><td class="fw-bold">${item.amount}</td></tr>
-    <tr><th>Tanggal</th><td>${formatDate(item.date)}</td></tr>
-    <tr><th>Deskripsi</th><td>${highlightText(item.description || '-', Core.state.searchKeyword)}</td></tr>
+    <tr><th>Tanggal</th><td>${Core.formatDate(item.date)}</td></tr>
+    <tr><th>Deskripsi</th><td>${Core.highlightText(item.description || '-', Core.state.searchKeyword)}</td></tr>
     </table>
     `;
     actionBtn.style.display = 'block';
@@ -1552,7 +1552,7 @@ function showSearchDetail(type, id) {
     <tr><th>Bank</th><td>${item.bank_code}</td></tr>
     <tr><th>Dompet</th><td>${item.wallet}</td></tr>
     <tr><th>Status</th><td>${item.status}</td></tr>
-    <tr><th>Tanggal Upload</th><td>${formatDate(item.date)}</td></tr>
+    <tr><th>Tanggal Upload</th><td>${Core.formatDate(item.date)}</td></tr>
     </table>
     `;
     actionBtn.style.display = 'block';
@@ -1596,7 +1596,7 @@ async function renderTrashPage() {
     <div class="d-flex justify-content-between">
     <div>
     <div>${t.category.name} · ${t.formatted_amount}</div>
-    <small class="text-muted">${t.wallet.name} · ${formatDate(t.transaction_date)}</small>
+    <small class="text-muted">${t.wallet.name} · ${Core.formatDate(t.transaction_date)}</small>
     </div>
     <div>
     <button class="btn btn-sm btn-outline-success" onclick="restoreTransaction(${t.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
@@ -1648,7 +1648,7 @@ async function renderTransferTrashPage() {
     <div>
     <div>${t.from_wallet.name} → ${t.to_wallet.name}</div>
     <div class="text-primary">${t.formatted_amount}</div>
-    <small class="text-muted">${formatDate(t.transfer_date)}</small>
+    <small class="text-muted">${Core.formatDate(t.transfer_date)}</small>
     </div>
     <div>
     <button class="btn btn-sm btn-outline-success" onclick="restoreTransfer(${t.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
