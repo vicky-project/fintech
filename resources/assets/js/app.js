@@ -341,11 +341,103 @@ function toggleQuickActions() {
   }
 }
 
+async function renderSearchPage() {
+  const html = `
+  <div class="container py-3">
+  <div class="input-group mb-3">
+  <span class="input-group-text"><i class="bi bi-search"></i></span>
+  <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer..."
+  onkeydown="if(event.key==='Enter') performSearch()">
+  <button class="btn btn-primary" onclick="performSearch()">Cari</button>
+  </div>
+  <div id="search-results">
+  <p class="text-muted text-center">Ketik minimal 2 karakter untuk mencari.</p>
+  </div>
+  </div>
+  `;
+  document.getElementById('main-content').innerHTML = html;
+  document.getElementById('search-input').focus();
+}
+
+async function performSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (q.length < 2) {
+    tgApp.showToast('Minimal 2 karakter', 'warning');
+    return;
+  }
+
+  const container = document.getElementById('search-results');
+  container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p>Mencari...</p></div>';
+
+  try {
+    const res = await api.get(`/api/fintech/search?q=${encodeURIComponent(q)}`);
+    const results = res.data || [];
+    renderSearchResults(results);
+  } catch (error) {
+    container.innerHTML = '<p class="text-muted text-center">Gagal mencari.</p>';
+  }
+}
+
+function renderSearchResults(results) {
+  const container = document.getElementById('search-results');
+  if (!results.length) {
+    container.innerHTML = '<p class="text-muted text-center py-5">Tidak ditemukan.</p>';
+    return;
+  }
+
+  let html = '<div class="list-group">';
+  results.forEach(item => {
+    if (item.type === 'transaction') {
+      html += `
+      <div class="list-group-item" onclick="showTransactionDetailModal(${item.id})">
+      <div class="d-flex align-items-center">
+      <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
+      <div class="flex-grow-1" style="min-width:0;">
+      <div class="fw-semibold text-truncate">${item.description || item.category}</div>
+      <small class="text-muted">${item.wallet} · ${formatDate(item.date)}</small>
+      </div>
+      <span class="${item.transaction_type === 'income' ? 'text-success': 'text-danger'} fw-bold ms-2">${item.amount}</span>
+      </div>
+      </div>
+      `;
+    } else if (item.type === 'transfer') {
+      html += `
+      <div class="list-group-item" onclick="editTransfer(${item.id})">
+      <div class="d-flex align-items-center">
+      <i class="bi bi-arrow-left-right me-3 fs-4 text-info"></i>
+      <div class="flex-grow-1" style="min-width:0;">
+      <div class="fw-semibold text-truncate">${item.description}</div>
+      <small class="text-muted">Transfer · ${formatDate(item.date)}</small>
+      </div>
+      <span class="fw-bold ms-2">${item.amount}</span>
+      </div>
+      </div>
+      `;
+    } else if (item.type === 'statement') {
+      html += `
+      <div class="list-group-item" onclick="renderPreviewStatementPage(${item.id})">
+      <div class="d-flex align-items-center">
+      <i class="bi bi-file-text me-3 fs-4 text-secondary"></i>
+      <div class="flex-grow-1" style="min-width:0;">
+      <div class="fw-semibold text-truncate">${item.description}</div>
+      <small class="text-muted">${item.bank_code} · ${item.wallet} · ${item.status}</small>
+      </div>
+      <small class="text-muted ms-2">${formatDate(item.date)}</small>
+      </div>
+      </div>
+      `;
+    }
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
 // ==================== DATA LOADING ====================
 async function loadWallets() {
   const res = await api.get('/api/fintech/wallets');
   state.wallets = res.data || [];
-  state.totalBalance = state.wallets.reduce((s, w) => s + w.balance, 0);
+  state.totalBalance = state.wallets.reduce((s, w) => s + w.balance,
+    0);
 }
 
 async function loadCategories() {
@@ -370,7 +462,8 @@ async function loadUnreadNotificationCount() {
     state.unreadNotificationCount = res.count || 0;
     updateNotificationBadge();
   } catch (e) {
-    console.error('Gagal memuat jumlah notifikasi:', e);
+    console.error('Gagal memuat jumlah notifikasi:',
+      e);
   }
 }
 
@@ -592,6 +685,7 @@ function navigateTo(page) {
     statements: renderStatementsPage,
     budgets: renderBudgetsPage,
     notifications: renderNotificationsPage,
+    search: renderSearchPage,
   };
   if (pages[page]) {
     pages[page]();

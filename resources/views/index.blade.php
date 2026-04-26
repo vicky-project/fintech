@@ -32,8 +32,8 @@
     <div class="container-fluid justify-content-around">
       <button class="btn nav-btn" data-page="home"><i class="bi bi-house fs-5"></i></button>
       <button class="btn nav-btn" data-page="transactions"><i class="bi bi-list-ul fs-5"></i></button>
-      <button class="btn nav-btn" data-page="wallets"><i class="bi bi-wallet2 fs-5"></i></button>
       <button class="btn nav-btn" data-page="reports"><i class="bi bi-graph-up fs-5"></i></button>
+      <button class="btn nav-btn" data-page="search"><i class="bi bi-search fs-5"></i></button>
       <button class="btn nav-btn position-relative" data-page="notifications">
         <i class="bi bi-bell fs-5"></i>
         <span id="notification-badge"
@@ -57,6 +57,7 @@
           <i class="bi bi-three-dots fs-5"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end mb-2">
+          <li><button class="dropdown-item nav-btn" data-page="wallets"><i class="bi bi-wallet2 me-2"></i>Dompet</button></li>
           <li><button class="dropdown-item nav-btn" data-page="transfers"><i class="bi bi-arrow-left-right me-2"></i>Transfer</button></li>
           <li><button class="dropdown-item nav-btn" data-page="statements"><i class="bi bi-file-text me-2"></i>Statement</button></li>
           <li><button class="dropdown-item nav-btn" data-page="insights"><i class="bi bi-bar-chart me-2"></i>Insight</button></li>
