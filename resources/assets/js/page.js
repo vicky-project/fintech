@@ -1434,19 +1434,20 @@ async function renderSearchPage() {
   <span class="input-group-text"><i class="bi bi-search"></i></span>
   <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer..."
   onkeydown="if(event.key==='Enter') performSearch()">
-  <button class="btn btn-primary" onclick="performSearch()">Cari</button>
+  <button class="btn btn-primary"
+  data-action="perform-search">Cari</button>
   </div>
   <div id="search-filters" class="btn-group btn-group-sm w-100 mb-3 d-none" role="group">
-  <button class="btn btn-outline-primary search-filter-btn active" data-filter="all" onclick="filterSearchResults('all')">
+  <button class="btn btn-outline-primary search-filter-btn active" data-filter="all" data-action="filter-search-results">
   Semua <span class="filter-badge" id="badge-all">0</span>
   </button>
-  <button class="btn btn-outline-primary search-filter-btn" data-filter="transaction" onclick="filterSearchResults('transaction')">
+  <button class="btn btn-outline-primary search-filter-btn" data-filter="transaction" data-action="filter-search-results">
   Transaksi <span class="filter-badge" id="badge-transaction">0</span>
   </button>
-  <button class="btn btn-outline-primary search-filter-btn" data-filter="transfer" onclick="filterSearchResults('transfer')">
+  <button class="btn btn-outline-primary search-filter-btn" data-filter="transfer" data-action="filter-search-results">
   Transfer <span class="filter-badge" id="badge-transfer">0</span>
   </button>
-  <button class="btn btn-outline-primary search-filter-btn" data-filter="statement" onclick="filterSearchResults('statement')">
+  <button class="btn btn-outline-primary search-filter-btn" data-filter="statement" data-action="filter-search-results">
   Statement <span class="filter-badge" id="badge-statement">0</span>
   </button>
   </div>
@@ -1507,7 +1508,7 @@ function renderSearchResults(results) {
     const desc = Core.highlightText(item.description || '', Core.state.searchKeyword);
     if (item.type === 'transaction') {
       return `
-      <div class="card search-result-item" onclick="showSearchDetail('${item.type}', ${item.id})">
+      <div class="card search-result-item" data-action="show-search-detail" data-type="${item.type}" data-id="${item.id}">
       <div class="card-body d-flex align-items-center p-3">
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
@@ -1520,7 +1521,7 @@ function renderSearchResults(results) {
       `;
     } else if (item.type === 'transfer') {
       return `
-      <div class="card search-result-item" onclick="showSearchDetail('${item.type}', ${item.id})">
+      <div class="card search-result-item" data-action="show-search-detail" data-type="${item.type}" data-id="${item.id}">
       <div class="card-body d-flex align-items-center p-3">
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
@@ -1533,7 +1534,7 @@ function renderSearchResults(results) {
       `;
     } else if (item.type === 'statement') {
       return `
-      <div class="card search-result-item" onclick="showSearchDetail('${item.type}', ${item.id})">
+      <div class="card search-result-item" data-action="show-search-detail" data-type="${item.type}" data-id="${item.id}">
       <div class="card-body d-flex align-items-center p-3">
       <i class="${item.icon} me-3 fs-4" style="color:${item.color}"></i>
       <div class="flex-grow-1" style="min-width:0;">
