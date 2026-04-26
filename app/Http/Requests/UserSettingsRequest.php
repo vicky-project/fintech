@@ -58,9 +58,9 @@ class UserSettingsRequest extends FormRequest
   {
     return [
       'default_wallet_id.exists' => "Dompet tidak ditemukan.",
-      'pin.min' => 'Minimal 4 digit'
-      'pin.max' => 'Maksimal 6 digit'
-      'pin.required_if' => 'PIN tidak boleh kosong jika diaktifkan'
+      'pin.min' => 'Minimal 4 digit',
+      'pin.max' => 'Maksimal 6 digit',
+      'pin.required_if' => 'PIN tidak boleh kosong jika diaktifkan',
     ];
   }
 }
