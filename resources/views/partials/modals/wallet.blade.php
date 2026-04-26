@@ -59,7 +59,7 @@
     const currencySelect = document.getElementById('wallet-currency');
     currencySelect.disabled = false;
     const defaultCurrency = Core.state.userSettings?.default_currency || '{{ config("fintech.default_currency", "IDR") }}'
-    populateSelectWithCurrencies(currencySelect, defaultCurrency);
+    Core.populateSelectWithCurrencies(currencySelect, defaultCurrency);
 
     new bootstrap.Modal(document.getElementById('walletModal')).show();
   }
@@ -80,7 +80,7 @@
 
     const currencySelect = document.getElementById('wallet-currency');
     currencySelect.disabled = true;
-    populateSelectWithCurrencies(currencySelect, wallet.currency.code);
+    Core.populateSelectWithCurrencies(currencySelect, wallet.currency.code);
 
     new bootstrap.Modal(document.getElementById('walletModal')).show();
   };

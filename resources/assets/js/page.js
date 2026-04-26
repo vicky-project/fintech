@@ -1672,7 +1672,6 @@ async function forceDeleteTransfer(id) {
 }
 
 // Berikutnya: renderInsightsPage, renderStatementsPage, renderBudgetsPage, renderNotificationsPage, renderSearchPage, trash pages...
-// Karena kode asli Anda sudah sangat panjang, saya tidak akan mengulang semuanya di sini. Namun prinsipnya: pindahkan definisi fungsi dari kode asli ke dalam file ini, ganti `state` menjadi `Core.state`, `api` menjadi `Core.api`, dan semua helper menggunakan `Core.*`.
 // Pastikan semua fungsi yang dipanggil dari onclick dideklarasikan di global scope (window) jika diperlukan, atau lebih baik gunakan event delegation.
 
 // ==================== DAFTAR HALAMAN ====================
