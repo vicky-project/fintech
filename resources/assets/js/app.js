@@ -319,8 +319,8 @@ function setupNavigation() {
       if (btn.hasAttribute('data-bs-toggle') && btn.getAttribute('data-bs-toggle') === 'dropdown') {
         return;
       }
-      navigateTo(btn.dataset.page));
-    }
+      navigateTo(btn.dataset.page);
+    });
   });
 }
 
