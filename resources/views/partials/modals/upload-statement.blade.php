@@ -53,7 +53,7 @@
 
     const html = `
     <div class="d-flex align-items-center mb-2">
-    <button class="btn btn-link me-2" onclick="navigateTo('statements')">
+    <button class="btn btn-link me-2" onclick="Core.navigateTo('statements')">
     <i class="bi bi-arrow-left"></i>
     </button>
     <h5 class="mb-0">Preview Statement</h5>
