@@ -1325,7 +1325,7 @@ async function renderNotificationsPage() {
   <div class="container py-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0">Notifikasi</h5>
-  <button class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsRead()">
+  <button class="btn btn-sm btn-outline-primary" data-action="mark-all-notifications-read">
   <i class="bi bi-check-all me-1"></i>Tandai Semua Dibaca
   </button>
   </div>
@@ -1333,7 +1333,7 @@ async function renderNotificationsPage() {
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;
-  await loadNotifications();
+  await Core.loadNotifications();
 }
 function updateNotificationBadge() {
   const badge = document.getElementById('notification-badge');
@@ -1360,12 +1360,12 @@ function renderNotificationList() {
   container.innerHTML = Core.state.notifications.map(n => {
     const iconClass = getNotificationIcon(n.type);
     const colorClass = getNotificationColor(n.type);
-    const timeAgo = formatTimeAgo(n.created_at);
+    const timeAgo = Core.formatTimeAgo(n.created_at);
 
     return `
     <div class="card mb-2 notification-row ${n.is_read ? 'read': 'unread'}"
     style="cursor: pointer; border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
-    onclick="markNotificationRead(${n.id})">
+    data-action="mark-notification-read" data-id="${n.id}">
     <div class="card-body d-flex align-items-start p-3">
     <div class="notification-icon ${colorClass} me-3">
     <i class="${iconClass}"></i>
@@ -1665,8 +1665,8 @@ async function renderTrashPage() {
     <small class="text-muted">${t.wallet.name} · ${Core.formatDate(t.transaction_date)}</small>
     </div>
     <div>
-    <button class="btn btn-sm btn-outline-success" onclick="restoreTransaction(${t.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
-    <button class="btn btn-sm btn-outline-danger" onclick="forceDeleteTransaction(${t.id})"><i class="bi bi-trash"></i></button>
+    <button class="btn btn-sm btn-outline-success" data-action="restore-transaction" data-id="${t.id}"><i class="bi bi-arrow-counterclockwise"></i></button>
+    <button class="btn btn-sm btn-outline-danger" data-action="force-delete-transaction" data-id="${t.id}"><i class="bi bi-trash"></i></button>
     </div>
     </div>
     </div>
@@ -1675,14 +1675,14 @@ async function renderTrashPage() {
 }
 async function restoreTransaction(id) {
   await Core.api.post(`/api/fintech/transactions/${id}/restore`);
-  await loadWallets();
-  await loadHomeSummary();
-  renderTrashPage();
+  await Core.loadWallets();
+  await Core.loadHomeSummary();
+  Core.navigateTo('transactionTrash');
 }
 async function forceDeleteTransaction(id) {
   if (!confirm('Hapus permanen?')) return;
   await Core.api.delete(`/api/fintech/transactions/${id}/force`);
-  renderTrashPage();
+  Core.navigateTo('transactionTrash');
 }
 function navigateToTransferTrash() {
   Core.state.currentPage = 'transfer-trash';

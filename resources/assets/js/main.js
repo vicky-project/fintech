@@ -11,23 +11,11 @@ window.navigateToTrash = () => {
 window.navigateToTransferTrash = () => {
   if (typeof navigateToTransferTrash === 'function') navigateToTransferTrash();
 };
-window.restoreTransaction = async (id) => {
-  if (typeof restoreTransaction === 'function') await restoreTransaction(id);
-};
-window.forceDeleteTransaction = async (id) => {
-  if (typeof forceDeleteTransaction === 'function') await forceDeleteTransaction(id);
-};
 window.restoreTransfer = async (id) => {
   if (typeof restoreTransfer === 'function') await restoreTransfer(id);
 };
 window.forceDeleteTransfer = async (id) => {
   if (typeof forceDeleteTransfer === 'function') await forceDeleteTransfer(id);
-};
-window.markNotificationRead = async (id) => {
-  if (typeof markNotificationRead === 'function') await markNotificationRead(id);
-};
-window.markAllNotificationsRead = async () => {
-  if (typeof markAllNotificationsRead === 'function') await markAllNotificationsRead();
 };
 window.toggleQuickActions = () => {
   const overlay = document.getElementById('quick-actions-overlay');
