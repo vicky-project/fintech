@@ -603,13 +603,13 @@ async function loadReportCharts() {
       <div class="col-6">
       <div class="card text-center p-2">
       <small class="text-success">Pemasukan</small>
-      <strong>${formatNumber(totalIncome)}</strong>
+      <strong>${Core.formatNumber(totalIncome)}</strong>
       </div>
       </div>
       <div class="col-6">
       <div class="card text-center p-2">
       <small class="text-danger">Pengeluaran</small>
-      <strong>${formatNumber(totalExpense)}</strong>
+      <strong>${Core.formatNumber(totalExpense)}</strong>
       </div>
       </div>
       </div>
@@ -800,9 +800,9 @@ function renderCategoryTable(data) {
     ${years.map(y => {
       const val = cat.data[y] || 0;
       rowTotal += val;
-      return `<td class="text-end" style="100px;">${val ? formatNumberShort(val): '-'}</td>`;
+      return `<td class="text-end" style="100px;">${val ? Core.formatNumberShort(val): '-'}</td>`;
     }).join('')}
-    <td class="text-end fw-semibold" style="min-width: 110px; white-space: nowrap;">${symbol} ${formatNumberShort(rowTotal)}</td>
+    <td class="text-end fw-semibold" style="min-width: 110px; white-space: nowrap;">${symbol} ${Core.formatNumberShort(rowTotal)}</td>
     </tr>
     `;
   });
@@ -811,8 +811,8 @@ function renderCategoryTable(data) {
   html += `
   <tr class="table-primary fw-bold">
   <td style="min-width: 150px;">Total</td>
-  ${years.map(y => `<td class="text-end" style="min-width: 100px;">${symbol} ${formatNumberShort(totals[y] || 0)}</td>`).join('')}
-  <td class="text-end" style="min-width: 110px; white-space: nowrap;">${symbol} ${formatNumberShort(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
+  ${years.map(y => `<td class="text-end" style="min-width: 100px;">${symbol} ${Core.formatNumberShort(totals[y] || 0)}</td>`).join('')}
+  <td class="text-end" style="min-width: 110px; white-space: nowrap;">${symbol} ${Core.formatNumberShort(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
   </tr>
   </tbody>
   </table>

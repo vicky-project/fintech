@@ -1,10 +1,6 @@
 // ==================== MAIN.JS ====================
 // Entry point aplikasi, inisialisasi, event delegation, dan fungsi global
 
-// ---------- FUNGSI GLOBAL (sementara, untuk mendukung inline onclick) ----------
-// Fungsi-fungsi ini bisa dipindahkan ke file terpisah (mis. modals.js) nantinya.
-// Untuk saat ini, kita definisikan agar tidak error saat tombol diklik.
-
 window.showAddWalletModal = () => tgApp.showToast('Modal tambah dompet belum diimplementasikan', 'info');
 window.editWallet = (id) => tgApp.showToast(`Edit dompet ${id} belum diimplementasikan`, 'info');
 window.showAddTransactionModal = () => tgApp.showToast('Modal tambah transaksi belum diimplementasikan', 'info');
