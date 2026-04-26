@@ -46,6 +46,8 @@ const state = {
   sessionTimer: null,
   isPinModalShowing: false,
   budgets: [],
+  unreadNotificationCount: 0,
+  notifications: [],
 };
 
 const api = {
@@ -288,6 +290,8 @@ async function initializeApp() {
       await loadHomeSummary().catch(e => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
     }
 
+    await loadUnreadNotificationCount();
+
     navigateTo('home');
     loadingOverlay.classList.add('d-none');
   } catch (error) {
@@ -344,6 +348,103 @@ async function loadCurrencies() {
 async function loadHomeSummary() {
   const res = await api.get('/api/fintech/home-summary');
   state.homeSummary = res.data;
+}
+
+async function loadUnreadNotificationCount() {
+  try {
+    const res = await api.get('/api/fintech/notifications/unread-count');
+    state.unreadNotificationCount = res.count || 0;
+    updateNotificationBadge();
+  } catch (e) {}
+}
+
+function updateNotificationBadge() {
+  const badge = document.getElementById('notification-badge');
+  if (badge) {
+    badge.textContent = state.unreadNotificationCount > 99 ? '99+': state.unreadNotificationCount;
+    badge.style.display = state.unreadNotificationCount > 0 ? 'inline-block': 'none';
+  }
+  const countBadge = document.getElementById('notification-count-badge');
+  if (countBadge) {
+    countBadge.textContent = state.unreadNotificationCount;
+  }
+}
+
+async function renderNotificationsPage() {
+  const html = `
+  <div class="container py-3">
+  <div class="d-flex justify-content-between mb-3">
+  <h5>Notifikasi</h5>
+  <button class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsRead()">Tandai Semua Dibaca</button>
+  </div>
+  <div id="notification-list"></div>
+  </div>
+  `;
+  document.getElementById('main-content').innerHTML = html;
+  await loadNotifications();
+}
+
+async function loadNotifications() {
+  try {
+    const res = await api.get('/api/fintech/notifications');
+    state.notifications = res.data || [];
+    state.unreadNotificationCount = res.unread_count;
+    updateNotificationBadge();
+    renderNotificationList();
+  } catch (e) {
+    document.getElementById('notification-list').innerHTML = '<p class="text-muted text-center py-4">Gagal memuat notifikasi.</p>';
+  }
+}
+
+function renderNotificationList() {
+  const container = document.getElementById('notification-list');
+  if (!state.notifications.length) {
+    container.innerHTML = '<p class="text-muted text-center py-4">Tidak ada notifikasi.</p>';
+    return;
+  }
+  container.innerHTML = state.notifications.map(n => {
+    const bg = n.is_read ? '': 'list-group-item-warning';
+    const icon = n.type === 'budget_warning' ? 'bi-exclamation-triangle text-warning':
+    n.type === 'cashflow_warning' ? 'bi-graph-down text-danger': 'bi-bell';
+    return `
+    <div class="list-group-item ${bg} mb-2 rounded" onclick="markNotificationRead(${n.id})">
+    <div class="d-flex align-items-start">
+    <i class="${icon} fs-5 me-3"></i>
+    <div class="flex-grow-1">
+    <div class="fw-semibold">${n.title}</div>
+    <small>${n.message}</small>
+    <div class="text-muted mt-1" style="font-size:0.75rem;">${formatDateTime(n.created_at)}</div>
+    </div>
+    </div>
+    </div>
+    `;
+  }).join('');
+}
+
+async function markNotificationRead(id) {
+  try {
+    await api.post(`/api/fintech/notifications/${id}/read`);
+    const n = state.notifications.find(x => x.id === id);
+    if (n && !n.is_read) {
+      n.is_read = true;
+      state.unreadNotificationCount = Math.max(0, state.unreadNotificationCount - 1);
+      updateNotificationBadge();
+      renderNotificationList();
+    }
+  } catch (e) {}
+}
+
+async function markAllNotificationsRead() {
+  try {
+    await api.post('/api/fintech/notifications/read-all');
+    state.notifications.forEach(n => n.is_read = true);
+    state.unreadNotificationCount = 0;
+    updateNotificationBadge();
+    renderNotificationList();
+    tgApp.showToast('Semua notifikasi ditandai dibaca');
+  } catch (e) {
+    tgApp.showToast('Gagal', 'danger');
+  }
 }
 
 async function loadTransactionsPage(page, filters) {

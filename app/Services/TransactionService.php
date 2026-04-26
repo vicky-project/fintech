@@ -148,6 +148,7 @@ class TransactionService
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
     BudgetService::clearBudgetCaches($user->id);
+    NotificationService::clearNotificationCaches($user->id);
 
     return $transaction;
   }
@@ -227,6 +228,7 @@ class TransactionService
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
     BudgetService::clearBudgetCaches($user->id);
+    NotificationService::clearNotificationCaches($user->id);
 
     return $transaction->fresh();
   }
@@ -263,6 +265,7 @@ class TransactionService
       $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+    NotificationService::clearNotificationCaches($user->id);
   }
 
   /**
@@ -313,6 +316,7 @@ class TransactionService
       $walletId);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+    NotificationService::clearNotificationCaches($user->id);
 
     return $count;
   }
@@ -350,6 +354,7 @@ class TransactionService
       $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+    NotificationService::clearNotificationCaches($user->id);
   }
 
   /**
@@ -375,6 +380,7 @@ class TransactionService
       $transaction->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
+    NotificationService::clearNotificationCaches($user->id);
   }
 
   /**

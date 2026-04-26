@@ -8,6 +8,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
   CurrencyController,
   HomeController,
   InsightController,
+  NotificationController,
   ReportController,
   SettingController,
   StatementController,
@@ -57,7 +58,7 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
   Route::apiResource('budgets', BudgetController::class)->except(['show']);
 
   // ==================== REPORTS ====================
-  Route::middleware('auth:sanctum')
+  Route::middleware(['auth:sanctum', 'pin.session'])
   ->prefix('reports')
   ->name('reports.')
   ->group(function () {
@@ -71,7 +72,7 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
   });
 
   Route::prefix('statements')
-  ->middleware('auth:sanctum')
+  ->middleware(['auth:sanctum', 'pin.session'])
   ->group(function() {
     Route::get('', [StatementController::class, 'index']);
     Route::post('upload', [StatementController::class, 'upload']);
@@ -80,10 +81,20 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
     Route::post('{statement}/import', [StatementController::class, 'import']);
     Route::delete('{statement}', [StatementController::class, 'destroy']);
   });
+
+  Route::prefix('notifications')
+  ->middleware(['auth:sanctum', 'pin.session'])
+  ->group(function() {
+    Route::get('', [NotificationController::class, 'index']);
+    Route::get('unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('{id}/read', [NotificationController::class, 'markRead']);
+  });
 });
 
+
 Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(function() {
-  Route::get('settings', [SettingController::class, 'show']);
+  Route::get('settings', [SettingController::class, 'show'])->middleware('pin.session');
   Route::put('settings', [SettingController::class, 'update']);
   Route::post('settings/verify-pin', [SettingController::class, 'verifyPin'])->middleware('throttle:10,1');
 });
