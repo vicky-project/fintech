@@ -310,15 +310,19 @@ function retryInitialization() {
   initializeApp();
 }
 document.addEventListener('DOMContentLoaded', async () => {
-  await initializeApp();
-  setupNavigation();
+  try {
+    await initializeApp();
+    setupNavigation();
 
-  ['click', 'scroll'].forEach(eventType => {
-    document.addEventListener(eventType, resetSessionTimer, {
-      passive: true
+    ['click', 'scroll'].forEach(eventType => {
+      document.addEventListener(eventType, resetSessionTimer, {
+        passive: true
+      });
     });
-  });
-  startSessionTimer();
+    startSessionTimer();
+  } catct(error) {
+    alert(error);
+  }
 });
 
 // --- 4. PIN & TIMER ---
