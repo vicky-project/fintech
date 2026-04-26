@@ -962,7 +962,7 @@ async function saveSettings() {
   try {
     tgApp.showLoading('Menyimpan...');
     await Core.api.put('/api/fintech/settings', data);
-    await loadUserSettings();
+    await Core.loadUserSettings();
     tgApp.hideLoading();
     tgApp.showToast('Pengaturan disimpan');
     Core.navigateTo('home');
