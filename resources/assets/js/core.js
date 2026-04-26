@@ -2,7 +2,7 @@
 
 // --- 1. CORE STATE & API (IIFE) ---
 const Core = (() => {
-  const state = {
+  let state = {
     wallets: [],
     categories: [],
     currencies: [],
