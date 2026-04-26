@@ -49,7 +49,7 @@
 
   async function renderPreviewStatementPage(statementId) {
     currentStatementId = statementId;
-    state.currentPage = 'statement-preview';
+    Core.state.currentPage = 'statement-preview';
 
     const html = `
     <div class="d-flex align-items-center mb-2">
@@ -76,7 +76,7 @@
 
   async function loadPreviewData() {
     try {
-      const res = await api.get(`/api/fintech/statements/${currentStatementId}/preview`);
+      const res = await Core.api.get(`/api/fintech/statements/${currentStatementId}/preview`);
       const data = res.data;
 
       previewTransactions = data.transactions;
@@ -195,7 +195,7 @@
     if (!categoryId) return;
 
     try {
-      await api.put(`/api/fintech/statements/transactions/${transactionId}/category`,
+      await Core.api.put(`/api/fintech/statements/transactions/${transactionId}/category`,
       {
       category_id: categoryId
       }
@@ -243,7 +243,7 @@
     try {
       tgApp.showLoading('Mengimpor...');
 
-      const res = await api.post(`/api/fintech/statements/${currentStatementId}/import`,
+      const res = await Core.api.post(`/api/fintech/statements/${currentStatementId}/import`,
       {
       transaction_ids: selectedIds
       }
@@ -273,14 +273,14 @@
     const walletSelect = document.querySelector('select[name="wallet_id"]');
     if (walletSelect) {
       walletSelect.innerHTML = '<option value="">Pilih Dompet</option>';
-      state.wallets.filter(w => w.is_active).forEach(wallet => {
+      Core.state.wallets.filter(w => w.is_active).forEach(wallet => {
       const option = document.createElement('option');
       option.value = wallet.id;
       option.textContent = `${wallet.name} (${wallet.formatted_balance})`;
       walletSelect.appendChild(option);
       });
 
-      const defaultWalletId = state.userSettings?.default_wallet_id;
+      const defaultWalletId = Core.state.userSettings?.default_wallet_id;
       if (defaultWalletId) {
         walletSelect.value = defaultWalletId;
       }

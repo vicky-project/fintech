@@ -58,14 +58,14 @@
 
     const currencySelect = document.getElementById('wallet-currency');
     currencySelect.disabled = false;
-    const defaultCurrency = state.userSettings?.default_currency || '{{ config("fintech.default_currency", "IDR") }}'
+    const defaultCurrency = Core.state.userSettings?.default_currency || '{{ config("fintech.default_currency", "IDR") }}'
     populateSelectWithCurrencies(currencySelect, defaultCurrency);
 
     new bootstrap.Modal(document.getElementById('walletModal')).show();
   }
 
   window.editWallet = function(id) {
-    const wallet = state.wallets.find(w => w.id === id);
+    const wallet = Core.state.wallets.find(w => w.id === id);
     if (!wallet) return;
 
     editingWalletId = id;
@@ -101,7 +101,7 @@
       delete data.is_active;
     }
 
-    if (!isEdit && state.wallets.some(w => w.name.toLowerCase() === data.name.toLowerCase())) {
+    if (!isEdit && Core.state.wallets.some(w => w.name.toLowerCase() === data.name.toLowerCase())) {
       tgApp.showToast('Nama dompet sudah digunakan', 'warning');
       return;
     }
@@ -111,9 +111,9 @@
       const url = isEdit ? `/api/fintech/wallets/${id}`: `/api/fintech/wallets`;
 
       if (isEdit) {
-        await api.put(url, data );
+        await Core.api.put(url, data );
       } else {
-        await api.post(url, data);
+        await Core.api.post(url, data);
       }
 
       await loadWallets();
@@ -123,9 +123,9 @@
       tgApp.showToast(isEdit ? 'Dompet diperbarui' : 'Dompet dibuat');
       bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
 
-      if (state.currentPage === 'wallets') {
+      if (Core.state.currentPage === 'wallets') {
         renderWalletsList();
-      } else if (state.currentPage === 'home') {
+      } else if (Core.state.currentPage === 'home') {
         renderHomePage();
       }
     } catch (error) {

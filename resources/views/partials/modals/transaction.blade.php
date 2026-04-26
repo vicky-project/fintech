@@ -94,14 +94,14 @@
     const select = document.getElementById('wallet-select');
     const hidden = document.getElementById('wallet-id-hidden');
     select.innerHTML = '<option value="">Pilih Dompet</option>';
-    state.wallets.filter(w => w.is_active).forEach(w => {
+    Core.state.wallets.filter(w => w.is_active).forEach(w => {
     const option = document.createElement('option');
     option.value = w.id;
     option.textContent = `${w.name} (${w.formatted_balance})`;
     select.appendChild(option);
     });
 
-    const defaultWalletId = selectedId || state.userSettings?.default_wallet_id;
+    const defaultWalletId = selectedId || Core.state.userSettings?.default_wallet_id;
     if (defaultWalletId) {
       select.value = defaultWalletId;
       hidden.value = defaultWalletId;
@@ -113,7 +113,7 @@
   function filterCategoriesByType(selectedId = null) {
     const type = document.getElementById('type-select').value;
     const categorySelect = document.getElementById('category-select');
-    const filtered = state.categories.filter(c =>
+    const filtered = Core.state.categories.filter(c =>
     type === 'income' ? (c.type === 'income' || c.type === 'both')
     : (c.type === 'expense' || c.type === 'both')
     );
@@ -148,7 +148,7 @@
   };
 
   window.editTransaction = function(id) {
-    const trx = state.transactions.find(t => t.id === id);
+    const trx = Core.state.transactions.find(t => t.id === id);
     if (!trx) {
       tgApp.showToast('Transaksi tidak ditemukan', 'danger');
       return;
@@ -181,20 +181,20 @@
       tgApp.showLoading('Menyimpan...');
       const url = isEdit ? `/api/fintech/transactions/${id}`: `/api/fintech/transactions`;
       if (isEdit) {
-        await api.put(url, data);
+        await Core.api.put(url, data);
       } else {
-        await api.post(url, data);
+        await Core.api.post(url, data);
       }
 
       await loadWallets();
       await loadHomeSummary();
-      if (state.currentPage === 'transactions') await refreshTransactionList();
+      if (Core.state.currentPage === 'transactions') await refreshTransactionList();
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil', 'success');
       bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
 
-      if (state.currentPage === 'home') renderHomePage();
+      if (Core.state.currentPage === 'home') renderHomePage();
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal menyimpan', 'danger');

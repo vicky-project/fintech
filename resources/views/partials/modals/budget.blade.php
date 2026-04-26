@@ -64,7 +64,7 @@
   }
 
   window.showEditBudgetModal = function(budgetId) {
-    const budget = state.budgets.find(b => b.id === budgetId);
+    const budget = Core.state.budgets.find(b => b.id === budgetId);
     if (!budget) return;
 
     editingBudgetId = budgetId;
@@ -83,7 +83,7 @@
   function populateBudgetCategories(selectedId = null) {
     const select = document.getElementById('budget-category');
     select.innerHTML = '<option value="">Pilih Kategori</option>';
-    state.categories.filter(c => c.type === 'expense' || c.type === 'both').forEach(c => {
+    Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both').forEach(c => {
     const option = document.createElement('option');
     option.value = c.id;
     option.textContent = c.name;
@@ -95,7 +95,7 @@
   function populateBudgetWallets(selectedId = null) {
     const select = document.getElementById('budget-wallet');
     select.innerHTML = '<option value="">Semua Dompet</option>';
-    state.wallets.forEach(w => {
+    Core.state.wallets.forEach(w => {
     const option = document.createElement('option');
     option.value = w.id;
     option.textContent = w.name;
@@ -130,9 +130,9 @@
     try {
       tgApp.showLoading('Menyimpan...');
       if (isEdit) {
-        await api.put(url, data);
+        await Core.api.put(url, data);
       } else {
-        await api.post(url, data);
+        await Core.api.post(url, data);
       }
 
       await refreshBudgetList();
@@ -148,7 +148,7 @@
   async function deleteBudget(id) {
     if (!confirm('Hapus budget ini?')) return;
     try {
-      await api.delete(`/api/fintech/budgets/${id}`);
+      await Core.api.delete(`/api/fintech/budgets/${id}`);
       await refreshBudgetList();
       tgApp.showToast('Budget dihapus');
     } catch (error) {

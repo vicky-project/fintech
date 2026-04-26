@@ -51,7 +51,7 @@
     }
     try {
       tgApp.showLoading('Mengirim...');
-      await api.post(BASE_URL + '/api/fintech/category-suggestions', { data });
+      await Core.api.post(BASE_URL + '/api/fintech/category-suggestions', { data });
       tgApp.hideLoading();
       tgApp.showToast('Usulan kategori berhasil dikirim');
       bootstrap.Modal.getInstance(document.getElementById('suggestCategoryModal')).hide();

@@ -262,7 +262,7 @@
 <script>
   const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
 
-  {!! file_get_contents(module_path('fintech', 'resources/assets/js/app.js')); !!}
+  {!! file_get_contents(module_path('fintech', 'resources/assets/js/core.js')); !!}
 </script>
 @endpush
 

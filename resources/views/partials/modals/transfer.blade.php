@@ -82,7 +82,7 @@
     const toSelect = document.getElementById('to-wallet-select');
     fromSelect.innerHTML = '<option value="">Pilih Dompet</option>';
     toSelect.innerHTML = '<option value="">Pilih Dompet</option>';
-    state.wallets.filter(w => w.is_active).forEach(w => {
+    Core.state.wallets.filter(w => w.is_active).forEach(w => {
     const opt1 = document.createElement('option');
     opt1.value = w.id;
     opt1.textContent = `${w.name} (${w.formatted_balance})`;
@@ -113,7 +113,7 @@
   };
 
   window.editTransfer = function(id) {
-    const transfer = state.transfers.find(t => t.id === id);
+    const transfer = Core.state.transfers.find(t => t.id === id);
     if (!transfer) {
       tgApp.showToast('Transfer tidak ditemukan', 'danger');
       return;
@@ -149,20 +149,20 @@
       tgApp.showLoading('Memproses...');
       const url = isEdit ? `/api/fintech/transfers/${id}`: `/api/fintech/transfers`;
       if (isEdit) {
-        await api.put(url, {data})
+        await Core.api.put(url, {data})
       } else {
-        await api.post(url, {data})
+        await Core.api.post(url, {data})
       }
 
       await loadWallets();
       await loadHomeSummary();
-      if (state.currentPage === 'transfers') await refreshTransferList();
+      if (Core.state.currentPage === 'transfers') await refreshTransferList();
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Transfer diperbarui' : 'Transfer berhasil');
       bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
 
-      if (state.currentPage === 'home') renderHomePage();
+      if (Core.state.currentPage === 'home') renderHomePage();
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal memproses transfer', 'danger');
