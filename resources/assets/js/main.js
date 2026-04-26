@@ -110,6 +110,8 @@ function handleGlobalClick(e) {
   if (actions[action]) {
     e.preventDefault();
     actions[action](e);
+  } else {
+    tgApp.showToast(`Action for ${action} not implement yet.`, 'danger');
   }
 }
 
