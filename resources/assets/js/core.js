@@ -537,11 +537,11 @@ async function loadStatements(page = 1) {
 
 // ====== 6. HOME PAGE ===========
 async function renderHomePage() {
+  alert(JSON.stringify(Core.state));
   if (!Core.state.homeSummary) {
     await loadHomeSummary();
   }
   const summary = Core.state.homeSummary;
-  alert(JSON.stringify(summary));
   if (!summary) {
     document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
     return;
