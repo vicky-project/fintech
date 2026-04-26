@@ -247,15 +247,15 @@ function renderTransactionList() {
 window.showTransactionDetailModal = async function(id) {
   let trx = Core.state.transactions.find(t => t.id === id);
   if (!trx) {
-    const res = await loadTransactionItem(id);
-    if (res.success && res.data) {
-      trx = res.data;
-    } else {
-      tgApp.showToast('Detail transaksi tidak ditemukan.', 'danger');
-      return;
-    }
+    await refreshTransactionList();
+    trx = Core.state.transactions.find(t => t.id === id);
   }
-  // ... buka modal detail (mengandalkan elemen transactionDetailModal)
+
+  if (!trx) {
+    tgApp.showToast('Detail transaksi tidak ditemukan.', 'danger');
+    return;
+  }
+
   const body = document.getElementById('transactionDetailBody');
   const typeLabel = trx.type === 'income' ? 'Pemasukan': 'Pengeluaran';
   const amountClass = trx.type === 'income' ? 'text-success': 'text-danger';
