@@ -73,6 +73,7 @@ async function renderHomePage() {
     }, 50);
   } catch(error) {
     tgApp.showToast("Gagal memuat halaman.", 'danger');
+    throw error;
   } finally {
     tgApp.hideLoading(),
   }
@@ -767,6 +768,7 @@ async function loadCategoryTable() {
   } catch (error) {
     document.getElementById('category-table-container').innerHTML = '<p class="text-muted text-center">Gagal memuat tabel.</p>';
     tgApp.showToast(error.message || "Gagal memuat table", 'danger');
+    throw error;
   }
 }
 function renderCategoryTable(data) {
