@@ -216,6 +216,7 @@ function navigateTo(page) {
     document.getElementById('main-content').innerHTML = renderEmptyState();
     return;
   }
+  alert(JSON.stringify(Core.pages))
 
   if (Core.pages[page]) {
     Core.pages[page]();
@@ -2012,7 +2013,6 @@ async function forceDeleteTransfer(id) {
 // ===== 16. NOTIFICATION ======
 function updateNotificationBadge() {
   const badge = document.getElementById('notification-badge');
-  alert("Badge: " + JSON.stringify(badge));
   if (badge) {
     if (Core.state.unreadNotificationCount > 0) {
       badge.textContent = Core.state.unreadNotificationCount > 99 ? '99+': Core.state.unreadNotificationCount;
