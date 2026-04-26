@@ -778,7 +778,7 @@ function renderCategoryTable(data) {
     return;
   }
 
-  const symbol = getCurrencySymbol(currency);
+  const symbol = Core.getCurrencySymbol(currency);
   let html = `
   <table class="table table-sm table-hover">
   <thead class="table-light sticky-top">
