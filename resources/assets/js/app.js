@@ -348,10 +348,17 @@ async function renderSearchPage() {
   const html = `
   <div class="container py-3">
   <div class="input-group mb-3">
-  <span class="input-group-text"><i class="bi bi-search bg-dark text-light"></i></span>
+  <span class="input-group-text"><i class="bi bi-search"></i></span>
   <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer..."
   onkeydown="if(event.key==='Enter') performSearch()">
   <button class="btn btn-primary" onclick="performSearch()">Cari</button>
+  </div>
+  <!-- Tab filter -->
+  <div id="search-filters" class="btn-group btn-group-sm mb-3 w-100 d-none" role="group">
+  <button class="btn btn-outline-primary active" data-filter="all" onclick="filterSearchResults('all')">Semua</button>
+  <button class="btn btn-outline-primary" data-filter="transaction" onclick="filterSearchResults('transaction')">Transaksi</button>
+  <button class="btn btn-outline-primary" data-filter="transfer" onclick="filterSearchResults('transfer')">Transfer</button>
+  <button class="btn btn-outline-primary" data-filter="statement" onclick="filterSearchResults('statement')">Statement</button>
   </div>
   <div id="search-results">
   <p class="text-muted text-center">Ketik minimal 2 karakter untuk mencari.</p>
@@ -379,6 +386,14 @@ async function performSearch() {
   } catch (error) {
     container.innerHTML = '<p class="text-muted text-center">Gagal mencari.</p>';
   }
+}
+
+function filterSearchResults(filter) {
+  state.currentFilter = filter;
+  document.querySelectorAll('#search-filters .btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  renderSearchResults(state.searchResults);
 }
 
 function renderSearchResults(results) {
