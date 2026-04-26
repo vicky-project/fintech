@@ -186,15 +186,15 @@
         await Core.api.post(url, data);
       }
 
-      await loadWallets();
-      await loadHomeSummary();
-      if (Core.state.currentPage === 'transactions') await refreshTransactionList();
+      await Core.loadWallets();
+      await Core.loadHomeSummary();
+      if (Core.state.currentPage === 'transactions') Core.navigateTo('transactions');
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil', 'success');
       bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
 
-      if (Core.state.currentPage === 'home') renderHomePage();
+      if (Core.state.currentPage === 'home') Core.navigateTo('home');
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal menyimpan', 'danger');
