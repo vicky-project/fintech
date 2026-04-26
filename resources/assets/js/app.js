@@ -315,7 +315,12 @@ function retryInitialization() {
 
 function setupNavigation() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+    btn.addEventListener('click', () => {
+      if (btn.hasAttribute('data-bs-toggle') && btn.getAttribute('data-bs-toggle') === 'dropdown') {
+        return;
+      }
+      navigateTo(btn.dataset.page));
+    }
   });
 }
 
@@ -588,10 +593,12 @@ function navigateTo(page) {
     budgets: renderBudgetsPage,
     notifications: renderNotificationsPage,
   };
-  if (pages[page]) pages[page]();
-  window.scrollTo({
-    top: 0, behavior: 'smooth'
-  });
+  if (pages[page]) {
+    pages[page]();
+    window.scrollTo({
+      top: 0, behavior: 'smooth'
+    });
+  }
 }
 
 function renderEmptyState() {
