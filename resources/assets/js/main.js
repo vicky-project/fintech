@@ -1,17 +1,5 @@
 // ==================== MAIN.JS ====================
 // Entry point aplikasi, inisialisasi, event delegation, dan fungsi global
-
-window.showTransactionDetailModal = (id) => {
-  // Implementasi sudah ada di pages.js, tapi kita butuh referensi global
-  if (typeof showTransactionDetailModal === 'function') showTransactionDetailModal(id);
-};
-window.deleteTransaction = async (id) => {
-  if (typeof deleteTransaction === 'function') await deleteTransaction(id);
-};
-window.showBulkDeleteModal = () => tgApp.showToast('Modal hapus massal belum diimplementasikan', 'info');
-window.executeBulkDelete = async () => {
-  if (typeof executeBulkDelete === 'function') await executeBulkDelete();
-};
 window.showAddTransferModal = () => tgApp.showToast('Modal tambah transfer belum diimplementasikan', 'info');
 window.editTransfer = (id) => tgApp.showToast(`Edit transfer ${id} belum diimplementasikan`, 'info');
 window.deleteTransfer = async (id) => {
@@ -34,19 +22,6 @@ window.restoreTransfer = async (id) => {
 };
 window.forceDeleteTransfer = async (id) => {
   if (typeof forceDeleteTransfer === 'function') await forceDeleteTransfer(id);
-};
-window.showReportFilterModal = () => tgApp.showToast('Modal filter laporan belum diimplementasikan', 'info');
-window.switchCategoryType = (type) => {
-  if (typeof switchCategoryType === 'function') switchCategoryType(type);
-};
-window.saveSettings = async () => {
-  if (typeof saveSettings === 'function') await saveSettings();
-};
-window.togglePinInput = () => {
-  if (typeof togglePinInput === 'function') togglePinInput();
-};
-window.performSearch = async () => {
-  if (typeof performSearch === 'function') await performSearch();
 };
 window.markNotificationRead = async (id) => {
   if (typeof markNotificationRead === 'function') await markNotificationRead(id);
