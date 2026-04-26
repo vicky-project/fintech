@@ -2,7 +2,7 @@
 
 // --- 1. CORE STATE & API (IIFE) ---
 const Core = (() => {
-  let state = {
+  const state = {
     wallets: [],
     categories: [],
     currencies: [],
@@ -488,7 +488,6 @@ async function loadCurrencies() {
 async function loadHomeSummary() {
   const res = await Core.api.get('/api/fintech/home-summary');
   Core.state.homeSummary = res.data;
-  alert(Core.state.homeSummary)
 }
 async function loadNotifications() {
   try {
@@ -546,6 +545,7 @@ async function renderHomePage() {
     document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
     return;
   }
+  alert(JSON.stringify(summary));
 
   const symbol = getCurrencySymbol(summary.currency);
   const html = `
