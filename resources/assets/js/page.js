@@ -28,55 +28,47 @@ async function renderListPage(config) {
 
 // ==================== HOME ====================
 async function renderHomePage() {
-  tgApp.showLoading("Memuat data...");
-  try {
-    if (!Core.state.homeSummary) {
-      await Core.loadHomeSummary();
-    }
-    const summary = Core.state.homeSummary;
-    if (!summary) {
-      document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
-      return;
-    }
-
-    const symbol = Core.getCurrencySymbol(summary.currency);
-    const html = `
-    <div class="container py-3">
-    <div class="card bg-gradient-primary text-white mb-3" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-    <div class="card-body">
-    <h6>Total Saldo</h6>
-    <h2>${symbol} ${Core.formatNumber(summary.total_balance)}</h2>
-    <small>${Core.state.wallets.length} dompet aktif</small>
-    </div>
-    </div>
-    <div class="row g-2 mb-3">
-    <div class="col-6">
-    <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-down-circle text-success fs-4"></i><h6 class="mb-0">${Core.formatNumberShort(summary.total_income)}</h6><small>Pemasukan</small></div></div>
-    </div>
-    <div class="col-6">
-    <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-up-circle text-danger fs-4"></i><h6 class="mb-0">${Core.formatNumberShort(summary.total_expense)}</h6><small>Pengeluaran</small></div></div>
-    </div>
-    </div>
-    <div class="card mb-3">
-    <div class="card-body">
-    <h6>Pengeluaran Mingguan</h6>
-    <div style="height: 180px;"><canvas id="homeChart"></canvas></div>
-    </div>
-    </div>
-    <h6>Transaksi Terbaru</h6>
-    <div id="recent-transactions"></div>
-    </div>`;
-    document.getElementById('main-content').innerHTML = html;
-    setTimeout(() => {
-      loadHomeChartFromSummary();
-      renderRecentTransactionsFromSummary();
-    }, 50);
-  } catch(error) {
-    tgApp.showToast("Gagal memuat halaman.", 'danger');
-    throw error;
-  } finally {
-    tgApp.hideLoading(),
+  if (!Core.state.homeSummary) {
+    await Core.loadHomeSummary();
   }
+  const summary = Core.state.homeSummary;
+  if (!summary) {
+    document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
+    return;
+  }
+
+  const symbol = Core.getCurrencySymbol(summary.currency);
+  const html = `
+  <div class="container py-3">
+  <div class="card bg-gradient-primary text-white mb-3" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+  <div class="card-body">
+  <h6>Total Saldo</h6>
+  <h2>${symbol} ${Core.formatNumber(summary.total_balance)}</h2>
+  <small>${Core.state.wallets.length} dompet aktif</small>
+  </div>
+  </div>
+  <div class="row g-2 mb-3">
+  <div class="col-6">
+  <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-down-circle text-success fs-4"></i><h6 class="mb-0">${Core.formatNumberShort(summary.total_income)}</h6><small>Pemasukan</small></div></div>
+  </div>
+  <div class="col-6">
+  <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-up-circle text-danger fs-4"></i><h6 class="mb-0">${Core.formatNumberShort(summary.total_expense)}</h6><small>Pengeluaran</small></div></div>
+  </div>
+  </div>
+  <div class="card mb-3">
+  <div class="card-body">
+  <h6>Pengeluaran Mingguan</h6>
+  <div style="height: 180px;"><canvas id="homeChart"></canvas></div>
+  </div>
+  </div>
+  <h6>Transaksi Terbaru</h6>
+  <div id="recent-transactions"></div>
+  </div>`;
+  document.getElementById('main-content').innerHTML = html;
+  setTimeout(() => {
+    loadHomeChartFromSummary();
+    renderRecentTransactionsFromSummary();
+  }, 50);
 }
 
 function loadHomeChartFromSummary() {
