@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
     startSessionTimer();
-  } catct(error) {
+  } catch(error) {
     alert(error);
   }
 });
