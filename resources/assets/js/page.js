@@ -122,7 +122,7 @@ async function renderTransactionsPage() {
     </select>
     </div>
     <div class="col-4">
-    <select class="form-select form-select-sm" id="filter-type">
+    <select class="form-select form-select-sm" id="filter-type" data-action="apply-transaction-filter">
     <option value="">Semua Tipe</option>
     <option value="income" ${Core.state.filters?.type === 'income' ? 'selected': ''}>Pemasukan</option>
     <option value="expense" ${Core.state.filters?.type === 'expense' ? 'selected': ''}>Pengeluaran</option>
@@ -134,16 +134,16 @@ async function renderTransactionsPage() {
     </div>
     <div class="mb-3">
     <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="resetTransactionFilter()"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
-    <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="applyTransactionFilter()"><i class="bi bi-funnel me-1"></i>Terapkan</button>
+    <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-action="reset-transaction-filter"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+    <button class="btn btn-sm btn-outline-primary flex-grow-1" data-action="apply-transaction-filter"><i class="bi bi-funnel me-1"></i>Terapkan</button>
     </div>
     </div>`,
     listContainerId: 'transaction-list',
     paginationId: 'transaction-pagination',
     extraHeaderButtons: `
     <button class="btn btn-sm btn-outline-warning me-1" onclick="showBulkDeleteModal()" title="Hapus Massal"><i class="bi bi-calendar-x"></i></button>
-    <button class="btn btn-sm btn-outline-danger me-1" onclick="navigateToTrash()"><i class="bi bi-trash"></i></button>
-    <button class="btn btn-sm btn-primary" onclick="showAddTransactionModal()"><i class="bi bi-plus"></i></button>`,
+    <button class="btn btn-sm btn-outline-danger me-1" onclick="Core.navigateTo('transactionTrash')"><i class="bi bi-trash"></i></button>
+    <button class="btn btn-sm btn-primary" data-action="add-transaction"><i class="bi bi-plus"></i></button>`,
     loadFn: refreshTransactionList
   });
   updateTransactionStats();
@@ -217,7 +217,7 @@ function renderTransactionList() {
     <div class="card mb-2" style="overflow: hidden;">
     <div class="card-body p-3">
     <div class="d-flex justify-content-between align-items-start">
-    <div class="flex-grow-1 me-2" onclick="showTransactionDetailModal(${trx.id})" style="cursor: pointer; min-width: 0;">
+    <div class="flex-grow-1 me-2" data-action="detail-transaction" data-id="${trx.id} style="cursor: pointer; min-width: 0;">
     <div class="d-flex align-items-center">
     <i class="${trx.category.icon} me-2" style="color:${trx.category.color}; flex-shrink: 0;"></i>
     <div style="min-width: 0;">
@@ -232,8 +232,8 @@ function renderTransactionList() {
     <div class="dropdown" onclick="event.stopPropagation()">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
     <ul class="dropdown-menu dropdown-menu-end">
-    <li><a class="dropdown-item" href="#" onclick="editTransaction(${trx.id})"><i class="bi bi-pencil me-2"></i>Edit</a></li>
-    <li><a class="dropdown-item text-danger" href="#" onclick="deleteTransaction(${trx.id})"><i class="bi bi-trash me-2"></i>Hapus</a></li>
+    <li><a class="dropdown-item" href="#" data-action="edit-transaction" data-id="${trx.id}"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+    <li><a class="dropdown-item text-danger" href="#" data-action="delete-transaction" data-id="${trx.id}"><i class="bi bi-trash me-2"></i>Hapus</a></li>
     </ul>
     </div>
     </div>
@@ -285,6 +285,70 @@ async function deleteTransaction(id) {
   }
 }
 
+function showBulkDeleteModal() {
+  // Isi dropdown dompet
+  const walletSelect = document.getElementById('bulk-wallet');
+  walletSelect.innerHTML = '<option value="">Pilih Dompet</option>';
+  Core.state.wallets.filter(w => w.is_active).forEach(w => {
+    const option = document.createElement('option');
+    option.value = w.id;
+    option.textContent = w.name;
+    walletSelect.appendChild(option);
+  });
+
+  const defaultWallet = Core.state.userSettings?.default_wallet_id;
+  if (defaultWallet) walletSelect.value = defaultWallet;
+
+  // Set default bulan ke bulan ini
+  const today = new Date();
+  const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('bulk-month').value = month;
+
+  new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
+}
+
+async function executeBulkDelete() {
+  const walletSelect = document.getElementById('bulk-wallet');
+  const walletId = walletSelect.value;
+  const month = document.getElementById('bulk-month').value;
+
+  if (!walletId) {
+    tgApp.showToast('Pilih dompet terlebih dahulu', 'warning');
+    return;
+  }
+  if (!month) {
+    tgApp.showToast('Pilih bulan terlebih dahulu', 'warning');
+    return;
+  }
+
+  const walletName = walletSelect.options[walletSelect.selectedIndex]?.text || 'dompet';
+  if (!confirm(`Hapus semua transaksi di dompet "${walletName}" pada bulan ${month}? Tindakan ini dapat dibatalkan di Tempat Sampah.`)) return;
+
+  try {
+    tgApp.showLoading('Menghapus...');
+    const res = await Core.api.post('/api/fintech/transactions/bulk-destroy', {
+      wallet_id: walletId,
+      month
+    });
+
+    tgApp.hideLoading();
+    tgApp.showToast(res.message,
+      res.success ? 'success': 'warning');
+
+    if (res.success) {
+      bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal')).hide();
+      await Core.loadWallets();
+      await Core.loadHomeSummary();
+      if (Core.state.currentPage === 'transactions') {
+        Core.navigateTo('transactions');
+      }
+    }
+  } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal menghapus', 'danger');
+  }
+}
+
 async function loadAndEditTransaction(id) {
   tgApp.showLoading('Mengambil data transaksi...');
   const res = await Core.api.get(`/api/fintech/transactions/${id}`);
@@ -305,7 +369,7 @@ async function renderTransfersPage() {
     icon: 'bi bi-arrow-left-right',
     filterHtml: `
     <div class="mb-3">
-    <select class="form-select form-select-sm" id="transfer-wallet-filter" onchange="applyTransferFilter()">
+    <select class="form-select form-select-sm" id="transfer-wallet-filter" data-action="apply-transfer-filter">
     <option value="">Semua Dompet</option>
     ${Core.state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
     </select>
@@ -406,7 +470,7 @@ function renderWalletsPage() {
   <div class="container py-3">
   <div class="d-flex justify-content-between mb-3">
   <div class="d-flex"><i class="bi bi-wallet2 me-2"></i><h5>Dompet Saya</h5></div>
-  <button class="btn btn-sm btn-primary" onclick="showAddWalletModal()"><i class="bi bi-plus"></i></button>
+  <button class="btn btn-sm btn-primary" data-action="add-wallet"><i class="bi bi-plus"></i></button>
   </div>
   <div id="wallet-list"></div>
   </div>`;
@@ -418,7 +482,7 @@ function renderWalletsList() {
   const container = document.getElementById('wallet-list');
   if (!container) return;
   container.innerHTML = Core.state.wallets.map(w => `
-    <div class="card mb-2" onclick="editWallet(${w.id})">
+    <div class="card mb-2" data-action="edit-wallet" data-id="${w.id}">
     <div class="card-body">
     <div class="d-flex justify-content-between">
     <div><i class="bi bi-wallet2 me-2"></i>${w.name}</div>
@@ -448,8 +512,8 @@ function renderReportsPage() {
   <div class="d-flex justify-content-between align-items-center mb-2">
   <h6>Distribusi Kategori</h6>
   <div class="btn-group btn-group-sm" role="group">
-  <button type="button" class="btn btn-outline-danger ${Core.state.categoryChartType === 'expense' ? 'active': ''}" data-cat-type="expense" onclick="switchCategoryType('expense')">Pengeluaran</button>
-  <button type="button" class="btn btn-outline-success ${Core.state.categoryChartType === 'income' ? 'active': ''}" data-cat-type="income" onclick="switchCategoryType('income')">Pemasukan</button>
+  <button type="button" class="btn btn-outline-danger ${Core.state.categoryChartType === 'expense' ? 'active': ''}" data-cat-type="expense" data-action="switch-category-type" data-cat-type="expense">Pengeluaran</button>
+  <button type="button" class="btn btn-outline-success ${Core.state.categoryChartType === 'income' ? 'active': ''}" data-cat-type="income" data-action="switch-category-type" data-cat-type="income">Pemasukan</button>
   </div>
   </div>
   <div style="height: 350px;">
@@ -496,7 +560,8 @@ function showReportFilterModal() {
   renderPeriodDetailInputs();
 
   // Event saat tipe periode berubah
-  periodTypeSelect.onchange = renderPeriodDetailInputs;
+  periodTypeSelect.setAttribute('data-action',
+    'render-period-detail-inputs');
 
   new bootstrap.Modal(document.getElementById('reportFilterModal')).show();
 }
@@ -856,7 +921,7 @@ async function renderSettingsPage() {
   <h6>Keamanan</h6>
   <div class="mb-3">
   <div class="form-check form-switch">
-  <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled" value="1" ${settings.pin_enabled ? 'checked': ''} onchange="togglePinInput()">
+  <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled" value="1" ${settings.pin_enabled ? 'checked': ''} data-action="toggle-pin">
   <label class="form-check-label" for="pin-enabled">Aktifkan PIN</label>
   </div>
   </div>
@@ -865,7 +930,7 @@ async function renderSettingsPage() {
   <input type="password" class="form-control" name="pin" id="pin-field" inputmode="numeric" pattern="[0-9]*" maxlength="6" minlength="4" placeholder="Masukkan PIN baru">
   <small class="text-muted">Kosongkan jika tidak ingin mengubah PIN.</small>
   </div>
-  <button type="button" class="btn btn-primary w-100" onclick="saveSettings()">Simpan Pengaturan</button>
+  <button type="button" class="btn btn-primary w-100" data-action="save-settings">Simpan Pengaturan</button>
   </form>
   </div>`;
   document.getElementById('main-content').innerHTML = html;
@@ -1567,7 +1632,7 @@ function showSearchDetail(type, id) {
 }
 
 // Trash
-function navigateToTrash() {
+function renderTransactionTrash() {
   Core.state.currentPage = 'trash';
   renderTrashPage();
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -1686,5 +1751,6 @@ Core.setPages({
   statements: renderStatementsPage,
   budgets: renderBudgetsPage,
   notifications: renderNotificationsPage,
-  search: renderSearchPage
+  search: renderSearchPage,
+  transactionTrash: renderTransactionTrash,
 });

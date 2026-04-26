@@ -83,6 +83,7 @@ function handleGlobalClick(e) {
     'edit-wallet': () => window.editWallet(id),
     'add-transaction': window.showAddTransactionModal,
     'edit-transaction': () => window.editTransaction(id),
+    'detail-transaction' => () => window.showTransactionDetailModal(id),
     'delete-transaction': () => window.deleteTransaction(id),
     'add-transfer': window.showAddTransferModal,
     'edit-transfer': () => window.editTransfer(id),
@@ -112,6 +113,55 @@ function handleGlobalClick(e) {
     actions[action](e);
   } else {
     tgApp.showToast(`Action for ${action} not implement yet.`, 'danger');
+  }
+}
+
+// ---------- EVENT DELEGATION: CHANGE ----------
+function handleGlobalChange(e) {
+  const target = e.target.closest('[data-action]');
+  if (!target) return;
+  const action = target.dataset.action;
+  const id = target.dataset.id;
+  const changeActions = {
+    // Settings
+    'toggle-pin': () => {
+      if (typeof togglePinInput === 'function') {
+        togglePinInput();
+      } else {
+        console.warn('togglePinInput tidak ditemukan');
+      }
+    },
+    // Transfers
+    'apply-transfer-filter': () => {
+      if (typeof applyTransferFilter === 'function') {
+        applyTransferFilter();
+      } else {
+        console.warn('applyTransferFilter tidak ditemukan');
+      }
+    },
+    'render-period-detail-inputs': () => {
+      if (typeof renderPeriodDetailInputs === 'function') {
+        renderPeriodDetailInputs();
+      } else {
+        console.warn('renderPeriodDetailInputs tidak ditemukan');
+      }
+    },
+    'apply-transaction-filter': () => {
+      if (typeof applyTransactionFilter === 'function') {
+        applyTransactionFilter();
+      }
+    },
+    'switch-category-chart': () => {
+      const type = target.dataset.catType; // ambil tipe dari data attribute
+      if (type && typeof switchCategoryType === 'function') {
+        switchCategoryType(type);
+      }
+    }
+    // Tambahkan aksi lain sesuai kebutuhan
+  };
+
+  if (changeActions[action]) {
+    changeActions[action](target, e);
   }
 }
 
@@ -182,6 +232,7 @@ window.retryInitialization = () => initializeApp();
 document.addEventListener('DOMContentLoaded', () => {
   // Setup event delegation (gantikan inline onclick secara bertahap)
   document.addEventListener('click', handleGlobalClick);
+  document.addEventListener('change', handleGlobalChange);
 
   // Setup navigasi sidebar
   setupNavigation();

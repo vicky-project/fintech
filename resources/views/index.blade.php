@@ -75,7 +75,7 @@
   </div>
 
   {{-- Overlay Quick Actions --}}
-  <div id="quick-actions-overlay" class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 9999; background-color: rgba(0,0,0,0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity 0.3s ease;" onclick="toggleQuickActions()">
+  <div id="quick-actions-overlay" class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 9999; background-color: rgba(0,0,0,0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity 0.3s ease;" data-action="toggle-quick-actions">
     <div class="d-flex flex-column justify-content-end h-100 pb-5" onclick="event.stopPropagation()">
       <div class="container px-4 pb-5">
         <div class="d-flex justify-content-center flex-wrap gap-4 mb-4">
