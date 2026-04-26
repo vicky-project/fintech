@@ -350,32 +350,38 @@ async function loadHomeSummary() {
   state.homeSummary = res.data;
 }
 
+// Fungsi Badge
 async function loadUnreadNotificationCount() {
   try {
     const res = await api.get('/api/fintech/notifications/unread-count');
     state.unreadNotificationCount = res.count || 0;
     updateNotificationBadge();
-  } catch (e) {}
+  } catch (e) {
+    console.error('Gagal memuat jumlah notifikasi:', e);
+  }
 }
 
 function updateNotificationBadge() {
   const badge = document.getElementById('notification-badge');
   if (badge) {
-    badge.textContent = state.unreadNotificationCount > 99 ? '99+': state.unreadNotificationCount;
-    badge.style.display = state.unreadNotificationCount > 0 ? 'inline-block': 'none';
-  }
-  const countBadge = document.getElementById('notification-count-badge');
-  if (countBadge) {
-    countBadge.textContent = state.unreadNotificationCount;
+    if (state.unreadNotificationCount > 0) {
+      badge.textContent = state.unreadNotificationCount > 99 ? '99+': state.unreadNotificationCount;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
   }
 }
 
+// Halaman Notifikasi
 async function renderNotificationsPage() {
   const html = `
   <div class="container py-3">
-  <div class="d-flex justify-content-between mb-3">
-  <h5>Notifikasi</h5>
-  <button class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsRead()">Tandai Semua Dibaca</button>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Notifikasi</h5>
+  <button class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsRead()">
+  <i class="bi bi-check-all me-1"></i>Tandai Semua Dibaca
+  </button>
   </div>
   <div id="notification-list"></div>
   </div>
@@ -399,26 +405,73 @@ async function loadNotifications() {
 function renderNotificationList() {
   const container = document.getElementById('notification-list');
   if (!state.notifications.length) {
-    container.innerHTML = '<p class="text-muted text-center py-4">Tidak ada notifikasi.</p>';
+    container.innerHTML = `
+    <div class="text-center py-5">
+    <i class="bi bi-bell-slash fs-1 text-muted"></i>
+    <p class="text-muted mt-2">Belum ada notifikasi</p>
+    </div>`;
     return;
   }
+
   container.innerHTML = state.notifications.map(n => {
-    const bg = n.is_read ? '': 'list-group-item-warning';
-    const icon = n.type === 'budget_warning' ? 'bi-exclamation-triangle text-warning':
-    n.type === 'cashflow_warning' ? 'bi-graph-down text-danger': 'bi-bell';
+    const iconClass = getNotificationIcon(n.type);
+    const colorClass = getNotificationColor(n.type);
+    const unreadClass = n.is_read ? '': 'unread';
+    const timeAgo = formatTimeAgo(n.created_at);
+
     return `
-    <div class="list-group-item ${bg} mb-2 rounded" onclick="markNotificationRead(${n.id})">
-    <div class="d-flex align-items-start">
-    <i class="${icon} fs-5 me-3"></i>
-    <div class="flex-grow-1">
-    <div class="fw-semibold">${n.title}</div>
-    <small>${n.message}</small>
-    <div class="text-muted mt-1" style="font-size:0.75rem;">${formatDateTime(n.created_at)}</div>
+    <div class="card mb-2 notification-row ${unreadClass}"
+    style="cursor: pointer; border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+    onclick="markNotificationRead(${n.id})">
+    <div class="card-body d-flex align-items-start p-3">
+    <div class="notification-icon ${colorClass} me-3">
+    <i class="${iconClass}"></i>
     </div>
+    <div class="flex-grow-1" style="min-width: 0;">
+    <div class="notification-header">
+    <strong class="${n.is_read ? 'text-body': 'text-dark'}">${n.title}</strong>
+    <span class="notification-time">${timeAgo}</span>
+    </div>
+    <p class="text-muted small mb-0" style="word-wrap: break-word;">${n.message}</p>
+    </div>
+    ${n.is_read ? '': '<span class="badge bg-primary rounded-pill ms-2" style="width: 8px; height: 8px; padding: 0;"></span>'}
     </div>
     </div>
     `;
   }).join('');
+}
+
+// Helper
+function getNotificationIcon(type) {
+  const icons = {
+    'budget_warning': 'bi-exclamation-triangle',
+    'cashflow_warning': 'bi-graph-down',
+    'subscription_reminder': 'bi-calendar-check',
+  };
+  return icons[type] || 'bi-bell';
+}
+
+function getNotificationColor(type) {
+  const colors = {
+    'budget_warning': 'budget-warning',
+    'cashflow_warning': 'cashflow-warning',
+    'subscription_reminder': 'subscription-reminder',
+  };
+  return colors[type] || '';
+}
+
+function formatTimeAgo(dateString) {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Baru saja';
+  if (diffMins < 60) return `${diffMins} menit lalu`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} jam lalu`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'Kemarin';
+  return `${diffDays} hari lalu`;
 }
 
 async function markNotificationRead(id) {
@@ -431,7 +484,9 @@ async function markNotificationRead(id) {
       updateNotificationBadge();
       renderNotificationList();
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Gagal menandai notifikasi:', e);
+  }
 }
 
 async function markAllNotificationsRead() {
