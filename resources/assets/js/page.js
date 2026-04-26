@@ -1435,7 +1435,7 @@ async function renderSearchPage() {
   <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer..."
   onkeydown="if(event.key==='Enter') performSearch()">
   <button class="btn btn-primary"
-  data-action="perform-search">Cari</button>
+  onclick="performSearch()">Cari</button>
   </div>
   <div id="search-filters" class="btn-group btn-group-sm w-100 mb-3 d-none" role="group">
   <button class="btn btn-outline-primary search-filter-btn active" data-filter="all" data-action="filter-search-results">
