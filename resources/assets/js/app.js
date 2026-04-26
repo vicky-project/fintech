@@ -1026,10 +1026,15 @@ async function refreshTransactionList(page) {
   renderPagination('transaction-pagination', state.transactionPage, state.transactionLastPage, refreshTransactionList);
 
   if (state.pendingAction && state.pendingAction.type === 'transaction') {
-    setTimeout(() => {
-      editTransaction(state.pendingAction.id);
-      state.pendingAction = null;
-    }, 100);
+    const targetId = state.pendingAction.id;
+    const exists = state.transactions.some(t => t.id == targetId);
+
+    if (exists) {
+      setTimeout(() => editTransaction(targetId), 100);
+    } else {
+      loadAndEditTransaction(targetId);
+    }
+    state.pendingAction = null;
   }
 }
 
@@ -1207,6 +1212,25 @@ async function executeBulkDelete() {
   }
 }
 
+async function loadAndEditTransaction(id) {
+  tgApp.showLoading('Mengambil data transaksi...');
+  try {
+    const res = await api.get(`/api/fintech/transactions/${id}`);
+    if (res.success && res.data) {
+      state.transactions.push(res.data);
+      tgApp.hideLoading();
+      // Buka modal edit
+      setTimeout(() => editTransaction(id), 50);
+    } else {
+      tgApp.hideLoading();
+      tgApp.showToast('Transaksi tidak ditemukan', 'danger');
+    }
+  } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast('Gagal memuat detail transaksi', 'danger');
+  }
+}
+
 // ==================== TRANSFERS PAGE ====================
 async function renderTransfersPage() {
   await renderListPage( {
@@ -1236,10 +1260,15 @@ async function refreshTransferList(page = 1) {
   renderTransferList(state.transfers);
   renderPagination('transfer-pagination', state.transferPage, state.transferLastPage, refreshTransferList);
   if (state.pendingAction && state.pendingAction.type === 'transfer') {
-    setTimeout(() => {
-      editTransfer(state.pendingAction.id);
-      state.pendingAction = null;
-    }, 100);
+    const targetId = state.pendingAction.id;
+    const exists = state.transfers.some(t => t.id == targetId);
+
+    if (exists) {
+      setTimeout(() => editTransfer(targetId), 100);
+    } else {
+      loadAndEditTransfer(targetId);
+    }
+    state.pendingAction = null;
   }
 }
 
@@ -1302,6 +1331,24 @@ async function deleteTransfer(id) {
   } catch (error) {
     tgApp.hideLoading();
     tgApp.showToast(error.message || 'Gagal menghapus', 'danger');
+  }
+}
+
+async function loadAndEditTransfer(id) {
+  tgApp.showLoading('Mengambil data transfer...');
+  try {
+    const res = await api.get(`/api/fintech/transfers/${id}`);
+    if (res.success && res.data) {
+      state.transfers.push(res.data);
+      tgApp.hideLoading();
+      setTimeout(() => editTransfer(id), 50);
+    } else {
+      tgApp.hideLoading();
+      tgApp.showToast('Transfer tidak ditemukan', 'danger');
+    }
+  } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast('Gagal memuat detail transfer', 'danger');
   }
 }
 
