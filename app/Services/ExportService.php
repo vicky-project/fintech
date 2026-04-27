@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 
 class ExportService
 {
-  protected int $maxRecords = 1000;
+  protected int $maxRecords = 2000;
 
   /**
   * Generate file export, return path to temp file.
