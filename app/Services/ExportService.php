@@ -99,7 +99,6 @@ class ExportService
       'total_income' => $totalIncome,
       'total_expense' => $totalExpense,
       'net' => $totalIncome - $totalExpense,
-      'currency' => 'IDR', // bisa dynamic nanti
     ];
 
     return [$data, $summary];
@@ -151,9 +150,11 @@ class ExportService
       ];
     })->toArray();
 
-    return [$data,
+    return [
+      $data,
       ['total' => $total,
-        'currency' => 'IDR']];
+      ]
+    ];
   }
 
   protected function applyTransferFilters($query, array $filters): void
@@ -215,7 +216,7 @@ class ExportService
           'Dompet' => $b->wallet?->name ?? '-',
           'Periode' => $b->period_type->label(),
           'Limit' => $b->getFormattedAmount(),
-          'Pengeluaran' => 'Rp ' . number_format($spent, 0, ',', '.'),
+          'Pengeluaran' => $b->formatCurrency($spent),
           'Persentase' => $b->getPercentage() . '%',
           'Status' => $b->isOverspent() ? 'Terlampaui' : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
         ];
@@ -227,7 +228,6 @@ class ExportService
           'total_limit' => $totalLimit,
           'total_spent' => $totalSpent,
           'remaining' => $totalLimit - $totalSpent,
-          'currency' => 'IDR',
         ]
       ];
     }
