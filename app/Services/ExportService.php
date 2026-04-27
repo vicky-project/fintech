@@ -36,6 +36,9 @@ class ExportService
       'budgets' => $this->getBudgetsData($filters),
     };
 
+    $metadata = $this->buildMetadata($type, $filters, $walletId);
+    $summary['metadata'] = $metadata;
+
     // Gabungkan aturan format ke summary
     $summary = array_merge($summary, $formatRules);
 
@@ -304,5 +307,32 @@ class ExportService
       }
 
       return $default;
+    }
+
+    protected function buildMetadata(string $type, array $filters, int $walletId): array
+    {
+      $wallet = Wallet::with('currencyDetails')->findOrFai($walletId);
+      $walletName = $wallet->name;
+
+      $meta = [
+        'Dompet: ' . $walletName,
+        'Tipe Data: ' . $this->getTitle($type),
+        'Tanggal Ekspor: ' . now()->format('d M Y H:i'),
+      ];
+
+      if (!empty($filters['month'])) {
+        $meta[] = 'Periode Bulan: ' . date('F Y', strtotime($filters['month'] . '-01'));
+      } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+        $from = !empty($filters['date_from']) ? $filters['date_from'] : 'Awal';
+        $to = !empty($filters['date_to']) ? $filters['date_to'] : 'Akhir';
+        $meta[] = 'Rentang Tanggal: ' . $from . ' s/d ' . $to;
+      }
+
+      if (!empty($filters['transaction_type'])) {
+        $meta[] = 'Tipe Transaksi: ' . ($filters['transaction_type'] === 'income' ? 'Pemasukan' : 'Pengeluaran');
+      }
+      // bisa tambahkan filter lain (kategori, dll.)
+
+      return $meta;
     }
   }

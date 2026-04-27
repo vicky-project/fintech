@@ -28,6 +28,17 @@
 </head>
 <body>
   <h3>{{ $title }}</h3>
+  <!-- di bawah <h3> -->
+  <div style="margin-bottom: 10px; font-size: 12px;">
+    @isset($summary['metadata'])
+    @foreach($summary['metadata'] as $info)
+    <p style="margin: 0;">
+      {{ $info }}
+    </p>
+    @endforeach
+    @endisset
+  </div>
+  <!-- kemudian tabel seperti biasa -->
   <table>
     <thead>
       <tr>
