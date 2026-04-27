@@ -165,7 +165,7 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
             }
           }
 
-          $symbol = 'Rp';
+          $symbol = $this->summary['symbol'] ?? 'Rp';
           $colJumlah = 'E'; // ganti sesuai kolom jumlah Anda
           $row = $subtotalStartRow;
 

@@ -24,6 +24,22 @@
     h3 {
       margin-bottom: 5px;
     }
+
+    /* Warna untuk jumlah */
+    .text-income {
+      color: #28A745;
+      /* hijau */
+      font-weight: bold;
+    }
+    .text-expense {
+      color: #DC3545;
+      /* merah */
+      font-weight: bold;
+    }
+    .text-neutral {
+      color: #000000;
+      /* hitam biasa, untuk transfer */
+    }
   </style>
 </head>
 <body>
@@ -31,7 +47,12 @@
   <table>
     <thead>
       <tr>
-        <th>Tanggal</th><th>Tipe</th><th>Kategori</th><th>Dompet</th><th>Jumlah</th><th>Deskripsi</th>
+        <th>Tanggal</th>
+        <th>Tipe</th>
+        <th>Kategori</th>
+        <th>Dompet</th>
+        <th>Jumlah</th>
+        <th>Deskripsi</th>
       </tr>
     </thead>
     <tbody>
@@ -39,24 +60,33 @@
       <tr><td colspan="6" style="text-align:center;">Tidak ada data</td></tr>
       @else
       @foreach($data as $row)
+      @php
+      $type = $row['Tipe'] ?? '';
+      $amountClass = match($type) {
+      'Pemasukan' => 'text-income',
+      'Pengeluaran' => 'text-expense',
+      default => 'text-neutral'
+      };
+      @endphp
       <tr>
         <td>{{ $row['Tanggal'] ?? '' }}</td>
-        <td>{{ $row['Tipe'] ?? '' }}</td>
+        <td>{{ $type }}</td>
         <td>{{ $row['Kategori'] ?? '' }}</td>
         <td>{{ $row['Dompet'] ?? '' }}</td>
-        <td>{{ $row['Jumlah'] ?? '' }}</td>
+        <td class="{{ $amountClass }}">{{ $row['Jumlah'] ?? '' }}</td>
         <td>{{ $row['Deskripsi'] ?? '' }}</td>
       </tr>
       @endforeach
       @endif
     </tbody>
   </table>
-  <!-- setelah tabel -->
+
+  <!-- Subtotal -->
   @if(isset($summary))
   <div style="margin-top: 15px; text-align: right; font-size: 12px;">
-    <strong>Pemasukan: {{ 'Rp ' . number_format($summary['total_income'], 0, ',', '.') }}</strong><br>
-    <strong>Pengeluaran: {{ 'Rp ' . number_format($summary['total_expense'], 0, ',', '.') }}</strong><br>
-    <strong>Net: {{ 'Rp ' . number_format($summary['net'], 0, ',', '.') }}</strong>
+    <strong>Pemasukan: <span class="text-income">{{ $summary['symbol'].' ' . number_format($summary['total_income'], 0, ',', '.') }}</span></strong><br>
+    <strong>Pengeluaran: <span class="text-expense">{{ $summary['symbol'] .' ' . number_format($summary['total_expense'], 0, ',', '.') }}</span></strong><br>
+    <strong>Net: {{ $summary['symbol'].' ' . number_format($summary['net'], 0, ',', '.') }}</strong>
   </div>
   @endif
 </body>

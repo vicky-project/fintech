@@ -28,7 +28,7 @@ class ExportRequest extends FormRequest
         Rule::in(['pdf', 'xlsx'])],
 
       'wallet_id' => [
-        'nullable',
+        'required',
         Rule::exists('fintech_wallets', 'id')->where(function ($query) {
           $query->where('user_id', $this->user()->id);
         }),

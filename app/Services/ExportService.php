@@ -5,6 +5,7 @@ namespace Modules\FinTech\Services;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Transfer;
 use Modules\FinTech\Models\Budget;
+use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Exports\DataExport;
 use Modules\FinTech\Services\WalletService;
@@ -29,6 +30,8 @@ class ExportService
   {
     $type = $filters['type'];
     $format = $filters['format'];
+    $walletId = $filters['wallet_id'];
+    $currencySymbol = $this->getCurrencySymbol($walletId);
 
     // Ambil data
     [$data,
@@ -37,6 +40,7 @@ class ExportService
       'transfers' => $this->getTransfersData($filters),
       'budgets' => $this->getBudgetsData($filters),
     };
+    $summary['symbol'] = $currencySymbol;
 
     // Cek batas
     if (count($data) > $this->maxRecords) {
@@ -273,5 +277,17 @@ class ExportService
         'transfers' => 'Laporan Transfer',
         'budgets' => 'Laporan Budget',
       };
+    }
+
+    /**
+    * Get currency symbol for a wallet.
+    */
+    protected function getCurrencySymbol(int $walletId): string
+    {
+      $wallet = Wallet::with('currencyDetails')->find($walletId);
+      if ($wallet && $wallet->currencyDetails) {
+        return $wallet->currencyDetails->symbol ?? $wallet->currency;
+      }
+      return $wallet->currency ?? 'Rp'; // fallback
     }
   }

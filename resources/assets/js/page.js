@@ -1875,12 +1875,12 @@ function renderExportFilters(type) {
   let html = '';
 
   // Wallet (selalu ada)
+  const defaultWalletId = Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '');
   html += `
   <div class="mb-3">
-  <label for="filter-wallet" class="form-label">Dompet</label>
+  <label for="filter-wallet" class="form-label">Dompet <span class="text-danger">*</span></label>
   <select class="form-select" id="filter-wallet">
-  <option value="">Semua Dompet</option>
-  ${Core.state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id === defaultWalletId ? 'selected': ''}>${w.name} (${w.currency || ''})</option>`).join('')}
   </select>
   </div>`;
 
@@ -2061,11 +2061,15 @@ async function performExport() {
   const formatRadio = document.querySelector('input[name="export-format"]:checked');
   const format = formatRadio ? formatRadio.value: 'xlsx'; // default xlsx
   const walletId = document.getElementById('filter-wallet').value;
+  if (!walletId) {
+    tgApp.showToast('Pilih dompet terlebih dahulu', 'warning');
+    return;
+  }
 
   const payload = {
     type,
     format,
-    wallet_id: walletId || undefined
+    wallet_id: walletId
   };
 
   // Filter spesifik tipe
@@ -2108,6 +2112,11 @@ async function performExport() {
       const selectedCategories = [...hiddenSelect.selectedOptions].map(o => o.value);
       if (selectedCategories.length) payload.category_ids = selectedCategories;
     }
+  }
+
+  if (!payload.wallet_id) {
+    tgApp.showToast('Pilih dompet terlebih dahulu', 'warning');
+    return;
   }
 
   try {

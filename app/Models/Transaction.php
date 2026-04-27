@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
 use Modules\FinTech\Enums\TransactionType;
+use Brick\Money\Money;
 
 class Transaction extends Model
 {
@@ -72,6 +73,38 @@ class Transaction extends Model
 
   public function getFormattedAmount(): string
   {
-    return $this->amount->formatTo('id_ID');
+    // Default fallback
+    $defaultPrecision = 0;
+    $defaultDecimalMark = ',';
+    $defaultThousandsSep = '.';
+    $defaultSymbol = 'Rp';
+    $defaultSymbolFirst = true;
+
+    $amountFloat = $this->getAmountFloat();
+
+    // Ambil detail mata uang dari dompet
+    if ($this->wallet && $this->wallet->currencyDetails) {
+      $currency = $this->wallet->currencyDetails;
+      $precision = $currency->precision ?? $defaultPrecision;
+      $decimalMark = $currency->decimal_mark ?? $defaultDecimalMark;
+      $thousandsSep = $currency->thousands_separator ?? $defaultThousandsSep;
+      $symbol = $currency->symbol ?? $defaultSymbol;
+      $symbolFirst = $currency->symbol_first ?? $defaultSymbolFirst;
+    } else {
+      // Fallback ke data default
+      $precision = $defaultPrecision;
+      $decimalMark = $defaultDecimalMark;
+      $thousandsSep = $defaultThousandsSep;
+      $symbol = $defaultSymbol;
+      $symbolFirst = $defaultSymbolFirst;
+    }
+
+    // Format angka
+    $formattedNumber = number_format($amountFloat, $precision, $decimalMark, $thousandsSep);
+
+    // Susun simbol dan angka
+    return $symbolFirst
+    ? $symbol . ' ' . $formattedNumber
+    : $formattedNumber . ' ' . $symbol;
   }
 }
