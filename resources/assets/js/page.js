@@ -2058,7 +2058,8 @@ function updateTransactionCategoryFilter() {
 
 async function performExport() {
   const type = document.getElementById('export-type').value;
-  const format = document.getElementById('export-format').value;
+  const formatRadio = document.querySelector('input[name="export-format"]:checked');
+  const format = formatRadio ? formatRadio.value: 'xlsx'; // default xlsx
   const walletId = document.getElementById('filter-wallet').value;
 
   const payload = {
