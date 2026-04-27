@@ -3,15 +3,6 @@
 window.performSearch = () => {
   if (typeof performSearch === 'function') performSearch();
 };
-window.navigateToTransferTrash = () => {
-  if (typeof navigateToTransferTrash === 'function') navigateToTransferTrash();
-};
-window.restoreTransfer = async (id) => {
-  if (typeof restoreTransfer === 'function') await restoreTransfer(id);
-};
-window.forceDeleteTransfer = async (id) => {
-  if (typeof forceDeleteTransfer === 'function') await forceDeleteTransfer(id);
-};
 window.toggleQuickActions = () => {
   const overlay = document.getElementById('quick-actions-overlay');
   const icon = document.getElementById('fab-icon');
@@ -59,8 +50,8 @@ function handleGlobalClick(e) {
     'show-search-detail': () => window.showSearchDetail(target.dataset.type, id),
     'mark-notification-read': () => window.markNotificationRead(id),
     'mark-all-notifications-read': window.markAllNotificationsRead,
-    'navigate-to-trash': window.navigateToTrash,
-    'navigate-to-transfer-trash': window.navigateToTransferTrash,
+    'navigate-to-trash': window.renderTransactionTrash,
+    'navigate-to-transfer-trash': window.renderTransferTrash,
     'restore-transaction': () => window.restoreTransaction(id),
     'force-delete-transaction': () => window.forceDeleteTransaction(id),
     'restore-transfer': () => window.restoreTransfer(id),

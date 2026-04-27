@@ -1637,7 +1637,7 @@ function showSearchDetail(type, id) {
 }
 
 // Trash
-function renderTransactionTrash() {
+window.renderTransactionTrash = function() {
   Core.state.currentPage = 'trash';
   renderTrashPage();
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -1688,7 +1688,7 @@ async function forceDeleteTransaction(id) {
   await Core.api.delete(`/api/fintech/transactions/${id}/force`);
   Core.navigateTo('transactionTrash');
 }
-window.navigateToTransferTrash = function() {
+window.renderTransferTrash = function() {
   Core.state.currentPage = 'transfer-trash';
   renderTransferTrashPage();
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -1721,8 +1721,8 @@ async function renderTransferTrashPage() {
     <small class="text-muted">${Core.formatDate(t.transfer_date)}</small>
     </div>
     <div>
-    <button class="btn btn-sm btn-outline-success" onclick="restoreTransfer(${t.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
-    <button class="btn btn-sm btn-outline-danger" onclick="forceDeleteTransfer(${t.id})"><i class="bi bi-trash"></i></button>
+    <button class="btn btn-sm btn-outline-success" data-action="restore-transfer" data-id="${t.id}"><i class="bi bi-arrow-counterclockwise"></i></button>
+    <button class="btn btn-sm btn-outline-danger" data-action="force-delete-transfer" data-id="${t.id}"><i class="bi bi-trash"></i></button>
     </div>
     </div>
     </div>
@@ -1758,4 +1758,5 @@ Core.setPages({
   notifications: renderNotificationsPage,
   search: renderSearchPage,
   transactionTrash: renderTransactionTrash,
+  transferTrash: renderTransferTrash,
 });
