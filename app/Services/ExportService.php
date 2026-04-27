@@ -29,7 +29,7 @@ class ExportService
     $formatRules = $this->getCurrencyFormat($walletId);
     $walletName = Wallet::find($walletId)->name;
 
-    $limit = $format === 'pdf' ? 2000 : $this->maxRecords;
+    $limit = $format === 'pdf' ? 1000 : $this->maxRecords;
 
     if ($type === 'all') {
       $originalMax = $this->maxRecords;
