@@ -2159,7 +2159,7 @@ async function performExport() {
     // Semua data
     else if (type === 'all') {
       if (format === 'pdf') {
-        tgApp.showToast('Format PDF tidak tersedia untuk semua data. Gunakan excel', 'warning');
+        tgApp.showToast('Format PDF tidak tersedia untuk semua data. Silakan gunakan excel', 'warning');
         return;
       }
 
