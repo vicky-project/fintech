@@ -8,6 +8,7 @@ use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Exports\DataExport;
+use Modules\FinTech\Exports\AllDataExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
@@ -25,9 +26,54 @@ class ExportService
     $type = $filters['type'];
     $format = $filters['format'];
     $walletId = $filters['wallet_id'];
-
-    // Ambil aturan format dari wallet yang dipilih
     $formatRules = $this->getCurrencyFormat($walletId);
+    $walletName = Wallet::find($walletId)->name;
+
+    if ($type === 'all') {
+      // Ambil semua data dengan filter umum
+      $transactionsData = $this->getTransactionsData($filters);
+      $transfersData = $this->getTransfersData($filters);
+      $budgetsData = $this->getBudgetsData($filters);
+
+      // Gabungkan aturan format ke setiap summary
+      $transactionsData[1] = array_merge($transactionsData[1], $formatRules);
+      $transfersData[1] = array_merge($transfersData[1], $formatRules);
+      $budgetsData[1] = array_merge($budgetsData[1], $formatRules);
+
+      $allData = [
+        'transactions' => $transactionsData,
+        'transfers' => $transfersData,
+        'budgets' => $budgetsData,
+      ];
+
+      $metadata = $this->buildMetadata('all', $filters, $walletName);
+      $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
+      $filename = Str::uuid() . '.' . $extension;
+      $tempPath = "temp/exports/{$filename}";
+
+      if ($format === 'xlsx') {
+        Excel::store(
+          new AllDataExport($allData, $formatRules),
+          $tempPath,
+          'local',
+          ExcelFormat::XLSX
+        );
+      } else {
+        $html = view("fintech::exports.all_pdf", [
+          'allData' => $allData,
+          'formatRules' => $formatRules,
+          'metadata' => $metadata,
+        ])->render();
+
+        $dompdf = new \Dompdf\Dompdf();
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        Storage::disk('local')->put($tempPath, $dompdf->output());
+      }
+
+      return Storage::disk('local')->path($tempPath);
+    }
 
     // Ambil data dan summary (hanya angka mentah)
     [$data,
@@ -314,14 +360,11 @@ class ExportService
       return $default;
     }
 
-    protected function buildMetadata(string $type, array $filters, int $walletId): array
+    protected function buildMetadata(string $type, array $filters, string $walletName): array
     {
-      $wallet = Wallet::with('currencyDetails')->findOrFail($walletId);
-      $walletName = $wallet->name;
-
       $meta = [
         'Dompet: ' . $walletName,
-        'Tipe Data: ' . $this->getTitle($type),
+        'Tipe Data: ' . ($type === 'all' ? 'Semua Data' : $this->getTitle($type)),
         'Tanggal Ekspor: ' . now()->format('d M Y H:i'),
       ];
 
@@ -333,10 +376,9 @@ class ExportService
         $meta[] = 'Rentang Tanggal: ' . $from . ' s/d ' . $to;
       }
 
-      if (!empty($filters['transaction_type'])) {
+      if ($type === 'transactions' && !empty($filters['transaction_type'])) {
         $meta[] = 'Tipe Transaksi: ' . ($filters['transaction_type'] === 'income' ? 'Pemasukan' : 'Pengeluaran');
       }
-      // bisa tambahkan filter lain (kategori, dll.)
 
       return $meta;
     }

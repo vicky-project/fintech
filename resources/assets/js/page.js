@@ -1765,7 +1765,8 @@ async function renderExportPage() {
   <i class="bi bi-stack me-2"></i>Jenis Data
   </label>
   <select class="form-select form-select-lg" id="export-type" data-action="change-export-type">
-  <option value="transactions" selected>Transaksi</option>
+  <option value="all" selected>Semua Data</option>
+  <option value="transactions">Transaksi</option>
   <option value="transfers">Transfer</option>
   <option value="budgets">Budget</option>
   </select>
@@ -1889,7 +1890,7 @@ function renderExportFilters(type) {
     <div class="row mb-3">
     <div class="col">
     <label for="filter-date-from" class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from">
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
     </div>
     <div class="col">
     <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
@@ -1923,7 +1924,7 @@ function renderExportFilters(type) {
     <div class="row mb-3">
     <div class="col">
     <label for="filter-date-from" class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from">
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
     </div>
     <div class="col">
     <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
@@ -1962,6 +1963,21 @@ function renderExportFilters(type) {
     // Render period input awal
     setTimeout(() =>
       renderCategoryBadges(Core.state.currentFilteredCategories), 10);
+  }
+
+  if (type === 'all') {
+    html += `
+    <div class="row mb-3">
+    <div class="col">
+    <label class="form-label">Dari Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
+    </div>
+    <div class="col">
+    <label class="form-label">Sampai Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>
+    `;
   }
 
   container.innerHTML = html;
@@ -2112,6 +2128,11 @@ async function performExport() {
       const selectedCategories = [...hiddenSelect.selectedOptions].map(o => o.value);
       if (selectedCategories.length) payload.category_ids = selectedCategories;
     }
+  }
+
+  if (type === 'all') {
+    payload.date_from = document.getElementById('filter-date-from').value || undefined;
+    payload.date_to = document.getElementById('filter-date-to').value || undefined;
   }
 
   if (!payload.wallet_id) {

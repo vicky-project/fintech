@@ -23,7 +23,7 @@ class ExportRequest extends FormRequest
   {
     return [
       'type' => ['required',
-        Rule::in(['transactions', 'transfers', 'budgets'])],
+        Rule::in(['transactions', 'transfers', 'budgets', 'all'])],
       'format' => ['required',
         Rule::in(['pdf', 'xlsx'])],
 
