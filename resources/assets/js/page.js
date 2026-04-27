@@ -2075,8 +2075,13 @@ function updateTransactionCategoryFilter() {
 async function performExport() {
   const type = document.getElementById('export-type').value;
   const formatRadio = document.querySelector('input[name="export-format"]:checked');
-  const format = formatRadio ? formatRadio.value: 'xlsx'; // default xlsx
-  const walletId = document.getElementById('filter-wallet').value;
+  const format = formatRadio ? formatRadio.value: 'xlsx';
+  const walletEl = document.getElementById('filter-wallet');
+  if (!walletEl) {
+    tgApp.showToast('Komponen dompet tidak ditemukan. Coba muat ulang halaman.', 'danger');
+    return;
+  }
+  const walletId = walletEl.value;
   if (!walletId) {
     tgApp.showToast('Pilih dompet terlebih dahulu', 'warning');
     return;
@@ -2088,66 +2093,62 @@ async function performExport() {
     wallet_id: walletId
   };
 
-  // Filter spesifik tipe
-  if (type === 'transactions') {
-    const dateFrom = document.getElementById('filter-date-from').value;
-    const dateTo = document.getElementById('filter-date-to').value;
-    const month = document.getElementById('filter-month').value;
-    const transactionType = document.getElementById('filter-type').value;
-    const hiddenSelect = document.getElementById('filter-category-hidden');
-    const selectedCategories = [...hiddenSelect.selectedOptions].map(o => o.value);
-    if (selectedCategories.length) payload.category_ids = selectedCategories;
-    const includeDesc = document.getElementById('include-description').checked;
-
-    if (dateFrom) payload.date_from = dateFrom;
-    if (dateTo) payload.date_to = dateTo;
-    if (month) payload.month = month;
-    if (transactionType) payload.transaction_type = transactionType;
-    if (selectedCategories.length) payload.category_id = selectedCategories;
-    payload.include_description = includeDesc;
-  } else if (type === 'transfers') {
-    const dateFrom = document.getElementById('filter-date-from').value;
-    const dateTo = document.getElementById('filter-date-to').value;
-    if (dateFrom) payload.date_from = dateFrom;
-    if (dateTo) payload.date_to = dateTo;
-  } else if (type === 'budgets') {
-    const periodType = document.getElementById('filter-period-type').value;
-    payload.period_type = periodType;
-    if (periodType === 'monthly') {
-      const month = document.getElementById('filter-month').value;
-      if (month) payload.month = month;
-    } else {
-      const year = document.getElementById('filter-year').value;
-      if (year) payload.year = year;
-    }
-    const status = document.getElementById('filter-status').value;
-    if (status) payload.status = status;
-
-    const hiddenSelect = document.getElementById('filter-category-hidden');
-    if (hiddenSelect) {
-      const selectedCategories = [...hiddenSelect.selectedOptions].map(o => o.value);
-      if (selectedCategories.length) payload.category_ids = selectedCategories;
-    }
-  }
-
-  if (type === 'all') {
-    payload.date_from = document.getElementById('filter-date-from').value || undefined;
-    payload.date_to = document.getElementById('filter-date-to').value || undefined;
-  }
-
-  if (!payload.wallet_id) {
-    tgApp.showToast('Pilih dompet terlebih dahulu', 'warning');
-    return;
-  }
-
   try {
+    // Filter transaksi
+    if (type === 'transactions') {
+      payload.transaction_type = document.getElementById('filter-type')?.value || undefined;
+      payload.month = document.getElementById('filter-month')?.value || undefined;
+      payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
+      payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
+      payload.include_description = document.getElementById('include-description')?.checked;
+      const hiddenSelect = document.getElementById('filter-category-hidden');
+      if (hiddenSelect) {
+        const selected = [...hiddenSelect.selectedOptions].map(o => o.value);
+        if (selected.length) payload.category_ids = selected;
+      }
+    }
+    // Filter transfer
+    else if (type === 'transfers') {
+      payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
+      payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
+      payload.month = document.getElementById('filter-month')?.value || undefined;
+    }
+    // Filter budget
+    else if (type === 'budgets') {
+      const periodTypeEl = document.getElementById('filter-period-type');
+      if (!periodTypeEl) {
+        tgApp.showToast('Form tipe periode tidak tersedia.', 'danger');
+        return;
+      }
+      const periodType = periodTypeEl.value;
+      payload.period_type = periodType;
+      if (periodType === 'monthly') {
+        const monthEl = document.getElementById('filter-month');
+        if (monthEl) payload.month = monthEl.value;
+      } else {
+        const yearEl = document.getElementById('filter-year');
+        if (yearEl) payload.year = yearEl.value;
+      }
+      payload.status = document.getElementById('filter-status')?.value || undefined;
+      const hiddenSelect = document.getElementById('filter-category-hidden');
+      if (hiddenSelect) {
+        const selected = [...hiddenSelect.selectedOptions].map(o => o.value);
+        if (selected.length) payload.category_ids = selected;
+      }
+    }
+    // Semua data
+    else if (type === 'all') {
+      payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
+      payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
+    }
+
     tgApp.showLoading('Mengekspor...');
     const res = await Core.api.post('/api/fintech/exports', payload);
     tgApp.hideLoading();
-    tgApp.showToast(res.message || res.success ? 'File berhasil dikirim ke Telegram anda.': 'Gagal mengekspor.', res.success ? 'success': 'danger');
-  } catch (error) {
+    tgApp.showToast(res.message || 'File berhasil dikirim ke Telegram Anda.');
+  } catch (err) {
     tgApp.hideLoading();
-    tgApp.showToast(error.message || 'Gagal mengekspor', 'danger');
+    tgApp.showToast(err.message || 'Gagal mengekspor.', 'danger');
   }
 }
 
