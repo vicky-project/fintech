@@ -1744,44 +1744,27 @@ async function forceDeleteTransfer(id) {
 // Export
 async function renderExportPage() {
   const html = `
+  <div class="export-page">
+  <!-- Header -->
   <div class="container py-3">
-  <div class="d-flex align-items-center mb-3">
-  <i class="bi bi-download me-2"></i>
-  <h5 class="mb-0">Ekspor Data</h5>
+  <div class="text-center mb-4">
+  <i class="bi bi-cloud-arrow-down-fill display-3 text-primary opacity-75"></i>
+  <h3 class="fw-bold mt-2">Ekspor Data Keuangan</h3>
+  <p class="text-muted">Unduh data transaksi, transfer, dan budget Anda dalam format PDF atau Excel.</p>
   </div>
 
-  <!-- Panduan Ekspor -->
-  <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
-  <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Cara Mengekspor Data</h6>
-  <ol class="mb-0 small ps-3">
-  <li>Pastikan Anda sudah <strong>memulai bot Telegram kami</strong> dengan menekan tombol <strong>Start</strong> di chat <strong>@${BOT_USERNAME}</strong>.</li>
-  <li>Jika belum, klik tombol <strong>"Buka Bot"</strong> di bawah, lalu tekan <strong>Start</strong>.</li>
-  <li>Pilih <strong>Jenis Data</strong> dan <strong>Filter</strong> yang diinginkan di bawah ini.</li>
-  <li>Klik <strong>"Ekspor Sekarang"</strong>. File akan otomatis dikirim ke chat Telegram Anda.</li>
-  <li>Cek chat Telegram Anda, file siap diunduh!</li>
-  </ol>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-
-  <!-- Tombol Buka Bot -->
-  <div class="d-grid mb-3">
-  <!-- HTML di renderExportPage -->
-  <button class="btn btn-telegram"
-  style="background-color: #0088cc; color: white;"
-  data-action="open-bot-chat"
-  data-bot-link="https://t.me/${BOT_USERNAME}?start=export">
-  <i class="bi bi-telegram me-2"></i> Buka Bot Telegram @${BOT_USERNAME}
-  </button>
-  <small class="text-muted mt-1">Pastikan Anda sudah menekan tombol <strong>Start</strong> di bot.</small>
-  </div>
-
-  <!-- Card Form Export -->
-  <div class="card">
-  <div class="card-body">
+  <!-- Konten Utama -->
+  <div class="row g-4">
+  <!-- Kolom Form (kiri) -->
+  <div class="col-lg-7">
+  <div class="card shadow-sm border-0">
+  <div class="card-body p-4">
   <!-- Jenis Data -->
-  <div class="mb-3">
-  <label class="form-label">Jenis Data</label>
-  <select class="form-select" id="export-type" data-action="change-export-type">
+  <div class="mb-4">
+  <label class="form-label fw-semibold">
+  <i class="bi bi-stack me-2"></i>Jenis Data
+  </label>
+  <select class="form-select form-select-lg" id="export-type" data-action="change-export-type">
   <option value="transactions" selected>Transaksi</option>
   <option value="transfers">Transfer</option>
   <option value="budgets">Budget</option>
@@ -1789,27 +1772,100 @@ async function renderExportPage() {
   </div>
 
   <!-- Filter Dinamis -->
-  <div id="export-filter-container"></div>
+  <div id="export-filter-container" class="mb-4"></div>
 
-  <!-- Format -->
-  <div class="mb-3">
-  <label class="form-label">Format File</label>
-  <select class="form-select" id="export-format">
-  <option value="xlsx">Excel (.xlsx)</option>
-  <option value="pdf">PDF</option>
-  </select>
+  <!-- Format File -->
+  <div class="mb-4">
+  <label class="form-label fw-semibold">
+  <i class="bi bi-file-earmark me-2"></i>Format File
+  </label>
+  <div class="d-flex gap-3">
+  <div class="form-check">
+  <input class="form-check-input" type="radio" name="export-format" id="format-xlsx" value="xlsx" checked>
+  <label class="form-check-label" for="format-xlsx">
+  <i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> Excel (.xlsx)
+  </label>
+  </div>
+  <div class="form-check">
+  <input class="form-check-input" type="radio" name="export-format" id="format-pdf" value="pdf">
+  <label class="form-check-label" for="format-pdf">
+  <i class="bi bi-file-earmark-pdf text-danger me-1"></i> PDF
+  </label>
+  </div>
+  </div>
   </div>
 
-  <!-- Tombol -->
-  <button class="btn btn-primary w-100" data-action="export-data">
-  <i class="bi bi-cloud-download me-1"></i> Ekspor Sekarang
+  <!-- Tombol Ekspor -->
+  <button class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 shadow-sm"
+  data-action="export-data"
+  style="transition: all 0.2s ease;">
+  <i class="bi bi-rocket-takeoff"></i> Ekspor Sekarang
   </button>
+  </div>
+  </div>
+  </div>
+
+  <!-- Kolom Panduan (kanan) -->
+  <div class="col-lg-5">
+  <div class="card shadow-sm border-0">
+  <div class="card-header bg-transparent border-0 pt-3 pb-0">
+  <h5 class="fw-bold"><i class="bi bi-info-circle-fill text-info me-2"></i>Panduan</h5>
+  </div>
+  <div class="card-body pt-3">
+  <div class="d-flex mb-3">
+  <div class="me-3">
+  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">1</span>
+  </div>
+  <div>
+  <strong>Buka Bot Telegram</strong>
+  <p class="text-muted small mb-1">Pastikan Anda sudah memulai bot kami dengan menekan tombol <strong>Start</strong>.</p>
+  <button class="btn btn-sm btn-telegram mt-1"
+  style="background-color: #0088cc; color: white;"
+  data-action="open-bot-chat"
+  data-bot-link="https://t.me/${BOT_USERNAME}?start=export">
+  <i class="bi bi-telegram me-1"></i> Buka @${BOT_USERNAME}
+  </button>
+  </div>
+  </div>
+  <div class="d-flex mb-3">
+  <div class="me-3">
+  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">2</span>
+  </div>
+  <div>
+  <strong>Pilih Data & Filter</strong>
+  <p class="text-muted small mb-0">Tentukan jenis data, dompet, rentang tanggal, dan filter lain yang diinginkan.</p>
+  </div>
+  </div>
+  <div class="d-flex mb-3">
+  <div class="me-3">
+  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">3</span>
+  </div>
+  <div>
+  <strong>Pilih Format</strong>
+  <p class="text-muted small mb-0">Excel untuk data yang bisa diedit, PDF untuk laporan siap cetak.</p>
+  </div>
+  </div>
+  <div class="d-flex">
+  <div class="me-3">
+  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">4</span>
+  </div>
+  <div>
+  <strong>Ekspor & Cek Telegram</strong>
+  <p class="text-muted small mb-0">Klik Ekspor, file akan dikirim ke chat Telegram Anda.</p>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div class="text-center mt-3">
+  <small class="text-muted">Butuh bantuan? Hubungi kami di <a href="https://t.me/${BOT_USERNAME}" target="_blank">@${BOT_USERNAME}</a></small>
+  </div>
+  </div>
   </div>
   </div>
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;
-  renderExportFilters('transactions'); // default
+  renderExportFilters('transactions');
 }
 
 function renderExportFilters(type) {
