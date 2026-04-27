@@ -56,6 +56,7 @@ function handleGlobalClick(e) {
     'force-delete-transaction': () => window.forceDeleteTransaction(id),
     'restore-transfer': () => window.restoreTransfer(id),
     'force-delete-transfer': () => window.forceDeleteTransfer(id),
+    'export-data': performExport,
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {
@@ -104,7 +105,11 @@ function handleGlobalChange(e) {
       if (type && typeof switchCategoryType === 'function') {
         switchCategoryType(type);
       }
-    }
+    },
+    'change-export-type': (el) => {
+      const type = el.value;
+      renderExportFilters(type);
+    },
     // Tambahkan aksi lain sesuai kebutuhan
   };
 

@@ -1741,8 +1741,187 @@ async function forceDeleteTransfer(id) {
   renderTransferTrashPage();
 }
 
-// Berikutnya: renderInsightsPage, renderStatementsPage, renderBudgetsPage, renderNotificationsPage, renderSearchPage, trash pages...
-// Pastikan semua fungsi yang dipanggil dari onclick dideklarasikan di global scope (window) jika diperlukan, atau lebih baik gunakan event delegation.
+// Export
+async function renderExportPage() {
+  const html = `
+  <div class="container py-3">
+  <div class="d-flex align-items-center mb-3">
+  <i class="bi bi-download me-2"></i>
+  <h5 class="mb-0">Ekspor Data</h5>
+  </div>
+  <div class="card">
+  <div class="card-body">
+  <!-- Jenis Data -->
+  <div class="mb-3">
+  <label class="form-label">Jenis Data</label>
+  <select class="form-select" id="export-type" data-action="change-export-type">
+  <option value="transactions" selected>Transaksi</option>
+  <option value="transfers">Transfer</option>
+  <option value="budgets">Budget</option>
+  </select>
+  </div>
+
+  <!-- Filter Dinamis -->
+  <div id="export-filter-container"></div>
+
+  <!-- Format -->
+  <div class="mb-3">
+  <label class="form-label">Format File</label>
+  <select class="form-select" id="export-format">
+  <option value="xlsx">Excel (.xlsx)</option>
+  <option value="pdf">PDF</option>
+  </select>
+  </div>
+
+  <!-- Tombol -->
+  <button class="btn btn-primary w-100" data-action="export-data">
+  <i class="bi bi-cloud-download me-1"></i> Ekspor Sekarang
+  </button>
+  </div>
+  </div>
+  </div>
+  `;
+  document.getElementById('main-content').innerHTML = html;
+  renderExportFilters('transactions'); // default
+}
+
+function renderExportFilters(type) {
+  const container = document.getElementById('export-filter-container');
+  if (!container) return;
+
+  let html = '';
+
+  // Wallet (selalu ada)
+  html += `
+  <div class="mb-3">
+  <label class="form-label">Dompet</label>
+  <select class="form-select" id="filter-wallet">
+  <option value="">Semua Dompet</option>
+  ${Core.state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+  </select>
+  </div>`;
+
+  if (type === 'transactions') {
+    html += `
+    <div class="row mb-3">
+    <div class="col">
+    <label class="form-label">Dari Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-from">
+    </div>
+    <div class="col">
+    <label class="form-label">Sampai Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Atau Bulan (abaikan tanggal)</label>
+    <input type="month" class="form-control" id="filter-month">
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Tipe</label>
+    <select class="form-select" id="filter-type">
+    <option value="">Semua</option>
+    <option value="income">Pemasukan</option>
+    <option value="expense">Pengeluaran</option>
+    </select>
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Kategori</label>
+    <select class="form-select" id="filter-category" multiple size="4">
+    ${Core.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+    </select>
+    </div>
+    <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="include-description" checked>
+    <label class="form-check-label">Sertakan Deskripsi</label>
+    </div>`;
+  } else if (type === 'transfers') {
+    html += `
+    <div class="row mb-3">
+    <div class="col">
+    <label class="form-label">Dari Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-from">
+    </div>
+    <div class="col">
+    <label class="form-label">Sampai Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>`;
+  } else if (type === 'budgets') {
+    html += `
+    <div class="mb-3">
+    <label class="form-label">Bulan</label>
+    <input type="month" class="form-control" id="filter-month">
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Status Budget</label>
+    <select class="form-select" id="filter-status">
+    <option value="">Semua</option>
+    <option value="overspent">Terlampaui</option>
+    <option value="near_limit">Mendekati</option>
+    <option value="on_track">Aman</option>
+    </select>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+async function performExport() {
+  const type = document.getElementById('export-type').value;
+  const format = document.getElementById('export-format').value;
+  const walletId = document.getElementById('filter-wallet').value;
+
+  const payload = {
+    type,
+    format,
+    wallet_id: walletId || undefined
+  };
+
+  // Filter spesifik tipe
+  if (type === 'transactions') {
+    const dateFrom = document.getElementById('filter-date-from').value;
+    const dateTo = document.getElementById('filter-date-to').value;
+    const month = document.getElementById('filter-month').value;
+    const transactionType = document.getElementById('filter-type').value;
+    const categorySelect = document.getElementById('filter-category');
+    const selectedCategories = [...categorySelect.selectedOptions].map(o => o.value);
+    const includeDesc = document.getElementById('include-description').checked;
+
+    if (dateFrom) payload.date_from = dateFrom;
+    if (dateTo) payload.date_to = dateTo;
+    if (month) payload.month = month;
+    if (transactionType) payload.transaction_type = transactionType;
+    if (selectedCategories.length) payload.category_id = selectedCategories;
+    payload.include_description = includeDesc;
+  } else if (type === 'transfers') {
+    const dateFrom = document.getElementById('filter-date-from').value;
+    const dateTo = document.getElementById('filter-date-to').value;
+    if (dateFrom) payload.date_from = dateFrom;
+    if (dateTo) payload.date_to = dateTo;
+  } else if (type === 'budgets') {
+    const month = document.getElementById('filter-month').value;
+    const status = document.getElementById('filter-status').value;
+    if (month) payload.month = month;
+    if (status) payload.status = status;
+  }
+
+  try {
+    tgApp.showLoading('Mengekspor...');
+    const blob = await Core.downloadFile('/api/fintech/exports', payload);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `export_${type}_${new Date().toISOString().slice(0, 10)}.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    tgApp.hideLoading();
+    tgApp.showToast('Ekspor berhasil');
+  } catch (error) {
+    tgApp.hideLoading();
+    tgApp.showToast(error.message || 'Gagal mengekspor', 'danger');
+  }
+}
 
 // ==================== DAFTAR HALAMAN ====================
 Core.setPages({
@@ -1759,4 +1938,5 @@ Core.setPages({
   search: renderSearchPage,
   transactionTrash: renderTransactionTrash,
   transferTrash: renderTransferTrash,
+  export: renderExportPage,
 });

@@ -421,6 +421,38 @@ const Core = (() => {
     });
   }
 
+  async function downloadFile(url, body = null) {
+    const token = tgApp.getToken();
+    const headers = {
+      'Accept': 'application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, */*',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (body) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const options = {
+      method: body ? 'POST': 'GET',
+      headers,
+    };
+    if (body) options.body = JSON.stringify(body);
+
+    const response = await fetch(BASE_URL + url, options);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {}
+      const message = errorData?.message || `HTTP ${response.status}`;
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+
+    return response.blob();
+  }
+
   // ========== PUBLIC API ==========
   return {
     // State & API (readonly)
@@ -469,6 +501,8 @@ const Core = (() => {
     renderEmptyState,
 
     // Pagination
-    renderPagination
+    renderPagination,
+
+    downloadFile
   };
 })();
