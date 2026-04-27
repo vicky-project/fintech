@@ -381,8 +381,8 @@ async function renderTransfersPage() {
     listContainerId: 'transfer-list',
     paginationId: 'transfer-pagination',
     extraHeaderButtons: `
-    <button class="btn btn-sm btn-outline-danger me-1" onclick="navigateToTransferTrash()"><i class="bi bi-trash"></i></button>
-    <button class="btn btn-sm btn-primary" onclick="showAddTransferModal()"><i class="bi bi-plus"></i></button>`,
+    <button class="btn btn-sm btn-outline-danger me-1" data-action="navigate-to-transfer-trash"><i class="bi bi-trash"></i></button>
+    <button class="btn btn-sm btn-primary" data-action="add-transfer"><i class="bi bi-plus"></i></button>`,
     loadFn: refreshTransferList
   });
 }
@@ -419,7 +419,7 @@ function renderTransferList(transfers) {
     <div class="card mb-2">
     <div class="card-body p-3">
     <div class="d-flex justify-content-between align-items-start">
-    <div class="flex-grow-1" onclick="editTransfer(${t.id})">
+    <div class="flex-grow-1" data-action="edit-transer" data-id="${t.id}">
     <div class="d-flex align-items-center mb-1">
     <i class="bi bi-arrow-right me-2 text-primary"></i>
     <span>${t.from_wallet.name} → ${t.to_wallet.name}</span>
@@ -431,8 +431,8 @@ function renderTransferList(transfers) {
     <div class="dropdown">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
     <ul class="dropdown-menu dropdown-menu-end">
-    <li><a class="dropdown-item" href="#" onclick="editTransfer(${t.id})"><i class="bi bi-pencil me-2"></i>Edit</a></li>
-    <li><a class="dropdown-item text-danger" href="#" onclick="deleteTransfer(${t.id})"><i class="bi bi-trash me-2"></i>Hapus</a></li>
+    <li><a class="dropdown-item" href="#" data="edit-transer" data-id="${t.id}"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+    <li><a class="dropdown-item text-danger" href="#" data-action="delete-transfer" data-id="${t.id}"><i class="bi bi-trash me-2"></i>Hapus</a></li>
     </ul>
     </div>
     </div>
