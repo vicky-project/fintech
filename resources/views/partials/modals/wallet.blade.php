@@ -66,7 +66,6 @@
 
   window.editWallet = function(id) {
     const wallet = Core.state.wallets.find(w => w.id == id);
-    alert(wallet)
     if (!wallet) return;
 
     editingWalletId = id;

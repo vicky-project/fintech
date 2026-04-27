@@ -485,7 +485,6 @@ function renderWalletsPage() {
 function renderWalletsList() {
   const container = document.getElementById('wallet-list');
   if (!container) return;
-  alert(JSON.stringify(Core.state.wallets));
   container.innerHTML = Core.state.wallets.map(w => `
     <div class="card mb-2" data-action="edit-wallet" data-id="${w.id}">
     <div class="card-body">
