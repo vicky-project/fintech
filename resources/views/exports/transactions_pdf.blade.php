@@ -64,32 +64,32 @@
 
     /* Lebar kolom absolut */
     th:nth-child(1), td:nth-child(1) {
-      width: 70px;
+      width: 50px;
     }
 
     /* Tanggal */
     th:nth-child(2), td:nth-child(2) {
-      width: 70px;
+      width: 50px;
     }
 
     /* Tipe */
     th:nth-child(3), td:nth-child(3) {
-      width: 90px;
+      width: 70px;
     }
 
     /* Kategori */
     th:nth-child(4), td:nth-child(4) {
-      width: 90px;
+      width: 70px;
     }
 
     /* Dompet */
     th:nth-child(5), td:nth-child(5) {
-      width: 80px;
+      width: 60px;
     }
 
     /* Pemasukan */
     th:nth-child(6), td:nth-child(6) {
-      width: 80px;
+      width: 60px;
     }
 
     /* Pengeluaran */
