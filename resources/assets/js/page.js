@@ -1877,10 +1877,8 @@ function renderExportFilters(type) {
     Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense');
 
     // Render period input awal
-    setTimeout(() => {
-      renderCategoryBadges(Core.state.currentFilteredCategories);
-      renderBudgetPeriodInput();
-    }, 10);
+    setTimeout(() =>
+      renderCategoryBadges(Core.state.currentFilteredCategories), 10);
   }
 
   container.innerHTML = html;
