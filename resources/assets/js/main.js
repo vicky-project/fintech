@@ -57,6 +57,10 @@ function handleGlobalClick(e) {
     'restore-transfer': () => window.restoreTransfer(id),
     'force-delete-transfer': () => window.forceDeleteTransfer(id),
     'export-data': performExport,
+    'toggle-category-badge': (e) => {
+      const id = target.dataset.categoryId;
+      toggleCategoryBadge(id);
+    },
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {

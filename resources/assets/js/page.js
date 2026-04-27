@@ -1826,10 +1826,9 @@ function renderExportFilters(type) {
     </select>
     </div>
     <div class="mb-3">
-    <label for="filter-category" class="form-label">Kategori</label>
-    <select class="form-select" id="filter-category" multiple size="4">
-    ${Core.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
-    </select>
+    <label class="form-label">Kategori</label>
+    <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
+    <select class="d-none" id="filter-category-hidden" multiple></select>
     </div>
     <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
@@ -1883,6 +1882,57 @@ function renderExportFilters(type) {
   container.innerHTML = html;
 }
 
+function toggleCategoryBadge(categoryId) {
+  const hiddenSelect = document.getElementById('filter-category-hidden');
+  if (!hiddenSelect) return;
+
+  const option = [...hiddenSelect.options].find(opt => opt.value === categoryId);
+  if (option) {
+    option.selected = !option.selected;
+    // Render ulang badge agar tampilan berubah
+    renderCategoryBadges(); // akan membaca ulang selected dari hiddenSelect
+  }
+}
+
+function renderCategoryBadges(filteredCategories = Core.state.categories) {
+  const badgesContainer = document.getElementById('category-badges');
+  const hiddenSelect = document.getElementById('filter-category-hidden');
+  if (!badgesContainer || !hiddenSelect) return;
+
+  // Ambil nilai yang sudah dipilih dari hidden select
+  const selectedValues = [...hiddenSelect.options]
+  .filter(opt => opt.selected)
+  .map(opt => opt.value);
+
+  // Kosongkan hidden select
+  hiddenSelect.innerHTML = '';
+
+  let html = '';
+  filteredCategories.forEach(cat => {
+    const isSelected = selectedValues.includes(cat.id.toString());
+    const bgColor = cat.color || '#6c757d';
+    const opacityStyle = isSelected ? '1': '0.45';
+    const borderStyle = isSelected ? 'border border-2 border-dark': '';
+    const checkIcon = isSelected ? '<i class="bi bi-check-circle-fill ms-1 small"></i>': '';
+
+    html += `
+    <span class="badge rounded-pill d-inline-flex align-items-center"
+    style="background-color: ${bgColor}; opacity: ${opacityStyle}; cursor: pointer; ${borderStyle}; font-size: 0.85rem; padding: 0.5rem 0.85rem;"
+    data-action="toggle-category-badge"
+    data-category-id="${cat.id}">
+    <i class="${cat.icon || 'bi-tag'} me-1"></i>${cat.name}${checkIcon}
+    </span>`;
+
+    // Tambahkan opsi ke hidden select
+    const option = document.createElement('option');
+    option.value = cat.id;
+    option.selected = isSelected;
+    hiddenSelect.appendChild(option);
+  });
+
+  badgesContainer.innerHTML = html;
+}
+
 function renderBudgetPeriodInput() {
   const periodType = document.getElementById('filter-period-type').value;
   const container = document.getElementById('budget-period-detail');
@@ -1903,32 +1953,18 @@ function renderBudgetPeriodInput() {
 
 function updateTransactionCategoryFilter() {
   const typeSelect = document.getElementById('filter-type');
-  const categorySelect = document.getElementById('filter-category');
-  if (!typeSelect || !categorySelect) return;
+  if (!typeSelect) return;
 
   const selectedType = typeSelect.value; // '' (semua), 'income', 'expense'
 
-  // Simpan kategori yang terpilih sebelumnya
-  const previouslySelected = [...categorySelect.selectedOptions].map(o => o.value);
-
-  // Filter kategori berdasarkan tipe
   let filteredCategories = Core.state.categories;
   if (selectedType === 'income') {
     filteredCategories = Core.state.categories.filter(c => c.type === 'income' || c.type === 'both');
   } else if (selectedType === 'expense') {
     filteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
   }
-  // Jika '' (semua), tampilkan semua
 
-  // Render ulang opsi kategori
-  categorySelect.innerHTML = filteredCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-  // Kembalikan pilihan yang sebelumnya masih ada di opsi baru
-  [...categorySelect.options].forEach(option => {
-    if (previouslySelected.includes(option.value)) {
-      option.selected = true;
-    }
-  });
+  renderCategoryBadges(filteredCategories);
 }
 
 async function performExport() {
@@ -1948,8 +1984,10 @@ async function performExport() {
     const dateTo = document.getElementById('filter-date-to').value;
     const month = document.getElementById('filter-month').value;
     const transactionType = document.getElementById('filter-type').value;
-    const categorySelect = document.getElementById('filter-category');
+    // Untuk transactions, ambil kategori dari hidden select
+    const categorySelect = document.getElementById('filter-category-hidden');
     const selectedCategories = [...categorySelect.selectedOptions].map(o => o.value);
+    if (selectedCategories.length) payload.category_ids = selectedCategories;
     const includeDesc = document.getElementById('include-description').checked;
 
     if (dateFrom) payload.date_from = dateFrom;
