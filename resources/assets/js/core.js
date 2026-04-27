@@ -439,6 +439,8 @@ const Core = (() => {
     if (body) options.body = JSON.stringify(body);
 
     const response = await fetch(BASE_URL + url, options);
+    const contentType = response.headers.get('Content-Type');
+    console.log('Content-Type:', contentType);
 
     if (!response.ok) {
       let errorData;
