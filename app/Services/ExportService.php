@@ -65,37 +65,35 @@ class ExportService
         'local',
         ExcelFormat::XLSX
       );
-
-      return Storage::disk('local')->path($tempPath);
-    }
-
-    // Ambil data dan summary (hanya angka mentah)
-    [$data,
-      $summary] = match ($type) {
-      'transactions' => $this->getTransactionsData($filters),
-      'transfers' => $this->getTransfersData($filters),
-      'budgets' => $this->getBudgetsData($filters),
-    };
-
-    $metadata = $this->buildMetadata($type, $filters, $walletId);
-    $summary['metadata'] = $metadata;
-
-    // Gabungkan aturan format ke summary
-    $summary = array_merge($summary, $formatRules);
-
-    // Cek batas
-    if (count($data) > $this->maxRecords) {
-      throw new \Exception("Jumlah data ({count($data)}) melebihi batas maksimal ({$this->maxRecords}). Silakan persempit filter.");
-    }
-
-    $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
-    $filename = Str::uuid() . '.' . $extension;
-    $tempPath = "temp/exports/{$filename}";
-
-    if ($format === 'xlsx') {
-      $this->generateExcel($type, $data, $summary, $tempPath);
     } else {
-      $this->generatePdf($type, $data, $summary, $tempPath);
+      // Ambil data dan summary (hanya angka mentah)
+      [$data,
+        $summary] = match ($type) {
+        'transactions' => $this->getTransactionsData($filters),
+        'transfers' => $this->getTransfersData($filters),
+        'budgets' => $this->getBudgetsData($filters),
+      };
+
+      $metadata = $this->buildMetadata($type, $filters, $walletId);
+      $summary['metadata'] = $metadata;
+
+      // Gabungkan aturan format ke summary
+      $summary = array_merge($summary, $formatRules);
+
+      // Cek batas
+      if (count($data) > $this->maxRecords) {
+        throw new \Exception("Jumlah data ({count($data)}) melebihi batas maksimal ({$this->maxRecords}). Silakan persempit filter.");
+      }
+
+      $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
+      $filename = Str::uuid() . '.' . $extension;
+      $tempPath = "temp/exports/{$filename}";
+
+      if ($format === 'xlsx') {
+        $this->generateExcel($type, $data, $summary, $tempPath);
+      } else {
+        $this->generatePdf($type, $data, $summary, $tempPath);
+      }
     }
 
     return Storage::disk('local')->path($tempPath);

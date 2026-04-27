@@ -64,7 +64,10 @@ class ExportController extends Controller
       // Fallback: download langsung
       return $this->downloadFallback($filePath, $request->type, $request->format);
     } catch (\Exception $e) {
-      Log::error('Export error', ['error' => $e->getMessage()]);
+      Log::error('Export error', [
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString()
+      ]);
 
       return response()->json([
         'success' => false,
