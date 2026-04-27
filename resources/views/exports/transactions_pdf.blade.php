@@ -68,16 +68,16 @@
       width: 14%;
     }
     th:nth-child(4), td:nth-child(4) {
-      width: 10%;
+      width: 14%;
     }
     th:nth-child(5), td:nth-child(5) {
-      width: 10%;
+      width: 9%;
     }
     th:nth-child(6), td:nth-child(6) {
-      width: 10%;
+      width: 9%;
     }
     th:nth-child(7), td:nth-child(7) {
-      width: 40%;
+      width: 32%;
     }
   </style>
 </head>
