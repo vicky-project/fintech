@@ -220,25 +220,25 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
 
       // Label SUBTOTAL
       $sheet->setCellValue('A'.$startRow, 'SUBTOTAL');
-      $sheet->mergeCells('A'.$startRow.':'.$this->getHighestColumn().$startRow);
+      $sheet->mergeCells('A'.$startRow.':'.$highestCol.$startRow);
       $sheet->getStyle('A'.$startRow)->applyFromArray($sty);
 
       $d = $startRow + 1;
       if ($this->type === 'transactions') {
         $sheet->setCellValue('A'.$d, 'Pemasukan: '.$fmtCur($f['total_income']));
-        $sheet->mergeCells('A'.$d.':'.'B'.$d);
-        $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
+        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
+        $sheet->getStyle('A'.$d)->applyFromArray($sty);
         $d++;
         $sheet->setCellValue('A'.$d, 'Pengeluaran: '.$fmtCur($f['total_expense']));
-        $sheet->mergeCells('A'.$d.':'.'B'.$d);
-        $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
+        $sheet->getStyle('A'.$d)->applyFromArray($sty);
         $d++;
         $sheet->setCellValue('A'.$d, 'Net: '.$fmtCur($f['net']));
-        $sheet->mergeCells('A'.$d.':'.'B'.$d);
-        $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
+        $sheet->getStyle('A'.$d)->applyFromArray($sty);
       } elseif ($this->type === 'transfers') {
         $sheet->setCellValue('A'.$d, 'Total Transfer: '.$fmtCur($f['total']));
-        $sheet->mergeCells('A'.$d.':'.'B'.$d);
+        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
         $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
       } elseif ($this->type === 'budgets') {
         $sheet->setCellValue('D'.$d, 'Total Limit: '.$fmtCur($f['total_limit']));
