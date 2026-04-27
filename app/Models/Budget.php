@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\FinTech\Enums\PeriodType;
 use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
+use Modules\FinTech\Traits\HasCurrencyFormatting;
 
 class Budget extends Model
 {
+  use HasCurrencyFormatting;
+
   protected $table = 'fintech_budgets';
 
   protected $fillable = [
@@ -40,13 +43,6 @@ class Budget extends Model
   public function getAmountFloat(): float
   {
     return $this->amount?->getAmount()->toFloat() ?? 0.0;
-  }
-
-  // Format amount untuk tampilan
-  public function getFormattedAmount(): string
-  {
-    $amountFloat = $this->getAmountFloat();
-    return $this->formatCurrency($amountFloat);
   }
 
   /**
@@ -97,39 +93,5 @@ class Budget extends Model
   {
     $pct = $this->getPercentage();
     return $pct >= 80 && $pct < 100;
-  }
-
-  /**
-  * Format angka sesuai mata uang dompet.
-  */
-  public function formatCurrency(float $amount): string
-  {
-    // Default fallback
-    $defaultPrecision = 0;
-    $defaultDecimalMark = ',';
-    $defaultThousandsSep = '.';
-    $defaultSymbol = 'Rp';
-    $defaultSymbolFirst = true;
-
-    if ($this->wallet && $this->wallet->currencyDetails) {
-      $currency = $this->wallet->currencyDetails;
-      $precision = $currency->precision ?? $defaultPrecision;
-      $decimalMark = $currency->decimal_mark ?? $defaultDecimalMark;
-      $thousandsSep = $currency->thousands_separator ?? $defaultThousandsSep;
-      $symbol = $currency->symbol ?? $defaultSymbol;
-      $symbolFirst = $currency->symbol_first ?? $defaultSymbolFirst;
-    } else {
-      $precision = $defaultPrecision;
-      $decimalMark = $defaultDecimalMark;
-      $thousandsSep = $defaultThousandsSep;
-      $symbol = $defaultSymbol;
-      $symbolFirst = $defaultSymbolFirst;
-    }
-
-    $formattedNumber = number_format($amount, $precision, $decimalMark, $thousandsSep);
-
-    return $symbolFirst
-    ? $symbol . ' ' . $formattedNumber
-    : $formattedNumber . ' ' . $symbol;
   }
 }

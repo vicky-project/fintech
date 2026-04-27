@@ -6,9 +6,7 @@ use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Transfer;
 use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Models\Wallet;
-use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Exports\DataExport;
-use Modules\FinTech\Services\WalletService;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
@@ -16,12 +14,7 @@ use Illuminate\Support\Str;
 
 class ExportService
 {
-  protected WalletService $walletService;
   protected int $maxRecords = 5000;
-
-  public function __construct(WalletService $walletService) {
-    $this->walletService = $walletService;
-  }
 
   /**
   * Generate file export, return path to temp file.
@@ -31,16 +24,20 @@ class ExportService
     $type = $filters['type'];
     $format = $filters['format'];
     $walletId = $filters['wallet_id'];
-    $currencySymbol = $this->getCurrencySymbol($walletId);
 
-    // Ambil data
+    // Ambil aturan format dari wallet yang dipilih
+    $formatRules = $this->getCurrencyFormat($walletId);
+
+    // Ambil data dan summary (hanya angka mentah)
     [$data,
       $summary] = match ($type) {
       'transactions' => $this->getTransactionsData($filters),
       'transfers' => $this->getTransfersData($filters),
       'budgets' => $this->getBudgetsData($filters),
     };
-    $summary['symbol'] = $currencySymbol;
+
+    // Gabungkan aturan format ke summary
+    $summary = array_merge($summary, $formatRules);
 
     // Cek batas
     if (count($data) > $this->maxRecords) {
@@ -48,7 +45,7 @@ class ExportService
     }
 
     $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
-    $filename = \Illuminate\Support\Str::uuid() . '.' . $extension;
+    $filename = Str::uuid() . '.' . $extension;
     $tempPath = "temp/exports/{$filename}";
 
     if ($format === 'xlsx') {
@@ -91,95 +88,61 @@ class ExportService
         'Kategori' => $trx->category->name,
         'Dompet' => $trx->wallet->name,
         'Jumlah' => $trx->getFormattedAmount(),
+        // pakai trait
         'Deskripsi' => $trx->description ?? '-',
       ];
     })->toArray();
 
-    $summary = [
-      'total_income' => $totalIncome,
-      'total_expense' => $totalExpense,
-      'net' => $totalIncome - $totalExpense,
+    return [
+      $data,
+      [
+        'total_income' => $totalIncome,
+        'total_expense' => $totalExpense,
+        'net' => $totalIncome - $totalExpense,
+      ]
     ];
-
-    return [$data, $summary];
-  }
-
-  protected function applyTransactionFilters($query,
-    array $filters): void
-  {
-    if (!empty($filters['wallet_id'])) {
-      $query->where('wallet_id', $filters['wallet_id']);
-    }
-    if (!empty($filters['transaction_type'])) {
-      $query->where('type', $filters['transaction_type']);
-    }
-    if (!empty($filters['month'])) {
-      $query->whereYear('transaction_date', substr($filters['month'], 0, 4))
-      ->whereMonth('transaction_date', substr($filters['month'], 5, 2));
-    } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
-      $query->when(!empty($filters['date_from']), fn($q) => $q->where('transaction_date', '>=', $filters['date_from']))
-      ->when(!empty($filters['date_to']), fn($q) => $q->where('transaction_date', '<=', $filters['date_to']));
-    }
-    if (!empty($filters['category_ids'])) {
-      $query->whereIn('category_id', $filters['category_ids']);
-    }
   }
 
   protected function getTransfersData(array $filters): array
   {
     $user = request()->user();
-    $query = Transfer::with(['fromWallet', 'toWallet'])
-    ->whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id));
+    $query = Transfer::with(['fromWallet',
+      'toWallet'])
+    ->whereHas('fromWallet',
+      fn($q) => $q->where('user_id', $user->id));
 
-    $this->applyTransferFilters($query, $filters);
+    $this->applyTransferFilters($query,
+      $filters);
 
-    $transfers = $query->orderBy('transfer_date', 'desc')
+    $transfers = $query->orderBy('transfer_date',
+      'desc')
     ->limit($this->maxRecords + 1)
     ->get();
 
     $total = 0;
     $data = $transfers->map(function ($t) use (&$total) {
-      $amount = $t->getAmountFloat(); // asumsi method ada
+      $amount = $t->getAmountFloat();
       $total += $amount;
       return [
         'Tanggal' => $t->transfer_date->format('d/m/Y'),
         'Dari' => $t->fromWallet->name,
         'Ke' => $t->toWallet->name,
         'Jumlah' => $t->getFormattedAmount(),
+        // pakai trait
         'Deskripsi' => $t->description ?? '-',
       ];
     })->toArray();
 
-    return [
-      $data,
-      ['total' => $total,
-      ]
-    ];
-  }
-
-  protected function applyTransferFilters($query, array $filters): void
-  {
-    if (!empty($filters['wallet_id'])) {
-      $walletId = $filters['wallet_id'];
-      $query->where(function ($q) use ($walletId) {
-        $q->where('from_wallet_id', $walletId)
-        ->orWhere('to_wallet_id', $walletId);
-      });
-    }
-    if (!empty($filters['month'])) {
-      $query->whereYear('transfer_date', substr($filters['month'], 0, 4))
-      ->whereMonth('transfer_date', substr($filters['month'], 5, 2));
-    } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
-      $query->when(!empty($filters['date_from']), fn($q) => $q->where('transfer_date', '>=', $filters['date_from']))
-      ->when(!empty($filters['date_to']), fn($q) => $q->where('transfer_date', '<=', $filters['date_to']));
-    }
+    return [$data, ['total' => $total]];
   }
 
   protected function getBudgetsData(array $filters): array
   {
     $user = request()->user();
-    $query = Budget::where('user_id', $user->id)
-    ->with(['category', 'wallet']);
+    $query = Budget::where('user_id',
+      $user->id)
+    ->with(['category',
+      'wallet']);
 
     if (!empty($filters['period_type'])) {
       $query->where('period_type', $filters['period_type']);
@@ -216,7 +179,9 @@ class ExportService
           'Dompet' => $b->wallet?->name ?? '-',
           'Periode' => $b->period_type->label(),
           'Limit' => $b->getFormattedAmount(),
+          // pakai trait
           'Pengeluaran' => $b->formatCurrency($spent),
+          // pakai trait
           'Persentase' => $b->getPercentage() . '%',
           'Status' => $b->isOverspent() ? 'Terlampaui' : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
         ];
@@ -232,12 +197,50 @@ class ExportService
       ];
     }
 
-    // ----- Excel Generation -----
+    // ----- Filter helpers (tidak berubah) -----
 
-    protected function generateExcel(string $type,
-      array $data,
-      array $summary,
-      string $storagePath): void
+    protected function applyTransactionFilters($query,
+      array $filters): void
+    {
+      if (!empty($filters['wallet_id'])) {
+        $query->where('wallet_id', $filters['wallet_id']);
+      }
+      if (!empty($filters['transaction_type'])) {
+        $query->where('type', $filters['transaction_type']);
+      }
+      if (!empty($filters['month'])) {
+        $query->whereYear('transaction_date', substr($filters['month'], 0, 4))
+        ->whereMonth('transaction_date', substr($filters['month'], 5, 2));
+      } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+        $query->when(!empty($filters['date_from']), fn($q) => $q->where('transaction_date', '>=', $filters['date_from']))
+        ->when(!empty($filters['date_to']), fn($q) => $q->where('transaction_date', '<=', $filters['date_to']));
+      }
+      if (!empty($filters['category_ids'])) {
+        $query->whereIn('category_id', $filters['category_ids']);
+      }
+    }
+
+    protected function applyTransferFilters($query, array $filters): void
+    {
+      if (!empty($filters['wallet_id'])) {
+        $walletId = $filters['wallet_id'];
+        $query->where(function ($q) use ($walletId) {
+          $q->where('from_wallet_id', $walletId)
+          ->orWhere('to_wallet_id', $walletId);
+        });
+      }
+      if (!empty($filters['month'])) {
+        $query->whereYear('transfer_date', substr($filters['month'], 0, 4))
+        ->whereMonth('transfer_date', substr($filters['month'], 5, 2));
+      } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+        $query->when(!empty($filters['date_from']), fn($q) => $q->where('transfer_date', '>=', $filters['date_from']))
+        ->when(!empty($filters['date_to']), fn($q) => $q->where('transfer_date', '<=', $filters['date_to']));
+      }
+    }
+
+    // ----- Excel & PDF Generation -----
+
+    protected function generateExcel(string $type, array $data, array $summary, string $storagePath): void
     {
       Excel::store(
         new DataExport($type, $data, $summary),
@@ -247,27 +250,20 @@ class ExportService
       );
     }
 
-    // ----- PDF Generation -----
-
-    protected function generatePdf(string $type,
-      array $data,
-      array $summary,
-      string $storagePath): void
+    protected function generatePdf(string $type, array $data, array $summary, string $storagePath): void
     {
-      $html = view("fintech::exports.{$type}_pdf",
-        ['data' => $data,
-          'title' => $this->getTitle($type),
-          'summary' => $summary
-        ])->render();
+      $html = view("fintech::exports.{$type}_pdf", [
+        'data' => $data,
+        'title' => $this->getTitle($type),
+        'summary' => $summary
+      ])->render();
 
       $dompdf = new \Dompdf\Dompdf();
       $dompdf->loadHtml($html);
-      $dompdf->setPaper('A4',
-        'landscape');
+      $dompdf->setPaper('A4', 'landscape');
       $dompdf->render();
 
-      Storage::disk('local')->put($storagePath,
-        $dompdf->output());
+      Storage::disk('local')->put($storagePath, $dompdf->output());
     }
 
     private function getTitle(string $type): string
@@ -279,15 +275,34 @@ class ExportService
       };
     }
 
+    // ----- Currency Format Helpers -----
+
     /**
-    * Get currency symbol for a wallet.
+    * Get full currency formatting rules for a wallet.
     */
-    protected function getCurrencySymbol(int $walletId): string
+    protected function getCurrencyFormat(int $walletId): array
     {
       $wallet = Wallet::with('currencyDetails')->find($walletId);
+
+      $default = [
+        'precision' => 0,
+        'decimal_mark' => ',',
+        'thousands_separator' => '.',
+        'symbol' => 'Rp',
+        'symbol_first' => true,
+      ];
+
       if ($wallet && $wallet->currencyDetails) {
-        return $wallet->currencyDetails->symbol ?? $wallet->currency;
+        $currency = $wallet->currencyDetails;
+        return [
+          'precision' => $currency->precision ?? $default['precision'],
+          'decimal_mark' => $currency->decimal_mark ?? $default['decimal_mark'],
+          'thousands_separator' => $currency->thousands_separator ?? $default['thousands_separator'],
+          'symbol' => $currency->symbol ?? $default['symbol'],
+          'symbol_first' => $currency->symbol_first ?? $default['symbol_first'],
+        ];
       }
-      return $wallet->currency ?? 'Rp'; // fallback
+
+      return $default;
     }
   }

@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
+use Modules\FinTech\Traits\HasCurrencyFormatting;
 
 class Transfer extends Model
 {
-  use SoftDeletes;
+  use SoftDeletes,
+  HasCurrencyFormatting;
 
   protected $table = 'fintech_transfers';
 
@@ -41,40 +43,21 @@ class Transfer extends Model
     return $this->amount->getAmount()->toFloat();
   }
 
-  public function getFormattedAmount(): string
+  protected function getCurrencyRules(): array
   {
-    // Default fallback
-    $defaultPrecision = 0;
-    $defaultDecimalMark = ',';
-    $defaultThousandsSep = '.';
-    $defaultSymbol = 'Rp';
-    $defaultSymbolFirst = true;
+    $default = $this->defaultCurrencyFormat();
 
-    $amountFloat = $this->getAmountFloat();
-
-    // Ambil detail mata uang dari dompet
-    if ($this->fromWallet && $this->fromWallet->currencyDetails) {
+    if (method_exists($this, 'fromWallet') && $this->fromWallet && $this->fromWallet->currencyDetails) {
       $currency = $this->fromWallet->currencyDetails;
-      $precision = $currency->precision ?? $defaultPrecision;
-      $decimalMark = $currency->decimal_mark ?? $defaultDecimalMark;
-      $thousandsSep = $currency->thousands_separator ?? $defaultThousandsSep;
-      $symbol = $currency->symbol ?? $defaultSymbol;
-      $symbolFirst = $currency->symbol_first ?? $defaultSymbolFirst;
-    } else {
-      // Fallback ke data default
-      $precision = $defaultPrecision;
-      $decimalMark = $defaultDecimalMark;
-      $thousandsSep = $defaultThousandsSep;
-      $symbol = $defaultSymbol;
-      $symbolFirst = $defaultSymbolFirst;
+      return [
+        'precision' => $currency->precision ?? $default['precision'],
+        'decimal_mark' => $currency->decimal_mark ?? $default['decimal_mark'],
+        'thousands_separator' => $currency->thousands_separator ?? $default['thousands_separator'],
+        'symbol' => $currency->symbol ?? $default['symbol'],
+        'symbol_first' => $currency->symbol_first ?? $default['symbol_first'],
+      ];
     }
 
-    // Format angka
-    $formattedNumber = number_format($amountFloat, $precision, $decimalMark, $thousandsSep);
-
-    // Susun simbol dan angka
-    return $symbolFirst
-    ? $symbol . ' ' . $formattedNumber
-    : $formattedNumber . ' ' . $symbol;
+    return $default;
   }
 }
