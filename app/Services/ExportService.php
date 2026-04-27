@@ -82,7 +82,8 @@ class ExportService
 
       // Cek batas
       if (count($data) > $this->maxRecords) {
-        throw new \Exception("Jumlah data ({count($data)}) melebihi batas maksimal ({$this->maxRecords}). Silakan persempit filter.");
+        $count = count($data);
+        throw new \Exception("Jumlah data ({$count}) melebihi batas maksimal ({$this->maxRecords}). Silakan persempit filter.");
       }
 
       $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
