@@ -1753,7 +1753,7 @@ async function renderExportPage() {
   <div class="card-body">
   <!-- Jenis Data -->
   <div class="mb-3">
-  <label class="form-label">Jenis Data</label>
+  <label for="export-type" class="form-label">Jenis Data</label>
   <select class="form-select" id="export-type" data-action="change-export-type">
   <option value="transactions" selected>Transaksi</option>
   <option value="transfers">Transfer</option>
@@ -1766,7 +1766,7 @@ async function renderExportPage() {
 
   <!-- Format -->
   <div class="mb-3">
-  <label class="form-label">Format File</label>
+  <label for="export-format" class="form-label">Format File</label>
   <select class="form-select" id="export-format">
   <option value="xlsx">Excel (.xlsx)</option>
   <option value="pdf">PDF</option>
@@ -1869,14 +1869,18 @@ function renderExportFilters(type) {
     </select>
     </div>
     <div class="mb-3">
-    <label for="filter-category" class="form-label">Kategori</label>
-    <select class="form-select" id="filter-category" multiple size="4">
-    ${Core.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
-    </select>
+    <label class="form-label">Kategori</label>
+    <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
+    <select class="d-none" id="filter-category-hidden" multiple></select>
     </div>`;
 
+    Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense');
+
     // Render period input awal
-    setTimeout(() => renderBudgetPeriodInput(), 0);
+    setTimeout(() => {
+      renderCategoryBadges(Core.state.currentFilteredCategories);
+      renderBudgetPeriodInput();
+    }, 10);
   }
 
   container.innerHTML = html;
@@ -2017,9 +2021,11 @@ async function performExport() {
     const status = document.getElementById('filter-status').value;
     if (status) payload.status = status;
 
-    const categorySelect = document.getElementById('filter-category');
-    const selectedCategories = [...categorySelect.selectedOptions].map(o => o.value);
-    if (selectedCategories.length) payload.category_ids = selectedCategories;
+    const hiddenSelect = document.getElementById('filter-category-hidden');
+    if (hiddenSelect) {
+      const selectedCategories = [...hiddenSelect.selectedOptions].map(o => o.value);
+      if (selectedCategories.length) payload.category_ids = selectedCategories;
+    }
   }
 
   try {
