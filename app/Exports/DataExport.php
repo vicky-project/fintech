@@ -23,7 +23,7 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
 {
   protected string $type;
   protected array $data;
-  protected array $summary;
+  protected array $summary; // termasuk aturan format & subtotal
 
   public function __construct(string $type, array $data, array $summary) {
     $this->type = $type;
@@ -31,26 +31,17 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
     $this->summary = $summary;
   }
 
-  /**
-  * Data yang akan diekspor.
-  */
   public function array(): array
   {
     return $this->data;
   }
 
-  /**
-  * Judul kolom diambil dari key array pertama.
-  */
   public function headings(): array
   {
     if (empty($this->data)) return [];
     return array_keys($this->data[0]);
   }
 
-  /**
-  * Nama sheet.
-  */
   public function title(): string
   {
     return match ($this->type) {
@@ -61,23 +52,21 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
       };
     }
 
-    /**
-    * Style header dan border data.
-    */
     public function styles(Worksheet $sheet) {
       // Tentukan range header
       $highestColumn = $sheet->getHighestColumn();
       $headerRange = 'A1:' . $highestColumn . '1';
 
-      // Style header: bold, putih, background biru, border
+      // Style header: bold, putih, latar biru, border
       $sheet->getStyle($headerRange)->applyFromArray([
         'font' => [
           'bold' => true,
           'color' => ['rgb' => 'FFFFFF'],
+          'size' => 11,
         ],
         'fill' => [
           'fillType' => Fill::FILL_SOLID,
-          'startColor' => ['rgb' => '4F81BD'], // biru profesional
+          'startColor' => ['rgb' => '4F81BD'],
         ],
         'borders' => [
           'allBorders' => [
@@ -90,37 +79,19 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
           'vertical' => Alignment::VERTICAL_CENTER,
         ],
       ]);
-
-      // Border untuk semua sel data
-      $dataRowCount = count($this->data);
-      if ($dataRowCount > 0) {
-        $lastRow = $dataRowCount + 1;
-        $dataRange = 'A2:' . $highestColumn . $lastRow;
-        $sheet->getStyle($dataRange)->applyFromArray([
-          'borders' => [
-            'allBorders' => [
-              'borderStyle' => Border::BORDER_THIN,
-              'color' => ['rgb' => '000000'],
-            ],
-          ],
-        ]);
-      }
     }
 
-    /**
-    * Tambahkan footer di bawah data.
-    */
     public function registerEvents(): array
     {
       return [
         AfterSheet::class => function (AfterSheet $event) {
           $sheet = $event->sheet->getDelegate();
-          $dataCount = count($this->data);
           $headerRow = 1;
-          $lastDataRow = $headerRow + $dataCount; // baris terakhir data
+          $dataCount = count($this->data);
+          $lastDataRow = $headerRow + $dataCount;
           $highestColumn = $sheet->getHighestColumn();
 
-          // ===== 1. Border khusus untuk HEADER + DATA saja =====
+          // ===== 1. Border ke seluruh data (header + data) =====
           $dataRange = 'A' . $headerRow . ':' . $highestColumn . $lastDataRow;
           $sheet->getStyle($dataRange)->applyFromArray([
             'borders' => [
@@ -131,71 +102,84 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
             ],
           ]);
 
-          // ===== 2. Baris kosong sebelum subtotal =====
-          $subtotalStartRow = $lastDataRow + 2; // lompat 1 baris kosong
-
-          // Label SUBTOTAL
-          $sheet->setCellValue('A' . $subtotalStartRow, 'SUBTOTAL');
-          $sheet->mergeCells('A' . $subtotalStartRow . ':D' . $subtotalStartRow);
-          $sheet->getStyle('A' . $subtotalStartRow)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12],
-            'fill' => [
-              'fillType' => Fill::FILL_SOLID,
-              'startColor' => ['rgb' => 'D9E2F3'],
-            ],
-            'borders' => [
-              'outline' => [
-                'borderStyle' => Border::BORDER_THIN,
-                'color' => ['rgb' => '000000'],
-              ],
-            ],
-          ]);
-
-          // ===== Warnai kolom Jumlah berdasarkan Tipe =====
+          // ===== 2. Pewarnaan teks Jumlah untuk Transaksi =====
           if ($this->type === 'transactions') {
-            $lastDataRow = $headerRow + $dataCount;
+            $colTipe = 'B'; // kolom Tipe
+            $colJumlah = 'E'; // kolom Jumlah (sesuai urutan data)
             for ($row = 2; $row <= $lastDataRow; $row++) {
-              $typeCell = $sheet->getCell('B' . $row)->getValue(); // kolom Tipe
-              $amountCell = $sheet->getCell('E' . $row); // kolom Jumlah
-              if ($typeCell === 'Pemasukan') {
-                $amountCell->getStyle()->getFont()->getColor()->setRGB('28A745'); // hijau
-              } elseif ($typeCell === 'Pengeluaran') {
-                $amountCell->getStyle()->getFont()->getColor()->setRGB('DC3545'); // merah
+              $tipe = $sheet->getCell($colTipe . $row)->getValue();
+              $jumlahCell = $sheet->getCell($colJumlah . $row);
+              if ($tipe === 'Pemasukan') {
+                $jumlahCell->getStyle()->getFont()->getColor()->setRGB('28A745'); // hijau
+              } elseif ($tipe === 'Pengeluaran') {
+                $jumlahCell->getStyle()->getFont()->getColor()->setRGB('DC3545'); // merah
               }
             }
           }
+          // Transfer tidak diwarnai (netral), Budget tidak ada Jumlah yg perlu diwarnai
 
-          $symbol = $this->summary['symbol'] ?? 'Rp';
-          $colJumlah = 'E'; // ganti sesuai kolom jumlah Anda
-          $row = $subtotalStartRow;
+          // ===== 3. Subtotal =====
+          $subStartRow = $lastDataRow + 2; // beri jarak 1 baris
+          $format = $this->summary; // aturan format
 
-          // Isi subtotal berdasarkan tipe
+          // Helper closure untuk format uang
+          $fmtNumber = function ($value) use ($format) {
+            return number_format(
+              $value,
+              $format['precision'],
+              $format['decimal_mark'],
+              $format['thousands_separator']
+            );
+          };
+          $fmtCurrency = function ($value) use ($format, $fmtNumber) {
+            $num = $fmtNumber($value);
+            return $format['symbol_first']
+            ? $format['symbol'] . ' ' . $num
+            : $num . ' ' . $format['symbol'];
+          };
+
+          // Label SUBTOTAL
+          $sheet->setCellValue('A' . $subStartRow, 'SUBTOTAL');
+          $sheet->mergeCells('A' . $subStartRow . ':D' . $subStartRow);
+          $sheet->getStyle('A' . $subStartRow)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 12],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E2F3']],
+            'borders' => ['outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
+          ]);
+
+          $colJumlah = 'E'; // default untuk transaksi
+          $row = $subStartRow;
+
+          // Isi sesuai tipe
           switch ($this->type) {
           case 'transactions':
-            $sheet->setCellValue($colJumlah . $row, 'Pemasukan: ' . $symbol . ' ' . number_format($this->summary['total_income'], 0, ',', '.'));
+            $sheet->setCellValue($colJumlah . $row, 'Pemasukan: ' . $fmtCurrency($this->summary['total_income']));
             $row++;
-            $sheet->setCellValue($colJumlah . $row, 'Pengeluaran: ' . $symbol . ' ' . number_format($this->summary['total_expense'], 0, ',', '.'));
+            $sheet->setCellValue($colJumlah . $row, 'Pengeluaran: ' . $fmtCurrency($this->summary['total_expense']));
             $row++;
-            $sheet->setCellValue($colJumlah . $row, 'Net: ' . $symbol . ' ' . number_format($this->summary['net'], 0, ',', '.'));
+            $sheet->setCellValue($colJumlah . $row, 'Net: ' . $fmtCurrency($this->summary['net']));
             break;
 
           case 'transfers':
-            $sheet->setCellValue($colJumlah . $row, 'Total Transfer: ' . $symbol . ' ' . number_format($this->summary['total'], 0, ',', '.'));
+            $colJumlah = 'D'; // kolom Jumlah di transfer adalah D
+            $sheet->setCellValue($colJumlah . $row, 'Total Transfer: ' . $fmtCurrency($this->summary['total']));
             break;
 
           case 'budgets':
-            $sheet->setCellValue($colJumlah . $row, 'Total Limit: ' . $symbol . ' ' . number_format($this->summary['total_limit'], 0, ',', '.'));
+            // Kolom Limit di E, Pengeluaran di F, bisa kita taruh di E/F
+            $colLimit = 'E';
+            $colSpent = 'F';
+            $sheet->setCellValue($colLimit . $row, 'Total Limit: ' . $fmtCurrency($this->summary['total_limit']));
+            $sheet->setCellValue($colSpent . $row, 'Total Pengeluaran: ' . $fmtCurrency($this->summary['total_spent']));
             $row++;
-            $sheet->setCellValue($colJumlah . $row, 'Total Pengeluaran: ' . $symbol . ' ' . number_format($this->summary['total_spent'], 0, ',', '.'));
-            $row++;
-            $sheet->setCellValue($colJumlah . $row, 'Sisa: ' . $symbol . ' ' . number_format($this->summary['remaining'], 0, ',', '.'));
+            $sheet->setCellValue($colLimit . $row, 'Sisa: ' . $fmtCurrency($this->summary['remaining']));
             break;
           }
 
-          // ===== 3. Border tipis untuk area subtotal =====
-          $subtotalEndRow = $row;
-          $subtotalRange = 'A' . $subtotalStartRow . ':' . $highestColumn . $subtotalEndRow;
-          $sheet->getStyle($subtotalRange)->applyFromArray([
+          // Styling subtotal area
+          $subEndRow = $row;
+          $subRange = 'A' . $subStartRow . ':' . $highestColumn . $subEndRow;
+          $sheet->getStyle($subRange)->applyFromArray([
             'borders' => [
               'allBorders' => [
                 'borderStyle' => Border::BORDER_THIN,
@@ -204,16 +188,12 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
             ],
           ]);
 
-          // ===== 4. Footer di bawah subtotal =====
-          $footerRow = $subtotalEndRow + 2;
-          $sheet->setCellValue('A' . $footerRow, 'Generated by VickyServer App - ' . now()->format('d M Y H:i'));
+          // ===== 4. Footer =====
+          $footerRow = $subEndRow + 2;
+          $sheet->setCellValue('A' . $footerRow, 'Generated by FinTech App - ' . now()->format('d M Y H:i'));
           $sheet->mergeCells('A' . $footerRow . ':E' . $footerRow);
           $sheet->getStyle('A' . $footerRow)->applyFromArray([
-            'font' => [
-              'italic' => true,
-              'color' => ['rgb' => '888888'],
-              'size' => 10,
-            ],
+            'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
           ]);
         },
