@@ -81,5 +81,12 @@
       @endif
     </tbody>
   </table>
+  @if(isset($summary))
+  <div style="margin-top: 15px; text-align: right; font-size: 12px;">
+    <strong>Total Limit: {{ 'Rp ' . number_format($summary['total_limit'], 0, ',', '.') }}</strong><br>
+    <strong>Total Pengeluaran: {{ 'Rp ' . number_format($summary['total_spent'], 0, ',', '.') }}</strong><br>
+    <strong>Sisa: {{ 'Rp ' . number_format($summary['remaining'], 0, ',', '.') }}</strong>
+  </div>
+  @endif
 </body>
 </html>

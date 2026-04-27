@@ -51,5 +51,13 @@
       @endif
     </tbody>
   </table>
+  <!-- setelah tabel -->
+  @if(isset($summary))
+  <div style="margin-top: 15px; text-align: right; font-size: 12px;">
+    <strong>Pemasukan: {{ 'Rp ' . number_format($summary['total_income'], 0, ',', '.') }}</strong><br>
+    <strong>Pengeluaran: {{ 'Rp ' . number_format($summary['total_expense'], 0, ',', '.') }}</strong><br>
+    <strong>Net: {{ 'Rp ' . number_format($summary['net'], 0, ',', '.') }}</strong>
+  </div>
+  @endif
 </body>
 </html>

@@ -54,5 +54,10 @@
       @endif
     </tbody>
   </table>
+  @if(isset($summary))
+  <div style="margin-top: 15px; text-align: right; font-size: 12px;">
+    <strong>Total Transfer: {{ 'Rp ' . number_format($summary['total'], 0, ',', '.') }}</strong>
+  </div>
+  @endif
 </body>
 </html>

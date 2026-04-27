@@ -31,24 +31,26 @@ class ExportService
     $format = $filters['format'];
 
     // Ambil data
-    $data = match ($type) {
+    [$data,
+      $summary] = match ($type) {
       'transactions' => $this->getTransactionsData($filters),
       'transfers' => $this->getTransfersData($filters),
       'budgets' => $this->getBudgetsData($filters),
     };
 
+    // Cek batas
     if (count($data) > $this->maxRecords) {
       throw new \Exception("Jumlah data ({count($data)}) melebihi batas maksimal ({$this->maxRecords}). Silakan persempit filter.");
     }
 
     $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
-    $filename = Str::uuid() . '.' . $extension;
+    $filename = \Illuminate\Support\Str::uuid() . '.' . $extension;
     $tempPath = "temp/exports/{$filename}";
 
     if ($format === 'xlsx') {
-      $this->generateExcel($type, $data, $tempPath);
+      $this->generateExcel($type, $data, $summary, $tempPath);
     } else {
-      $this->generatePdf($type, $data, $tempPath);
+      $this->generatePdf($type, $data, $summary, $tempPath);
     }
 
     return Storage::disk('local')->path($tempPath);
@@ -64,20 +66,43 @@ class ExportService
 
     $this->applyTransactionFilters($query, $filters);
 
-    return $query->orderBy('transaction_date', 'desc')
+    $transactions = $query->orderBy('transaction_date', 'desc')
     ->limit($this->maxRecords + 1)
-    ->get()
-    ->map(fn($trx) => [
-      'Tanggal' => $trx->transaction_date->format('d/m/Y'),
-      'Tipe' => $trx->type->label(),
-      'Kategori' => $trx->category->name,
-      'Dompet' => $trx->wallet->name,
-      'Jumlah' => $trx->getFormattedAmount(),
-      'Deskripsi' => $trx->description ?? '-',
-    ])->toArray();
+    ->get();
+
+    $totalIncome = 0;
+    $totalExpense = 0;
+
+    $data = $transactions->map(function ($trx) use (&$totalIncome, &$totalExpense) {
+      $amount = $trx->getAmountFloat();
+      if ($trx->type === \Modules\FinTech\Enums\TransactionType::INCOME) {
+        $totalIncome += $amount;
+      } else {
+        $totalExpense += $amount;
+      }
+
+      return [
+        'Tanggal' => $trx->transaction_date->format('d/m/Y'),
+        'Tipe' => $trx->type->label(),
+        'Kategori' => $trx->category->name,
+        'Dompet' => $trx->wallet->name,
+        'Jumlah' => $trx->getFormattedAmount(),
+        'Deskripsi' => $trx->description ?? '-',
+      ];
+    })->toArray();
+
+    $summary = [
+      'total_income' => $totalIncome,
+      'total_expense' => $totalExpense,
+      'net' => $totalIncome - $totalExpense,
+      'currency' => 'IDR', // bisa dynamic nanti
+    ];
+
+    return [$data, $summary];
   }
 
-  protected function applyTransactionFilters($query, array $filters): void
+  protected function applyTransactionFilters($query,
+    array $filters): void
   {
     if (!empty($filters['wallet_id'])) {
       $query->where('wallet_id', $filters['wallet_id']);
@@ -105,16 +130,26 @@ class ExportService
 
     $this->applyTransferFilters($query, $filters);
 
-    return $query->orderBy('transfer_date', 'desc')
+    $transfers = $query->orderBy('transfer_date', 'desc')
     ->limit($this->maxRecords + 1)
-    ->get()
-    ->map(fn($t) => [
-      'Tanggal' => $t->transfer_date->format('d/m/Y'),
-      'Dari' => $t->fromWallet->name,
-      'Ke' => $t->toWallet->name,
-      'Jumlah' => $t->getFormattedAmount(),
-      'Deskripsi' => $t->description ?? '-',
-    ])->toArray();
+    ->get();
+
+    $total = 0;
+    $data = $transfers->map(function ($t) use (&$total) {
+      $amount = $t->getAmountFloat(); // asumsi method ada
+      $total += $amount;
+      return [
+        'Tanggal' => $t->transfer_date->format('d/m/Y'),
+        'Dari' => $t->fromWallet->name,
+        'Ke' => $t->toWallet->name,
+        'Jumlah' => $t->getFormattedAmount(),
+        'Deskripsi' => $t->description ?? '-',
+      ];
+    })->toArray();
+
+    return [$data,
+      ['total' => $total,
+        'currency' => 'IDR']];
   }
 
   protected function applyTransferFilters($query, array $filters): void
@@ -163,25 +198,45 @@ class ExportService
         return true;
       });
 
-      return $budgets->map(fn($b) => [
-        'Kategori' => $b->category->name,
-        'Dompet' => $b->wallet?->name ?? '-',
-        'Periode' => $b->period_type->label(),
-        'Limit' => $b->getFormattedAmount(),
-        'Pengeluaran' => 'Rp ' . number_format($b->getCurrentSpending(), 0, ',', '.'),
-        'Persentase' => $b->getPercentage() . '%',
-        'Status' => $b->isOverspent() ? 'Terlampaui' : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
-      ])->values()->toArray();
+      $totalLimit = 0;
+      $totalSpent = 0;
+      $data = $budgets->map(function ($b) use (&$totalLimit, &$totalSpent) {
+        $limit = $b->getAmountFloat();
+        $spent = $b->getCurrentSpending();
+        $totalLimit += $limit;
+        $totalSpent += $spent;
+
+        return [
+          'Kategori' => $b->category->name,
+          'Dompet' => $b->wallet?->name ?? '-',
+          'Periode' => $b->period_type->label(),
+          'Limit' => $b->getFormattedAmount(),
+          'Pengeluaran' => 'Rp ' . number_format($spent, 0, ',', '.'),
+          'Persentase' => $b->getPercentage() . '%',
+          'Status' => $b->isOverspent() ? 'Terlampaui' : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
+        ];
+      })->values()->toArray();
+
+      return [
+        $data,
+        [
+          'total_limit' => $totalLimit,
+          'total_spent' => $totalSpent,
+          'remaining' => $totalLimit - $totalSpent,
+          'currency' => 'IDR',
+        ]
+      ];
     }
 
     // ----- Excel Generation -----
 
     protected function generateExcel(string $type,
       array $data,
+      array $summary,
       string $storagePath): void
     {
       Excel::store(
-        new DataExport($type, $data),
+        new DataExport($type, $data, $summary),
         $storagePath,
         'local',
         ExcelFormat::XLSX
@@ -192,11 +247,14 @@ class ExportService
 
     protected function generatePdf(string $type,
       array $data,
+      array $summary,
       string $storagePath): void
     {
       $html = view("fintech::exports.{$type}_pdf",
         ['data' => $data,
-          'title' => $this->getTitle($type)])->render();
+          'title' => $this->getTitle($type),
+          'summary' => $summary
+        ])->render();
 
       $dompdf = new \Dompdf\Dompdf();
       $dompdf->loadHtml($html);
