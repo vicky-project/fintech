@@ -71,7 +71,7 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
           }
 
           // === 2. Header Tabel ===
-          $tableStart = $metaCount + 2; // 1 baris kosong setelah metadata
+          $tableStart = $metaCount + 3; // 1 baris kosong setelah metadata
           $this->writeHeaders($sheet, $tableStart, $highestCol);
           $headerRows = $this->headerRowCount();
           $dataStart = $tableStart + $headerRows; // langsung di bawah header
@@ -220,22 +220,26 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
 
       // Label SUBTOTAL
       $sheet->setCellValue('A'.$startRow, 'SUBTOTAL');
-      $sheet->mergeCells('A'.$startRow.':D'.$startRow);
+      $sheet->mergeCells('A'.$startRow.':'$this->getHighestColumn().$startRow);
       $sheet->getStyle('A'.$startRow)->applyFromArray($sty);
 
       $d = $startRow + 1;
       if ($this->type === 'transactions') {
-        $sheet->setCellValue('E'.$d, 'Pemasukan: '.$fmtCur($f['total_income']));
-        $sheet->getStyle('E'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $sheet->setCellValue('A'.$d, 'Pemasukan: '.$fmtCur($f['total_income']));
+        $sheet->mergeCells('A'.$d.':'.'B'.$d);
+        $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
         $d++;
-        $sheet->setCellValue('E'.$d, 'Pengeluaran: '.$fmtCur($f['total_expense']));
-        $sheet->getStyle('E'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $sheet->setCellValue('A'.$d, 'Pengeluaran: '.$fmtCur($f['total_expense']));
+        $sheet->mergeCells('A'.$d.':'.'B'.$d);
+        $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
         $d++;
-        $sheet->setCellValue('E'.$d, 'Net: '.$fmtCur($f['net']));
-        $sheet->getStyle('E'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $sheet->setCellValue('A'.$d, 'Net: '.$fmtCur($f['net']));
+        $sheet->mergeCells('A'.$d.':'.'B'.$d);
+        $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
       } elseif ($this->type === 'transfers') {
-        $sheet->setCellValue('D'.$d, 'Total Transfer: '.$fmtCur($f['total']));
-        $sheet->getStyle('D'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $sheet->setCellValue('A'.$d, 'Total Transfer: '.$fmtCur($f['total']));
+        $sheet->mergeCells('A'.$d.':'.'B'.$d);
+        $sheet->getStyle('A'.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
       } elseif ($this->type === 'budgets') {
         $sheet->setCellValue('D'.$d, 'Total Limit: '.$fmtCur($f['total_limit']));
         $sheet->setCellValue('E'.$d, 'Total Pengeluaran: '.$fmtCur($f['total_spent']));
