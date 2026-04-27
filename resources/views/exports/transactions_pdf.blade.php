@@ -17,8 +17,6 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
-      table-layout: fixed;
-      /* penting agar lebar kolom dihiraukan */
     }
     th, td {
       border: 1px solid #ddd;
@@ -60,43 +58,6 @@
       color: #888;
       margin-top: 20px;
     }
-
-    /* Lebar kolom absolut */
-    th:nth-child(1), td:nth-child(1) {
-      width: 50px;
-    }
-
-    /* Tanggal */
-    th:nth-child(2), td:nth-child(2) {
-      width: 40px;
-    }
-
-    /* Tipe */
-    th:nth-child(3), td:nth-child(3) {
-      width: 70px;
-    }
-
-    /* Kategori */
-    th:nth-child(4), td:nth-child(4) {
-      width: 40px;
-    }
-
-    /* Dompet */
-    th:nth-child(5), td:nth-child(5) {
-      width: 50px;
-    }
-
-    /* Pemasukan */
-    th:nth-child(6), td:nth-child(6) {
-      width: 50px;
-    }
-
-    /* Pengeluaran */
-    th:nth-child(7), td:nth-child(7) {
-      width: auto;
-    }
-
-    /* Deskripsi (sisa) */
   </style>
 </head>
 <body>

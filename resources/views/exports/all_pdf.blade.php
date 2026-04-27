@@ -4,7 +4,7 @@
   <title>Ekspor Semua Data</title>
   <style>
     body {
-      font-family: DejaVu Sans, sans-serif;
+      font-family: Helvetica, Arial, sans-serif;
     }
     .metadata {
       margin-bottom: 20px;

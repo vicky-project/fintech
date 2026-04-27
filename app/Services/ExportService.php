@@ -69,7 +69,8 @@ class ExportService
           ExcelFormat::XLSX
         );
       } else {
-        ini_set('memory_limit', '256M');
+        ini_set('memory_limit', '512M');
+        set_time_limit(60);
         $html = view("fintech::exports.all_pdf", [
           'allData' => $allData,
           'formatRules' => $formatRules,

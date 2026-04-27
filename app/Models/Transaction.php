@@ -16,6 +16,11 @@ class Transaction extends Model
 
   protected $table = 'fintech_transactions';
 
+  protected $with = [
+    'wallet',
+    'category'
+  ];
+
   protected $fillable = [
     'wallet_id',
     'category_id',
