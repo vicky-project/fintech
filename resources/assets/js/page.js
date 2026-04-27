@@ -1749,11 +1749,38 @@ async function renderExportPage() {
   <i class="bi bi-download me-2"></i>
   <h5 class="mb-0">Ekspor Data</h5>
   </div>
+
+  <!-- Panduan Ekspor -->
+  <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+  <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Cara Mengekspor Data</h6>
+  <ol class="mb-0 small ps-3">
+  <li>Pastikan Anda sudah <strong>memulai bot Telegram kami</strong> dengan menekan tombol <strong>Start</strong> di chat <strong>@${BOT_USERNAME}</strong>.</li>
+  <li>Jika belum, klik tombol <strong>"Buka Bot"</strong> di bawah, lalu tekan <strong>Start</strong>.</li>
+  <li>Pilih <strong>Jenis Data</strong> dan <strong>Filter</strong> yang diinginkan di bawah ini.</li>
+  <li>Klik <strong>"Ekspor Sekarang"</strong>. File akan otomatis dikirim ke chat Telegram Anda.</li>
+  <li>Cek chat Telegram Anda, file siap diunduh!</li>
+  </ol>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <!-- Tombol Buka Bot -->
+  <div class="d-grid mb-3">
+  <!-- HTML di renderExportPage -->
+  <button class="btn btn-telegram"
+  style="background-color: #0088cc; color: white;"
+  data-action="open-bot-chat"
+  data-bot-link="https://t.me/${BOT_USERNAME}?start=export">
+  <i class="bi bi-telegram me-2"></i> Buka Bot Telegram @${BOT_USERNAME}
+  </button>
+  <small class="text-muted mt-1">Pastikan Anda sudah menekan tombol <strong>Start</strong> di bot.</small>
+  </div>
+
+  <!-- Card Form Export -->
   <div class="card">
   <div class="card-body">
   <!-- Jenis Data -->
   <div class="mb-3">
-  <label for="export-type" class="form-label">Jenis Data</label>
+  <label class="form-label">Jenis Data</label>
   <select class="form-select" id="export-type" data-action="change-export-type">
   <option value="transactions" selected>Transaksi</option>
   <option value="transfers">Transfer</option>
@@ -1766,7 +1793,7 @@ async function renderExportPage() {
 
   <!-- Format -->
   <div class="mb-3">
-  <label for="export-format" class="form-label">Format File</label>
+  <label class="form-label">Format File</label>
   <select class="form-select" id="export-format">
   <option value="xlsx">Excel (.xlsx)</option>
   <option value="pdf">PDF</option>
@@ -2028,15 +2055,9 @@ async function performExport() {
 
   try {
     tgApp.showLoading('Mengekspor...');
-    const blob = await Core.downloadFile('/api/fintech/exports', payload);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `export_${type}_${new Date().toISOString().slice(0, 10)}.${format}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const res = await Core.api.post('/api/fintech/exports', payload);
     tgApp.hideLoading();
-    tgApp.showToast('Ekspor berhasil');
+    tgApp.showToast(res.message || res.success ? 'File berhasil dikirim ke Telegram anda.': 'Gagal mengekspor.', res.success ? 'success': 'danger');
   } catch (error) {
     tgApp.hideLoading();
     tgApp.showToast(error.message || 'Gagal mengekspor', 'danger');

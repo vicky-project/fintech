@@ -267,6 +267,8 @@
 <script>
   const BASE_URL = '{{ rtrim(config("app.url"), "/") }}';
 
+  const BOT_USERNAME = '{{ config("telegram.bot.username") }}'; // GANTI dengan username bot asli
+
   {!! file_get_contents(module_path('fintech', 'resources/assets/js/core.js')); !!}
   {!! file_get_contents(module_path('fintech', 'resources/assets/js/page.js')); !!}
   {!! file_get_contents(module_path('fintech', 'resources/assets/js/main.js')); !!}

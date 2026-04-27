@@ -61,6 +61,15 @@ function handleGlobalClick(e) {
       const id = target.dataset.categoryId;
       if (id) toggleCategoryBadge(id);
     },
+    'open-bot-chat': () => {
+      const link = target.dataset.botLink;
+      try {
+        window.Telegram.WebApp.openTelegramLink(link);
+      } catch (err) {
+        // Fallback: buka di browser biasa jika method tidak tersedia
+        window.open(link, '_blank');
+      }
+    },
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {
