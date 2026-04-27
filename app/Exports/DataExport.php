@@ -31,14 +31,42 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
   }
 
   public function headings(): array {
-    return [[]];
-  }
-  public function title(): string
-  {
+    // Jika data tersedia, gunakan key dari baris pertama
+    if (!empty($this->data) && is_array($this->data[0])) {
+      return array_keys($this->data[0]);
+    }
+
+    // Default headings per tipe
     return match ($this->type) {
-      'transactions' => 'Transaksi',
-      'transfers' => 'Transfer',
-      'budgets' => 'Budget',
+      'transactions' => ['Tanggal',
+        'Tipe',
+        'Kategori',
+        'Dompet',
+        'Pemasukan',
+        'Pengeluaran',
+        'Deskripsi'],
+      'transfers' => ['Tanggal',
+        'Dari',
+        'Ke',
+        'Jumlah',
+        'Deskripsi'],
+      'budgets' => ['Kategori',
+        'Dompet',
+        'Periode',
+        'Limit',
+        'Pengeluaran',
+        'Persentase',
+        'Status'],
+      default => [],
+      };
+    }
+
+    public function title(): string
+    {
+      return match ($this->type) {
+        'transactions' => 'Transaksi',
+        'transfers' => 'Transfer',
+        'budgets' => 'Budget',
       default => 'Data'
       };
     }
@@ -139,6 +167,7 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
           'vertical' => Alignment::VERTICAL_CENTER],
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
       ];
+      $headings = $this->headings();
 
       if ($this->type === 'transactions') {
         // Baris 1
@@ -159,7 +188,6 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
         $sheet->setCellValue('E'.($startRow+1), 'Pemasukan');
         $sheet->setCellValue('F'.($startRow+1), 'Pengeluaran');
       } else {
-        $headings = array_keys($this->data[0]);
         $col = 'A';
         foreach ($headings as $h) {
           $sheet->setCellValue($col.$startRow, $h);
@@ -171,6 +199,18 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
 
     private function writeData(Worksheet $sheet, int $startRow, string $highestCol): void
     {
+      if (empty($this->data)) {
+        // Tulis "Tidak ada data" di baris pertama, merge semua kolom
+        $sheet->setCellValue('A' . $startRow, 'Tidak ada data');
+        $sheet->mergeCells('A' . $startRow . ':' . $highestCol . $startRow);
+        $sheet->getStyle('A' . $startRow)->applyFromArray([
+          'font' => ['italic' => true, 'color' => ['rgb' => '888888']],
+          'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+          'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+        return;
+      }
+
       $row = $startRow;
       foreach ($this->data as $line) {
         $col = 'A';

@@ -21,7 +21,7 @@ $fmt    = fn($v) => $symbol . ' ' . number_format($v, $prec, $dec, $thou);
     </tr>
   </thead>
   <tbody>
-    @foreach($data as $row)
+    @forelse($data as $row)
     <tr>
       <td>{{ $row['Tanggal'] }}</td>
       <td>{{ $row['Tipe'] }}</td>
@@ -31,12 +31,18 @@ $fmt    = fn($v) => $symbol . ' ' . number_format($v, $prec, $dec, $thou);
       <td class="text-right text-expense">{{ $row['Pengeluaran'] === '-' ? '0' : $row['Pengeluaran'] }}</td>
       <td>{{ $row['Deskripsi'] }}</td>
     </tr>
-    @endforeach
+    @empty
+    <tr>
+      <td colspan="7" style="text-align: center;">Tidak ada data</td>
+    </tr>
+    @endforelse
+    @if(!empty($data))
     <tr class="sub-row">
       <td colspan="4">SUBTOTAL</td>
       <td class="text-right">{{ $fmt($summary['total_income']) }}</td>
       <td class="text-right">{{ $fmt($summary['total_expense']) }}</td>
       <td class="text-right">Net: {{ $fmt($summary['net']) }}</td>
     </tr>
+    @endif
   </tbody>
 </table>
