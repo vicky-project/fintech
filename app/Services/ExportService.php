@@ -30,15 +30,21 @@ class ExportService
     $walletName = Wallet::find($walletId)->name;
 
     if ($type === 'all') {
+      $filtersCommon = $filters;
+      unset($filtersCommon['transaction_type'], $filtersCommon['category_ids'], $filtersCommon['period_type'], $filtersCommon['status']);
       // Ambil semua data dengan filter umum
-      $transactionsData = $this->getTransactionsData($filters);
-      $transfersData = $this->getTransfersData($filters);
-      $budgetsData = $this->getBudgetsData($filters);
+      $transactionsData = $this->getTransactionsData($filtersCommon);
+      $transfersData = $this->getTransfersData($filtersCommon);
+      $budgetsData = $this->getBudgetsData($filtersCommon);
+
+      $metaTransactions = $this->buildMetadata('transactions', $filtersCommon, $walletName);
+      $metaTransfers = $this->buildMetadata('transfers', $filtersCommon, $walletName);
+      $metaBudgets = $this->buildMetadata('budgets', $filtersCommon, $walletName);
 
       // Gabungkan aturan format ke setiap summary
-      $transactionsData[1] = array_merge($transactionsData[1], $formatRules);
-      $transfersData[1] = array_merge($transfersData[1], $formatRules);
-      $budgetsData[1] = array_merge($budgetsData[1], $formatRules);
+      $transactionsData[1] = array_merge($transactionsData[1], $formatRules, ['metadata' => $metaTransactions]);
+      $transfersData[1] = array_merge($transfersData[1], $formatRules, ['metadata' => $metaTransfers]);
+      $budgetsData[1] = array_merge($budgetsData[1], $formatRules, ['metadata' => $metaBudgets]);
 
       $allData = [
         'transactions' => $transactionsData,

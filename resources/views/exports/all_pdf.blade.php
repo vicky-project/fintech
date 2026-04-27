@@ -72,19 +72,19 @@
   @endif
 
   <h4>Transaksi</h4>
-  @include('fintech::exports._transactions_table', [
+  @include('fintech::exports.tables._transactions_table', [
   'data'    => $allData['transactions'][0],
   'summary' => $allData['transactions'][1]
   ])
 
   <h4>Transfer</h4>
-  @include('fintech::exports._transfers_table', [
+  @include('fintech::exports.tables._transfers_table', [
   'data'    => $allData['transfers'][0],
   'summary' => $allData['transfers'][1]
   ])
 
   <h4>Budget</h4>
-  @include('fintech::exports._budgets_table', [
+  @include('fintech::exports.tables._budgets_table', [
   'data'    => $allData['budgets'][0],
   'summary' => $allData['budgets'][1]
   ])
