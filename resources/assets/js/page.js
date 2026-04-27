@@ -1688,7 +1688,7 @@ async function forceDeleteTransaction(id) {
   await Core.api.delete(`/api/fintech/transactions/${id}/force`);
   Core.navigateTo('transactionTrash');
 }
-function navigateToTransferTrash() {
+window.navigateToTransferTrash = function() {
   Core.state.currentPage = 'transfer-trash';
   renderTransferTrashPage();
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
