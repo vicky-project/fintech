@@ -1819,7 +1819,7 @@ function renderExportFilters(type) {
     </div>
     <div class="mb-3">
     <label class="form-label">Tipe</label>
-    <select class="form-select" id="filter-type">
+    <select class="form-select" id="filter-type" data-action="change-transaction-type">
     <option value="">Semua</option>
     <option value="income">Pemasukan</option>
     <option value="expense">Pengeluaran</option>
@@ -1835,6 +1835,7 @@ function renderExportFilters(type) {
     <input class="form-check-input" type="checkbox" id="include-description" checked>
     <label class="form-check-label">Sertakan Deskripsi</label>
     </div>`;
+    setTimeout(() => updateTransactionCategoryFilter(), 0);
   } else if (type === 'transfers') {
     html += `
     <div class="row mb-3">
@@ -1850,21 +1851,84 @@ function renderExportFilters(type) {
   } else if (type === 'budgets') {
     html += `
     <div class="mb-3">
-    <label class="form-label">Bulan</label>
-    <input type="month" class="form-control" id="filter-month">
+    <label class="form-label">Tipe Periode</label>
+    <select class="form-select" id="filter-period-type" data-action="change-budget-period">
+    <option value="monthly" selected>Bulanan</option>
+    <option value="yearly">Tahunan</option>
+    </select>
+    </div>
+    <div class="mb-3" id="budget-period-detail">
+    <!-- Dinamis: input month atau year -->
     </div>
     <div class="mb-3">
     <label class="form-label">Status Budget</label>
     <select class="form-select" id="filter-status">
     <option value="">Semua</option>
-    <option value="overspent">Terlampaui</option>
-    <option value="near_limit">Mendekati</option>
-    <option value="on_track">Aman</option>
+    <option value="overspent">Terlampaui (≥100%)</option>
+    <option value="near_limit">Mendekati (80-99%)</option>
+    <option value="on_track">Aman (<80%)</option>
+    </select>
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Kategori</label>
+    <select class="form-select" id="filter-category" multiple size="4">
+    ${Core.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
     </select>
     </div>`;
+
+    // Render period input awal
+    setTimeout(() => renderBudgetPeriodInput(), 0);
   }
 
   container.innerHTML = html;
+}
+
+function renderBudgetPeriodInput() {
+  const periodType = document.getElementById('filter-period-type').value;
+  const container = document.getElementById('budget-period-detail');
+  if (!container) return;
+
+  if (periodType === 'monthly') {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    container.innerHTML = `
+    <label class="form-label">Bulan</label>
+    <input type="month" class="form-control" id="filter-month" value="${currentMonth}">`;
+  } else {
+    const currentYear = new Date().getFullYear();
+    container.innerHTML = `
+    <label class="form-label">Tahun</label>
+    <input type="number" class="form-control" id="filter-year" value="${currentYear}" min="2000" max="${currentYear}">`;
+  }
+}
+
+function updateTransactionCategoryFilter() {
+  const typeSelect = document.getElementById('filter-type');
+  const categorySelect = document.getElementById('filter-category');
+  if (!typeSelect || !categorySelect) return;
+
+  const selectedType = typeSelect.value; // '' (semua), 'income', 'expense'
+
+  // Simpan kategori yang terpilih sebelumnya
+  const previouslySelected = [...categorySelect.selectedOptions].map(o => o.value);
+
+  // Filter kategori berdasarkan tipe
+  let filteredCategories = Core.state.categories;
+  if (selectedType === 'income') {
+    filteredCategories = Core.state.categories.filter(c => c.type === 'income' || c.type === 'both');
+  } else if (selectedType === 'expense') {
+    filteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
+  }
+  // Jika '' (semua), tampilkan semua
+
+  // Render ulang opsi kategori
+  categorySelect.innerHTML = filteredCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+  // Kembalikan pilihan yang sebelumnya masih ada di opsi baru
+  [...categorySelect.options].forEach(option => {
+    if (previouslySelected.includes(option.value)) {
+      option.selected = true;
+    }
+  });
 }
 
 async function performExport() {
@@ -1900,10 +1964,21 @@ async function performExport() {
     if (dateFrom) payload.date_from = dateFrom;
     if (dateTo) payload.date_to = dateTo;
   } else if (type === 'budgets') {
-    const month = document.getElementById('filter-month').value;
+    const periodType = document.getElementById('filter-period-type').value;
+    payload.period_type = periodType;
+    if (periodType === 'monthly') {
+      const month = document.getElementById('filter-month').value;
+      if (month) payload.month = month;
+    } else {
+      const year = document.getElementById('filter-year').value;
+      if (year) payload.year = year;
+    }
     const status = document.getElementById('filter-status').value;
-    if (month) payload.month = month;
     if (status) payload.status = status;
+
+    const categorySelect = document.getElementById('filter-category');
+    const selectedCategories = [...categorySelect.selectedOptions].map(o => o.value);
+    if (selectedCategories.length) payload.category_ids = selectedCategories;
   }
 
   try {

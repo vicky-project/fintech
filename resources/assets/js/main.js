@@ -110,6 +110,8 @@ function handleGlobalChange(e) {
       const type = el.value;
       renderExportFilters(type);
     },
+    'change-budget-period': () => renderBudgetPeriodInput(),
+    'change-transaction-type': () => updateTransactionCategoryFilter(),
     // Tambahkan aksi lain sesuai kebutuhan
   };
 
