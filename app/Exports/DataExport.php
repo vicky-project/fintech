@@ -29,35 +29,8 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
   public function headings(): array
   {
     if (empty($this->data)) return [];
-
-    if ($this->type === 'transactions') {
-      // Header dua tingkat
-      return [
-        [
-          '',
-          '',
-          '',
-          '',
-          'Amount',
-          '',
-          ''
-        ],
-        // baris1
-        [
-          'Tanggal',
-          'Tipe',
-          'Kategori',
-          'Dompet',
-          'Pemasukan',
-          'Pengeluaran',
-          'Deskripsi'
-        ],
-        // baris2
-      ];
-    }
-
-    // Untuk transfer/budgets, heading biasa
-    return [array_keys($this->data[0])];
+    // Dummy, akan ditulis manual di AfterSheet
+    return [[]];
   }
 
   public function title(): string
@@ -71,7 +44,7 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
     }
 
     public function styles(Worksheet $sheet) {
-      // Style untuk header akan kita tangani manual di AfterSheet
+      // Style manual di AfterSheet
     }
 
     public function registerEvents(): array
@@ -81,199 +54,212 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
           $sheet = $event->sheet->getDelegate();
           $metadata = $this->summary['metadata'] ?? [];
           $metaCount = count($metadata);
-          $highestColumn = $this->type === 'transactions' ? 'G' : $sheet->getHighestColumn();
+          $highestColumn = $this->getHighestColumn();
 
-          // ===== 1. Tulis metadata =====
+          // ===== 1. Metadata =====
           if ($metaCount > 0) {
             $sheet->setCellValue('A1', 'INFORMASI EKSPOR');
             $sheet->mergeCells('A1:' . $highestColumn . '1');
             $sheet->getStyle('A1')->applyFromArray([
               'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1F4E79']],
             ]);
-
             for ($i = 0; $i < $metaCount; $i++) {
               $row = $i + 2;
-              $sheet->setCellValue('A' . $row, $metadata[$i]);
-              $sheet->mergeCells('A' . $row . ':' . $highestColumn . $row);
-              $sheet->getStyle('A' . $row)->applyFromArray([
+              $sheet->setCellValue('A'.$row, $metadata[$i]);
+              $sheet->mergeCells('A'.$row.':'.$highestColumn.$row);
+              $sheet->getStyle('A'.$row)->applyFromArray([
                 'font' => ['size' => 10, 'italic' => true],
               ]);
             }
           }
 
-          // ===== 2. Tentukan posisi header tabel =====
-          $tableHeaderRow = $metaCount + 2; // setelah metadata + 1 baris kosong
+          // ===== 2. Tabel Header =====
+          $tableHeaderRow = $metaCount + 2; // 1 baris kosong setelah metadata
+          $this->writeHeaders($sheet, $tableHeaderRow, $highestColumn);
 
-          if ($this->type === 'transactions') {
-            // Header tingkat 1: "Amount" di merge
-            $sheet->mergeCells('E' . $tableHeaderRow . ':F' . $tableHeaderRow);
-            $sheet->setCellValue('A' . $tableHeaderRow, '');
-            $sheet->setCellValue('B' . $tableHeaderRow, '');
-            $sheet->setCellValue('C' . $tableHeaderRow, '');
-            $sheet->setCellValue('D' . $tableHeaderRow, '');
-            $sheet->setCellValue('E' . $tableHeaderRow, 'Amount');
-            $sheet->setCellValue('G' . $tableHeaderRow, '');
+          // ===== 3. Data =====
+          $dataStartRow = $tableHeaderRow + $this->headerRowCount() + 1;
+          $lastDataRow = $dataStartRow + count($this->data) - 1;
+          $this->writeData($sheet, $dataStartRow, $highestColumn);
+          $this->styleData($sheet, $dataStartRow, $lastDataRow, $highestColumn);
 
-            $sheet->getStyle('A' . $tableHeaderRow . ':G' . $tableHeaderRow)->applyFromArray([
-              'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-              'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
-              'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ]);
+          // ===== 4. Subtotal =====
+          $subStartRow = $lastDataRow + 2;
+          $this->writeSubtotal($sheet, $subStartRow, $highestColumn);
 
-            $headerRow2 = $tableHeaderRow + 1;
-            $subHeaders = ['Tanggal',
-              'Tipe',
-              'Kategori',
-              'Dompet',
-              'Pemasukan',
-              'Pengeluaran',
-              'Deskripsi'];
-            $col = 'A';
-            foreach ($subHeaders as $text) {
-              $sheet->setCellValue($col . $headerRow2, $text);
-              $col++;
-            }
-            $sheet->getStyle('A' . $headerRow2 . ':G' . $headerRow2)->applyFromArray([
-              'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-              'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
-              'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ]);
-
-            // Batas border header
-            $sheet->getStyle('A' . $tableHeaderRow . ':G' . $headerRow2)->applyFromArray([
-              'borders' => [
-                'outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']],
-              ],
-            ]);
-
-            $dataStartRow = $headerRow2 + 1;
-          } else {
-            // Heading biasa 1 baris
-            $headings = array_keys($this->data[0]);
-            $col = 'A';
-            foreach ($headings as $text) {
-              $sheet->setCellValue($col . $tableHeaderRow, $text);
-              $col++;
-            }
-            $sheet->getStyle('A' . $tableHeaderRow . ':' . $highestColumn . $tableHeaderRow)->applyFromArray([
-              'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-              'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
-              'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-              'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
-            ]);
-            $dataStartRow = $tableHeaderRow + 1;
-          }
-
-          // ===== 3. Tulis data =====
-          $row = $dataStartRow;
-          foreach ($this->data as $dataRow) {
-            $col = 'A';
-            foreach ($dataRow as $value) {
-              $sheet->setCellValue($col . $row, $value);
-              $col++;
-            }
-            $sheet->getStyle('A' . $row . ':' . $highestColumn . $row)->applyFromArray([
-              'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
-            ]);
-            $row++;
-          }
-          $lastDataRow = $row - 1;
-
-          // ===== 4. Pewarnaan =====
-          if ($this->type === 'transactions') {
-            $colPemasukan = 'E';
-            $colPengeluaran = 'F';
-            for ($r = $dataStartRow; $r <= $lastDataRow; $r++) {
-              $pemasukan = $sheet->getCell($colPemasukan . $r)->getValue();
-              $pengeluaran = $sheet->getCell($colPengeluaran . $r)->getValue();
-              if ($pemasukan !== '-') {
-                $sheet->getStyle($colPemasukan . $r)->getFont()->getColor()->setRGB('28A745');
-              }
-              if ($pengeluaran !== '-') {
-                $sheet->getStyle($colPengeluaran . $r)->getFont()->getColor()->setRGB('DC3545');
-              }
-            }
-          }
-
-          // ===== 5. Subtotal =====
-          $subStartRow = $lastDataRow + 2; // beri jarak 1 baris
-          $format = $this->summary; // aturan format
-
-          // Helper closure untuk format uang
-          $fmtNumber = function ($value) use ($format) {
-            return number_format(
-              $value,
-              $format['precision'],
-              $format['decimal_mark'],
-              $format['thousands_separator']
-            );
-          };
-          $fmtCurrency = function ($value) use ($format, $fmtNumber) {
-            $num = $fmtNumber($value);
-            return $format['symbol_first']
-            ? $format['symbol'] . ' ' . $num
-            : $num . ' ' . $format['symbol'];
-          };
-
-          // Label SUBTOTAL
-          $sheet->setCellValue('A' . $subStartRow, 'SUBTOTAL');
-          $sheet->mergeCells('A' . $subStartRow . ':D' . $subStartRow);
-          $sheet->getStyle('A' . $subStartRow)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E2F3']],
-            'borders' => ['outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
-          ]);
-
-          $colJumlah = 'E'; // default untuk transaksi
-          $row = $subStartRow;
-
-          // Isi sesuai tipe
-          switch ($this->type) {
-          case 'transactions':
-            $sheet->setCellValue($colJumlah . $row, 'Pemasukan: ' . $fmtCurrency($this->summary['total_income']));
-            $row++;
-            $sheet->setCellValue($colJumlah . $row, 'Pengeluaran: ' . $fmtCurrency($this->summary['total_expense']));
-            $row++;
-            $sheet->setCellValue($colJumlah . $row, 'Net: ' . $fmtCurrency($this->summary['net']));
-            break;
-
-          case 'transfers':
-            $colJumlah = 'D'; // kolom Jumlah di transfer adalah D
-            $sheet->setCellValue($colJumlah . $row, 'Total Transfer: ' . $fmtCurrency($this->summary['total']));
-            break;
-
-          case 'budgets':
-            // Kolom Limit di E, Pengeluaran di F, bisa kita taruh di E/F
-            $colLimit = 'E';
-            $colSpent = 'F';
-            $sheet->setCellValue($colLimit . $row, 'Total Limit: ' . $fmtCurrency($this->summary['total_limit']));
-            $sheet->setCellValue($colSpent . $row, 'Total Pengeluaran: ' . $fmtCurrency($this->summary['total_spent']));
-            $row++;
-            $sheet->setCellValue($colLimit . $row, 'Sisa: ' . $fmtCurrency($this->summary['remaining']));
-            break;
-          }
-
-          // Styling subtotal area
-          $subEndRow = $row;
-          $subRange = 'A' . $subStartRow . ':' . $highestColumn . $subEndRow;
-          $sheet->getStyle($subRange)->applyFromArray([
-            'borders' => [
-              'allBorders' => [
-                'borderStyle' => Border::BORDER_THIN,
-                'color' => ['rgb' => '000000'],
-              ],
-            ],
-          ]);
-
-          // ===== 6. Footer =====
-          $footerRow = $subEndRow + 2;
-          $sheet->setCellValue('A' . $footerRow, 'Generated by VickyServer App - ' . now()->format('d M Y H:i'));
-          $sheet->mergeCells('A' . $footerRow . ':E' . $footerRow);
-          $sheet->getStyle('A' . $footerRow)->applyFromArray([
+          // ===== 5. Footer =====
+          $footerRow = $subStartRow + $this->subtotalRowCount() + 1;
+          $sheet->setCellValue('A'.$footerRow, 'Generated by VickyServer App - '.now()->format('d M Y H:i'));
+          $sheet->mergeCells('A'.$footerRow.':'.$highestColumn.$footerRow);
+          $sheet->getStyle('A'.$footerRow)->applyFromArray([
             'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
           ]);
         },
       ];
+    }
+
+    // ----- Helper untuk kolom -----
+    private function getHighestColumn(): string
+    {
+      return match ($this->type) {
+        'transactions' => 'G',
+        // A..G
+        'transfers' => 'E',
+        'budgets' => 'G',
+      default => 'E',
+      };
+    }
+
+    private function headerRowCount(): int
+    {
+      return $this->type === 'transactions' ? 2 : 1;
+    }
+
+    private function subtotalRowCount(): int
+    {
+      return match ($this->type) {
+        'transactions' => 3,
+        // pemasukan, pengeluaran, net
+        'transfers' => 1,
+        'budgets' => 2,
+        // total limit, total spent, sisa
+      default => 1,
+      };
+    }
+
+    // ----- Tulis Header -----
+    private function writeHeaders(Worksheet $sheet, int $startRow, string $highestColumn): void
+    {
+      $headerStyle = [
+        'font' => ['bold' => true,
+          'color' => ['rgb' => 'FFFFFF'],
+          'size' => 12],
+        'fill' => ['fillType' => Fill::FILL_SOLID,
+          'startColor' => ['rgb' => '4F81BD']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
+          'vertical' => Alignment::VERTICAL_CENTER],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+      ];
+
+      if ($this->type === 'transactions') {
+        // Baris 1 header
+        $sheet->mergeCells('A'.$startRow.':A'.($startRow+1));
+        $sheet->setCellValue('A'.$startRow, 'Tanggal');
+        $sheet->mergeCells('B'.$startRow.':B'.($startRow+1));
+        $sheet->setCellValue('B'.$startRow, 'Tipe');
+        $sheet->mergeCells('C'.$startRow.':C'.($startRow+1));
+        $sheet->setCellValue('C'.$startRow, 'Kategori');
+        $sheet->mergeCells('D'.$startRow.':D'.($startRow+1));
+        $sheet->setCellValue('D'.$startRow, 'Dompet');
+        $sheet->mergeCells('E'.$startRow.':F'.$startRow);
+        $sheet->setCellValue('E'.$startRow, 'Amount');
+        $sheet->mergeCells('G'.$startRow.':G'.($startRow+1));
+        $sheet->setCellValue('G'.$startRow, 'Deskripsi');
+        $sheet->getStyle('A'.$startRow.':G'.($startRow+1))->applyFromArray($headerStyle);
+
+        // Baris 2 header (sub‑header Amount)
+        $startRow++;
+        $sheet->setCellValue('E'.$startRow, 'Pemasukan');
+        $sheet->setCellValue('F'.$startRow, 'Pengeluaran');
+        $sheet->getStyle('E'.$startRow.':F'.$startRow)->applyFromArray($headerStyle);
+      } else {
+        // Header biasa 1 baris
+        $headings = array_keys($this->data[0]);
+        $col = 'A';
+        foreach ($headings as $heading) {
+          $sheet->setCellValue($col.$startRow, $heading);
+          $col++;
+        }
+        $sheet->getStyle('A'.$startRow.':'.$highestColumn.$startRow)->applyFromArray($headerStyle);
+      }
+    }
+
+    // ----- Tulis Data -----
+    private function writeData(Worksheet $sheet, int $startRow, string $highestColumn): void
+    {
+      $row = $startRow;
+      foreach ($this->data as $dataRow) {
+        $col = 'A';
+        foreach ($dataRow as $value) {
+          // Ganti "-" menjadi 0
+          $displayValue = ($value === '-' || $value === null) ? '0' : $value;
+          $sheet->setCellValue($col.$row, $displayValue);
+          $col++;
+        }
+        $row++;
+      }
+    }
+
+    // ----- Style Data -----
+    private function styleData(Worksheet $sheet, int $firstRow, int $lastRow, string $highestColumn): void
+    {
+      $dataStyle = [
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'font' => ['size' => 10],
+      ];
+
+      // Semua data
+      $sheet->getStyle('A'.$firstRow.':'.$highestColumn.$lastRow)->applyFromArray($dataStyle);
+
+      // Rata kanan untuk kolom angka
+      if ($this->type === 'transactions') {
+        $sheet->getStyle('E'.$firstRow.':F'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        // Warna hijau/merah
+        for ($r = $firstRow; $r <= $lastRow; $r++) {
+          $tipe = $sheet->getCell('B'.$r)->getValue();
+          if ($tipe === 'Pemasukan') {
+            $sheet->getStyle('E'.$r)->getFont()->getColor()->setRGB('28A745');
+          } elseif ($tipe === 'Pengeluaran') {
+            $sheet->getStyle('F'.$r)->getFont()->getColor()->setRGB('DC3545');
+          }
+        }
+      } elseif ($this->type === 'transfers') {
+        $sheet->getStyle('D'.$firstRow.':D'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+      } elseif ($this->type === 'budgets') {
+        $sheet->getStyle('D'.$firstRow.':E'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+      }
+    }
+
+    // ----- Subtotal -----
+    private function writeSubtotal(Worksheet $sheet, int $startRow, string $highestColumn): void
+    {
+      $format = $this->summary;
+      $fmtNum = fn($v) => number_format($v, $format['precision'], $format['decimal_mark'], $format['thousands_separator']);
+      $fmtCur = fn($v) => ($format['symbol_first'] ? $format['symbol'].' ' : '').$fmtNum($v).(!$format['symbol_first'] ? ' '.$format['symbol'] : '');
+
+      $subStyle = [
+        'font' => ['bold' => true,
+          'size' => 11],
+        'fill' => ['fillType' => Fill::FILL_SOLID,
+          'startColor' => ['rgb' => 'D9E2F3']],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
+      ];
+
+      $sheet->setCellValue('A'.$startRow, 'SUBTOTAL');
+      $sheet->mergeCells('A'.$startRow.':D'.$startRow);
+      $sheet->getStyle('A'.$startRow)->applyFromArray($subStyle);
+
+      if ($this->type === 'transactions') {
+        $sheet->setCellValue('E'.$startRow, 'Pemasukan: '.$fmtCur($this->summary['total_income']));
+        $sheet->getStyle('E'.$startRow)->applyFromArray($subStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $startRow++;
+        $sheet->setCellValue('E'.$startRow, 'Pengeluaran: '.$fmtCur($this->summary['total_expense']));
+        $sheet->getStyle('E'.$startRow)->applyFromArray($subStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $startRow++;
+        $sheet->setCellValue('E'.$startRow, 'Net: '.$fmtCur($this->summary['net']));
+        $sheet->getStyle('E'.$startRow)->applyFromArray($subStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+      } elseif ($this->type === 'transfers') {
+        $sheet->setCellValue('D'.$startRow, 'Total Transfer: '.$fmtCur($this->summary['total']));
+        $sheet->getStyle('D'.$startRow)->applyFromArray($subStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+      } elseif ($this->type === 'budgets') {
+        $sheet->setCellValue('D'.$startRow, 'Total Limit: '.$fmtCur($this->summary['total_limit']));
+        $sheet->setCellValue('E'.$startRow, 'Total Pengeluaran: '.$fmtCur($this->summary['total_spent']));
+        $sheet->getStyle('D'.$startRow.':E'.$startRow)->applyFromArray($subStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+        $startRow++;
+        $sheet->setCellValue('D'.$startRow, 'Sisa: '.$fmtCur($this->summary['remaining']));
+        $sheet->getStyle('D'.$startRow)->applyFromArray($subStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]]);
+      }
     }
   }
