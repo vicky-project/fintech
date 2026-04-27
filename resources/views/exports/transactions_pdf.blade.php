@@ -77,7 +77,7 @@
       width: 10%;
     }
     th:nth-child(7), td:nth-child(7) {
-      width: 24%;
+      width: 40%;
     }
   </style>
 </head>
