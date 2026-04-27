@@ -6,6 +6,7 @@ use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Transfer;
 use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Enums\TransactionType;
+use Modules\FinTech\Exports\DataExport;
 use Modules\FinTech\Services\WalletService;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
@@ -180,25 +181,7 @@ class ExportService
       string $storagePath): void
     {
       Excel::store(
-        new class($type, $data) implements \Maatwebsite\Excel\Concerns\FromArray,
-        \Maatwebsite\Excel\Concerns\WithHeadings {
-          private string $type;
-          private array $data;
-
-          public function __construct(string $type, array $data) {
-            $this->type = $type;
-            $this->data = $data;
-          }
-
-          public function array(): array {
-            return $this->data;
-          }
-
-          public function headings(): array {
-            if (empty($this->data)) return [];
-            return array_keys($this->data[0]);
-          }
-        },
+        new DataExport($type, $data),
         $storagePath,
         'local',
         ExcelFormat::XLSX
