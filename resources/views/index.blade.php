@@ -62,7 +62,7 @@
           <li><button class="dropdown-item nav-btn" data-page="statements"><i class="bi bi-file-text me-2"></i>Statement</button></li>
           <li><button class="dropdown-item nav-btn" data-page="insights"><i class="bi bi-bar-chart me-2"></i>Insight</button></li>
           <li><button class="dropdown-item nav-btn" data-page="budgets"><i class="bi bi-pie-chart me-2"></i>Budget</button></li>
-          <li><button class="dropdown-item nav-btn" data-page="exports"><i class="bi bi-cloud-download-fill me-2"></i>Export</button></li>
+          <li><button class="dropdown-item nav-btn" data-page="export"><i class="bi bi-cloud-download-fill me-2"></i>Export</button></li>
         </ul>
       </div>
     </div>
