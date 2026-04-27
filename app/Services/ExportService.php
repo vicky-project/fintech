@@ -29,13 +29,17 @@ class ExportService
     $formatRules = $this->getCurrencyFormat($walletId);
     $walletName = Wallet::find($walletId)->name;
 
+    $limit = $format === 'pdf' ? 2000 : $this->maxRecords;
+
     if ($type === 'all') {
-      $filtersCommon = $filters;
-      unset($filtersCommon['transaction_type'], $filtersCommon['category_ids'], $filtersCommon['period_type'], $filtersCommon['status']);
+      $originalMax = $this->maxRecords;
+      $this->maxRecords = $limit;
+
       // Ambil semua data dengan filter umum
-      $transactionsData = $this->getTransactionsData($filtersCommon);
-      $transfersData = $this->getTransfersData($filtersCommon);
-      $budgetsData = $this->getBudgetsData($filtersCommon);
+      $transactionsData = $this->getTransactionsData($filters);
+      $transfersData = $this->getTransfersData($filters);
+      $budgetsData = $this->getBudgetsData($filters);
+      $this->maxRecords = $originalMax;
 
       $metaTransactions = $this->buildMetadata('transactions', $filtersCommon, $walletName);
       $metaTransfers = $this->buildMetadata('transfers', $filtersCommon, $walletName);
@@ -65,6 +69,7 @@ class ExportService
           ExcelFormat::XLSX
         );
       } else {
+        ini_set('memory_limit', '256M');
         $html = view("fintech::exports.all_pdf", [
           'allData' => $allData,
           'formatRules' => $formatRules,
@@ -81,6 +86,9 @@ class ExportService
       return Storage::disk('local')->path($tempPath);
     }
 
+    $originalMax = $this->maxRecords;
+    $this->maxRecords = $limit;
+
     // Ambil data dan summary (hanya angka mentah)
     [$data,
       $summary] = match ($type) {
@@ -88,6 +96,7 @@ class ExportService
       'transfers' => $this->getTransfersData($filters),
       'budgets' => $this->getBudgetsData($filters),
     };
+    $this->maxRecords = $originalMax;
 
     $metadata = $this->buildMetadata($type, $filters, $walletId);
     $summary['metadata'] = $metadata;
@@ -305,6 +314,7 @@ class ExportService
       if (count($data) > 1000) {
         throw new \Exception("Jumlah data terlalu banyak ({count($data)}). Kurang jumlah pengambilan data.");
       }
+
       Excel::store(
         new DataExport($type, $data, $summary),
         $storagePath,

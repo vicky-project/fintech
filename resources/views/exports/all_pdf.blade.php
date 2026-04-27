@@ -34,28 +34,10 @@
     .text-right {
       text-align: right;
     }
-    .text-income {
-      color: #28A745;
-      font-weight: bold;
-    }
-    .text-expense {
-      color: #DC3545;
-      font-weight: bold;
-    }
     .sub-row td {
       font-weight: bold;
       background: #D9E2F3;
       font-size: 11px;
-    }
-    .status-overspent {
-      color: #DC3545;
-      font-weight: bold;
-    }
-    .status-near-limit {
-      color: #FFC107;
-    }
-    .status-on-track {
-      color: #198754;
     }
   </style>
 </head>
