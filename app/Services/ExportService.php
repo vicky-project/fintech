@@ -69,9 +69,6 @@ class ExportService
       return Storage::disk('local')->path($tempPath);
     }
 
-    $originalMax = $this->maxRecords;
-    $this->maxRecords = $limit;
-
     // Ambil data dan summary (hanya angka mentah)
     [$data,
       $summary] = match ($type) {
@@ -79,7 +76,6 @@ class ExportService
       'transfers' => $this->getTransfersData($filters),
       'budgets' => $this->getBudgetsData($filters),
     };
-    $this->maxRecords = $originalMax;
 
     $metadata = $this->buildMetadata($type, $filters, $walletId);
     $summary['metadata'] = $metadata;
