@@ -4,7 +4,7 @@
   <title>{{ $title }}</title>
   <style>
     body {
-      font-family: DejaVu Sans, sans-serif;
+      font-family: Helvetica, Arial, sans-serif;
     }
     .header-info {
       margin-bottom: 25px;

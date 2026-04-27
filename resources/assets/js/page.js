@@ -1867,6 +1867,7 @@ async function renderExportPage() {
   `;
   document.getElementById('main-content').innerHTML = html;
   renderExportFilters('transactions');
+  updateExportFormatAvailability();
 }
 
 function renderExportFilters(type) {
@@ -2054,6 +2055,25 @@ function renderBudgetPeriodInput() {
   }
 }
 
+function updateExportFormatAvailability() {
+  const type = document.getElementById('export-type').value;
+  const formatPdfRadio = document.getElementById('format-pdf');
+  const formatXlsxRadio = document.getElementById('format-xlsx');
+  if (!formatPdfRadio || !formatXlsxRadio) return;
+
+  if (type === 'all') {
+    // Nonaktifkan PDF, paksa Excel
+    formatPdfRadio.disabled = true;
+    formatPdfRadio.checked = false;
+    formatXlsxRadio.checked = true;
+    // Opsional: tambahkan kelas 'text-muted' pada label
+    document.querySelector('label[for="format-pdf"]')?.classList.add('text-muted');
+  } else {
+    formatPdfRadio.disabled = false;
+    document.querySelector('label[for="format-pdf"]')?.classList.remove('text-muted');
+  }
+}
+
 function updateTransactionCategoryFilter() {
   const typeSelect = document.getElementById('filter-type');
   if (!typeSelect) return;
@@ -2138,6 +2158,11 @@ async function performExport() {
     }
     // Semua data
     else if (type === 'all') {
+      if (format === 'pdf') {
+        tgApp.showToast('Format PDF tidak tersedia untuk semua data. Gunakan excel', 'warning');
+        return;
+      }
+
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
       payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
     }

@@ -119,9 +119,10 @@ function handleGlobalChange(e) {
         switchCategoryType(type);
       }
     },
-    'change-export-type': (el) => {
-      const type = el.value;
+    'change-export-type': () => {
+      const type = target.value;
       renderExportFilters(type);
+      updateExportFormatAvailability(); // ← panggil di sini
     },
     'change-budget-period': () => renderBudgetPeriodInput(),
     'change-transaction-type': () => updateTransactionCategoryFilter(),

@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 
 class ExportService
 {
-  protected int $maxRecords = 5000;
+  protected int $maxRecords = 1000;
 
   /**
   * Generate file export, return path to temp file.
@@ -29,17 +29,14 @@ class ExportService
     $formatRules = $this->getCurrencyFormat($walletId);
     $walletName = Wallet::find($walletId)->name;
 
-    $limit = $format === 'pdf' ? 1000 : $this->maxRecords;
-
     if ($type === 'all') {
-      $originalMax = $this->maxRecords;
-      $this->maxRecords = $limit;
-
+      if ($format === 'pdf') {
+        throw new \Error("Export to pdf with all data not allowed. Use Excel format instead or choose partial type.");
+      }
       // Ambil semua data dengan filter umum
       $transactionsData = $this->getTransactionsData($filters);
       $transfersData = $this->getTransfersData($filters);
       $budgetsData = $this->getBudgetsData($filters);
-      $this->maxRecords = $originalMax;
 
       $metaTransactions = $this->buildMetadata('transactions', $filters, $walletName);
       $metaTransfers = $this->buildMetadata('transfers', $filters, $walletName);
@@ -61,28 +58,13 @@ class ExportService
       $filename = Str::uuid() . '.' . $extension;
       $tempPath = "temp/exports/{$filename}";
 
-      if ($format === 'xlsx') {
-        Excel::store(
-          new AllDataExport($allData, $formatRules),
-          $tempPath,
-          'local',
-          ExcelFormat::XLSX
-        );
-      } else {
-        ini_set('memory_limit', '512M');
-        set_time_limit(60);
-        $html = view("fintech::exports.all_pdf", [
-          'allData' => $allData,
-          'formatRules' => $formatRules,
-          'metadata' => $metadata,
-        ])->render();
 
-        $dompdf = new \Dompdf\Dompdf();
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
-        Storage::disk('local')->put($tempPath, $dompdf->output());
-      }
+      Excel::store(
+        new AllDataExport($allData, $formatRules),
+        $tempPath,
+        'local',
+        ExcelFormat::XLSX
+      );
 
       return Storage::disk('local')->path($tempPath);
     }
