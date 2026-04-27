@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 
 class ExportService
 {
-  protected int $maxRecords = 1100;
+  protected int $maxRecords = 500;
 
   /**
   * Generate file export, return path to temp file.
@@ -83,7 +83,7 @@ class ExportService
       // Cek batas
       if (count($data) > $this->maxRecords) {
         $count = count($data);
-        throw new \Exception("Jumlah data ({$count}) melebihi batas maksimal ({$this->maxRecords}). Silakan persempit filter.");
+        throw new \Exception("Jumlah data ({$count}) melebihi batas maksimal ({$this->maxRecords}). Silakan gunakan format Excel untuk data lebih dari {$this->maxRecords}.");
       }
 
       $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
