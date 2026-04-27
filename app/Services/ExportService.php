@@ -302,6 +302,9 @@ class ExportService
 
     protected function generateExcel(string $type, array $data, array $summary, string $storagePath): void
     {
+      if (count($data) > 1000) {
+        throw new \Exception("Jumlah data terlalu banyak ({count($data)}). Kurang jumlah pengambilan data.");
+      }
       Excel::store(
         new DataExport($type, $data, $summary),
         $storagePath,
