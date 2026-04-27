@@ -69,7 +69,7 @@
 
     /* Tanggal */
     th:nth-child(2), td:nth-child(2) {
-      width: 50px;
+      width: 40px;
     }
 
     /* Tipe */
@@ -79,17 +79,17 @@
 
     /* Kategori */
     th:nth-child(4), td:nth-child(4) {
-      width: 70px;
+      width: 40px;
     }
 
     /* Dompet */
     th:nth-child(5), td:nth-child(5) {
-      width: 60px;
+      width: 50px;
     }
 
     /* Pemasukan */
     th:nth-child(6), td:nth-child(6) {
-      width: 60px;
+      width: 50px;
     }
 
     /* Pengeluaran */
