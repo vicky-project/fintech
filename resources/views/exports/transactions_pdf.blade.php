@@ -114,9 +114,9 @@
     <thead>
       <tr>
         <th rowspan="2">Tanggal</th>
-        <th rowspan="2">Tipe</th>
+        <th rowspan="2" width="30px">Tipe</th>
         <th rowspan="2">Kategori</th>
-        <th rowspan="2">Dompet</th>
+        <th rowspan="2" width="30px">Dompet</th>
         <th colspan="2">Amount</th>
         <th rowspan="2">Deskripsi</th>
       </tr>
