@@ -1880,7 +1880,7 @@ function renderExportFilters(type) {
   <div class="mb-3">
   <label for="filter-wallet" class="form-label">Dompet <span class="text-danger">*</span></label>
   <select class="form-select" id="filter-wallet">
-  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id === defaultWalletId ? 'selected': ''}>${w.name} (${Core.getCurrencySymbol(w.currency)})</option>`).join('')}
+  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id === defaultWalletId ? 'selected': ''}>${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
   </select>
   </div>`;
 
