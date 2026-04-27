@@ -220,7 +220,7 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
 
       // Label SUBTOTAL
       $sheet->setCellValue('A'.$startRow, 'SUBTOTAL');
-      $sheet->mergeCells('A'.$startRow.':'$this->getHighestColumn().$startRow);
+      $sheet->mergeCells('A'.$startRow.':'.$this->getHighestColumn().$startRow);
       $sheet->getStyle('A'.$startRow)->applyFromArray($sty);
 
       $d = $startRow + 1;
