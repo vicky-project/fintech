@@ -259,7 +259,7 @@
 @endsection
 
 @push('scripts')
-<script src="//cdn.jsdelivr.net/npm/eruda"></script>
+<!--<script src="//cdn.jsdelivr.net/npm/eruda"></script>-->
 <script>
   eruda.init(); // Ikon Eruda akan muncul
 </script>
