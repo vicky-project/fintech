@@ -2,28 +2,23 @@
 
 namespace Modules\FinTech\Exports;
 
-use Maatwebsite\Excel\Concerns\ {
-  FromArray,
-  WithHeadings,
-  WithStyles,
-  ShouldAutoSize,
-  WithEvents,
-  WithTitle
-};
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize:
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\ {
-  Border,
-  Fill,
-  Font,
-  Alignment
-};
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Font;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize, WithEvents, WithTitle
+class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents, WithTitle
 {
   protected string $type;
   protected array $data;
-  protected array $summary; // termasuk aturan format & subtotal
+  protected array $summary;
 
   public function __construct(string $type, array $data, array $summary) {
     $this->type = $type;
@@ -31,15 +26,38 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
     $this->summary = $summary;
   }
 
-  public function array(): array
-  {
-    return $this->data;
-  }
-
   public function headings(): array
   {
     if (empty($this->data)) return [];
-    return array_keys($this->data[0]);
+
+    if ($this->type === 'transactions') {
+      // Header dua tingkat
+      return [
+        [
+          '',
+          '',
+          '',
+          '',
+          'Amount',
+          '',
+          ''
+        ],
+        // baris1
+        [
+          'Tanggal',
+          'Tipe',
+          'Kategori',
+          'Dompet',
+          'Pemasukan',
+          'Pengeluaran',
+          'Deskripsi'
+        ],
+        // baris2
+      ];
+    }
+
+    // Untuk transfer/budgets, heading biasa
+    return [array_keys($this->data[0])];
   }
 
   public function title(): string
@@ -53,32 +71,7 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
     }
 
     public function styles(Worksheet $sheet) {
-      // Tentukan range header
-      $highestColumn = $sheet->getHighestColumn();
-      $headerRange = 'A1:' . $highestColumn . '1';
-
-      // Style header: bold, putih, latar biru, border
-      $sheet->getStyle($headerRange)->applyFromArray([
-        'font' => [
-          'bold' => true,
-          'color' => ['rgb' => 'FFFFFF'],
-          'size' => 11,
-        ],
-        'fill' => [
-          'fillType' => Fill::FILL_SOLID,
-          'startColor' => ['rgb' => '4F81BD'],
-        ],
-        'borders' => [
-          'allBorders' => [
-            'borderStyle' => Border::BORDER_THIN,
-            'color' => ['rgb' => '000000'],
-          ],
-        ],
-        'alignment' => [
-          'horizontal' => Alignment::HORIZONTAL_CENTER,
-          'vertical' => Alignment::VERTICAL_CENTER,
-        ],
-      ]);
+      // Style untuk header akan kita tangani manual di AfterSheet
     }
 
     public function registerEvents(): array
@@ -86,9 +79,9 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
       return [
         AfterSheet::class => function (AfterSheet $event) {
           $sheet = $event->sheet->getDelegate();
-          $meta = $this->summary['metadata'] ?? [];
-          $metaCount = count($meta);
-          $highestColumn = $sheet->getHighestColumn();
+          $metadata = $this->summary['metadata'] ?? [];
+          $metaCount = count($metadata);
+          $highestColumn = $this->type === 'transactions' ? 'G' : $sheet->getHighestColumn();
 
           // ===== 1. Tulis metadata =====
           if ($metaCount > 0) {
@@ -100,7 +93,7 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
 
             for ($i = 0; $i < $metaCount; $i++) {
               $row = $i + 2;
-              $sheet->setCellValue('A' . $row, $meta[$i]);
+              $sheet->setCellValue('A' . $row, $metadata[$i]);
               $sheet->mergeCells('A' . $row . ':' . $highestColumn . $row);
               $sheet->getStyle('A' . $row)->applyFromArray([
                 'font' => ['size' => 10, 'italic' => true],
@@ -110,43 +103,94 @@ class DataExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize,
 
           // ===== 2. Tentukan posisi header tabel =====
           $tableHeaderRow = $metaCount + 2; // setelah metadata + 1 baris kosong
-          $dataStartRow = $tableHeaderRow + 1;
 
-          // Tulis header tabel (headings) – harus dipindahkan ke baris yang tepat
-          $headings = $this->headings();
-          $colIndex = 'A';
-          foreach ($headings as $heading) {
-            $sheet->setCellValue($colIndex . $tableHeaderRow, $heading);
-            $colIndex++;
+          if ($this->type === 'transactions') {
+            // Header tingkat 1: "Amount" di merge
+            $sheet->mergeCells('E' . $tableHeaderRow . ':F' . $tableHeaderRow);
+            $sheet->setCellValue('A' . $tableHeaderRow, '');
+            $sheet->setCellValue('B' . $tableHeaderRow, '');
+            $sheet->setCellValue('C' . $tableHeaderRow, '');
+            $sheet->setCellValue('D' . $tableHeaderRow, '');
+            $sheet->setCellValue('E' . $tableHeaderRow, 'Amount');
+            $sheet->setCellValue('G' . $tableHeaderRow, '');
+
+            $sheet->getStyle('A' . $tableHeaderRow . ':G' . $tableHeaderRow)->applyFromArray([
+              'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+              'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
+              'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+
+            $headerRow2 = $tableHeaderRow + 1;
+            $subHeaders = ['Tanggal',
+              'Tipe',
+              'Kategori',
+              'Dompet',
+              'Pemasukan',
+              'Pengeluaran',
+              'Deskripsi'];
+            $col = 'A';
+            foreach ($subHeaders as $text) {
+              $sheet->setCellValue($col . $headerRow2, $text);
+              $col++;
+            }
+            $sheet->getStyle('A' . $headerRow2 . ':G' . $headerRow2)->applyFromArray([
+              'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+              'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
+              'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+
+            // Batas border header
+            $sheet->getStyle('A' . $tableHeaderRow . ':G' . $headerRow2)->applyFromArray([
+              'borders' => [
+                'outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']],
+              ],
+            ]);
+
+            $dataStartRow = $headerRow2 + 1;
+          } else {
+            // Heading biasa 1 baris
+            $headings = array_keys($this->data[0]);
+            $col = 'A';
+            foreach ($headings as $text) {
+              $sheet->setCellValue($col . $tableHeaderRow, $text);
+              $col++;
+            }
+            $sheet->getStyle('A' . $tableHeaderRow . ':' . $highestColumn . $tableHeaderRow)->applyFromArray([
+              'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+              'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
+              'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+              'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
+            ]);
+            $dataStartRow = $tableHeaderRow + 1;
           }
 
-          // Style header tabel
-          $headerRange = 'A' . $tableHeaderRow . ':' . $highestColumn . $tableHeaderRow;
-          $sheet->getStyle($headerRange)->applyFromArray([
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-          ]);
+          // ===== 3. Tulis data =====
+          $row = $dataStartRow;
+          foreach ($this->data as $dataRow) {
+            $col = 'A';
+            foreach ($dataRow as $value) {
+              $sheet->setCellValue($col . $row, $value);
+              $col++;
+            }
+            $sheet->getStyle('A' . $row . ':' . $highestColumn . $row)->applyFromArray([
+              'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
+            ]);
+            $row++;
+          }
+          $lastDataRow = $row - 1;
 
-          // ===== 3. Border data =====
-          $lastDataRow = $dataStartRow + count($this->data) - 1;
-          $dataRange = 'A' . $dataStartRow . ':' . $highestColumn . $lastDataRow;
-          $sheet->getStyle($dataRange)->applyFromArray([
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
-          ]);
-
-          // ===== 4. Pewarnaan Jumlah (transactions) =====
+          // ===== 4. Pewarnaan =====
           if ($this->type === 'transactions') {
-            $colTipe = 'B';
-            $colJumlah = 'E';
-            for ($row = $dataStartRow; $row <= $lastDataRow; $row++) {
-              $tipe = $sheet->getCell($colTipe . $row)->getValue();
-              $jumlahCell = $sheet->getCell($colJumlah . $row);
-              if ($tipe === 'Pemasukan') {
-                $jumlahCell->getStyle()->getFont()->getColor()->setRGB('28A745');
-              } elseif ($tipe === 'Pengeluaran') {
-                $jumlahCell->getStyle()->getFont()->getColor()->setRGB('DC3545');
+            $colPemasukan = 'E';
+            $colPengeluaran = 'F';
+            for ($r = $dataStartRow; $r <= $lastDataRow; $r++) {
+              $pemasukan = $sheet->getCell($colPemasukan . $r)->getValue();
+              $pengeluaran = $sheet->getCell($colPengeluaran . $r)->getValue();
+              if ($pemasukan !== '-') {
+                $sheet->getStyle($colPemasukan . $r)->getFont()->getColor()->setRGB('28A745');
+              }
+              if ($pengeluaran !== '-') {
+                $sheet->getStyle($colPengeluaran . $r)->getFont()->getColor()->setRGB('DC3545');
               }
             }
           }

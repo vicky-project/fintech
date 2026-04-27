@@ -7,6 +7,13 @@
     body {
       font-family: DejaVu Sans, sans-serif;
     }
+    .header-info {
+      margin-bottom: 15px;
+    }
+    .header-info p {
+      margin: 0;
+      font-size: 11px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -15,27 +22,31 @@
     th, td {
       border: 1px solid #ddd;
       padding: 6px 8px;
-      font-size: 12px;
+      font-size: 11px;
     }
     th {
-      background-color: #f2f2f2;
-      text-align: left;
+      background-color: #4F81BD;
+      color: #ffffff;
+      font-weight: bold;
+      text-align: center;
     }
-    h3 {
-      margin-bottom: 5px;
+    td {
+      text-align: left;
     }
     .text-right {
       text-align: right;
     }
-    .text-center {
-      text-align: center;
+    .subtotal {
+      margin-top: 15px;
+      text-align: right;
+      font-size: 12px;
     }
     .status-overspent {
-      color: #dc3545;
+      color: #DC3545;
       font-weight: bold;
     }
     .status-near-limit {
-      color: #ffc107;
+      color: #FFC107;
     }
     .status-on-track {
       color: #198754;
@@ -44,26 +55,26 @@
 </head>
 <body>
   <h3>{{ $title }}</h3>
-  <!-- di bawah <h3> -->
-  <div style="margin-bottom: 10px; font-size: 12px;">
-    @isset($summary['metadata'])
+
+  @if(isset($summary['metadata']))
+  <div class="header-info">
     @foreach($summary['metadata'] as $info)
-    <p style="margin: 0;">
+    <p>
       {{ $info }}
     </p>
     @endforeach
-    @endisset
   </div>
-  <!-- kemudian tabel seperti biasa -->
+  @endif
+
   <table>
     <thead>
       <tr>
         <th>Kategori</th>
         <th>Dompet</th>
         <th>Periode</th>
-        <th class="text-right">Limit</th>
-        <th class="text-right">Pengeluaran</th>
-        <th class="text-center">Persentase</th>
+        <th>Limit</th>
+        <th>Pengeluaran</th>
+        <th>Persentase</th>
         <th>Status</th>
       </tr>
     </thead>
@@ -92,11 +103,21 @@
       @endif
     </tbody>
   </table>
+
   @if(isset($summary))
-  <div style="margin-top: 15px; text-align: right; font-size: 12px;">
-    <strong>Total Limit: {{ 'Rp ' . number_format($summary['total_limit'], 0, ',', '.') }}</strong><br>
-    <strong>Total Pengeluaran: {{ 'Rp ' . number_format($summary['total_spent'], 0, ',', '.') }}</strong><br>
-    <strong>Sisa: {{ 'Rp ' . number_format($summary['remaining'], 0, ',', '.') }}</strong>
+  <div class="subtotal">
+    @php
+    $symbol = $summary['symbol'] ?? 'Rp';
+    $precision = $summary['precision'] ?? 0;
+    $decimalMark = $summary['decimal_mark'] ?? ',';
+    $thousandsSep = $summary['thousands_separator'] ?? '.';
+    $format = function($val) use ($symbol, $precision, $decimalMark, $thousandsSep) {
+    return $symbol . ' ' . number_format($val, $precision, $decimalMark, $thousandsSep);
+    };
+    @endphp
+    <strong>Total Limit: {{ $format($summary['total_limit']) }}</strong>
+    <strong>Total Pengeluaran: {{ $format($summary['total_spent']) }}</strong>
+    <strong>Sisa: {{ $format($summary['remaining']) }}</strong>
   </div>
   @endif
 </body>

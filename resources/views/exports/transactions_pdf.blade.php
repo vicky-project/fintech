@@ -7,6 +7,13 @@
     body {
       font-family: DejaVu Sans, sans-serif;
     }
+    .header-info {
+      margin-bottom: 15px;
+    }
+    .header-info p {
+      margin: 0;
+      font-size: 11px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -15,46 +22,56 @@
     th, td {
       border: 1px solid #ddd;
       padding: 6px 8px;
-      font-size: 12px;
+      font-size: 11px;
     }
     th {
-      background-color: #f2f2f2;
+      background-color: #4F81BD;
+      color: #ffffff;
+      font-weight: bold;
+      text-align: center;
+    }
+    td {
       text-align: left;
     }
-    h3 {
-      margin-bottom: 5px;
+    .text-right {
+      text-align: right;
     }
-
-    /* Warna untuk jumlah */
+    .text-center {
+      text-align: center;
+    }
     .text-income {
       color: #28A745;
-      /* hijau */
       font-weight: bold;
     }
     .text-expense {
       color: #DC3545;
-      /* merah */
       font-weight: bold;
     }
-    .text-neutral {
-      color: #000000;
-      /* hitam biasa, untuk transfer */
+    .subtotal {
+      margin-top: 15px;
+      text-align: right;
+      font-size: 12px;
+    }
+    .subtotal strong {
+      display: block;
     }
   </style>
 </head>
 <body>
   <h3>{{ $title }}</h3>
-  <!-- di bawah <h3> -->
-  <div style="margin-bottom: 10px; font-size: 12px;">
-    @isset($summary['metadata'])
+
+  <!-- Metadata -->
+  @if(isset($summary['metadata']))
+  <div class="header-info">
     @foreach($summary['metadata'] as $info)
-    <p style="margin: 0;">
+    <p>
       {{ $info }}
     </p>
     @endforeach
-    @endisset
   </div>
-  <!-- kemudian tabel seperti biasa -->
+  @endif
+
+  <!-- Tabel Transaksi -->
   <table>
     <thead>
       <tr>
@@ -62,30 +79,32 @@
         <th>Tipe</th>
         <th>Kategori</th>
         <th>Dompet</th>
-        <th>Jumlah</th>
+        <th colspan="2" style="text-align: center;">Amount</th>
         <th>Deskripsi</th>
+      </tr>
+      <tr>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th>Pemasukan</th>
+        <th>Pengeluaran</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       @if(empty($data))
-      <tr><td colspan="6" style="text-align:center;">Tidak ada data</td></tr>
+      <tr><td colspan="7" style="text-align:center;">Tidak ada data</td></tr>
       @else
       @foreach($data as $row)
-      @php
-      $type = $row['Tipe'] ?? '';
-      $amountClass = match($type) {
-      'Pemasukan' => 'text-income',
-      'Pengeluaran' => 'text-expense',
-      default => 'text-neutral'
-      };
-      @endphp
       <tr>
         <td>{{ $row['Tanggal'] ?? '' }}</td>
-        <td>{{ $type }}</td>
+        <td>{{ $row['Tipe'] ?? '' }}</td>
         <td>{{ $row['Kategori'] ?? '' }}</td>
         <td>{{ $row['Dompet'] ?? '' }}</td>
-        <td class="{{ $amountClass }}">{{ $row['Jumlah'] ?? '' }}</td>
-        <td>{{ $row['Deskripsi'] ?? '' }}</td>
+        <td class="text-right text-income">{{ $row['Pemasukan'] ?? '-' }}</td>
+        <td class="text-right text-expense">{{ $row['Pengeluaran'] ?? '-' }}</td>
+        <td>{{ $row['Deskripsi'] ?? '-' }}</td>
       </tr>
       @endforeach
       @endif
@@ -94,10 +113,19 @@
 
   <!-- Subtotal -->
   @if(isset($summary))
-  <div style="margin-top: 15px; text-align: right; font-size: 12px;">
-    <strong>Pemasukan: <span class="text-income">{{ $summary['symbol'].' ' . number_format($summary['total_income'], 0, ',', '.') }}</span></strong><br>
-    <strong>Pengeluaran: <span class="text-expense">{{ $summary['symbol'] .' ' . number_format($summary['total_expense'], 0, ',', '.') }}</span></strong><br>
-    <strong>Net: {{ $summary['symbol'].' ' . number_format($summary['net'], 0, ',', '.') }}</strong>
+  <div class="subtotal">
+    @php
+    $symbol = $summary['symbol'] ?? 'Rp';
+    $precision = $summary['precision'] ?? 0;
+    $decimalMark = $summary['decimal_mark'] ?? ',';
+    $thousandsSep = $summary['thousands_separator'] ?? '.';
+    $format = function($val) use ($symbol, $precision, $decimalMark, $thousandsSep) {
+    return $symbol . ' ' . number_format($val, $precision, $decimalMark, $thousandsSep);
+    };
+    @endphp
+    <strong>Pemasukan: {{ $format($summary['total_income']) }}</strong>
+    <strong>Pengeluaran: {{ $format($summary['total_expense']) }}</strong>
+    <strong>Net: {{ $format($summary['net']) }}</strong>
   </div>
   @endif
 </body>

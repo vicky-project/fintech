@@ -7,6 +7,13 @@
     body {
       font-family: DejaVu Sans, sans-serif;
     }
+    .header-info {
+      margin-bottom: 15px;
+    }
+    .header-info p {
+      margin: 0;
+      font-size: 11px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -15,30 +22,40 @@
     th, td {
       border: 1px solid #ddd;
       padding: 6px 8px;
-      font-size: 12px;
+      font-size: 11px;
     }
     th {
-      background-color: #f2f2f2;
+      background-color: #4F81BD;
+      color: #ffffff;
+      font-weight: bold;
+      text-align: center;
+    }
+    td {
       text-align: left;
     }
-    h3 {
-      margin-bottom: 5px;
+    .text-right {
+      text-align: right;
+    }
+    .subtotal {
+      margin-top: 15px;
+      text-align: right;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
   <h3>{{ $title }}</h3>
-  <!-- di bawah <h3> -->
-  <div style="margin-bottom: 10px; font-size: 12px;">
-    @isset($summary['metadata'])
+
+  @if(isset($summary['metadata']))
+  <div class="header-info">
     @foreach($summary['metadata'] as $info)
-    <p style="margin: 0;">
+    <p>
       {{ $info }}
     </p>
     @endforeach
-    @endisset
   </div>
-  <!-- kemudian tabel seperti biasa -->
+  @endif
+
   <table>
     <thead>
       <tr>
@@ -58,16 +75,24 @@
         <td>{{ $row['Tanggal'] ?? '' }}</td>
         <td>{{ $row['Dari'] ?? '' }}</td>
         <td>{{ $row['Ke'] ?? '' }}</td>
-        <td>{{ $row['Jumlah'] ?? '' }}</td>
-        <td>{{ $row['Deskripsi'] ?? '' }}</td>
+        <td class="text-right">{{ $row['Jumlah'] ?? '' }}</td>
+        <td>{{ $row['Deskripsi'] ?? '-' }}</td>
       </tr>
       @endforeach
       @endif
     </tbody>
   </table>
+
   @if(isset($summary))
-  <div style="margin-top: 15px; text-align: right; font-size: 12px;">
-    <strong>Total Transfer: {{ 'Rp ' . number_format($summary['total'], 0, ',', '.') }}</strong>
+  <div class="subtotal">
+    @php
+    $symbol = $summary['symbol'] ?? 'Rp';
+    $precision = $summary['precision'] ?? 0;
+    $decimalMark = $summary['decimal_mark'] ?? ',';
+    $thousandsSep = $summary['thousands_separator'] ?? '.';
+    $total = $summary['total'] ?? 0;
+    @endphp
+    <strong>Total Transfer: {{ $symbol }} {{ number_format($total, $precision, $decimalMark, $thousandsSep) }}</strong>
   </div>
   @endif
 </body>

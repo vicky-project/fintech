@@ -6,6 +6,7 @@ use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Transfer;
 use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Exports\DataExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
@@ -79,10 +80,14 @@ class ExportService
 
     $data = $transactions->map(function ($trx) use (&$totalIncome, &$totalExpense) {
       $amount = $trx->getAmountFloat();
-      if ($trx->type === \Modules\FinTech\Enums\TransactionType::INCOME) {
+      if ($trx->type === TransactionType::INCOME) {
         $totalIncome += $amount;
+        $income = $trx->getFormattedAmount();
+        $expense = '-';
       } else {
         $totalExpense += $amount;
+        $income = '-';
+        $expense = $trx->getFormattedAmount();
       }
 
       return [
@@ -90,8 +95,8 @@ class ExportService
         'Tipe' => $trx->type->label(),
         'Kategori' => $trx->category->name,
         'Dompet' => $trx->wallet->name,
-        'Jumlah' => $trx->getFormattedAmount(),
-        // pakai trait
+        'Pemasukan' => $income,
+        'Pengeluaran' => $expense,
         'Deskripsi' => $trx->description ?? '-',
       ];
     })->toArray();
