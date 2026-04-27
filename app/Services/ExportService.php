@@ -311,7 +311,7 @@ class ExportService
 
     protected function buildMetadata(string $type, array $filters, int $walletId): array
     {
-      $wallet = Wallet::with('currencyDetails')->findOrFai($walletId);
+      $wallet = Wallet::with('currencyDetails')->findOrFail($walletId);
       $walletName = $wallet->name;
 
       $meta = [
