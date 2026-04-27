@@ -1794,7 +1794,7 @@ function renderExportFilters(type) {
   // Wallet (selalu ada)
   html += `
   <div class="mb-3">
-  <label class="form-label">Dompet</label>
+  <label for="filter-wallet" class="form-label">Dompet</label>
   <select class="form-select" id="filter-wallet">
   <option value="">Semua Dompet</option>
   ${Core.state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
@@ -1805,20 +1805,20 @@ function renderExportFilters(type) {
     html += `
     <div class="row mb-3">
     <div class="col">
-    <label class="form-label">Dari Tanggal</label>
+    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
     <input type="date" class="form-control" id="filter-date-from">
     </div>
     <div class="col">
-    <label class="form-label">Sampai Tanggal</label>
+    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
     <input type="date" class="form-control" id="filter-date-to">
     </div>
     </div>
     <div class="mb-3">
-    <label class="form-label">Atau Bulan (abaikan tanggal)</label>
+    <label for="filter-month" class="form-label">Atau Bulan (abaikan tanggal)</label>
     <input type="month" class="form-control" id="filter-month">
     </div>
     <div class="mb-3">
-    <label class="form-label">Tipe</label>
+    <label for="filter-type" class="form-label">Tipe</label>
     <select class="form-select" id="filter-type" data-action="change-transaction-type">
     <option value="">Semua</option>
     <option value="income">Pemasukan</option>
@@ -1826,32 +1826,32 @@ function renderExportFilters(type) {
     </select>
     </div>
     <div class="mb-3">
-    <label class="form-label">Kategori</label>
+    <label for="filter-category" class="form-label">Kategori</label>
     <select class="form-select" id="filter-category" multiple size="4">
     ${Core.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
     </select>
     </div>
     <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
-    <label class="form-check-label">Sertakan Deskripsi</label>
+    <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
     </div>`;
     setTimeout(() => updateTransactionCategoryFilter(), 0);
   } else if (type === 'transfers') {
     html += `
     <div class="row mb-3">
     <div class="col">
-    <label class="form-label">Dari Tanggal</label>
+    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
     <input type="date" class="form-control" id="filter-date-from">
     </div>
     <div class="col">
-    <label class="form-label">Sampai Tanggal</label>
+    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
     <input type="date" class="form-control" id="filter-date-to">
     </div>
     </div>`;
   } else if (type === 'budgets') {
     html += `
     <div class="mb-3">
-    <label class="form-label">Tipe Periode</label>
+    <label for="filter-period-type" class="form-label">Tipe Periode</label>
     <select class="form-select" id="filter-period-type" data-action="change-budget-period">
     <option value="monthly" selected>Bulanan</option>
     <option value="yearly">Tahunan</option>
@@ -1861,7 +1861,7 @@ function renderExportFilters(type) {
     <!-- Dinamis: input month atau year -->
     </div>
     <div class="mb-3">
-    <label class="form-label">Status Budget</label>
+    <label for="filter-status" class="form-label">Status Budget</label>
     <select class="form-select" id="filter-status">
     <option value="">Semua</option>
     <option value="overspent">Terlampaui (≥100%)</option>
@@ -1870,7 +1870,7 @@ function renderExportFilters(type) {
     </select>
     </div>
     <div class="mb-3">
-    <label class="form-label">Kategori</label>
+    <label for="filter-category" class="form-label">Kategori</label>
     <select class="form-select" id="filter-category" multiple size="4">
     ${Core.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
     </select>
@@ -1891,12 +1891,12 @@ function renderBudgetPeriodInput() {
   if (periodType === 'monthly') {
     const currentMonth = new Date().toISOString().slice(0, 7);
     container.innerHTML = `
-    <label class="form-label">Bulan</label>
+    <label for="filter-month" class="form-label">Bulan</label>
     <input type="month" class="form-control" id="filter-month" value="${currentMonth}">`;
   } else {
     const currentYear = new Date().getFullYear();
     container.innerHTML = `
-    <label class="form-label">Tahun</label>
+    <label for="filter-year" class="form-label">Tahun</label>
     <input type="number" class="form-control" id="filter-year" value="${currentYear}" min="2000" max="${currentYear}">`;
   }
 }
