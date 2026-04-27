@@ -1834,7 +1834,7 @@ function renderExportFilters(type) {
     <input class="form-check-input" type="checkbox" id="include-description" checked>
     <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
     </div>`;
-    setTimeout(() => updateTransactionCategoryFilter(), 0);
+    setTimeout(() => updateTransactionCategoryFilter(), 10);
   } else if (type === 'transfers') {
     html += `
     <div class="row mb-3">
@@ -1890,25 +1890,27 @@ function toggleCategoryBadge(categoryId) {
   if (option) {
     option.selected = !option.selected;
     // Render ulang badge agar tampilan berubah
-    renderCategoryBadges(); // akan membaca ulang selected dari hiddenSelect
+    renderCategoryBadges(Core.state.currentFilteredCategories);
   }
 }
 
-function renderCategoryBadges(filteredCategories = Core.state.categories) {
+function renderCategoryBadges(categories = null) {
+  // Gunakan currentFilteredCategories jika tidak ada parameter
+  const catList = categories || Core.state.currentFilteredCategories;
   const badgesContainer = document.getElementById('category-badges');
   const hiddenSelect = document.getElementById('filter-category-hidden');
   if (!badgesContainer || !hiddenSelect) return;
 
-  // Ambil nilai yang sudah dipilih dari hidden select
+  // Ambil opsi yang sudah dipilih sebelumnya dari hidden select
   const selectedValues = [...hiddenSelect.options]
   .filter(opt => opt.selected)
   .map(opt => opt.value);
 
-  // Kosongkan hidden select
+  // Kosongkan hidden select dan badge
   hiddenSelect.innerHTML = '';
-
   let html = '';
-  filteredCategories.forEach(cat => {
+
+  catList.forEach(cat => {
     const isSelected = selectedValues.includes(cat.id.toString());
     const bgColor = cat.color || '#6c757d';
     const opacityStyle = isSelected ? '1': '0.45';
@@ -1957,14 +1959,16 @@ function updateTransactionCategoryFilter() {
 
   const selectedType = typeSelect.value; // '' (semua), 'income', 'expense'
 
-  let filteredCategories = Core.state.categories;
+  // Simpan ke variabel global agar digunakan ulang saat render badge
   if (selectedType === 'income') {
-    filteredCategories = Core.state.categories.filter(c => c.type === 'income' || c.type === 'both');
+    Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'income' || c.type === 'both');
   } else if (selectedType === 'expense') {
-    filteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
+    Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
+  } else {
+    Core.state.currentFilteredCategories = [...Core.state.categories];
   }
 
-  renderCategoryBadges(filteredCategories);
+  renderCategoryBadges(Core.state.currentFilteredCategories);
 }
 
 async function performExport() {
@@ -1984,9 +1988,8 @@ async function performExport() {
     const dateTo = document.getElementById('filter-date-to').value;
     const month = document.getElementById('filter-month').value;
     const transactionType = document.getElementById('filter-type').value;
-    // Untuk transactions, ambil kategori dari hidden select
-    const categorySelect = document.getElementById('filter-category-hidden');
-    const selectedCategories = [...categorySelect.selectedOptions].map(o => o.value);
+    const hiddenSelect = document.getElementById('filter-category-hidden');
+    const selectedCategories = [...hiddenSelect.selectedOptions].map(o => o.value);
     if (selectedCategories.length) payload.category_ids = selectedCategories;
     const includeDesc = document.getElementById('include-description').checked;
 

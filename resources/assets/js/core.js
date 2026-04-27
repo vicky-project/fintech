@@ -43,7 +43,8 @@ const Core = (() => {
     searchResults: [],
     searchKeyword: '',
     currentFilter: 'all',
-    pendingAction: null
+    pendingAction: null,
+    currentFilteredCategories: [],
   };
 
   // ========== PRIVATE HELPERS ==========

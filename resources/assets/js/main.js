@@ -57,9 +57,9 @@ function handleGlobalClick(e) {
     'restore-transfer': () => window.restoreTransfer(id),
     'force-delete-transfer': () => window.forceDeleteTransfer(id),
     'export-data': performExport,
-    'toggle-category-badge': (e) => {
+    'toggle-category-badge': (target) => {
       const id = target.dataset.categoryId;
-      toggleCategoryBadge(id);
+      if (id) toggleCategoryBadge(id);
     },
     // tambahkan aksi lain sesuai kebutuhan
   };
