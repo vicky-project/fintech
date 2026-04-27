@@ -45,8 +45,39 @@ class Budget extends Model
   // Format amount untuk tampilan
   public function getFormattedAmount(): string
   {
-    if (!$this->amount) return 'Rp 0';
-    return $this->amount->formatTo('id_ID');
+    // Default fallback
+    $defaultPrecision = 0;
+    $defaultDecimalMark = ',';
+    $defaultThousandsSep = '.';
+    $defaultSymbol = 'Rp';
+    $defaultSymbolFirst = true;
+
+    $amountFloat = $this->getAmountFloat();
+
+    // Ambil detail mata uang dari dompet
+    if ($this->wallet && $this->wallet->currencyDetails) {
+      $currency = $this->wallet->currencyDetails;
+      $precision = $currency->precision ?? $defaultPrecision;
+      $decimalMark = $currency->decimal_mark ?? $defaultDecimalMark;
+      $thousandsSep = $currency->thousands_separator ?? $defaultThousandsSep;
+      $symbol = $currency->symbol ?? $defaultSymbol;
+      $symbolFirst = $currency->symbol_first ?? $defaultSymbolFirst;
+    } else {
+      // Fallback ke data default
+      $precision = $defaultPrecision;
+      $decimalMark = $defaultDecimalMark;
+      $thousandsSep = $defaultThousandsSep;
+      $symbol = $defaultSymbol;
+      $symbolFirst = $defaultSymbolFirst;
+    }
+
+    // Format angka
+    $formattedNumber = number_format($amountFloat, $precision, $decimalMark, $thousandsSep);
+
+    // Susun simbol dan angka
+    return $symbolFirst
+    ? $symbol . ' ' . $formattedNumber
+    : $formattedNumber . ' ' . $symbol;
   }
 
   /**
