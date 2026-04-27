@@ -68,13 +68,13 @@
       width: 14%;
     }
     th:nth-child(4), td:nth-child(4) {
-      width: 14%;
+      width: 10%;
     }
     th:nth-child(5), td:nth-child(5) {
-      width: 13%;
+      width: 10%;
     }
     th:nth-child(6), td:nth-child(6) {
-      width: 13%;
+      width: 10%;
     }
     th:nth-child(7), td:nth-child(7) {
       width: 24%;
