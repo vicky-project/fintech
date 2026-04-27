@@ -41,9 +41,9 @@ class ExportService
       $budgetsData = $this->getBudgetsData($filters);
       $this->maxRecords = $originalMax;
 
-      $metaTransactions = $this->buildMetadata('transactions', $filtersCommon, $walletName);
-      $metaTransfers = $this->buildMetadata('transfers', $filtersCommon, $walletName);
-      $metaBudgets = $this->buildMetadata('budgets', $filtersCommon, $walletName);
+      $metaTransactions = $this->buildMetadata('transactions', $filters, $walletName);
+      $metaTransfers = $this->buildMetadata('transfers', $filters, $walletName);
+      $metaBudgets = $this->buildMetadata('budgets', $filters, $walletName);
 
       // Gabungkan aturan format ke setiap summary
       $transactionsData[1] = array_merge($transactionsData[1], $formatRules, ['metadata' => $metaTransactions]);
