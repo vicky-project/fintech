@@ -2,7 +2,7 @@
 
 namespace Modules\FinTech\Exports;
 
-use Maatwebsite\Excel\Concerns\ WithHeadings;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
