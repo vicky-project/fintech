@@ -18,6 +18,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Modules\FinTech\Services\Google\GoogleSheetsService;
 
 class ExportService
 {
