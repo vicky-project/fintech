@@ -401,11 +401,9 @@ class ExportService
 
     protected function addChartToExcel(string $storagePath, array $data, array $summary): void
     {
-      $fullPath = Storage::disk('local')->path($storagePath);
-
       // Buka file Excel yang sudah disimpan
       $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
-      $spreadsheet = $reader->load($fullPath);
+      $spreadsheet = $reader->load($storagePath);
 
       // Ambil sheet pertama
       $sheet = $spreadsheet->getActiveSheet();
@@ -484,7 +482,7 @@ class ExportService
         // Simpan ulang file
         $writer = new Xlsx($spreadsheet);
         $writer->setIncludeCharts(true); // penting!
-        $writer->save($fullPath);
+        $writer->save($storagePath);
       }
     }
   }
