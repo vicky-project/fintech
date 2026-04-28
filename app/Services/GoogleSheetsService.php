@@ -44,22 +44,26 @@ class GoogleSheetsService
   */
   public function createSpreadsheetForUser($user): string
   {
-    $credentials = config("google.service_account_credential_json");
-    \Log::debug('Membaca credentials dari: ' . $credentials);
-    \Log::debug("File exists: ".file_exists($credentials) ? 'YES' : 'NO');
     $title = "FinTech - " . ($user->name ?? "User {$user->id}");
 
     try {
-      $newSpreadsheet = Sheets::create($title);
-      $spreadsheetId = $newSpreadsheet->spreadsheetId;
+      $client = Sheets::getService(); // Google\Client
+      $service = new \Google_Service_Sheets($client);
 
-      // Rename sheet default menjadi Transaksi
-      $sheets = $newSpreadsheet->getSheets();
-      if (count($sheets) > 0) {
-        $defaultTitle = $sheets[0]->getProperties()->getTitle();
-        Sheets::spreadsheet($spreadsheetId)
-        ->sheet($defaultTitle)
-        ->rename(self::SHEET_TRANSACTIONS);
+      $spreadsheet = new \Google_Service_Sheets_Spreadsheet([
+        'properties' => [
+          'title' => $title,
+        ],
+      ]);
+
+      $spreadsheet = $service->spreadsheets->create($spreadsheet);
+      $spreadsheetId = $spreadsheet->spreadsheetId;
+
+      // Ubah nama sheet default menjadi "Transaksi"
+      $defaultSheet = $spreadsheet->getSheets()[0] ?? null;
+      if ($defaultSheet) {
+        $sheetId = $defaultSheet->getProperties()->getSheetId();
+        $this->renameSheet($spreadsheetId, $sheetId, self::SHEET_TRANSACTIONS);
       }
 
       // Buat sheet Transfer dan Budget
@@ -67,7 +71,7 @@ class GoogleSheetsService
       $this->addSheetIfNotExists($spreadsheetId, self::SHEET_BUDGETS);
 
       Log::info("Spreadsheet dibuat untuk user {$user->id}", [
-        'spreadsheet_id' => $spreadsheetId
+        'spreadsheet_id' => $spreadsheetId,
       ]);
 
       return $spreadsheetId;
@@ -75,6 +79,33 @@ class GoogleSheetsService
       Log::error("Gagal membuat spreadsheet: " . $e->getMessage());
       throw $e;
     }
+  }
+
+  /**
+  * Rename sheet berdasarkan sheet ID.
+  */
+  protected function renameSheet(string $spreadsheetId, int $sheetId, string $newName): void
+  {
+    $client = Sheets::getService();
+    $service = new \Google_Service_Sheets($client);
+
+    $requests = [
+      new \Google_Service_Sheets_Request([
+        'updateSheetProperties' => [
+          'properties' => [
+            'sheetId' => $sheetId,
+            'title' => $newName,
+          ],
+          'fields' => 'title',
+        ],
+      ]),
+    ];
+
+    $batchUpdate = new \Google_Service_Sheets_BatchUpdateSpreadsheetRequest([
+      'requests' => $requests,
+    ]);
+
+    $service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
   /**
