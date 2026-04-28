@@ -13,12 +13,6 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Chart\Chart;
-use PhpOffice\PhpSpreadsheet\Chart\DataSeries;
-use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
-use PhpOffice\PhpSpreadsheet\Chart\Legend;
-use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
-use PhpOffice\PhpSpreadsheet\Chart\Title;
 
 class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents, WithTitle
 {
@@ -128,100 +122,6 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
             'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
-
-          // ========== CHART (hanya transaksi) ==========
-          if ($this->type === 'transactions' && count($this->data) > 0) {
-            try {
-              $headerRows = $this->headerRowCount(); // 2
-              $tableStart = $metaCount + 3; // baris header pertama
-              $dataStartRow = $tableStart + $headerRows; // baris pertama data
-              $dataEndRow = $dataStartRow + count($this->data) - 1;
-
-              // Pastikan minimal ada 1 baris data
-              if ($dataEndRow < $dataStartRow) {
-                \Log::warning('Chart tidak dibuat: data kosong');
-                return;
-              }
-
-              $categoriesRange = 'A' . $dataStartRow . ':A' . $dataEndRow;
-              $incomeRange = 'E' . $dataStartRow . ':E' . $dataEndRow;
-              $expenseRange = 'F' . $dataStartRow . ':F' . $dataEndRow;
-
-              \Log::info('Membuat chart', [
-                'type' => $this->type,
-                'data_rows' => count($this->data),
-                'categories' => $categoriesRange,
-                'income' => $incomeRange,
-                'expense' => $expenseRange,
-              ]);
-
-              // Label series (header kolom)
-              $labelIncome = new DataSeriesValues(
-                DataSeriesValues::DATASERIES_TYPE_STRING,
-                "'Worksheet'!\$E\$1", // ← format absolut dengan petik
-                null, 1
-              );
-              $labelExpense = new DataSeriesValues(
-                DataSeriesValues::DATASERIES_TYPE_STRING,
-                "'Worksheet'!\$F\$1",
-                null, 1
-              );
-
-              // Kategori (X axis)
-              $categories = new DataSeriesValues(
-                DataSeriesValues::DATASERIES_TYPE_STRING,
-                "'Worksheet'!" . $categoriesRange,
-                null, count($this->data)
-              );
-
-              // Nilai (Y axis)
-              $valuesIncome = new DataSeriesValues(
-                DataSeriesValues::DATASERIES_TYPE_NUMBER,
-                "'Worksheet'!" . $incomeRange,
-                null, count($this->data)
-              );
-              $valuesExpense = new DataSeriesValues(
-                DataSeriesValues::DATASERIES_TYPE_NUMBER,
-                "'Worksheet'!" . $expenseRange,
-                null, count($this->data)
-              );
-
-              // Buat series
-              $series = new DataSeries(
-                DataSeries::TYPE_BARCHART,
-                DataSeries::GROUPING_CLUSTERED,
-                [0, 1],
-                [$labelIncome, $labelExpense],
-                [$categories],
-                [$valuesIncome, $valuesExpense]
-              );
-
-              $plotArea = new PlotArea(null, [$series]);
-              $chart = new Chart(
-                'chart_pemasukan_pengeluaran',
-                new Title('Pemasukan vs Pengeluaran'),
-                new Legend(Legend::POSITION_TOP),
-                $plotArea
-              );
-
-              // Letakkan chart di bawah footer
-              $chartTopLeft = 'A' . ($footerRow + 2);
-              $chartBottomRight = 'G' . ($footerRow + 18);
-              $chart->setTopLeftPosition($chartTopLeft);
-              $chart->setBottomRightPosition($chartBottomRight);
-
-              // Tambahkan chart ke worksheet
-              $sheet->addChart($chart);
-
-              \Log::info('Chart berhasil ditambahkan', [
-                'position' => $chartTopLeft . ':' . $chartBottomRight
-              ]);
-            } catch (\Exception $e) {
-              \Log::error('Gagal membuat chart: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-              ]);
-            }
-          }
         },
       ];
     }

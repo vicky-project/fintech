@@ -17,6 +17,14 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Chart\Chart;
+use PhpOffice\PhpSpreadsheet\Chart\DataSeries;
+use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
+use PhpOffice\PhpSpreadsheet\Chart\Legend;
+use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
+use PhpOffice\PhpSpreadsheet\Chart\Title;
 
 class ExportService
 {
@@ -285,7 +293,8 @@ class ExportService
 
     protected function generateExcel(string $type, array $data, array $summary): string
     {
-      return $this->storeExcel(new DataExport($type, $data, $summary), 'xlsx');
+      $storagePath = $this->storeExcel(new DataExport($type, $data, $summary), 'xlsx');
+      $this->addChartToExcel($storagePath, $data, $summary);
     }
 
     protected function generatePdf(string $type, array $data, array $summary): string
@@ -387,6 +396,95 @@ class ExportService
         throw new \Error(
           "Export PDF tidak tersedia untuk semua data. Gunakan format Excel."
         );
+      }
+    }
+
+    protected function addChartToExcel(string $storagePath, array $data, array $summary): void
+    {
+      $fullPath = Storage::disk('local')->path($storagePath);
+
+      // Buka file Excel yang sudah disimpan
+      $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+      $spreadsheet = $reader->load($fullPath);
+
+      // Ambil sheet pertama
+      $sheet = $spreadsheet->getActiveSheet();
+
+      // Hitung posisi data (sama seperti di DataExport)
+      $metaCount = count($summary['metadata'] ?? []);
+      $headerRows = 2; // karena transaksi punya 2 baris header
+      $tableStart = $metaCount + 3;
+      $dataStartRow = $tableStart + $headerRows;
+      $dataEndRow = $dataStartRow + count($data) - 1;
+
+      if ($dataEndRow >= $dataStartRow) {
+        $categoriesRange = 'A' . $dataStartRow . ':A' . $dataEndRow;
+        $incomeRange = 'E' . $dataStartRow . ':E' . $dataEndRow;
+        $expenseRange = 'F' . $dataStartRow . ':F' . $dataEndRow;
+
+        // Label series
+        $labelIncome = new DataSeriesValues(
+          DataSeriesValues::DATASERIES_TYPE_STRING,
+          'Worksheet!$E$1',
+          null, 1
+        );
+        $labelExpense = new DataSeriesValues(
+          DataSeriesValues::DATASERIES_TYPE_STRING,
+          'Worksheet!$F$1',
+          null, 1
+        );
+
+        // Kategori (X axis)
+        $categories = new DataSeriesValues(
+          DataSeriesValues::DATASERIES_TYPE_STRING,
+          'Worksheet!' . $categoriesRange,
+          null, count($data)
+        );
+
+        // Nilai
+        $valuesIncome = new DataSeriesValues(
+          DataSeriesValues::DATASERIES_TYPE_NUMBER,
+          'Worksheet!' . $incomeRange,
+          null, count($data)
+        );
+        $valuesExpense = new DataSeriesValues(
+          DataSeriesValues::DATASERIES_TYPE_NUMBER,
+          'Worksheet!' . $expenseRange,
+          null, count($data)
+        );
+
+        // Buat series
+        $series = new DataSeries(
+          DataSeries::TYPE_BARCHART,
+          DataSeries::GROUPING_CLUSTERED,
+          [0, 1],
+          [$labelIncome, $labelExpense],
+          [$categories],
+          [$valuesIncome, $valuesExpense]
+        );
+
+        $plotArea = new PlotArea(null, [$series]);
+        $chart = new Chart(
+          'chart_pemasukan_pengeluaran',
+          new Title('Pemasukan vs Pengeluaran'),
+          new Legend(Legend::POSITION_TOP),
+          $plotArea
+        );
+
+        // Posisi chart
+        $footerRow = $dataEndRow + 7; // perkiraan posisi footer (subtotal + footer)
+        $chartTopLeft = 'A' . ($footerRow + 2);
+        $chartBottomRight = 'G' . ($footerRow + 18);
+        $chart->setTopLeftPosition($chartTopLeft);
+        $chart->setBottomRightPosition($chartBottomRight);
+
+        // Tambahkan chart
+        $sheet->addChart($chart);
+
+        // Simpan ulang file
+        $writer = new Xlsx($spreadsheet);
+        $writer->setIncludeCharts(true); // penting!
+        $writer->save($fullPath);
       }
     }
   }
