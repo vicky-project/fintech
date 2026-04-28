@@ -7,11 +7,9 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 class AllDataExport implements WithMultipleSheets
 {
   private array $allData;
-  private array $formatRules;
 
-  public function __construct(array $allData, array $formatRules) {
+  public function __construct(array $allData) {
     $this->allData = $allData;
-    $this->formatRules = $formatRules;
   }
 
   public function sheets(): array

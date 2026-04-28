@@ -2,13 +2,17 @@
 
 namespace Modules\FinTech\Services;
 
-use Modules\FinTech\Models\Transaction;
-use Modules\FinTech\Models\Transfer;
-use Modules\FinTech\Models\Budget;
-use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Models\ {
+  Transaction,
+  Transfer,
+  Budget,
+  Wallet
+};
 use Modules\FinTech\Enums\TransactionType;
-use Modules\FinTech\Exports\DataExport;
-use Modules\FinTech\Exports\AllDataExport;
+use Modules\FinTech\Exports\ {
+  DataExport,
+  AllDataExport
+};
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +20,8 @@ use Illuminate\Support\Str;
 
 class ExportService
 {
-  protected int $maxRecords = 500;
+  protected int $maxExcelRecords = 5000;
+  protected int $maxPdfRecords = 500;
 
   /**
   * Generate file export, return path to temp file.
@@ -25,93 +30,83 @@ class ExportService
   {
     $type = $filters['type'];
     $format = $filters['format'];
-    $walletId = $filters['wallet_id'];
-    $formatRules = $this->getCurrencyFormat($walletId);
-    $walletName = Wallet::find($walletId)->name;
+    $wallet = Wallet::with('currencyDetails')->findOrFail($filters['wallet_id']);
 
+    $walletName = $wallet->name;
+    $formatRules = $this->getCurrencyFormat($wallet);
+    $user = request()->user();
+
+    // Tentukan limit dan method data
+    $isPdf = $format === 'pdf';
+    $limit = $isPdf ? $this->maxPdfRecords : $this->maxExcelRecords;
+
+    // Jika semua tipe data (hanya Excel)
     if ($type === 'all') {
-      if ($format === 'pdf') {
-        throw new \Error("Export to pdf with all data not allowed. Use Excel format instead or choose partial type.");
-      }
-      // Ambil semua data dengan filter umum
-      $transactionsData = $this->getTransactionsData($filters);
-      $transfersData = $this->getTransfersData($filters);
-      $budgetsData = $this->getBudgetsData($filters);
+      $this->ensureNotPdf($format);
 
-      $metaTransactions = $this->buildMetadata('transactions', $filters, $walletName);
-      $metaTransfers = $this->buildMetadata('transfers', $filters, $walletName);
-      $metaBudgets = $this->buildMetadata('budgets', $filters, $walletName);
+      // Ambil data per tipe dengan limit
+      $transactions = $this->getTransactionsData($user, $filters, $limit);
+      $transfers = $this->getTransfersData($user, $filters, $limit);
+      $budgets = $this->getBudgetsData($user, $filters, $limit);
 
-      // Gabungkan aturan format ke setiap summary
-      $transactionsData[1] = array_merge($transactionsData[1], $formatRules, ['metadata' => $metaTransactions]);
-      $transfersData[1] = array_merge($transfersData[1], $formatRules, ['metadata' => $metaTransfers]);
-      $budgetsData[1] = array_merge($budgetsData[1], $formatRules, ['metadata' => $metaBudgets]);
+      // Metadata per sheet
+      $transactions[1] = array_merge($transactions[1], $formatRules, [
+        'metadata' => $this->buildMetadata('transactions', $filters, $walletName)
+      ]);
+      $transfers[1] = array_merge($transfers[1], $formatRules, [
+        'metadata' => $this->buildMetadata('transfers', $filters, $walletName)
+      ]);
+      $budgets[1] = array_merge($budgets[1], $formatRules, [
+        'metadata' => $this->buildMetadata('budgets', $filters, $walletName)
+      ]);
 
-      $allData = [
-        'transactions' => $transactionsData,
-        'transfers' => $transfersData,
-        'budgets' => $budgetsData,
-      ];
+      $allData = compact('transactions', 'transfers', 'budgets');
 
-      $metadata = $this->buildMetadata('all', $filters, $walletName);
-      $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
-      $filename = Str::uuid() . '.' . $extension;
-      $tempPath = "temp/exports/{$filename}";
-
-
-      Excel::store(
-        new AllDataExport($allData, $formatRules),
-        $tempPath,
-        'local',
-        ExcelFormat::XLSX
+      return $this->storeExcel(
+        new AllDataExport($allData),
+        'xlsx'
       );
-    } else {
-      // Ambil data dan summary (hanya angka mentah)
-      [$data,
-        $summary] = match ($type) {
-        'transactions' => $this->getTransactionsData($filters),
-        'transfers' => $this->getTransfersData($filters),
-        'budgets' => $this->getBudgetsData($filters),
-      };
-
-      $metadata = $this->buildMetadata($type, $filters, $walletId);
-      $summary['metadata'] = $metadata;
-
-      // Gabungkan aturan format ke summary
-      $summary = array_merge($summary, $formatRules);
-
-      // Cek batas
-      if (count($data) > $this->maxRecords) {
-        $count = count($data);
-        throw new \Exception("Jumlah data ({$count}) melebihi batas maksimal ({$this->maxRecords}). Silakan gunakan format Excel untuk data lebih dari {$this->maxRecords}.");
-      }
-
-      $extension = $format === 'pdf' ? 'pdf' : 'xlsx';
-      $filename = Str::uuid() . '.' . $extension;
-      $tempPath = "temp/exports/{$filename}";
-
-      if ($format === 'xlsx') {
-        $this->generateExcel($type, $data, $summary, $tempPath);
-      } else {
-        $this->generatePdf($type, $data, $summary, $tempPath);
-      }
     }
 
-    return Storage::disk('local')->path($tempPath);
+    // Tipe tunggal (transactions / transfers / budgets)
+    [$data,
+      $summary] = match ($type) {
+      'transactions' => $this->getTransactionsData($user, $filters, $limit),
+      'transfers' => $this->getTransfersData($user, $filters, $limit),
+      'budgets' => $this->getBudgetsData($user, $filters, $limit),
+    };
+
+    // Cek batas khusus PDF
+    if ($isPdf && count($data) > $this->maxPdfRecords) {
+      throw new \Exception(
+        "Jumlah data (" . count($data) . ") melebihi batas PDF ({$this->maxPdfRecords}). " .
+        "Silakan gunakan Excel atau persempit filter."
+      );
+    }
+
+    $metadata = $this->buildMetadata($type, $filters, $walletName);
+    $summary = array_merge($summary, $formatRules, compact('metadata'));
+
+    if ($isPdf) {
+      return $this->generatePdf($type, $data, $summary);
+    }
+
+    return $this->generateExcel($type, $data, $summary);
   }
 
-  // ----- Data Retrieval -----
+  // ----------------------------------------------------------------
+  // DATA RETRIEVAL
+  // ----------------------------------------------------------------
 
-  protected function getTransactionsData(array $filters): array
+  protected function getTransactionsData($user, array $filters, int $limit): array
   {
-    $user = request()->user();
     $query = Transaction::with(['wallet', 'category'])
     ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id));
 
     $this->applyTransactionFilters($query, $filters);
 
     $transactions = $query->orderBy('transaction_date', 'desc')
-    ->limit($this->maxRecords + 1)
+    ->limit($limit + 1)
     ->get();
 
     $totalIncome = 0;
@@ -146,13 +141,14 @@ class ExportService
         'total_income' => $totalIncome,
         'total_expense' => $totalExpense,
         'net' => $totalIncome - $totalExpense,
-      ]
+      ],
     ];
   }
 
-  protected function getTransfersData(array $filters): array
+  protected function getTransfersData($user,
+    array $filters,
+    int $limit): array
   {
-    $user = request()->user();
     $query = Transfer::with(['fromWallet',
       'toWallet'])
     ->whereHas('fromWallet',
@@ -163,7 +159,7 @@ class ExportService
 
     $transfers = $query->orderBy('transfer_date',
       'desc')
-    ->limit($this->maxRecords + 1)
+    ->limit($limit + 1)
     ->get();
 
     $total = 0;
@@ -175,7 +171,6 @@ class ExportService
         'Dari' => $t->fromWallet->name,
         'Ke' => $t->toWallet->name,
         'Jumlah' => $t->getFormattedAmount(),
-        // pakai trait
         'Deskripsi' => $t->description ?? '-',
       ];
     })->toArray();
@@ -183,9 +178,10 @@ class ExportService
     return [$data, ['total' => $total]];
   }
 
-  protected function getBudgetsData(array $filters): array
+  protected function getBudgetsData($user,
+    array $filters,
+    int $limit): array
   {
-    $user = request()->user();
     $query = Budget::where('user_id',
       $user->id)
     ->with(['category',
@@ -201,16 +197,15 @@ class ExportService
       $query->whereIn('category_id', $filters['category_ids']);
     }
 
-    $budgets = $query->get()->filter(function ($budget) use ($filters) {
-      if (!empty($filters['status'])) {
-        return match ($filters['status']) {
-          'overspent' => $budget->isOverspent(),
-          'near_limit' => $budget->isNearLimit(),
-          'on_track' => !$budget->isOverspent() && !$budget->isNearLimit(),
-          default => true,
-          };
-        }
-        return true;
+    $budgets = $query->limit($limit + 1)->get()
+    ->filter(function ($budget) use ($filters) {
+      if (empty($filters['status'])) return true;
+      return match ($filters['status']) {
+        'overspent' => $budget->isOverspent(),
+        'near_limit' => $budget->isNearLimit(),
+        'on_track' => !$budget->isOverspent() && !$budget->isNearLimit(),
+        default => true,
+        };
       });
 
       $totalLimit = 0;
@@ -226,11 +221,11 @@ class ExportService
           'Dompet' => $b->wallet?->name ?? '-',
           'Periode' => $b->period_type->label(),
           'Limit' => $b->getFormattedAmount(),
-          // pakai trait
           'Pengeluaran' => $b->formatCurrency($spent),
-          // pakai trait
           'Persentase' => $b->getPercentage() . '%',
-          'Status' => $b->isOverspent() ? 'Terlampaui' : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
+          'Status' => $b->isOverspent()
+          ? 'Terlampaui'
+          : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
         ];
       })->values()->toArray();
 
@@ -240,11 +235,13 @@ class ExportService
           'total_limit' => $totalLimit,
           'total_spent' => $totalSpent,
           'remaining' => $totalLimit - $totalSpent,
-        ]
+        ],
       ];
     }
 
-    // ----- Filter helpers (tidak berubah) -----
+    // ----------------------------------------------------------------
+    // FILTER HELPERS
+    // ----------------------------------------------------------------
 
     protected function applyTransactionFilters($query,
       array $filters): void
@@ -270,11 +267,8 @@ class ExportService
     protected function applyTransferFilters($query, array $filters): void
     {
       if (!empty($filters['wallet_id'])) {
-        $walletId = $filters['wallet_id'];
-        $query->where(function ($q) use ($walletId) {
-          $q->where('from_wallet_id', $walletId)
-          ->orWhere('to_wallet_id', $walletId);
-        });
+        $wid = $filters['wallet_id'];
+        $query->where(fn($q) => $q->where('from_wallet_id', $wid)->orWhere('to_wallet_id', $wid));
       }
       if (!empty($filters['month'])) {
         $query->whereYear('transfer_date', substr($filters['month'], 0, 4))
@@ -285,28 +279,24 @@ class ExportService
       }
     }
 
-    // ----- Excel & PDF Generation -----
+    // ----------------------------------------------------------------
+    // GENERATION (EXCEL / PDF)
+    // ----------------------------------------------------------------
 
-    protected function generateExcel(string $type, array $data, array $summary, string $storagePath): void
+    protected function generateExcel(string $type, array $data, array $summary): string
     {
-      if (count($data) > 1000) {
-        throw new \Exception("Jumlah data terlalu banyak ({count($data)}). Kurang jumlah pengambilan data.");
-      }
-
-      Excel::store(
-        new DataExport($type, $data, $summary),
-        $storagePath,
-        'local',
-        ExcelFormat::XLSX
-      );
+      return $this->storeExcel(new DataExport($type, $data, $summary), 'xlsx');
     }
 
-    protected function generatePdf(string $type, array $data, array $summary, string $storagePath): void
+    protected function generatePdf(string $type, array $data, array $summary): string
     {
+      set_time_limit(60);
+      ini_set('memory_limit', '256M');
+
       $html = view("fintech::exports.{$type}_pdf", [
         'data' => $data,
         'title' => $this->getTitle($type),
-        'summary' => $summary
+        'summary' => $summary,
       ])->render();
 
       $dompdf = new \Dompdf\Dompdf();
@@ -314,27 +304,30 @@ class ExportService
       $dompdf->setPaper('A4', 'landscape');
       $dompdf->render();
 
-      Storage::disk('local')->put($storagePath, $dompdf->output());
+      $filename = Str::uuid()->toString() . '.pdf';
+      $tempPath = "temp/exports/{$filename}";
+
+      Storage::disk('local')->put($tempPath, $dompdf->output());
+
+      return Storage::disk('local')->path($tempPath);
     }
 
-    private function getTitle(string $type): string
+    protected function storeExcel($export, string $extension): string
     {
-      return match ($type) {
-        'transactions' => 'Laporan Transaksi',
-        'transfers' => 'Laporan Transfer',
-        'budgets' => 'Laporan Budget',
-      };
+      $filename = Str::uuid()->toString() . '.' . $extension;
+      $tempPath = "temp/exports/{$filename}";
+
+      Excel::store($export, $tempPath, 'local', ExcelFormat::XLSX);
+
+      return Storage::disk('local')->path($tempPath);
     }
 
-    // ----- Currency Format Helpers -----
+    // ----------------------------------------------------------------
+    // HELPERS
+    // ----------------------------------------------------------------
 
-    /**
-    * Get full currency formatting rules for a wallet.
-    */
-    protected function getCurrencyFormat(int $walletId): array
+    protected function getCurrencyFormat(Wallet $wallet): array
     {
-      $wallet = Wallet::with('currencyDetails')->find($walletId);
-
       $default = [
         'precision' => 0,
         'decimal_mark' => ',',
@@ -343,8 +336,7 @@ class ExportService
         'symbol_first' => true,
       ];
 
-      if ($wallet && $wallet->currencyDetails) {
-        $currency = $wallet->currencyDetails;
+      if ($currency = $wallet->currencyDetails) {
         return [
           'precision' => $currency->precision ?? $default['precision'],
           'decimal_mark' => $currency->decimal_mark ?? $default['decimal_mark'],
@@ -368,8 +360,8 @@ class ExportService
       if (!empty($filters['month'])) {
         $meta[] = 'Periode Bulan: ' . date('F Y', strtotime($filters['month'] . '-01'));
       } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
-        $from = !empty($filters['date_from']) ? $filters['date_from'] : 'Awal';
-        $to = !empty($filters['date_to']) ? $filters['date_to'] : 'Akhir';
+        $from = $filters['date_from'] ?? 'Awal';
+        $to = $filters['date_to'] ?? 'Akhir';
         $meta[] = 'Rentang Tanggal: ' . $from . ' s/d ' . $to;
       }
 
@@ -378,5 +370,23 @@ class ExportService
       }
 
       return $meta;
+    }
+
+    protected function getTitle(string $type): string
+    {
+      return match ($type) {
+        'transactions' => 'Laporan Transaksi',
+        'transfers' => 'Laporan Transfer',
+        'budgets' => 'Laporan Budget',
+      };
+    }
+
+    protected function ensureNotPdf(string $format): void
+    {
+      if ($format === 'pdf') {
+        throw new \Error(
+          "Export PDF tidak tersedia untuk semua data. Gunakan format Excel."
+        );
+      }
     }
   }
