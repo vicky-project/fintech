@@ -120,13 +120,33 @@ class SheetWriter
           'range' => [
             'sheetId' => $sheetId,
             'startRowIndex' => $currentRow - 1,
-            'endRowIndex' => 1,
+            'endRowIndex' => $currentRow,
             'startColumnIndex' => 4,
             'endColumnIndex' => 6,
           ],
           'mergeType' => 'MERGE_ALL'
         ]
       ]);
+
+      $verticalCols = [0,
+        1,
+        2,
+        3,
+        6]; // A, B, C, D, G
+      foreach ($verticalCols as $colIndex) {
+        $requests[] = new \Google\Service\Sheets\Request([
+          'mergeCells' => [
+            'range' => [
+              'sheetId' => $sheetId,
+              'startRowIndex' => $currentRow - 1,
+              'endRowIndex' => $currentRow + 1,
+              'startColumnIndex' => $colIndex,
+              'endColumnIndex' => $colIndex + 1,
+            ],
+            'mergeType' => 'MERGE_ALL'
+          ]
+        ]);
+      }
 
       // C. STYLING (Center, Bold, Middle)
       $requests[] = new \Google\Service\Sheets\Request([
