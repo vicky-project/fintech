@@ -63,6 +63,7 @@ class SheetWriter
   */
   public function writeHeaders(string $spreadsheetId, string $sheetName, array $headers, int &$currentRow, ?string $dataType): void
   {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     if ($dataType === 'transactions') {
       // 1. ISI DATA TEKS (Baris 1 & 2)
       $row1 = ['Tanggal',
