@@ -416,5 +416,11 @@
     .notification-icon.budget-warning { background-color: rgba(255, 193, 7, 0.15); color: #f0ad4e; }
     .notification-icon.cashflow-warning { background-color: rgba(220, 53, 69, 0.15); color: #dc3545; }
     .notification-icon.subscription-reminder { background-color: rgba(13, 110, 253, 0.15); color: #0d6efd; }
+
+    .form-select, .form-control, .form-check-input, .modal-content {
+    background-color: var(--tg-theme-bg-color) !important;
+    color: var(--tg-theme-text-color) !important;
+    border-color: var(--tg-theme-hint-color) !important;
+    }
     </style>
     @endpush
