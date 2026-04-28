@@ -1885,6 +1885,22 @@ function renderExportFilters(type) {
   ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id === defaultWalletId ? 'selected': ''}>${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
   </select>
   </div>`;
+  if (type === 'all') {
+    html += `
+    <div class="row mb-3">
+    <div class="col">
+    <label class="form-label">Dari Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
+    </div>
+    <div class="col">
+    <label class="form-label">Sampai Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>
+    `;
+    container.innerHTML = html;
+    return;
+  }
 
   if (type === 'transactions') {
     html += `
@@ -1964,21 +1980,6 @@ function renderExportFilters(type) {
     // Render period input awal
     setTimeout(() =>
       renderCategoryBadges(Core.state.currentFilteredCategories), 10);
-  }
-
-  if (type === 'all') {
-    html += `
-    <div class="row mb-3">
-    <div class="col">
-    <label class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
-    </div>
-    <div class="col">
-    <label class="form-label">Sampai Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-to">
-    </div>
-    </div>
-    `;
   }
 
   container.innerHTML = html;
@@ -2076,20 +2077,30 @@ function updateExportFormatAvailability() {
 
 function updateTransactionCategoryFilter() {
   const typeSelect = document.getElementById('filter-type');
-  if (!typeSelect) return;
+  const badgesContainer = document.getElementById('category-badges');
+  if (!typeSelect || !badgesContainer) return;
 
   const selectedType = typeSelect.value; // '' (semua), 'income', 'expense'
 
-  // Simpan ke variabel global agar digunakan ulang saat render badge
-  if (selectedType === 'income') {
-    Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'income' || c.type === 'both');
-  } else if (selectedType === 'expense') {
-    Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
-  } else {
-    Core.state.currentFilteredCategories = [...Core.state.categories];
+  // Kosongkan badge jika tidak ada tipe spesifik
+  if (selectedType === '' || selectedType === 'all') {
+    badgesContainer.innerHTML = '';
+    const hiddenSelect = document.getElementById('filter-category-hidden');
+    if (hiddenSelect) hiddenSelect.innerHTML = '';
+    currentFilteredCategories = [];
+    return;
   }
 
-  renderCategoryBadges(Core.state.currentFilteredCategories);
+  // Filter kategori sesuai tipe
+  let filteredCategories = Core.state.categories;
+  if (selectedType === 'income') {
+    filteredCategories = Core.state.categories.filter(c => ['income', 'both'].includes(c.type));
+  } else if (selectedType === 'expense') {
+    filteredCategories = Core.state.categories.filter(c => ['expense', 'both'].includes(c.type));
+  }
+
+  currentFilteredCategories = filteredCategories;
+  renderCategoryBadges(currentFilteredCategories);
 }
 
 async function performExport() {

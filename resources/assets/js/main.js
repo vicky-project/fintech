@@ -123,6 +123,7 @@ function handleGlobalChange(e) {
       const type = target.value;
       renderExportFilters(type);
       updateExportFormatAvailability(); // ← panggil di sini
+      if (type === 'transactions') updateTransactionCategoryFilter();
     },
     'change-budget-period': () => renderBudgetPeriodInput(),
     'change-transaction-type': () => updateTransactionCategoryFilter(),
