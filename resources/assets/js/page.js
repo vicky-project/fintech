@@ -1793,6 +1793,12 @@ async function renderExportPage() {
   <i class="bi bi-file-earmark-pdf text-danger me-1"></i> PDF
   </label>
   </div>
+  <div class="form-check">
+  <input class="form-check-input" type="radio" name="export-format" id="format-csv" value="csv">
+  <label class="form-check-label" for="format-csv">
+  <i class="bi bi-file-earmark-text text-secondary me-1"></i> CSV
+  </label>
+  </div>
   </div>
   </div>
 
@@ -2060,18 +2066,24 @@ function updateExportFormatAvailability() {
   const type = document.getElementById('export-type').value;
   const formatPdfRadio = document.getElementById('format-pdf');
   const formatXlsxRadio = document.getElementById('format-xlsx');
-  if (!formatPdfRadio || !formatXlsxRadio) return;
+  const formatCsvRadio = document.getElementById('format-csv');
+  if (!formatPdfRadio || !formatXlsxRadio || !formatCsvRadio) return;
 
   if (type === 'all') {
-    // Nonaktifkan PDF, paksa Excel
+    // Nonaktifkan PDF & CSV, paksa Excel
     formatPdfRadio.disabled = true;
     formatPdfRadio.checked = false;
+    formatCsvRadio.disabled = true;
+    formatCsvRadio.checked = false;
     formatXlsxRadio.checked = true;
     // Opsional: tambahkan kelas 'text-muted' pada label
     document.querySelector('label[for="format-pdf"]')?.classList.add('text-muted');
+    document.querySelector('label[for="format-csv"]')?.classList.add('text-muted');
   } else {
     formatPdfRadio.disabled = false;
+    formatCsvRadio.disabled = false;
     document.querySelector('label[for="format-pdf"]')?.classList.remove('text-muted');
+    document.querySelector('label[for="format-csv"]')?.classList.remove('text-muted');
   }
 }
 
