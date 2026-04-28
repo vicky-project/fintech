@@ -4,7 +4,6 @@
 
 @section('content')
 <div id="fintech-app">
-  <button class="btn btn-warning" id="test-auth">Test</button>
   {{-- Loading overlay --}}
   <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75" style="z-index: 9999;">
     <div class="text-center">
@@ -273,15 +272,6 @@
   {!! file_get_contents(module_path('fintech', 'resources/assets/js/core.js')); !!}
   {!! file_get_contents(module_path('fintech', 'resources/assets/js/page.js')); !!}
   {!! file_get_contents(module_path('fintech', 'resources/assets/js/main.js')); !!}
-
-  document.getElementById("test-auth").addEventListener('click', async function(){
-  try {
-  const res = await Core.api.get(BASE_URL + '/api/test-sheets');
-  tgApp.showToast(res.message, res.success ? 'success' : 'danger');
-  } catch(error) {
-  tgApp.showToast(error.message, 'danger');
-  }
-  });
 </script>
 @endpush
 

@@ -18,7 +18,6 @@ use Modules\FinTech\Http\Controllers\Api\ {
   TransferController,
   WalletController
 };
-use Revolution\Google\Sheets\Facades\Sheets;
 
 /*
 |--------------------------------------------------------------------------
@@ -102,21 +101,4 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::get('settings', [SettingController::class, 'show'])->middleware('pin.session');
   Route::put('settings', [SettingController::class, 'update']);
   Route::post('settings/verify-pin', [SettingController::class, 'verifyPin'])->middleware('throttle:10,1');
-});
-
-// routes/web.php
-Route::get('test-sheets', function () {
-  try {
-    $sheets = Sheets::spreadsheetList();
-    return response()->json([
-      'status' => 'success',
-      'message' => 'Service account authentication working',
-      'spreadsheet_count' => count($sheets)
-    ]);
-  } catch (\Exception $e) {
-    return response()->json([
-      'status' => 'error',
-      'message' => $e->getMessage()
-    ]);
-  }
 });
