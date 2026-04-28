@@ -295,6 +295,7 @@ class ExportService
     {
       $storagePath = $this->storeExcel(new DataExport($type, $data, $summary), 'xlsx');
       $this->addChartToExcel($storagePath, $data, $summary);
+      return $storagePath;
     }
 
     protected function generatePdf(string $type, array $data, array $summary): string
