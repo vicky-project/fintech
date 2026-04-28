@@ -19,6 +19,7 @@ use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\FinTech\Services\Google\GoogleSheetsService;
+use Modules\FinTech\Services\Google\SpreadsheetManager;
 
 class ExportService
 {
@@ -160,16 +161,16 @@ class ExportService
       $metaTf = $this->buildMetadata('transfers', $filters, $wallet->name);
       $metaBg = $this->buildMetadata('budgets', $filters, $wallet->name);
 
-      $googleService->exportDataToSheet($spreadsheetId, GoogleSheetsService::SHEET_TRANSACTIONS, $all['transactions'][0], true, $metaTx, $all['transactions'][1], 'transactions');
-      $googleService->exportDataToSheet($spreadsheetId, GoogleSheetsService::SHEET_TRANSFERS, $all['transfers'][0], true, $metaTf, $all['transfers'][1], 'transfers');
-      $googleService->exportDataToSheet($spreadsheetId, GoogleSheetsService::SHEET_BUDGETS, $all['budgets'][0], true, $metaBg, $all['budgets'][1], 'budgets');
+      $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_TRANSACTIONS, $all['transactions'][0], true, $metaTx, $all['transactions'][1], 'transactions');
+      $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_TRANSFERS, $all['transfers'][0], true, $metaTf, $all['transfers'][1], 'transfers');
+      $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_BUDGETS, $all['budgets'][0], true, $metaBg, $all['budgets'][1], 'budgets');
     } else {
       [$data,
         $summary] = $this->fetchData($type, $user, $filters, $limit);
       $sheetName = match ($type) {
-        'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
-        'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
-        'budgets' => GoogleSheetsService::SHEET_BUDGETS,
+        'transactions' => SpreadsheetManager::SHEET_TRANSACTIONS,
+        'transfers' => SpreadsheetManager::SHEET_TRANSFERS,
+        'budgets' => SpreadsheetManager::SHEET_BUDGETS,
       };
       $googleService->exportDataToSheet($spreadsheetId, $sheetName, $data, true, $metadata, $summary, $type);
     }
