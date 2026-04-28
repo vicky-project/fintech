@@ -83,40 +83,7 @@ class SheetWriter
         ['valueInputOption' => 'RAW']
       );
 
-      // Merge sel untuk header yang tidak memiliki sub-header (dua baris)
-      // A: Tanggal (merge A1:A2)
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId,
-        'startRowIndex' => $currentRow - 1,
-        'endRowIndex' => $currentRow + 1,
-        'startColumnIndex' => 0,
-        'endColumnIndex' => 1
-      ]]]);
-      // B: Tipe (merge B1:B2)
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId,
-        'startRowIndex' => $currentRow - 1,
-        'endRowIndex' => $currentRow + 1,
-        'startColumnIndex' => 1,
-        'endColumnIndex' => 2
-      ]]]);
-      // C: Kategori (merge C1:C2)
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId,
-        'startRowIndex' => $currentRow - 1,
-        'endRowIndex' => $currentRow + 1,
-        'startColumnIndex' => 2,
-        'endColumnIndex' => 3
-      ]]]);
-      // D: Dompet (merge D1:D2)
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId,
-        'startRowIndex' => $currentRow - 1,
-        'endRowIndex' => $currentRow + 1,
-        'startColumnIndex' => 3,
-        'endColumnIndex' => 4
-      ]]]);
-      // E1:F1: Amount (merge horizontal, SATU BARIS saja)
+      // HANYA merge E1:F1 horizontal (Amount)
       $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
         'sheetId' => $sheetId,
         'startRowIndex' => $currentRow - 1,
@@ -124,16 +91,8 @@ class SheetWriter
         'startColumnIndex' => 4,
         'endColumnIndex' => 6
       ]]]);
-      // G: Deskripsi (merge G1:G2)
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId,
-        'startRowIndex' => $currentRow - 1,
-        'endRowIndex' => $currentRow + 1,
-        'startColumnIndex' => 6,
-        'endColumnIndex' => 7
-      ]]]);
 
-      // Baris 2: (kosong), (kosong), (kosong), (kosong), Pemasukan, Pengeluaran, (kosong)
+      // Baris 2: Pemasukan, Pengeluaran di kolom E dan F
       $row2 = ['',
         '',
         '',
