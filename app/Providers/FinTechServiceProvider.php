@@ -14,6 +14,7 @@ use Modules\FinTech\Services\Parsers\MandiriExcelParser;
 use Modules\FinTech\Services\Parsers\MandiriCsvParser;
 use Modules\FinTech\Services\Parsers\BniPdfParser;
 use Modules\FinTech\Services\Parsers\BriPdfParser;
+use Modules\FinTech\Services\Google\GoogleSheetsClient;
 
 class FinTechServiceProvider extends ServiceProvider
 {
@@ -45,6 +46,10 @@ class FinTechServiceProvider extends ServiceProvider
   {
     $this->app->register(EventServiceProvider::class);
     $this->app->register(RouteServiceProvider::class);
+
+    $this->app->singleton(GoogleSheetsClient::class, function($app) {
+      return new GoogleSheetsClient();
+    });
 
     $this->app->make("config")->set("world.migrations.countries.table_name", "world_countries");
     $this->app->make("config")->set("world.migrations.states.table_name", "world_states");
