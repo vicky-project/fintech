@@ -480,7 +480,7 @@ class ExportService
         $chart->setBottomRightPosition($chartBottomRight);
 
         // Tambahkan chart ke spreadsheet (bukan worksheet)
-        $spreadsheet->addChart($chart);
+        $worksheet->addChart($chart);
 
         // Simpan ke file temporari
         $writer = new WriterXlsx($spreadsheet);
