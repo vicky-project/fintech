@@ -5,6 +5,7 @@ namespace Modules\FinTech\Services;
 use Google\Client as GoogleClient;
 use Google\Service\Sheets as GoogleSheets;
 use Google\Service\Drive as GoogleDrive;
+use Google\Service\Exception as GoogleException;
 use Google\Service\Sheets\Spreadsheet;
 use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
 use Google\Service\Sheets\Request as SheetsRequest;
@@ -140,8 +141,13 @@ class GoogleSheetsService
       ]);
 
       return $spreadsheetId;
-    } catch(\Exception $e) {
-      Log::error($e);
+    } catch(GoogleException $e) {
+      Log::error("Google Error:", [
+        'message' => $e->getMessage(),
+        'trace' => $e->getTrace()
+      ]);
+      throw $e;
+    } catch (\Exception $e) {
       throw $e;
     }
   }
