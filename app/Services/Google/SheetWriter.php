@@ -63,8 +63,6 @@ class SheetWriter
   */
   public function writeHeaders(string $spreadsheetId, string $sheetName, array $headers, int &$currentRow, ?string $dataType): void
   {
-    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    $requests = [];
     $colCount = count($headers);
 
     if ($dataType === 'transactions') {
@@ -83,16 +81,7 @@ class SheetWriter
         ['valueInputOption' => 'RAW']
       );
 
-      // HANYA merge E1:F1 horizontal (Amount)
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId,
-        'startRowIndex' => $currentRow - 1,
-        'endRowIndex' => $currentRow,
-        'startColumnIndex' => 4,
-        'endColumnIndex' => 6
-      ]]]);
-
-      // Baris 2: Pemasukan, Pengeluaran di kolom E dan F
+      // Baris 2: Pemasukan di E, Pengeluaran di F
       $row2 = ['',
         '',
         '',
@@ -109,19 +98,14 @@ class SheetWriter
 
       $currentRow += 2;
     } else {
-      // Header satu baris
+      // Header satu baris untuk tipe lain
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
-        $sheetName . '!A' . $currentRow . ':' . chr(64+$colCount) . $currentRow,
+        $sheetName . '!A' . $currentRow . ':' . chr(64 + $colCount) . $currentRow,
         new ValueRange(['values' => [$headers]]),
         ['valueInputOption' => 'RAW']
       );
       $currentRow++;
-    }
-
-    if ($requests) {
-      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
-      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
     }
   }
 
