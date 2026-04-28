@@ -7,6 +7,8 @@ use Google\Service\Sheets as GoogleSheets;
 use Google\Service\Sheets\Spreadsheet;
 use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
 use Google\Service\Sheets\Request as SheetsRequest;
+use Google\Service\Drive as GoogleDrive;
+use Google\Service\Drive\Permission as DrivePermission;
 use Modules\FinTech\Models\UserSetting;
 use Illuminate\Support\Facades\Log;
 
@@ -18,10 +20,12 @@ class GoogleSheetsService
 
   protected GoogleClient $client;
   protected GoogleSheets $service;
+  protected GoogleDrive $driveService;
 
   public function __construct() {
     $this->client = $this->createClient();
     $this->service = new GoogleSheets($this->client);
+    $this->driveService = new GoogleDrive($this->client);
   }
 
   /**
@@ -30,13 +34,19 @@ class GoogleSheetsService
   protected function createClient(): GoogleClient
   {
     $credentialsPath = config('google.service.file');
+
     if (!file_exists($credentialsPath)) {
       throw new \Exception("File kredensial Google tidak ditemukan: {$credentialsPath}");
     }
 
     $client = new GoogleClient();
     $client->setAuthConfig($credentialsPath);
-    $client->addScope(GoogleSheets::SPREADSHEETS);
+    $client->addScope([
+      GoogleSheets::SPREADSHEETS,
+      GoogleDrive::DRIVE_FILE,
+    ]);
+    $client->setAccessType('offline');
+
     return $client;
   }
 
@@ -53,11 +63,14 @@ class GoogleSheetsService
         $this->service->spreadsheets->get($spreadsheetId);
         return $spreadsheetId;
       } catch (\Exception $e) {
-        Log::warning("Spreadsheet user {$user->id} tidak valid, dibuat baru.");
+        Log::warning("Spreadsheet user {$user->id} tidak valid, dibuat baru.", [
+          'error' => $e->getMessage()
+        ]);
         $spreadsheetId = null;
       }
     }
 
+    // Buat baru
     $spreadsheetId = $this->createSpreadsheetForUser($user);
     $this->saveSpreadsheetId($user, $spreadsheetId);
 
@@ -79,6 +92,9 @@ class GoogleSheetsService
       $spreadsheet = $this->service->spreadsheets->create($spreadsheet);
       $spreadsheetId = $spreadsheet->spreadsheetId;
 
+      // Berikan akses ke service account (meskipun sebenarnya sudah owner)
+      $this->grantAccessToSpreadsheet($spreadsheetId);
+
       // Ganti nama sheet pertama menjadi "Transaksi"
       $sheets = $spreadsheet->getSheets();
       if (count($sheets) > 0) {
@@ -96,8 +112,55 @@ class GoogleSheetsService
 
       return $spreadsheetId;
     } catch (\Exception $e) {
-      Log::error("Gagal membuat spreadsheet: " . $e->getMessage());
+      Log::error("Gagal membuat spreadsheet: " . $e->getMessage(), [
+        'user_id' => $user->id,
+        'trace' => $e->getTraceAsString()
+      ]);
       throw $e;
+    }
+  }
+
+  /**
+  * Memberikan akses ke service account ke spreadsheet.
+  */
+  public function grantAccessToSpreadsheet(string $spreadsheetId): void
+  {
+    try {
+      // Dapatkan email service account dari file kredensial
+      $credentials = json_decode(
+        file_get_contents(config('google.service_account_credentials_json')),
+        true
+      );
+      $serviceAccountEmail = $credentials['client_email'] ?? null;
+
+      if (!$serviceAccountEmail) {
+        return;
+      }
+
+      // Cek apakah permission sudah ada
+      $permissions = $this->driveService->permissions->listPermissions($spreadsheetId);
+      foreach ($permissions->getPermissions() as $permission) {
+        if ($permission->getEmailAddress() === $serviceAccountEmail) {
+          return; // Sudah ada akses
+        }
+      }
+
+      // Tambahkan permission
+      $permission = new DrivePermission([
+        'type' => 'user',
+        'role' => 'writer',
+        'emailAddress' => $serviceAccountEmail,
+      ]);
+
+      $this->driveService->permissions->create($spreadsheetId, $permission);
+
+      Log::info("Akses diberikan ke service account", [
+        'spreadsheet_id' => $spreadsheetId,
+        'email' => $serviceAccountEmail,
+      ]);
+    } catch (\Exception $e) {
+      Log::warning("Gagal memberikan akses: " . $e->getMessage());
+      // Tidak throw error karena spreadsheet masih bisa diakses oleh pembuatnya
     }
   }
 
@@ -106,34 +169,37 @@ class GoogleSheetsService
   */
   public function exportDataToSheet(string $spreadsheetId, string $sheetName, array $data, bool $clear = true): void
   {
-    if (empty($data)) return;
+    if (empty($data)) {
+      return;
+    }
 
     $this->addSheetIfNotExists($spreadsheetId, $sheetName);
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
 
-    $range = $sheetName . '!A1';
-
     // Clear dulu jika diminta
     if ($clear) {
-      $this->service->spreadsheets_values->clear($spreadsheetId, $sheetName, new \Google\Service\Sheets\ClearValuesRequest());
+      $this->service->spreadsheets_values->clear(
+        $spreadsheetId,
+        $sheetName,
+        new \Google\Service\Sheets\ClearValuesRequest()
+      );
     }
 
     // Tulis header
     $this->service->spreadsheets_values->update(
       $spreadsheetId,
-      $range,
+      $sheetName . '!A1',
       new \Google\Service\Sheets\ValueRange(['values' => [$headers]]),
       ['valueInputOption' => 'RAW']
     );
 
     // Tulis data (append setelah header)
     if (!empty($values)) {
-      $range = $sheetName . '!A2';
       $this->service->spreadsheets_values->update(
         $spreadsheetId,
-        $range,
+        $sheetName . '!A2',
         new \Google\Service\Sheets\ValueRange(['values' => $values]),
         ['valueInputOption' => 'RAW']
       );
