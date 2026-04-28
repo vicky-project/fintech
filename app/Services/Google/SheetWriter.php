@@ -61,12 +61,10 @@ class SheetWriter
   /**
   * Tulis header tabel (mendukung dua baris untuk transaksi).
   */
-  public function writeHeaders(string $spreadsheetId, string $sheetName, array $headers, int &$currentRow, ?string $dataType): void
+  public function writeHeaders(string $spreadsheetId, int $sheetId, string $sheetName, array $headers, int &$currentRow, ?string $dataType): void
   {
-    $colCount = count($headers);
-
     if ($dataType === 'transactions') {
-      // Baris 1: Tanggal, Tipe, Kategori, Dompet, Amount, (kosong), Deskripsi
+      // 1. ISI DATA TEKS (Baris 1 & 2)
       $row1 = ['Tanggal',
         'Tipe',
         'Kategori',
@@ -74,14 +72,6 @@ class SheetWriter
         'Amount',
         '',
         'Deskripsi'];
-      $this->client->getSheetsService()->spreadsheets_values->update(
-        $spreadsheetId,
-        $sheetName . '!A' . $currentRow,
-        new ValueRange(['values' => [$row1]]),
-        ['valueInputOption' => 'RAW']
-      );
-
-      // Baris 2: Pemasukan di E, Pengeluaran di F
       $row2 = ['',
         '',
         '',
@@ -89,25 +79,69 @@ class SheetWriter
         'Pemasukan',
         'Pengeluaran',
         ''];
+
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
-        $sheetName . '!A' . ($currentRow + 1),
-        new ValueRange(['values' => [$row2]]),
+        $sheetName . '!A' . $currentRow,
+        new \Google\Service\Sheets\ValueRange(['values' => [$row1, $row2]]),
         ['valueInputOption' => 'RAW']
       );
 
+      // 2. LOGIKA FORMATTING (Merge & Alignment)
+      $requests = [
+        // Merge Horizontal: "Amount" (Kolom E ke F, Baris 1)
+        $this->createMergeRequest($sheetId, $currentRow, $currentRow, 4, 6),
+
+        // Merge Vertikal: Kolom A, B, C, D, dan G (Baris 1 ke 2)
+        $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 0, 1),
+        $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 1, 2),
+        $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 2, 3),
+        $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 3, 4),
+        $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 6, 7),
+
+        // Style: Rata Tengah (Center Alignment) & Tebal (Bold) untuk semua Header
+        new \Google\Service\Sheets\Request([
+          'repeatCell' => [
+            'range' => [
+              'sheetId' => $sheetId,
+              'startRowIndex' => $currentRow - 1,
+              'endRowIndex' => $currentRow + 1,
+              'startColumnIndex' => 0,
+              'endColumnIndex' => 7,
+            ],
+            'cell' => [
+              'userEnteredFormat' => [
+                'horizontalAlignment' => 'CENTER',
+                'verticalAlignment' => 'MIDDLE',
+                'textFormat' => ['bold' => true]
+              ]
+            ],
+            'fields' => 'userEnteredFormat(horizontalAlignment,verticalAlignment,textFormat)'
+          ]
+        ])
+      ];
+
+      $batchUpdate = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
+
       $currentRow += 2;
     } else {
-      // Header satu baris untuk tipe lain
+      // Header standar untuk tipe lain
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
-        $sheetName . '!A' . $currentRow . ':' . chr(64 + $colCount) . $currentRow,
-        new ValueRange(['values' => [$headers]]),
+        $sheetName . '!A' . $currentRow,
+        new \Google\Service\Sheets\ValueRange(['values' => [$headers]]),
         ['valueInputOption' => 'RAW']
       );
+
+      // Opsional: Beri format bold untuk header standar
+      $this->applyBoldCenter($spreadsheetId, $sheetId, $currentRow, count($headers));
+
       $currentRow++;
     }
   }
+
+
 
   /**
   * Tulis data.
@@ -212,5 +246,51 @@ class SheetWriter
       $sheetName,
       new ClearValuesRequest()
     );
+  }
+
+  /**
+  * Helper untuk membuat Request Merge
+  */
+  private function createMergeRequest(int $sheetId, int $startRow, int $endRow, int $startCol, int $endCol): \Google\Service\Sheets\Request
+  {
+    return new \Google\Service\Sheets\Request([
+      'mergeCells' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $startRow - 1, // Konversi ke Index-0
+          'endRowIndex' => $endRow, // End index bersifat eksklusif
+          'startColumnIndex' => $startCol,
+          'endColumnIndex' => $endCol,
+        ],
+        'mergeType' => 'MERGE_ALL'
+      ]
+    ]);
+  }
+
+  /**
+  * Helper untuk format Bold & Center pada header standar
+  */
+  private function applyBoldCenter(string $spreadsheetId, int $sheetId, int $row, int $colCount): void
+  {
+    $request = new \Google\Service\Sheets\Request([
+      'repeatCell' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $row - 1,
+          'endRowIndex' => $row,
+          'startColumnIndex' => 0,
+          'endColumnIndex' => $colCount,
+        ],
+        'cell' => [
+          'userEnteredFormat' => [
+            'horizontalAlignment' => 'CENTER',
+            'textFormat' => ['bold' => true]
+          ]
+        ],
+        'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
+      ]
+    ]);
+    $batchUpdate = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => [$request]]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 }
