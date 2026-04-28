@@ -102,8 +102,8 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::get('settings', [SettingController::class, 'show'])->middleware('pin.session');
   Route::put('settings', [SettingController::class, 'update']);
   Route::post('settings/verify-pin', [SettingController::class, 'verifyPin'])->middleware('throttle:10,1');
+  Route::get('/oauth/google/status', [GoogleOAuthController::class, 'status']);
 });
 
 Route::get('/oauth/google/redirect', [GoogleOAuthController::class, 'redirect']);
 Route::get('/oauth/google/callback', [GoogleOAuthController::class, 'callback']);
-Route::get('/oauth/google/status', [GoogleOAuthController::class, 'status']);

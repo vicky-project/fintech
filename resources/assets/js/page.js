@@ -936,7 +936,6 @@ async function renderSettingsPage() {
   </div>
   <button type="button" class="btn btn-primary w-100" data-action="save-settings">Simpan Pengaturan</button>
   </form>
-  // Di dalam renderSettingsPage, setelah blok Keamanan (PIN), tambahkan:
   <hr>
   <h6>Integrasi</h6>
   <div class="mb-3">
