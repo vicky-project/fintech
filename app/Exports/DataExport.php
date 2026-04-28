@@ -129,28 +129,53 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
 
-          // === Chart ===
+          // ========== CHART (hanya transaksi) ==========
           if ($this->type === 'transactions' && count($this->data) > 0) {
-            $dataStart = $tableStart + $this->headerRowCount(); // baris pertama data
-            $dataCount = count($this->data);
-            $dataEnd = $dataStart + $dataCount - 1; // baris terakhir data
+            // hitung ulang baris data
+            $headerRows = $this->headerRowCount(); // 2 untuk transaksi
+            $tableStart = $metaCount + 3; // baris header pertama
+            $dataStartRow = $tableStart + $headerRows; // baris pertama data
+            $dataEndRow = $dataStartRow + count($this->data) - 1; // baris terakhir data
 
-            $categoriesRange = 'A' . $dataStart . ':A' . $dataEnd; // label: tanggal
-            $incomeRange = 'E' . $dataStart . ':E' . $dataEnd; // pemasukan
-            $expenseRange = 'F' . $dataStart . ':F' . $dataEnd; // pengeluaran
+            // pastikan range valid
+            if ($dataEndRow < $dataStartRow) return;
 
-            // Label series
-            $labelIncome = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, 'Worksheet!E1', null, 1);
-            $labelExpense = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, 'Worksheet!F1', null, 1);
+            $categoriesRange = 'A' . $dataStartRow . ':A' . $dataEndRow; // label (tanggal)
+            $incomeRange = 'E' . $dataStartRow . ':E' . $dataEndRow; // pemasukan
+            $expenseRange = 'F' . $dataStartRow . ':F' . $dataEndRow; // pengeluaran
 
-            // Kategori (X axis)
-            $categories = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, 'Worksheet!' . $categoriesRange, null, count($this->data));
+            // DataSeriesValues untuk label
+            $labelIncome = new DataSeriesValues(
+              DataSeriesValues::DATASERIES_TYPE_STRING,
+              'Worksheet!E1', // header "Pemasukan"
+              null, 1
+            );
+            $labelExpense = new DataSeriesValues(
+              DataSeriesValues::DATASERIES_TYPE_STRING,
+              'Worksheet!F1', // header "Pengeluaran"
+              null, 1
+            );
+
+            // Kategori (X axis) dari kolom A
+            $categories = new DataSeriesValues(
+              DataSeriesValues::DATASERIES_TYPE_STRING,
+              'Worksheet!' . $categoriesRange,
+              null, count($this->data)
+            );
 
             // Nilai (Y axis)
-            $valuesIncome = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, 'Worksheet!' . $incomeRange, null, count($this->data));
-            $valuesExpense = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, 'Worksheet!' . $expenseRange, null, count($this->data));
+            $valuesIncome = new DataSeriesValues(
+              DataSeriesValues::DATASERIES_TYPE_NUMBER,
+              'Worksheet!' . $incomeRange,
+              null, count($this->data)
+            );
+            $valuesExpense = new DataSeriesValues(
+              DataSeriesValues::DATASERIES_TYPE_NUMBER,
+              'Worksheet!' . $expenseRange,
+              null, count($this->data)
+            );
 
-            // Buat series
+            // Buat DataSeries
             $series = new DataSeries(
               DataSeries::TYPE_BARCHART,
               DataSeries::GROUPING_CLUSTERED,
@@ -168,12 +193,14 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
               $plotArea
             );
 
-            // Letakkan chart di bawah footer
+            // Letakkan chart di bawah footer (footerRow sudah diketahui)
             $chartTopLeft = 'A' . ($footerRow + 2);
-            $chartBottomRight = 'G' . ($footerRow + 17);
+            $chartBottomRight = 'G' . ($footerRow + 18);
+
             $chart->setTopLeftPosition($chartTopLeft);
             $chart->setBottomRightPosition($chartBottomRight);
 
+            // Tambahkan ke worksheet
             $sheet->addChart($chart);
           }
         },
