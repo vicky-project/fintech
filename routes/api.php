@@ -104,7 +104,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
 });
 
 // routes/web.php
-Route::get('/test-sheets', function () {
+Route::get('test-sheets', function () {
   try {
     $sheets = Sheets::spreadsheetList();
     return response()->json([

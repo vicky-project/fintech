@@ -276,7 +276,7 @@
 
   document.getElementById("test-auth").addEventListener('click', async function(){
   try {
-  const res = await Core.api.get(BASE_URL + '/api/test-sheet');
+  const res = await Core.api.get(BASE_URL + '/api/test-sheets');
   tgApp.showToast(res.message, res.success ? 'success' : 'danger');
   } catch(error) {
   tgApp.showToast(error.message, 'danger');
