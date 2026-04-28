@@ -90,17 +90,34 @@ class SheetWriter
 
       // 2. LOGIKA FORMATTING (Merge & Alignment)
       $requests = [
-        // Merge Horizontal: "Amount" (Kolom E ke F, Baris 1)
-        $this->createMergeRequest($sheetId, $currentRow, $currentRow, 4, 6),
-
-        // Merge Vertikal: Kolom A, B, C, D, dan G (Baris 1 ke 2)
+        // 1. Merge Vertikal (Baris 1 ke Baris 2) - Kolom A, B, C, D, G
         $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 0, 1),
+        // A1:A2
         $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 1, 2),
+        // B1:B2
         $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 2, 3),
+        // C1:C2
         $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 3, 4),
+        // D1:D2
         $this->createMergeRequest($sheetId, $currentRow, $currentRow + 1, 6, 7),
+        // G1:G2
 
-        // Style: Rata Tengah (Center Alignment) & Tebal (Bold) untuk semua Header
+        // 2. Merge Horizontal (Kolom E ke F) - Hanya di Baris 1
+        // Perhatikan: endRowIndex adalah $currentRow agar tidak menabrak baris 2
+        new \Google\Service\Sheets\Request([
+          'mergeCells' => [
+            'range' => [
+              'sheetId' => $sheetId,
+              'startRowIndex' => $currentRow - 1, // Baris 1
+              'endRowIndex' => $currentRow, // Berhenti sebelum baris 2
+              'startColumnIndex' => 4, // Kolom E
+              'endColumnIndex' => 6, // Sampai Kolom F
+            ],
+            'mergeType' => 'MERGE_ALL'
+          ]
+        ]),
+
+        // 3. Styling (Alignment & Bold)
         new \Google\Service\Sheets\Request([
           'repeatCell' => [
             'range' => [
@@ -121,6 +138,7 @@ class SheetWriter
           ]
         ])
       ];
+
 
       $batchUpdate = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
