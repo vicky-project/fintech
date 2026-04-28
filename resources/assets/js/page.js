@@ -1801,6 +1801,12 @@ async function renderExportPage() {
   <i class="bi bi-file-earmark-text text-secondary me-1"></i> CSV
   </label>
   </div>
+  <div class="form-check">
+  <input class="form-check-input" type="radio" name="export-format" id="format-gsheet" value="gsheet">
+  <label class="form-check-label" for="format-gsheet">
+  <i class="bi bi-google text-primary me-1"></i> Google Sheets
+  </label>
+  </div>
   </div>
   </div>
 
@@ -2057,26 +2063,29 @@ function renderBudgetPeriodInput() {
 
 function updateExportFormatAvailability() {
   const type = document.getElementById('export-type').value;
-  const formatPdfRadio = document.getElementById('format-pdf');
-  const formatXlsxRadio = document.getElementById('format-xlsx');
-  const formatCsvRadio = document.getElementById('format-csv');
-  if (!formatPdfRadio || !formatXlsxRadio || !formatCsvRadio) return;
+  const formatPdf = document.getElementById('format-pdf');
+  const formatXlsx = document.getElementById('format-xlsx');
+  const formatCsv = document.getElementById('format-csv');
+  const formatGsheet = document.getElementById('format-gsheet');
+  const labels = document.querySelectorAll('label[for="format-pdf"], label[for="format-csv"], label[for="format-gsheet"]');
+
+  if (!formatPdf || !formatCsv || !formatGsheet) return;
 
   if (type === 'all') {
-    // Nonaktifkan PDF & CSV, paksa Excel
-    formatPdfRadio.disabled = true;
-    formatPdfRadio.checked = false;
-    formatCsvRadio.disabled = true;
-    formatCsvRadio.checked = false;
-    formatXlsxRadio.checked = true;
-    // Opsional: tambahkan kelas 'text-muted' pada label
-    document.querySelector('label[for="format-pdf"]')?.classList.add('text-muted');
-    document.querySelector('label[for="format-csv"]')?.classList.add('text-muted');
+    // Sembunyikan semua selain Excel
+    formatPdf.disabled = true;
+    formatPdf.checked = false;
+    formatCsv.disabled = true;
+    formatCsv.checked = false;
+    formatGsheet.disabled = true;
+    formatGsheet.checked = false;
+    formatXlsx.checked = true;
+    labels.forEach(l => l?.classList.add('text-muted'));
   } else {
-    formatPdfRadio.disabled = false;
-    formatCsvRadio.disabled = false;
-    document.querySelector('label[for="format-pdf"]')?.classList.remove('text-muted');
-    document.querySelector('label[for="format-csv"]')?.classList.remove('text-muted');
+    formatPdf.disabled = false;
+    formatCsv.disabled = false;
+    formatGsheet.disabled = false;
+    labels.forEach(l => l?.classList.remove('text-muted'));
   }
 }
 
@@ -2174,8 +2183,8 @@ async function performExport() {
     }
     // Semua data
     else if (type === 'all') {
-      if (format === 'pdf') {
-        tgApp.showToast('Format PDF tidak tersedia untuk semua data. Silakan gunakan excel', 'warning');
+      if (['pdf', 'csv', 'gsheet'].includes(payload.format)) {
+        tgApp.showToast('Format tersebut tidak didukung untuk semua data. Silakan gunakan excel', 'warning');
         return;
       }
 

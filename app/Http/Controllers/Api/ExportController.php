@@ -30,12 +30,33 @@ class ExportController extends Controller
     }
 
     try {
+      $data = $request->validated();
+      $format = $data['format'];
+
+      // --- GOOGLE SHEETS ---
+      if ($format === 'gsheet') {
+        $result = $this->exportService->exportToGoogleSheets($data);
+
+        $telegramApi = app(TelegramApi::class);
+        $caption = "✅ Ekspor ke Google Sheets berhasil!\n"
+        . "📊 Buka spreadsheet di sini: " . $result['url'];
+
+        $telegramApi->sendMessage($chatId, $caption);
+
+        return response()->json([
+          'success' => true,
+          'message' => 'Data berhasil dikirim ke Google Sheets. Cek pesan Telegram Anda!',
+          'url' => $result['url'],
+        ]);
+      }
+
+      // --- FILE-BASED (PDF/Excel/CSV) ---
       // 1. Generate file
-      $filePath = $this->exportService->generate($request->validated());
+      $filePath = $this->exportService->generate($data);
 
       // 2. Kirim via Telegram
       $telegramApi = app(TelegramApi::class);
-      $caption = "✅ Export " . ucfirst($request->type) . " selesai!\n" . now()->format('d M Y H:i');
+      $caption = "✅ Export " . ucfirst($data['type']) . " selesai!\n" . now()->format('d M Y H:i');
 
       $sent = $telegramApi->sendDocument(
         chatId: $chatId,
@@ -53,16 +74,14 @@ class ExportController extends Controller
           'success' => true,
           'message' => 'File berhasil dikirim ke Telegram Anda. 📁',
         ]);
-      } else {
-        // Mungkin bot belum di-start user
-        return response()->json([
-          'success' => false,
-          'message' => 'Silakan mulai bot terlebih dahulu dengan klik /start di @NamaBot.',
-        ], 400);
       }
 
-      // Fallback: download langsung
-      return $this->downloadFallback($filePath, $request->type, $request->format);
+      // Fallback jika bot belum distart
+      return response()->json([
+        'success' => false,
+        'message' => 'Silakan mulai bot terlebih dahulu dengan klik /start di @NamaBot.',
+      ], 400);
+
     } catch (\Exception $e) {
       Log::error('Export error', [
         'error' => $e->getMessage(),

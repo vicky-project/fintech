@@ -10,6 +10,7 @@ use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Exports\AllDataExport;
 use Modules\FinTech\Exports\CsvDataExport;
 use Modules\FinTech\Exports\ExcelDataExport;
+use Modules\FinTech\Services\GoogleSheetsService;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
@@ -396,5 +397,35 @@ class ExportService
           "Export PDF tidak tersedia untuk semua data. Gunakan format Excel."
         );
       }
+    }
+
+    // GOOGLESHEET
+    public function exportToGoogleSheets(array $filters): array
+    {
+      $user = request()->user();
+      $type = $filters['type'];
+      $limit = $this->maxExcelRecords; // pakai batas Excel
+
+      [$data,
+        $summary] = match ($type) {
+        'transactions' => $this->getTransactionsData($user, $filters, $limit),
+        'transfers' => $this->getTransfersData($user, $filters, $limit),
+        'budgets' => $this->getBudgetsData($user, $filters, $limit),
+      };
+
+      $googleSheets = app(GoogleSheetsService::class);
+      $spreadsheetId = $googleSheets->getOrCreateSpreadsheet($user);
+
+      $sheetName = match ($type) {
+        'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
+        'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
+        'budgets' => GoogleSheetsService::SHEET_BUDGETS,
+      };
+
+      $googleSheets->exportDataToSheet($spreadsheetId, $sheetName, $data, true);
+
+      return [
+        'url' => $googleSheets->getSpreadsheetUrl($spreadsheetId),
+      ];
     }
   }

@@ -25,7 +25,7 @@ class ExportRequest extends FormRequest
       'type' => ['required',
         Rule::in(['transactions', 'transfers', 'budgets', 'all'])],
       'format' => ['required',
-        Rule::in(['pdf', 'xlsx', 'csv'])],
+        Rule::in(['pdf', 'xlsx', 'csv', 'gsheet'])],
 
       'wallet_id' => [
         'required',
