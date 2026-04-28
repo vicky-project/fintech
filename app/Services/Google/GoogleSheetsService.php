@@ -3,9 +3,9 @@
 namespace Modules\FinTech\Services\Google;
 
 use Modules\FinTech\Services\Google\GoogleSheetsClient;
-use Modules\FinTech\Exports\Google\SpreadsheetManager;
-use Modules\FinTech\Exports\Google\SheetWriter;
-use Modules\FinTech\Exports\Google\SheetStyler;
+use Modules\FinTech\Services\Google\SpreadsheetManager;
+use Modules\FinTech\Services\Google\SheetWriter;
+use Modules\FinTech\Services\Google\SheetStyler;
 
 class GoogleSheetsService
 {
