@@ -335,28 +335,57 @@ class ExportService
       return Storage::disk('local')->path($tempPath);
     }
 
-    protected function generateGsheet(string $type, array $data, $user): string
+    protected function generateGsheet(string $type, array $filters, $user): string
     {
       $googleService = app(GoogleSheetsService::class);
       $googleService->setupForUser($user);
 
       $spreadsheetId = $googleService->getOrCreateSpreadsheet($user);
 
-      // Ambil data (tanpa batasan format)
-      [$data,
-        $summary] = match ($type) {
-        'transactions' => $this->getTransactionsData($user, $data, 5000),
-        'transfers' => $this->getTransfersData($user, $data, 5000),
-        'budgets' => $this->getBudgetsData($user, $data, 5000),
-      };
+      if ($type === 'all') {
+        // Ambil semua data dengan limit besar (Excel)
+        $limit = $this->maxExcelRecords;
 
-      $sheetName = match ($type) {
-        'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
-        'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
-        'budgets' => GoogleSheetsService::SHEET_BUDGETS,
-      };
+        $transactions = $this->getTransactionsData($user, $filters, $limit);
+        $transfers = $this->getTransfersData($user, $filters, $limit);
+        $budgets = $this->getBudgetsData($user, $filters, $limit);
 
-      $googleService->exportDataToSheet($spreadsheetId, $sheetName, $data, true);
+        // Tulis masing-masing ke sheet
+        $googleService->exportDataToSheet(
+          $spreadsheetId,
+          GoogleSheetsService::SHEET_TRANSACTIONS,
+          $transactions[0],
+          true
+        );
+        $googleService->exportDataToSheet(
+          $spreadsheetId,
+          GoogleSheetsService::SHEET_TRANSFERS,
+          $transfers[0],
+          true
+        );
+        $googleService->exportDataToSheet(
+          $spreadsheetId,
+          GoogleSheetsService::SHEET_BUDGETS,
+          $budgets[0],
+          true
+        );
+      } else {
+        // Tipe tunggal
+        [$data,
+          $summary] = match ($type) {
+          'transactions' => $this->getTransactionsData($user, $filters, $this->maxExcelRecords),
+          'transfers' => $this->getTransfersData($user, $filters, $this->maxExcelRecords),
+          'budgets' => $this->getBudgetsData($user, $filters, $this->maxExcelRecords),
+        };
+
+        $sheetName = match ($type) {
+          'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
+          'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
+          'budgets' => GoogleSheetsService::SHEET_BUDGETS,
+        };
+
+        $googleService->exportDataToSheet($spreadsheetId, $sheetName, $data, true);
+      }
 
       return $googleService->getSpreadsheetUrl($spreadsheetId);
     }
@@ -427,35 +456,5 @@ class ExportService
           "Export PDF tidak tersedia untuk semua data. Gunakan format Excel."
         );
       }
-    }
-
-    // GOOGLESHEET
-    public function exportToGoogleSheets(array $filters): array
-    {
-      $user = request()->user();
-      $type = $filters['type'];
-      $limit = $this->maxExcelRecords; // pakai batas Excel
-
-      [$data,
-        $summary] = match ($type) {
-        'transactions' => $this->getTransactionsData($user, $filters, $limit),
-        'transfers' => $this->getTransfersData($user, $filters, $limit),
-        'budgets' => $this->getBudgetsData($user, $filters, $limit),
-      };
-
-      $googleSheets = app(GoogleSheetsService::class);
-      $spreadsheetId = $googleSheets->getOrCreateSpreadsheet($user);
-
-      $sheetName = match ($type) {
-        'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
-        'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
-        'budgets' => GoogleSheetsService::SHEET_BUDGETS,
-      };
-
-      $googleSheets->exportDataToSheet($spreadsheetId, $sheetName, $data, true);
-
-      return [
-        'url' => $googleSheets->getSpreadsheetUrl($spreadsheetId),
-      ];
     }
   }
