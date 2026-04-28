@@ -114,31 +114,36 @@ class GoogleSheetsService
   */
   public function createSpreadsheetForUser($user): string
   {
-    $title = "FinTech - " . ($user->name ?? "User {$user->id}");
+    try {
+      $title = "FinTech - " . ($user->name ?? "User {$user->id}");
 
-    $spreadsheet = new Spreadsheet([
-      'properties' => ['title' => $title],
-    ]);
+      $spreadsheet = new Spreadsheet([
+        'properties' => ['title' => $title],
+      ]);
 
-    $spreadsheet = $this->service->spreadsheets->create($spreadsheet);
-    $spreadsheetId = $spreadsheet->spreadsheetId;
+      $spreadsheet = $this->service->spreadsheets->create($spreadsheet);
+      $spreadsheetId = $spreadsheet->spreadsheetId;
 
-    // Rename sheet pertama
-    $sheets = $spreadsheet->getSheets();
-    if (count($sheets) > 0) {
-      $sheetId = $sheets[0]->getProperties()->getSheetId();
-      $this->renameSheet($spreadsheetId, $sheetId, self::SHEET_TRANSACTIONS);
+      // Rename sheet pertama
+      $sheets = $spreadsheet->getSheets();
+      if (count($sheets) > 0) {
+        $sheetId = $sheets[0]->getProperties()->getSheetId();
+        $this->renameSheet($spreadsheetId, $sheetId, self::SHEET_TRANSACTIONS);
+      }
+
+      // Buat sheet Transfer dan Budget
+      $this->addSheetIfNotExists($spreadsheetId, self::SHEET_TRANSFERS);
+      $this->addSheetIfNotExists($spreadsheetId, self::SHEET_BUDGETS);
+
+      Log::info("Spreadsheet dibuat untuk user {$user->id}", [
+        'spreadsheet_id' => $spreadsheetId,
+      ]);
+
+      return $spreadsheetId;
+    } catch(\Exception $e) {
+      Log::error($e);
+      throw $e;
     }
-
-    // Buat sheet Transfer dan Budget
-    $this->addSheetIfNotExists($spreadsheetId, self::SHEET_TRANSFERS);
-    $this->addSheetIfNotExists($spreadsheetId, self::SHEET_BUDGETS);
-
-    Log::info("Spreadsheet dibuat untuk user {$user->id}", [
-      'spreadsheet_id' => $spreadsheetId,
-    ]);
-
-    return $spreadsheetId;
   }
 
   /**
