@@ -70,6 +70,10 @@ function handleGlobalClick(e) {
         window.open(link, '_blank');
       }
     },
+    'show-export-guide': () => {
+      const modal = new bootstrap.Modal(document.getElementById('exportGuideModal'));
+      modal.show();
+    },
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {

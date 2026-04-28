@@ -1745,30 +1745,43 @@ async function forceDeleteTransfer(id) {
 async function renderExportPage() {
   const html = `
   <div class="export-page">
-  <!-- Header -->
   <div class="container py-3">
-  <div class="text-center mb-4">
-  <i class="bi bi-cloud-arrow-down-fill display-3 text-primary opacity-75"></i>
-  <h3 class="fw-bold mt-2">Ekspor Data Keuangan</h3>
-  <p class="text-muted">Unduh data transaksi, transfer, dan budget Anda dalam format PDF atau Excel.</p>
+  <!-- Header dengan tombol panduan -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+  <h3 class="fw-bold mb-0"><i class="bi bi-cloud-arrow-down-fill me-2"></i>Ekspor Data Keuangan</h3>
+  </div>
+  <button class="btn btn-outline-secondary btn-sm rounded-circle" style="width: 36px; height: 36px;"
+  data-action="show-export-guide" title="Panduan Ekspor">
+  <i class="bi bi-question-lg"></i>
+  </button>
   </div>
 
-  <!-- Konten Utama -->
-  <div class="row g-4">
-  <!-- Kolom Form (kiri) -->
-  <div class="col-lg-7">
-  <div class="card shadow-sm border-0">
+  <!-- Card Utama -->
+  <div class="card border-0 shadow-sm" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);">
   <div class="card-body p-4">
   <!-- Jenis Data -->
   <div class="mb-4">
   <label class="form-label fw-semibold">
   <i class="bi bi-stack me-2"></i>Jenis Data
   </label>
-  <select class="form-select form-select-lg" id="export-type" data-action="change-export-type">
-  <option value="all" selected>Semua Data</option>
-  <option value="transactions">Transaksi</option>
+  <select class="form-select" id="export-type" data-action="change-export-type"
+  style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
+  <option value="transactions" selected>Transaksi</option>
   <option value="transfers">Transfer</option>
   <option value="budgets">Budget</option>
+  <option value="all">Semua Data</option>
+  </select>
+  </div>
+
+  <!-- Dompet -->
+  <div class="mb-4">
+  <label class="form-label fw-semibold">
+  <i class="bi bi-wallet2 me-2"></i>Dompet <span class="text-danger">*</span>
+  </label>
+  <select class="form-select" id="filter-wallet"
+  style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
+  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id == (Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '')) ? 'selected': ''}>${w.name} (${w.currency || ''})</option>`).join('')}
   </select>
   </div>
 
@@ -1780,11 +1793,11 @@ async function renderExportPage() {
   <label class="form-label fw-semibold">
   <i class="bi bi-file-earmark me-2"></i>Format File
   </label>
-  <div class="d-flex gap-3">
+  <div class="d-flex gap-3 flex-wrap">
   <div class="form-check">
   <input class="form-check-input" type="radio" name="export-format" id="format-xlsx" value="xlsx" checked>
   <label class="form-check-label" for="format-xlsx">
-  <i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> Excel (.xlsx)
+  <i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> Excel
   </label>
   </div>
   <div class="form-check">
@@ -1803,68 +1816,56 @@ async function renderExportPage() {
   </div>
 
   <!-- Tombol Ekspor -->
-  <button class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 shadow-sm"
-  data-action="export-data"
-  style="transition: all 0.2s ease;">
+  <button class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
+  data-action="export-data">
   <i class="bi bi-rocket-takeoff"></i> Ekspor Sekarang
   </button>
   </div>
   </div>
   </div>
 
-  <!-- Kolom Panduan (kanan) -->
-  <div class="col-lg-5">
-  <div class="card shadow-sm border-0">
-  <div class="card-header bg-transparent border-0 pt-3 pb-0">
-  <h5 class="fw-bold"><i class="bi bi-info-circle-fill text-info me-2"></i>Panduan</h5>
+  <!-- Modal Panduan -->
+  <div class="modal fade" id="exportGuideModal" tabindex="-1" aria-labelledby="exportGuideModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+  <div class="modal-content" style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
+  <div class="modal-header">
+  <h5 class="modal-title fw-bold" id="exportGuideModalLabel"><i class="bi bi-info-circle-fill text-info me-2"></i>Panduan Lengkap Ekspor</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1);"></button>
   </div>
-  <div class="card-body pt-3">
-  <div class="d-flex mb-3">
-  <div class="me-3">
-  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">1</span>
-  </div>
-  <div>
-  <strong>Buka Bot Telegram</strong>
-  <p class="text-muted small mb-1">Pastikan Anda sudah memulai bot kami dengan menekan tombol <strong>Start</strong>.</p>
-  <button class="btn btn-sm btn-telegram mt-1"
-  style="background-color: #0088cc; color: white;"
-  data-action="open-bot-chat"
-  data-bot-link="https://t.me/${BOT_USERNAME}?start=export">
+  <div class="modal-body">
+  <div class="mb-4">
+  <h6 class="fw-bold"><i class="bi bi-1-circle-fill text-primary me-2"></i>Mulai Bot Telegram</h6>
+  <p class="small opacity-75">Sebelum mengekspor, pastikan Anda sudah memulai bot kami. Klik tombol di bawah untuk membuka chat:</p>
+  <button class="btn btn-sm" style="background-color: #0088cc; color: white;"
+  data-action="open-bot-chat" data-bot-link="https://t.me/${BOT_USERNAME}?start=export">
   <i class="bi bi-telegram me-1"></i> Buka @${BOT_USERNAME}
   </button>
   </div>
+  <div class="mb-4">
+  <h6 class="fw-bold"><i class="bi bi-2-circle-fill text-primary me-2"></i>Pilih Jenis & Filter</h6>
+  <p class="small opacity-75">Pilih tipe data (<strong>Transaksi</strong>, <strong>Transfer</strong>, <strong>Budget</strong>, atau <strong>Semua Data</strong>). Filter akan menyesuaikan dengan tipe yang dipilih.</p>
+  <ul class="small opacity-75">
+  <li><strong>Transaksi:</strong> Bisa difilter per dompet, tanggal/bulan, tipe (pemasukan/pengeluaran), dan kategori.</li>
+  <li><strong>Transfer:</strong> Hanya bisa difilter per dompet dan rentang tanggal/bulan.</li>
+  <li><strong>Budget:</strong> Bisa difilter per dompet, tipe periode (bulanan/tahunan), status, dan kategori.</li>
+  <li><strong>Semua Data:</strong> Hanya dompet dan rentang tanggal yang tersedia.</li>
+  </ul>
   </div>
-  <div class="d-flex mb-3">
-  <div class="me-3">
-  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">2</span>
-  </div>
-  <div>
-  <strong>Pilih Data & Filter</strong>
-  <p class="text-muted small mb-0">Tentukan jenis data, dompet, rentang tanggal, dan filter lain yang diinginkan.</p>
-  </div>
-  </div>
-  <div class="d-flex mb-3">
-  <div class="me-3">
-  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">3</span>
-  </div>
-  <div>
-  <strong>Pilih Format</strong>
-  <p class="text-muted small mb-0">Excel untuk data yang bisa diedit, PDF untuk laporan siap cetak.</p>
-  </div>
-  </div>
-  <div class="d-flex">
-  <div class="me-3">
-  <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">4</span>
+  <div class="mb-4">
+  <h6 class="fw-bold"><i class="bi bi-3-circle-fill text-primary me-2"></i>Pilih Format File</h6>
+  <p class="small opacity-75">
+  <strong>Excel (.xlsx):</strong> Data lengkap dengan tabel, subtotal, dan metadata. Cocok untuk analisis lebih lanjut.<br>
+  <strong>PDF:</strong> Laporan siap cetak dengan tampilan profesional. Batas data 500 baris.<br>
+  <strong>CSV:</strong> Format ringan untuk diimpor ke spreadsheet lain (Excel, Google Sheets, dsb).
+  </p>
   </div>
   <div>
-  <strong>Ekspor & Cek Telegram</strong>
-  <p class="text-muted small mb-0">Klik Ekspor, file akan dikirim ke chat Telegram Anda.</p>
+  <h6 class="fw-bold"><i class="bi bi-4-circle-fill text-primary me-2"></i>Ekspor & Cek Telegram</h6>
+  <p class="small opacity-75">Setelah menekan tombol <strong>Ekspor Sekarang</strong>, file akan diproses dan dikirim ke chat Telegram Anda. Pastikan koneksi internet stabil.</p>
   </div>
   </div>
-  </div>
-  </div>
-  <div class="text-center mt-3">
-  <small class="text-muted">Butuh bantuan? Hubungi kami di <a href="https://t.me/${BOT_USERNAME}" target="_blank">@${BOT_USERNAME}</a></small>
+  <div class="modal-footer">
+  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
   </div>
   </div>
   </div>
