@@ -2,21 +2,23 @@
 
 namespace Modules\FinTech\Exports;
 
-use Maatwebsite\Excel\Concerns\ {
-  WithHeadings,
-  WithStyles,
-  ShouldAutoSize,
-  WithEvents,
-  WithTitle
-};
+use Maatwebsite\Excel\Concerns\ WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\ {
-  Border,
-  Fill,
-  Font,
-  Alignment
-};
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Font;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Chart\Chart;
+use PhpOffice\PhpSpreadsheet\Chart\DataSeries;
+use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
+use PhpOffice\PhpSpreadsheet\Chart\Legend;
+use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
+use PhpOffice\PhpSpreadsheet\Chart\Title;
 
 class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents, WithTitle
 {
@@ -126,6 +128,54 @@ class DataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents
             'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
+
+          // === Chart ===
+          if ($this->type === 'transactions' && count($this->data) > 0) {
+            $dataStart = $tableStart + $this->headerRowCount(); // baris pertama data
+            $dataCount = count($this->data);
+            $dataEnd = $dataStart + $dataCount - 1; // baris terakhir data
+
+            $categoriesRange = 'A' . $dataStart . ':A' . $dataEnd; // label: tanggal
+            $incomeRange = 'E' . $dataStart . ':E' . $dataEnd; // pemasukan
+            $expenseRange = 'F' . $dataStart . ':F' . $dataEnd; // pengeluaran
+
+            // Label series
+            $labelIncome = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, 'Worksheet!E1', null, 1);
+            $labelExpense = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, 'Worksheet!F1', null, 1);
+
+            // Kategori (X axis)
+            $categories = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, 'Worksheet!' . $categoriesRange, null, count($this->data));
+
+            // Nilai (Y axis)
+            $valuesIncome = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, 'Worksheet!' . $incomeRange, null, count($this->data));
+            $valuesExpense = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, 'Worksheet!' . $expenseRange, null, count($this->data));
+
+            // Buat series
+            $series = new DataSeries(
+              DataSeries::TYPE_BARCHART,
+              DataSeries::GROUPING_CLUSTERED,
+              [0, 1],
+              [$labelIncome, $labelExpense],
+              [$categories],
+              [$valuesIncome, $valuesExpense]
+            );
+
+            $plotArea = new PlotArea(null, [$series]);
+            $chart = new Chart(
+              'chart_pemasukan_pengeluaran',
+              new Title('Pemasukan vs Pengeluaran'),
+              new Legend(Legend::POSITION_TOP),
+              $plotArea
+            );
+
+            // Letakkan chart di bawah footer
+            $chartTopLeft = 'A' . ($footerRow + 2);
+            $chartBottomRight = 'G' . ($footerRow + 17);
+            $chart->setTopLeftPosition($chartTopLeft);
+            $chart->setBottomRightPosition($chartBottomRight);
+
+            $sheet->addChart($chart);
+          }
         },
       ];
     }
