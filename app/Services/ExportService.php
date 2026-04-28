@@ -17,14 +17,14 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Chart\Chart;
 use PhpOffice\PhpSpreadsheet\Chart\DataSeries;
 use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
 use PhpOffice\PhpSpreadsheet\Chart\Legend;
 use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
 use PhpOffice\PhpSpreadsheet\Chart\Title;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx as ReaderXlsx;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as WriterXlsx;
 
 class ExportService
 {
@@ -400,57 +400,59 @@ class ExportService
       }
     }
 
-    protected function addChartToExcel(string $storagePath, array $data, array $summary): void
+    protected function addChartToExcel(string $fullPath, array $data, array $summary): void
     {
-      // Buka file Excel yang sudah disimpan
-      $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
-      $spreadsheet = $reader->load($storagePath);
+      if (!file_exists($fullPath)) {
+        \Log::error('File Excel tidak ditemukan: ' . $fullPath);
+        return;
+      }
 
-      // Ambil sheet pertama
-      $sheet = $spreadsheet->getActiveSheet();
+      // Buat salinan sementara untuk dimodifikasi
+      $tmpPath = $fullPath . '.tmp';
 
-      // Hitung posisi data (sama seperti di DataExport)
-      $metaCount = count($summary['metadata'] ?? []);
-      $headerRows = 2; // karena transaksi punya 2 baris header
-      $tableStart = $metaCount + 3;
-      $dataStartRow = $tableStart + $headerRows;
-      $dataEndRow = $dataStartRow + count($data) - 1;
+      try {
+        copy($fullPath, $tmpPath);
 
-      if ($dataEndRow >= $dataStartRow) {
-        $categoriesRange = 'A' . $dataStartRow . ':A' . $dataEndRow;
-        $incomeRange = 'E' . $dataStartRow . ':E' . $dataEndRow;
-        $expenseRange = 'F' . $dataStartRow . ':F' . $dataEndRow;
+        $reader = new ReaderXlsx();
+        $spreadsheet = $reader->load($tmpPath);
 
-        // Label series
-        $labelIncome = new DataSeriesValues(
-          DataSeriesValues::DATASERIES_TYPE_STRING,
-          'Worksheet!$E$1',
-          null, 1
-        );
-        $labelExpense = new DataSeriesValues(
-          DataSeriesValues::DATASERIES_TYPE_STRING,
-          'Worksheet!$F$1',
-          null, 1
-        );
+        // Hapus sheet default kosong jika ada (biasanya tidak)
+        // $spreadsheet->removeSheetByIndex(0); // jangan lakukan ini
+
+        $worksheet = $spreadsheet->getActiveSheet();
+        $sheetTitle = $worksheet->getTitle();
+
+        // Hitung posisi data
+        $metaCount = count($summary['metadata'] ?? []);
+        $headerRows = 2; // transaksi memiliki 2 baris header
+        $tableStart = $metaCount + 3;
+        $dataStartRow = $tableStart + $headerRows;
+        $dataEndRow = $dataStartRow + count($data) - 1;
+
+        if ($dataEndRow < $dataStartRow) {
+          \Log::warning('Data terlalu sedikit untuk membuat chart');
+          return;
+        }
+
+        // Gunakan referensi sheet dengan nama yang tepat
+        $sheetName = str_replace("'", "''", $sheetTitle); // escape petik
+        $prefix = "'{$sheetName}'!";
+
+        // Range data
+        $categoriesRange = $prefix . '$A$' . $dataStartRow . ':$A$' . $dataEndRow;
+        $incomeRange = $prefix . '$E$' . $dataStartRow . ':$E$' . $dataEndRow;
+        $expenseRange = $prefix . '$F$' . $dataStartRow . ':$F$' . $dataEndRow;
+
+        // Label series (header)
+        $labelIncome = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, $prefix . '$E$1', null, 1);
+        $labelExpense = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, $prefix . '$F$1', null, 1);
 
         // Kategori (X axis)
-        $categories = new DataSeriesValues(
-          DataSeriesValues::DATASERIES_TYPE_STRING,
-          'Worksheet!' . $categoriesRange,
-          null, count($data)
-        );
+        $categories = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, $categoriesRange, null, count($data));
 
         // Nilai
-        $valuesIncome = new DataSeriesValues(
-          DataSeriesValues::DATASERIES_TYPE_NUMBER,
-          'Worksheet!' . $incomeRange,
-          null, count($data)
-        );
-        $valuesExpense = new DataSeriesValues(
-          DataSeriesValues::DATASERIES_TYPE_NUMBER,
-          'Worksheet!' . $expenseRange,
-          null, count($data)
-        );
+        $valuesIncome = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, $incomeRange, null, count($data));
+        $valuesExpense = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, $expenseRange, null, count($data));
 
         // Buat series
         $series = new DataSeries(
@@ -470,20 +472,38 @@ class ExportService
           $plotArea
         );
 
-        // Posisi chart
-        $footerRow = $dataEndRow + 7; // perkiraan posisi footer (subtotal + footer)
+        // Posisi chart (di bawah footer)
+        $footerRow = $dataEndRow + 7; // perkiraan baris terakhir + footer
         $chartTopLeft = 'A' . ($footerRow + 2);
         $chartBottomRight = 'G' . ($footerRow + 18);
         $chart->setTopLeftPosition($chartTopLeft);
         $chart->setBottomRightPosition($chartBottomRight);
 
-        // Tambahkan chart
-        $sheet->addChart($chart);
+        // Tambahkan chart ke spreadsheet (bukan worksheet)
+        $spreadsheet->addChart($chart);
 
-        // Simpan ulang file
-        $writer = new Xlsx($spreadsheet);
-        $writer->setIncludeCharts(true); // penting!
-        $writer->save($storagePath);
+        // Simpan ke file temporari
+        $writer = new WriterXlsx($spreadsheet);
+        $writer->setIncludeCharts(true);
+        $writer->save($tmpPath);
+
+        // Hapus file asli dan ganti dengan yang baru
+        if (file_exists($fullPath)) {
+          unlink($fullPath);
+        }
+        rename($tmpPath, $fullPath);
+
+        \Log::info('Chart berhasil ditambahkan ke file Excel');
+
+      } catch (\Exception $e) {
+        \Log::error('Gagal menambahkan chart: ' . $e->getMessage(), [
+          'exception' => $e,
+        ]);
+
+        // Bersihkan file temporari jika masih ada
+        if (file_exists($tmpPath)) {
+          unlink($tmpPath);
+        }
       }
     }
   }
