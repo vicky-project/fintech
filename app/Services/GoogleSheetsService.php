@@ -46,7 +46,7 @@ class GoogleSheetsService
     $client->addScope([GoogleSheets::SPREADSHEETS, GoogleDrive::DRIVE_FILE]);
     $client->setAccessType('offline');
 
-    $setting = $user->userSetting;
+    $setting = UserSetting::where('user_id', $user->id)->first();
     if ($setting && $setting->google_access_token) {
       $token = [
         'access_token' => $setting->google_access_token,
