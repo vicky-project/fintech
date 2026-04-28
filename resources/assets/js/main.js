@@ -77,8 +77,11 @@ async function handleGlobalClick(e) {
     'connect-google': async () => {
       const res = await Core.api.get('/api/fintech/oauth/google/redirect');
       if (res.url) {
-        window.Telegram.WebApp.openTelegramLink(res.url);
-        tgApp.showToast('Silakan hubungkan akun Google Anda. Setelah itu, segarkan halaman.', 'info');
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(res.url);
+        } else {
+          window.open(res.url, '_blank');
+        }
       }
     },
     // tambahkan aksi lain sesuai kebutuhan
