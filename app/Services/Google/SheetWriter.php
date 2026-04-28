@@ -68,7 +68,7 @@ class SheetWriter
     $colCount = count($headers);
 
     if ($dataType === 'transactions') {
-      // Baris 1: merge kolom A..D, E..F, G sendiri
+      // Baris 1: Tanggal, Tipe, Kategori, Dompet, Amount, (kosong), Deskripsi
       $row1 = ['Tanggal',
         'Tipe',
         'Kategori',
@@ -78,21 +78,62 @@ class SheetWriter
         'Deskripsi'];
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
-        $sheetName . '!A' . $currentRow . ':G' . $currentRow,
+        $sheetName . '!A' . $currentRow,
         new ValueRange(['values' => [$row1]]),
         ['valueInputOption' => 'RAW']
       );
-      // Merge A..D, E..F
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId, 'startRowIndex' => $currentRow-1, 'endRowIndex' => $currentRow+1,
-        'startColumnIndex' => 0, 'endColumnIndex' => 4
-      ], 'mergeType' => 'MERGE_COLUMNS']]);
-      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
-        'sheetId' => $sheetId, 'startRowIndex' => $currentRow-1, 'endRowIndex' => $currentRow+1,
-        'startColumnIndex' => 4, 'endColumnIndex' => 6
-      ], 'mergeType' => 'MERGE_COLUMNS']]);
 
-      // Baris 2: sub-header
+      // Merge sel untuk header yang tidak memiliki sub-header (dua baris)
+      // A: Tanggal (merge A1:A2)
+      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
+        'sheetId' => $sheetId,
+        'startRowIndex' => $currentRow - 1,
+        'endRowIndex' => $currentRow + 1,
+        'startColumnIndex' => 0,
+        'endColumnIndex' => 1
+      ]]]);
+      // B: Tipe (merge B1:B2)
+      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
+        'sheetId' => $sheetId,
+        'startRowIndex' => $currentRow - 1,
+        'endRowIndex' => $currentRow + 1,
+        'startColumnIndex' => 1,
+        'endColumnIndex' => 2
+      ]]]);
+      // C: Kategori (merge C1:C2)
+      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
+        'sheetId' => $sheetId,
+        'startRowIndex' => $currentRow - 1,
+        'endRowIndex' => $currentRow + 1,
+        'startColumnIndex' => 2,
+        'endColumnIndex' => 3
+      ]]]);
+      // D: Dompet (merge D1:D2)
+      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
+        'sheetId' => $sheetId,
+        'startRowIndex' => $currentRow - 1,
+        'endRowIndex' => $currentRow + 1,
+        'startColumnIndex' => 3,
+        'endColumnIndex' => 4
+      ]]]);
+      // E1:F1: Amount (merge horizontal, SATU BARIS saja)
+      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
+        'sheetId' => $sheetId,
+        'startRowIndex' => $currentRow - 1,
+        'endRowIndex' => $currentRow,
+        'startColumnIndex' => 4,
+        'endColumnIndex' => 6
+      ]]]);
+      // G: Deskripsi (merge G1:G2)
+      $requests[] = new SheetsRequest(['mergeCells' => ['range' => [
+        'sheetId' => $sheetId,
+        'startRowIndex' => $currentRow - 1,
+        'endRowIndex' => $currentRow + 1,
+        'startColumnIndex' => 6,
+        'endColumnIndex' => 7
+      ]]]);
+
+      // Baris 2: (kosong), (kosong), (kosong), (kosong), Pemasukan, Pengeluaran, (kosong)
       $row2 = ['',
         '',
         '',
@@ -102,12 +143,14 @@ class SheetWriter
         ''];
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
-        $sheetName . '!A' . ($currentRow+1) . ':G' . ($currentRow+1),
+        $sheetName . '!A' . ($currentRow + 1),
         new ValueRange(['values' => [$row2]]),
         ['valueInputOption' => 'RAW']
       );
+
       $currentRow += 2;
     } else {
+      // Header satu baris
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
         $sheetName . '!A' . $currentRow . ':' . chr(64+$colCount) . $currentRow,
