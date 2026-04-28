@@ -95,7 +95,7 @@ class GoogleOAuthController extends Controller
   */
   public function status(Request $request) {
     $user = $request->user();
-    $setting = $user->userSetting;
+    $setting = UserSetting::where('user_id', $user->id)->first();
 
     $connected = $setting && $setting->google_access_token;
 
