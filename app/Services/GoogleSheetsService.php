@@ -224,7 +224,7 @@ class GoogleSheetsService
       $spreadsheetId, $sheetName,
       $startRow, $headerEndCol,
       $dataStartRow, $dataEndRow,
-      $dataType, $values, $headers
+      $dataType, $values, $headers, $summary
     );
 
     // Auto-resize kolom
@@ -387,7 +387,8 @@ class GoogleSheetsService
     int $dataEndRow,
     ?string $dataType,
     array $values,
-    array $headers
+    array $headers,
+    ?array $summary = null
   ): void {
     $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
     $requests = [];
