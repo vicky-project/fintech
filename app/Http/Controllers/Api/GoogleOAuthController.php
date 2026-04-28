@@ -9,6 +9,7 @@ use Google\Client as GoogleClient;
 use Google\Service\Sheets;
 use Modules\FinTech\Models\UserSetting;
 use Illuminate\Support\Facades\Log;
+use Modules\Telegram\Models\TelegramUser;
 use Modules\Telegram\Services\Support\TelegramApi;
 
 class GoogleOAuthController extends Controller
@@ -52,7 +53,7 @@ class GoogleOAuthController extends Controller
     $telegramId = $stateData['telegram_id'];
 
     // Cari user berdasarkan telegram_id
-    $user = \Modules\Telegram\Models\TelegramUser::where('telegram_id', $telegramId)->first();
+    $user = TelegramUser::where('telegram_id', $telegramId)->first();
     if (!$user) {
       return response()->json(['error' => 'Pengguna tidak ditemukan.'], 404);
     }

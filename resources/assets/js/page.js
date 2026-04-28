@@ -2216,8 +2216,8 @@ async function performExport() {
     }
     // Semua data
     else if (type === 'all') {
-      if (['pdf', 'csv', 'gsheet'].includes(payload.format)) {
-        tgApp.showToast('Format tersebut tidak didukung untuk semua data. Silakan gunakan excel', 'warning');
+      if (['pdf', 'csv'].includes(payload.format)) {
+        tgApp.showToast('Format tersebut tidak didukung untuk semua data. Silakan gunakan excel atau googlesheet', 'warning');
         return;
       }
 
