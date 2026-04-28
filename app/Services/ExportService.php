@@ -313,7 +313,7 @@ class ExportService
       return Storage::disk('local')->path($tempPath);
     }
 
-    protected function generateCsv(array $data, string $storagePath): void
+    protected function generateCsv(array $data, string $storagePath): string
     {
       return $this->storeExport(new CsvDataExport($data), 'csv');
     }
