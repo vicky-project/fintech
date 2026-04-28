@@ -92,7 +92,6 @@ class SheetWriter
       $requests = [];
 
       // LANGKAH PENTING: Unmerge dulu area header (A sampai G, Baris 1 & 2)
-      // untuk menghindari error "Anda harus memilih semua sel..."
       $requests[] = new \Google\Service\Sheets\Request([
         'unmergeCells' => [
           'range' => [
@@ -121,7 +120,7 @@ class SheetWriter
           'range' => [
             'sheetId' => $sheetId,
             'startRowIndex' => $currentRow - 1,
-            'endRowIndex' => $currentRow,
+            'endRowIndex' => 1,
             'startColumnIndex' => 4,
             'endColumnIndex' => 6,
           ],
@@ -182,7 +181,6 @@ class SheetWriter
       ]
     ]);
   }
-
 
   /**
   * Helper: Format standar (Bold & Center)
