@@ -1774,17 +1774,6 @@ async function renderExportPage() {
   </select>
   </div>
 
-  <!-- Dompet -->
-  <div class="mb-4">
-  <label class="form-label fw-semibold">
-  <i class="bi bi-wallet2 me-2"></i>Dompet <span class="text-danger">*</span>
-  </label>
-  <select class="form-select" id="filter-wallet"
-  style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
-  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id == (Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '')) ? 'selected': ''}>${w.name} (${w.currency || ''})</option>`).join('')}
-  </select>
-  </div>
-
   <!-- Filter Dinamis -->
   <div id="export-filter-container" class="mb-4"></div>
 
@@ -1887,9 +1876,12 @@ function renderExportFilters(type) {
   const defaultWalletId = Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '');
   html += `
   <div class="mb-3">
-  <label for="filter-wallet" class="form-label">Dompet <span class="text-danger">*</span></label>
-  <select class="form-select" id="filter-wallet">
-  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id === defaultWalletId ? 'selected': ''}>${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
+  <label class="form-label fw-semibold">
+  <i class="bi bi-wallet2 me-2"></i>Dompet <span class="text-danger">*</span>
+  </label>
+  <select class="form-select" id="filter-wallet"
+  style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
+  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id == defaultWalletId ? 'selected': ''}>${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
   </select>
   </div>`;
   if (type === 'all') {
