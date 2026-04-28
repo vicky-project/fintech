@@ -19,7 +19,11 @@ class UserSetting extends Model
     'pin_enabled',
     'pin_attempts',
     'locked_until',
-    'pin_verified_at'
+    'pin_verified_at',
+    'google_access_token',
+    'google_refresh_token',
+    'google_token_expires_at',
+    'google_spreadsheet_id'
   ];
 
   protected $casts = [
@@ -28,6 +32,7 @@ class UserSetting extends Model
     'pin_attempts' => 'integer',
     'locked_until' => 'datetime',
     'pin_verified_at' => 'datetime',
+    'google_token_expires_at' => 'datetime'
   ];
 
   protected $hidden = ['pin'];
