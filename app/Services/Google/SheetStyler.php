@@ -155,10 +155,20 @@ class SheetStyler
           'cell' => ['userEnteredFormat' => ['textFormat' => ['foregroundColor' => ['red' => 40/255, 'green' => 167/255, 'blue' => 69/255], 'bold' => true]]],
           'fields' => 'userEnteredFormat(textFormat)',
         ]]);
+        $requests[] = new SheetsRequest(['repeatCell' => [
+          'range' => ['sheetId' => $sheetId, 'startRowIndex' => $rowNum-1, 'endRowIndex' => $rowNum, 'startColumnIndex' => $colF, 'endColumnIndex' => $colF+1],
+          'cell' => ['userEnteredFormat' => ['textFormat' => ['foregroundColor' => ['red' => 0, 'green' => 0, 'blue' => 0], 'bold' => false]]],
+          'fields' => 'userEnteredFormat(textFormat)',
+        ]]);
       } elseif ($tipe === 'Pengeluaran') {
         $requests[] = new SheetsRequest(['repeatCell' => [
           'range' => ['sheetId' => $sheetId, 'startRowIndex' => $rowNum-1, 'endRowIndex' => $rowNum, 'startColumnIndex' => $colF, 'endColumnIndex' => $colF+1],
           'cell' => ['userEnteredFormat' => ['textFormat' => ['foregroundColor' => ['red' => 220/255, 'green' => 53/255, 'blue' => 69/255], 'bold' => true]]],
+          'fields' => 'userEnteredFormat(textFormat)',
+        ]]);
+        $requests[] = new SheetsRequest(['repeatCell' => [
+          'range' => ['sheetId' => $sheetId, 'startRowIndex' => $rowNum-1, 'endRowIndex' => $rowNum, 'startColumnIndex' => $colE, 'endColumnIndex' => $colE+1],
+          'cell' => ['userEnteredFormat' => ['textFormat' => ['foregroundColor' => ['red' => 0, 'green' => 0, 'blue' => 0], 'bold' => false]]],
           'fields' => 'userEnteredFormat(textFormat)',
         ]]);
       }
