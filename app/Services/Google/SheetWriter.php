@@ -382,7 +382,7 @@ class SheetWriter
               'anchorCell' => [
                 'sheetId' => $sheetId,
                 'rowIndex' => $chartRow - 1,
-                'columnIndex' => 0
+                'columnIndex' => 6
               ],
               'widthPixels' => 600,
               'heightPixels' => 350

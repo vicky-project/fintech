@@ -94,7 +94,6 @@ class GoogleSheetsService
     $footerRow = $currentRow + 1;
     $this->writer->writeFooter($spreadsheetId, $sheetName, $footerRow, $headers);
 
-    // Setelah writeFooter(...);
     if ($dataType === 'transactions' && !empty($values)) {
       $chartRow = $footerRow + 2; // dua baris setelah footer
       $this->writer->writeTransactionChart(
