@@ -1876,7 +1876,7 @@ function renderExportFilters(type) {
   const defaultWalletId = Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '');
   html += `
   <div class="mb-3">
-  <label class="form-label fw-semibold">
+  <label for="filter-wallet" class="form-label fw-semibold">
   <i class="bi bi-wallet2 me-2"></i>Dompet <span class="text-danger">*</span>
   </label>
   <select class="form-select" id="filter-wallet"
