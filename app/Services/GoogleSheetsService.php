@@ -44,6 +44,9 @@ class GoogleSheetsService
   */
   public function createSpreadsheetForUser($user): string
   {
+    $credentials = config("google.service_account_credential_json");
+    \Log::debug('Membaca credentials dari: ' . $credentials);
+    \Log::debug("File exists: ".file_exists($credentials) ? 'YES' : 'NO');
     $title = "FinTech - " . ($user->name ?? "User {$user->id}");
 
     try {
