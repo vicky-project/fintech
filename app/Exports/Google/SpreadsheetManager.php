@@ -5,6 +5,7 @@ namespace Modules\FinTech\Exports\Google;
 use Google\Service\Sheets\Spreadsheet;
 use Illuminate\Support\Facades\Log;
 use Modules\FinTech\Models\UserSetting;
+use Modules\FinTech\Services\Google\GoogleSheetsClient;
 
 class SpreadsheetManager
 {
