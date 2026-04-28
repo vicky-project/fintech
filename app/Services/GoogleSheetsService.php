@@ -90,7 +90,7 @@ class GoogleSheetsService
   */
   public function getOrCreateSpreadsheet($user): string
   {
-    $setting = $user->userSetting;
+    $setting = UserSetting::where('user_id', $user->id)->first();
     $spreadsheetId = $setting->google_spreadsheet_id ?? null;
 
     if ($spreadsheetId) {
