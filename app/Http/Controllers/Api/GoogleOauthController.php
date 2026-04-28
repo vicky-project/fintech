@@ -9,6 +9,7 @@ use Google\Client as GoogleClient;
 use Google\Service\Sheets;
 use Modules\FinTech\Models\UserSetting;
 use Illuminate\Support\Facades\Log;
+use Modules\Telegram\Services\Support\TelegramApi;
 
 class GoogleOAuthController extends Controller
 {
@@ -77,7 +78,7 @@ class GoogleOAuthController extends Controller
 
     // Kirim pesan sukses via Telegram
     try {
-      $telegramApi = app(\Modules\Telegram\Services\Support\TelegramApi::class);
+      $telegramApi = app(TelegramApi::class);
       $telegramApi->sendMessage(
         chatId: $telegramId,
         text: "✅ Akun Google Anda berhasil terhubung!\nSekarang Anda bisa mengekspor data ke Google Sheets."
