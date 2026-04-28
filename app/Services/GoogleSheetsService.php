@@ -2,9 +2,12 @@
 
 namespace Modules\FinTech\Services;
 
-use Revolution\Google\Sheets\Facades\Sheets;
+use Google\Client as GoogleClient;
+use Google\Service\Sheets as GoogleSheets;
+use Google\Service\Sheets\Spreadsheet;
+use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
+use Google\Service\Sheets\Request as SheetsRequest;
 use Modules\FinTech\Models\UserSetting;
-use Modules\Telegram\Models\TelegramUser;
 use Illuminate\Support\Facades\Log;
 
 class GoogleSheetsService
@@ -13,18 +16,41 @@ class GoogleSheetsService
   const SHEET_TRANSFERS = 'Transfer';
   const SHEET_BUDGETS = 'Budget';
 
+  protected GoogleClient $client;
+  protected GoogleSheets $service;
+
+  public function __construct() {
+    $this->client = $this->createClient();
+    $this->service = new GoogleSheets($this->client);
+  }
+
+  /**
+  * Buat Google\Client dari service account JSON.
+  */
+  protected function createClient(): GoogleClient
+  {
+    $credentialsPath = config('google.service.file');
+    if (!file_exists($credentialsPath)) {
+      throw new \Exception("File kredensial Google tidak ditemukan: {$credentialsPath}");
+    }
+
+    $client = new GoogleClient();
+    $client->setAuthConfig($credentialsPath);
+    $client->addScope(GoogleSheets::SPREADSHEETS);
+    return $client;
+  }
+
   /**
   * Dapatkan atau buat spreadsheet untuk user.
   */
-  public function getOrCreateSpreadsheet(TelegramUser $user): string
+  public function getOrCreateSpreadsheet($user): string
   {
-
-    $spreadsheetId = UserSetting::where('user_id', $user->id)->first()->google_spreadsheet_id ?? null;
+    $spreadsheetId = $user->userSetting->google_spreadsheet_id ?? null;
 
     if ($spreadsheetId) {
       try {
-        // Cek apakah spreadsheet masih valid
-        Sheets::spreadsheet($spreadsheetId)->get();
+        // Cek apakah spreadsheet masih bisa diakses
+        $this->service->spreadsheets->get($spreadsheetId);
         return $spreadsheetId;
       } catch (\Exception $e) {
         Log::warning("Spreadsheet user {$user->id} tidak valid, dibuat baru.");
@@ -32,7 +58,6 @@ class GoogleSheetsService
       }
     }
 
-    // Buat baru
     $spreadsheetId = $this->createSpreadsheetForUser($user);
     $this->saveSpreadsheetId($user, $spreadsheetId);
 
@@ -47,26 +72,21 @@ class GoogleSheetsService
     $title = "FinTech - " . ($user->name ?? "User {$user->id}");
 
     try {
-      $client = Sheets::getService(); // Google\Client
-      $service = new \Google_Service_Sheets($client);
-
-      $spreadsheet = new \Google_Service_Sheets_Spreadsheet([
-        'properties' => [
-          'title' => $title,
-        ],
+      $spreadsheet = new Spreadsheet([
+        'properties' => ['title' => $title],
       ]);
 
-      $spreadsheet = $service->spreadsheets->create($spreadsheet);
+      $spreadsheet = $this->service->spreadsheets->create($spreadsheet);
       $spreadsheetId = $spreadsheet->spreadsheetId;
 
-      // Ubah nama sheet default menjadi "Transaksi"
-      $defaultSheet = $spreadsheet->getSheets()[0] ?? null;
-      if ($defaultSheet) {
-        $sheetId = $defaultSheet->getProperties()->getSheetId();
+      // Ganti nama sheet pertama menjadi "Transaksi"
+      $sheets = $spreadsheet->getSheets();
+      if (count($sheets) > 0) {
+        $sheetId = $sheets[0]->getProperties()->getSheetId();
         $this->renameSheet($spreadsheetId, $sheetId, self::SHEET_TRANSACTIONS);
       }
 
-      // Buat sheet Transfer dan Budget
+      // Tambahkan sheet Transfer dan Budget
       $this->addSheetIfNotExists($spreadsheetId, self::SHEET_TRANSFERS);
       $this->addSheetIfNotExists($spreadsheetId, self::SHEET_BUDGETS);
 
@@ -82,65 +102,41 @@ class GoogleSheetsService
   }
 
   /**
-  * Rename sheet berdasarkan sheet ID.
-  */
-  protected function renameSheet(string $spreadsheetId, int $sheetId, string $newName): void
-  {
-    $client = Sheets::getService();
-    $service = new \Google_Service_Sheets($client);
-
-    $requests = [
-      new \Google_Service_Sheets_Request([
-        'updateSheetProperties' => [
-          'properties' => [
-            'sheetId' => $sheetId,
-            'title' => $newName,
-          ],
-          'fields' => 'title',
-        ],
-      ]),
-    ];
-
-    $batchUpdate = new \Google_Service_Sheets_BatchUpdateSpreadsheetRequest([
-      'requests' => $requests,
-    ]);
-
-    $service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
-  }
-
-  /**
   * Menulis data ke sheet tertentu.
-  *
-  * @param string $spreadsheetId
-  * @param string $sheetName
-  * @param array  $data       Data terformat (array of associative arrays)
-  * @param bool   $clear      Hapus isi sheet sebelumnya?
   */
   public function exportDataToSheet(string $spreadsheetId, string $sheetName, array $data, bool $clear = true): void
   {
-    if (empty($data)) {
-      return;
-    }
+    if (empty($data)) return;
 
     $this->addSheetIfNotExists($spreadsheetId, $sheetName);
 
-    // Ambil header dari key baris pertama
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
 
-    $sheet = Sheets::spreadsheet($spreadsheetId)->sheet($sheetName);
+    $range = $sheetName . '!A1';
 
+    // Clear dulu jika diminta
     if ($clear) {
-      $sheet->clear();
+      $this->service->spreadsheets_values->clear($spreadsheetId, $sheetName, new \Google\Service\Sheets\ClearValuesRequest());
     }
 
     // Tulis header
-    $sheet->range('A1')->update([$headers]);
+    $this->service->spreadsheets_values->update(
+      $spreadsheetId,
+      $range,
+      new \Google\Service\Sheets\ValueRange(['values' => [$headers]]),
+      ['valueInputOption' => 'RAW']
+    );
 
-    // Tulis data
+    // Tulis data (append setelah header)
     if (!empty($values)) {
-      // Gunakan append agar langsung di bawah header
-      $sheet->range('A2')->append($values);
+      $range = $sheetName . '!A2';
+      $this->service->spreadsheets_values->update(
+        $spreadsheetId,
+        $range,
+        new \Google\Service\Sheets\ValueRange(['values' => $values]),
+        ['valueInputOption' => 'RAW']
+      );
     }
 
     // Auto-resize kolom
@@ -154,7 +150,7 @@ class GoogleSheetsService
   }
 
   /**
-  * Mendapatkan URL spreadsheet.
+  * URL spreadsheet.
   */
   public function getSpreadsheetUrl(string $spreadsheetId): string
   {
@@ -162,65 +158,76 @@ class GoogleSheetsService
   }
 
   /**
-  * Menambahkan sheet jika belum ada.
+  * Tambahkan sheet jika belum ada.
   */
   protected function addSheetIfNotExists(string $spreadsheetId, string $sheetName): void
   {
-    try {
-      $spreadsheet = Sheets::spreadsheet($spreadsheetId)->get();
-      $existingNames = array_map(
-        fn($s) => $s->getProperties()->getTitle(),
-        $spreadsheet->getSheets()
-      );
+    $spreadsheet = $this->service->spreadsheets->get($spreadsheetId);
+    $existingNames = array_map(
+      fn($s) => $s->getProperties()->getTitle(),
+      $spreadsheet->getSheets()
+    );
 
-      if (!in_array($sheetName, $existingNames)) {
-        Sheets::spreadsheet($spreadsheetId)->addSheet($sheetName);
-      }
-    } catch (\Exception $e) {
-      Log::warning("Gagal menambah sheet {$sheetName}: " . $e->getMessage());
+    if (!in_array($sheetName, $existingNames)) {
+      $requests = [
+        new SheetsRequest([
+          'addSheet' => [
+            'properties' => ['title' => $sheetName],
+          ],
+        ]),
+      ];
+      $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
     }
   }
 
   /**
-  * Auto-resize kolom menggunakan Google Sheets API.
+  * Rename sheet berdasarkan ID.
+  */
+  protected function renameSheet(string $spreadsheetId, int $sheetId, string $newName): void
+  {
+    $requests = [
+      new SheetsRequest([
+        'updateSheetProperties' => [
+          'properties' => ['sheetId' => $sheetId, 'title' => $newName],
+          'fields' => 'title',
+        ],
+      ]),
+    ];
+    $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
+  }
+
+  /**
+  * Auto-resize kolom.
   */
   protected function autoResizeColumns(string $spreadsheetId, string $sheetName, int $columnCount): void
   {
-    try {
-      $service = Sheets::getService();
-      $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
+    $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
+    if ($sheetId === null) return;
 
-      if ($sheetId === null) return;
-
-      $requests = [
-        new \Google_Service_Sheets_Request([
-          'autoResizeDimensions' => [
-            'dimensions' => [
-              'sheetId' => $sheetId,
-              'dimension' => 'COLUMNS',
-              'startIndex' => 0,
-              'endIndex' => $columnCount,
-            ]
-          ]
-        ])
-      ];
-
-      $batchUpdate = new \Google_Service_Sheets_BatchUpdateSpreadsheetRequest([
-        'requests' => $requests
-      ]);
-
-      $service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
-    } catch (\Exception $e) {
-      Log::warning("Gagal auto-resize kolom: " . $e->getMessage());
-    }
+    $requests = [
+      new SheetsRequest([
+        'autoResizeDimensions' => [
+          'dimensions' => [
+            'sheetId' => $sheetId,
+            'dimension' => 'COLUMNS',
+            'startIndex' => 0,
+            'endIndex' => $columnCount,
+          ],
+        ],
+      ]),
+    ];
+    $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
   /**
-  * Mendapatkan sheet ID berdasarkan nama sheet.
+  * Ambil sheet ID berdasarkan nama.
   */
   protected function getSheetIdByName(string $spreadsheetId, string $sheetName): ?int
   {
-    $spreadsheet = Sheets::spreadsheet($spreadsheetId)->get();
+    $spreadsheet = $this->service->spreadsheets->get($spreadsheetId);
     foreach ($spreadsheet->getSheets() as $sheet) {
       if ($sheet->getProperties()->getTitle() === $sheetName) {
         return $sheet->getProperties()->getSheetId();
@@ -232,7 +239,7 @@ class GoogleSheetsService
   /**
   * Simpan spreadsheet ID ke user settings.
   */
-  protected function saveSpreadsheetId(TelegramUser $user, string $spreadsheetId): void
+  protected function saveSpreadsheetId($user, string $spreadsheetId): void
   {
     $setting = UserSetting::firstOrNew(['user_id' => $user->id]);
     $setting->google_spreadsheet_id = $spreadsheetId;
