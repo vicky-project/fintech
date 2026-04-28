@@ -7,6 +7,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
   CategorySuggestionController,
   CurrencyController,
   ExportController,
+  GoogleOAuthController,
   HomeController,
   InsightController,
   NotificationController,
@@ -102,3 +103,7 @@ Route::middleware(['auth:sanctum'])->prefix('fintech')->name('fintech.')->group(
   Route::put('settings', [SettingController::class, 'update']);
   Route::post('settings/verify-pin', [SettingController::class, 'verifyPin'])->middleware('throttle:10,1');
 });
+
+Route::get('/oauth/google/redirect', [GoogleOAuthController::class, 'redirect']);
+Route::get('/oauth/google/callback', [GoogleOAuthController::class, 'callback']);
+Route::get('/oauth/google/status', [GoogleOAuthController::class, 'status']);

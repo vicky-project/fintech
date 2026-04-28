@@ -39,6 +39,10 @@ class ExportService
     $isExcel = $format === 'xlsx';
     $limit = $isPdf ? $this->maxPdfRecords : $this->maxExcelRecords;
 
+    if ($format === 'gsheet') {
+      return $this->generateGsheet($type, $filters, $user);
+    }
+
     // Jika semua tipe data (hanya Excel)
     if ($type === 'all') {
       $this->ensureNotPdf($format);
@@ -329,6 +333,32 @@ class ExportService
       Excel::store($export, $tempPath, 'local', $writerType);
 
       return Storage::disk('local')->path($tempPath);
+    }
+
+    protected function generateGsheet(string $type, array $data, $user): string
+    {
+      $googleService = app(GoogleSheetsService::class);
+      $googleService->setupForUser($user);
+
+      $spreadsheetId = $googleService->getOrCreateSpreadsheet($user);
+
+      // Ambil data (tanpa batasan format)
+      [$data,
+        $summary] = match ($type) {
+        'transactions' => $this->getTransactionsData($user, $data, 5000),
+        'transfers' => $this->getTransfersData($user, $data, 5000),
+        'budgets' => $this->getBudgetsData($user, $data, 5000),
+      };
+
+      $sheetName = match ($type) {
+        'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
+        'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
+        'budgets' => GoogleSheetsService::SHEET_BUDGETS,
+      };
+
+      $googleService->exportDataToSheet($spreadsheetId, $sheetName, $data, true);
+
+      return $googleService->getSpreadsheetUrl($spreadsheetId);
     }
 
     // ----------------------------------------------------------------

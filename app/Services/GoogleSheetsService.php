@@ -4,11 +4,12 @@ namespace Modules\FinTech\Services;
 
 use Google\Client as GoogleClient;
 use Google\Service\Sheets as GoogleSheets;
+use Google\Service\Drive as GoogleDrive;
 use Google\Service\Sheets\Spreadsheet;
 use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
 use Google\Service\Sheets\Request as SheetsRequest;
-use Google\Service\Drive as GoogleDrive;
-use Google\Service\Drive\Permission as DrivePermission;
+use Google\Service\Sheets\ValueRange;
+use Google\Service\Sheets\ClearValuesRequest;
 use Modules\FinTech\Models\UserSetting;
 use Illuminate\Support\Facades\Log;
 
@@ -22,32 +23,65 @@ class GoogleSheetsService
   protected GoogleSheets $service;
   protected GoogleDrive $driveService;
 
-  public function __construct() {
-    $this->client = $this->createClient();
+  /**
+  * Setup service untuk user tertentu (dengan token OAuth user).
+  */
+  public function setupForUser($user): void
+  {
+    $this->client = $this->createUserClient($user);
     $this->service = new GoogleSheets($this->client);
     $this->driveService = new GoogleDrive($this->client);
   }
 
   /**
-  * Buat Google\Client dari service account JSON.
+  * Buat GoogleClient dengan token user.
   */
-  protected function createClient(): GoogleClient
+  protected function createUserClient($user): GoogleClient
   {
-    $credentialsPath = config('google.service.file');
-
-    if (!file_exists($credentialsPath)) {
-      throw new \Exception("File kredensial Google tidak ditemukan: {$credentialsPath}");
-    }
-
     $client = new GoogleClient();
-    $client->setAuthConfig($credentialsPath);
-    $client->addScope([
-      GoogleSheets::SPREADSHEETS,
-      GoogleDrive::DRIVE_FILE,
-    ]);
+    $client->setClientId(config('fintech.google.oauth_client_id'));
+    $client->setClientSecret(config('fintech.google.oauth_client_secret'));
+    $client->setRedirectUri(config('fintech.google.oauth_redirect_uri'));
+    $client->addScope([GoogleSheets::SPREADSHEETS, GoogleDrive::DRIVE_FILE]);
     $client->setAccessType('offline');
 
+    $setting = $user->userSetting;
+    if ($setting && $setting->google_access_token) {
+      $token = [
+        'access_token' => $setting->google_access_token,
+        'refresh_token' => $setting->google_refresh_token,
+        'expires_in' => 3599,
+      ];
+      $client->setAccessToken($token);
+
+      // Refresh token jika expired
+      if ($client->isAccessTokenExpired()) {
+        if ($client->getRefreshToken()) {
+          $newToken = $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+          if (!isset($newToken['error'])) {
+            $this->saveToken($setting, $newToken);
+            $client->setAccessToken($newToken);
+          }
+        }
+      }
+    }
+
     return $client;
+  }
+
+  /**
+  * Simpan token baru ke user_settings.
+  */
+  protected function saveToken(UserSetting $setting, array $token): void
+  {
+    $setting->google_access_token = $token['access_token'];
+    if (isset($token['refresh_token'])) {
+      $setting->google_refresh_token = $token['refresh_token'];
+    }
+    if (isset($token['expires_in'])) {
+      $setting->google_token_expires_at = now()->addSeconds($token['expires_in']);
+    }
+    $setting->save();
   }
 
   /**
@@ -55,24 +89,22 @@ class GoogleSheetsService
   */
   public function getOrCreateSpreadsheet($user): string
   {
-    $spreadsheetId = $user->userSetting->google_spreadsheet_id ?? null;
+    $setting = $user->userSetting;
+    $spreadsheetId = $setting->google_spreadsheet_id ?? null;
 
     if ($spreadsheetId) {
       try {
-        // Cek apakah spreadsheet masih bisa diakses
         $this->service->spreadsheets->get($spreadsheetId);
         return $spreadsheetId;
       } catch (\Exception $e) {
-        Log::warning("Spreadsheet user {$user->id} tidak valid, dibuat baru.", [
-          'error' => $e->getMessage()
-        ]);
+        Log::warning("Spreadsheet user {$user->id} tidak valid, dibuat baru.");
         $spreadsheetId = null;
       }
     }
 
-    // Buat baru
     $spreadsheetId = $this->createSpreadsheetForUser($user);
-    $this->saveSpreadsheetId($user, $spreadsheetId);
+    $setting->google_spreadsheet_id = $spreadsheetId;
+    $setting->save();
 
     return $spreadsheetId;
   }
@@ -84,84 +116,29 @@ class GoogleSheetsService
   {
     $title = "FinTech - " . ($user->name ?? "User {$user->id}");
 
-    try {
-      $spreadsheet = new Spreadsheet([
-        'properties' => ['title' => $title],
-      ]);
+    $spreadsheet = new Spreadsheet([
+      'properties' => ['title' => $title],
+    ]);
 
-      $spreadsheet = $this->service->spreadsheets->create($spreadsheet);
-      $spreadsheetId = $spreadsheet->spreadsheetId;
+    $spreadsheet = $this->service->spreadsheets->create($spreadsheet);
+    $spreadsheetId = $spreadsheet->spreadsheetId;
 
-      // Berikan akses ke service account (meskipun sebenarnya sudah owner)
-      $this->grantAccessToSpreadsheet($spreadsheetId);
-
-      // Ganti nama sheet pertama menjadi "Transaksi"
-      $sheets = $spreadsheet->getSheets();
-      if (count($sheets) > 0) {
-        $sheetId = $sheets[0]->getProperties()->getSheetId();
-        $this->renameSheet($spreadsheetId, $sheetId, self::SHEET_TRANSACTIONS);
-      }
-
-      // Tambahkan sheet Transfer dan Budget
-      $this->addSheetIfNotExists($spreadsheetId, self::SHEET_TRANSFERS);
-      $this->addSheetIfNotExists($spreadsheetId, self::SHEET_BUDGETS);
-
-      Log::info("Spreadsheet dibuat untuk user {$user->id}", [
-        'spreadsheet_id' => $spreadsheetId,
-      ]);
-
-      return $spreadsheetId;
-    } catch (\Exception $e) {
-      Log::error("Gagal membuat spreadsheet: " . $e->getMessage(), [
-        'user_id' => $user->id,
-        'trace' => $e->getTraceAsString()
-      ]);
-      throw $e;
+    // Rename sheet pertama
+    $sheets = $spreadsheet->getSheets();
+    if (count($sheets) > 0) {
+      $sheetId = $sheets[0]->getProperties()->getSheetId();
+      $this->renameSheet($spreadsheetId, $sheetId, self::SHEET_TRANSACTIONS);
     }
-  }
 
-  /**
-  * Memberikan akses ke service account ke spreadsheet.
-  */
-  public function grantAccessToSpreadsheet(string $spreadsheetId): void
-  {
-    try {
-      // Dapatkan email service account dari file kredensial
-      $credentials = json_decode(
-        file_get_contents(config('google.service_account_credentials_json')),
-        true
-      );
-      $serviceAccountEmail = $credentials['client_email'] ?? null;
+    // Buat sheet Transfer dan Budget
+    $this->addSheetIfNotExists($spreadsheetId, self::SHEET_TRANSFERS);
+    $this->addSheetIfNotExists($spreadsheetId, self::SHEET_BUDGETS);
 
-      if (!$serviceAccountEmail) {
-        return;
-      }
+    Log::info("Spreadsheet dibuat untuk user {$user->id}", [
+      'spreadsheet_id' => $spreadsheetId,
+    ]);
 
-      // Cek apakah permission sudah ada
-      $permissions = $this->driveService->permissions->listPermissions($spreadsheetId);
-      foreach ($permissions->getPermissions() as $permission) {
-        if ($permission->getEmailAddress() === $serviceAccountEmail) {
-          return; // Sudah ada akses
-        }
-      }
-
-      // Tambahkan permission
-      $permission = new DrivePermission([
-        'type' => 'user',
-        'role' => 'writer',
-        'emailAddress' => $serviceAccountEmail,
-      ]);
-
-      $this->driveService->permissions->create($spreadsheetId, $permission);
-
-      Log::info("Akses diberikan ke service account", [
-        'spreadsheet_id' => $spreadsheetId,
-        'email' => $serviceAccountEmail,
-      ]);
-    } catch (\Exception $e) {
-      Log::warning("Gagal memberikan akses: " . $e->getMessage());
-      // Tidak throw error karena spreadsheet masih bisa diakses oleh pembuatnya
-    }
+    return $spreadsheetId;
   }
 
   /**
@@ -169,50 +146,38 @@ class GoogleSheetsService
   */
   public function exportDataToSheet(string $spreadsheetId, string $sheetName, array $data, bool $clear = true): void
   {
-    if (empty($data)) {
-      return;
-    }
+    if (empty($data)) return;
 
     $this->addSheetIfNotExists($spreadsheetId, $sheetName);
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
 
-    // Clear dulu jika diminta
     if ($clear) {
       $this->service->spreadsheets_values->clear(
         $spreadsheetId,
         $sheetName,
-        new \Google\Service\Sheets\ClearValuesRequest()
+        new ClearValuesRequest()
       );
     }
 
-    // Tulis header
     $this->service->spreadsheets_values->update(
       $spreadsheetId,
       $sheetName . '!A1',
-      new \Google\Service\Sheets\ValueRange(['values' => [$headers]]),
+      new ValueRange(['values' => [$headers]]),
       ['valueInputOption' => 'RAW']
     );
 
-    // Tulis data (append setelah header)
     if (!empty($values)) {
       $this->service->spreadsheets_values->update(
         $spreadsheetId,
         $sheetName . '!A2',
-        new \Google\Service\Sheets\ValueRange(['values' => $values]),
+        new ValueRange(['values' => $values]),
         ['valueInputOption' => 'RAW']
       );
     }
 
-    // Auto-resize kolom
     $this->autoResizeColumns($spreadsheetId, $sheetName, count($headers));
-
-    Log::info("Data diekspor ke Google Sheets", [
-      'spreadsheet_id' => $spreadsheetId,
-      'sheet' => $sheetName,
-      'rows' => count($data),
-    ]);
   }
 
   /**
@@ -223,9 +188,8 @@ class GoogleSheetsService
     return "https://docs.google.com/spreadsheets/d/{$spreadsheetId}";
   }
 
-  /**
-  * Tambahkan sheet jika belum ada.
-  */
+  // ----- Helper methods -----
+
   protected function addSheetIfNotExists(string $spreadsheetId, string $sheetName): void
   {
     $spreadsheet = $this->service->spreadsheets->get($spreadsheetId);
@@ -235,62 +199,45 @@ class GoogleSheetsService
     );
 
     if (!in_array($sheetName, $existingNames)) {
-      $requests = [
-        new SheetsRequest([
-          'addSheet' => [
-            'properties' => ['title' => $sheetName],
-          ],
-        ]),
-      ];
+      $requests = [new SheetsRequest([
+        'addSheet' => ['properties' => ['title' => $sheetName]],
+      ])];
       $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
     }
   }
 
-  /**
-  * Rename sheet berdasarkan ID.
-  */
   protected function renameSheet(string $spreadsheetId, int $sheetId, string $newName): void
   {
-    $requests = [
-      new SheetsRequest([
-        'updateSheetProperties' => [
-          'properties' => ['sheetId' => $sheetId, 'title' => $newName],
-          'fields' => 'title',
-        ],
-      ]),
-    ];
+    $requests = [new SheetsRequest([
+      'updateSheetProperties' => [
+        'properties' => ['sheetId' => $sheetId, 'title' => $newName],
+        'fields' => 'title',
+      ],
+    ])];
     $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
     $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
-  /**
-  * Auto-resize kolom.
-  */
   protected function autoResizeColumns(string $spreadsheetId, string $sheetName, int $columnCount): void
   {
     $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
     if ($sheetId === null) return;
 
-    $requests = [
-      new SheetsRequest([
-        'autoResizeDimensions' => [
-          'dimensions' => [
-            'sheetId' => $sheetId,
-            'dimension' => 'COLUMNS',
-            'startIndex' => 0,
-            'endIndex' => $columnCount,
-          ],
+    $requests = [new SheetsRequest([
+      'autoResizeDimensions' => [
+        'dimensions' => [
+          'sheetId' => $sheetId,
+          'dimension' => 'COLUMNS',
+          'startIndex' => 0,
+          'endIndex' => $columnCount,
         ],
-      ]),
-    ];
+      ],
+    ])];
     $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
     $this->service->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
-  /**
-  * Ambil sheet ID berdasarkan nama.
-  */
   protected function getSheetIdByName(string $spreadsheetId, string $sheetName): ?int
   {
     $spreadsheet = $this->service->spreadsheets->get($spreadsheetId);
@@ -300,15 +247,5 @@ class GoogleSheetsService
       }
     }
     return null;
-  }
-
-  /**
-  * Simpan spreadsheet ID ke user settings.
-  */
-  protected function saveSpreadsheetId($user, string $spreadsheetId): void
-  {
-    $setting = UserSetting::firstOrNew(['user_id' => $user->id]);
-    $setting->google_spreadsheet_id = $spreadsheetId;
-    $setting->save();
   }
 }

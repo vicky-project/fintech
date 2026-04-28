@@ -936,11 +936,32 @@ async function renderSettingsPage() {
   </div>
   <button type="button" class="btn btn-primary w-100" data-action="save-settings">Simpan Pengaturan</button>
   </form>
+  // Di dalam renderSettingsPage, setelah blok Keamanan (PIN), tambahkan:
+  <hr>
+  <h6>Integrasi</h6>
+  <div class="mb-3">
+  <div id="google-connect-area">
+  <div class="d-flex justify-content-between align-items-center">
+  <div>
+  <i class="bi bi-google me-2"></i> Google Sheets
+  <small class="text-muted d-block">Hubungkan akun Google untuk ekspor langsung ke Sheets.</small>
+  </div>
+  <button id="btn-connect-google" class="btn btn-outline-danger btn-sm d-none" data-action="connect-google">
+  <i class="bi bi-link-45deg"></i> Hubungkan
+  </button>
+  <span id="google-connected-badge" class="badge bg-success d-none">
+  <i class="bi bi-check-circle"></i> Terhubung
+  </span>
+  </div>
+  </div>
+  </div>
   </div>`;
   document.getElementById('main-content').innerHTML = html;
   Core.populateSelectWithCurrencies(document.getElementById('setting-currency'),
     settings.default_currency);
   if (settings.default_wallet_id) document.getElementById('setting-wallet').value = settings.default_wallet_id;
+
+  setTimeout(() => checkGoogleConnection(), 0);
 }
 
 function togglePinInput() {
@@ -2061,13 +2082,14 @@ function renderBudgetPeriodInput() {
   }
 }
 
-function updateExportFormatAvailability() {
+async function updateExportFormatAvailability() {
   const type = document.getElementById('export-type').value;
   const formatPdf = document.getElementById('format-pdf');
   const formatXlsx = document.getElementById('format-xlsx');
   const formatCsv = document.getElementById('format-csv');
   const formatGsheet = document.getElementById('format-gsheet');
-  const labels = document.querySelectorAll('label[for="format-pdf"], label[for="format-csv"], label[for="format-gsheet"]');
+  const labelGsheet = document.querySelector('label[for="format-gsheet"]');
+  const labels = document.querySelectorAll('label[for="format-pdf"], label[for="format-csv"]');
 
   if (!formatPdf || !formatCsv || !formatGsheet) return;
 
@@ -2077,15 +2099,27 @@ function updateExportFormatAvailability() {
     formatPdf.checked = false;
     formatCsv.disabled = true;
     formatCsv.checked = false;
-    formatGsheet.disabled = true;
-    formatGsheet.checked = false;
     formatXlsx.checked = true;
     labels.forEach(l => l?.classList.add('text-muted'));
   } else {
     formatPdf.disabled = false;
     formatCsv.disabled = false;
-    formatGsheet.disabled = false;
     labels.forEach(l => l?.classList.remove('text-muted'));
+  }
+
+  const connected = await checkGoogleConnection();
+  if (formatGsheet) {
+    if (connected) {
+      formatGsheet.disabled = false;
+      labelGsheet?.classList.remove('text-muted');
+    } else {
+      formatGsheet.disabled = true;
+      formatGsheet.checked = false;
+      labelGsheet?.classList.add('text-muted');
+      if (document.querySelector('input[name="export-format"]:checked') === formatGsheet) {
+        formatXlsx.checked = true;
+      }
+    }
   }
 }
 
@@ -2199,6 +2233,28 @@ async function performExport() {
   } catch (err) {
     tgApp.hideLoading();
     tgApp.showToast(err.message || 'Gagal mengekspor.', 'danger');
+  }
+}
+
+async function checkGoogleConnection() {
+  try {
+    const res = await Core.api.get('/api/fintech/oauth/google/status');
+    const btn = document.getElementById('btn-connect-google');
+    const badge = document.getElementById('google-connected-badge');
+
+    if (btn && badge) {
+      if (res.connected) {
+        btn.classList.add('d-none');
+        badge.classList.remove('d-none');
+      } else {
+        btn.classList.remove('d-none');
+        badge.classList.add('d-none');
+      }
+    }
+    return res.connected;
+  } catch (e) {
+    console.error('Gagal cek status Google:', e);
+    return false;
   }
 }
 

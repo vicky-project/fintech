@@ -33,29 +33,21 @@ class ExportController extends Controller
       $data = $request->validated();
       $format = $data['format'];
 
-      // --- GOOGLE SHEETS ---
-      if ($format === 'gsheet') {
-        $result = $this->exportService->exportToGoogleSheets($data);
-
-        $telegramApi = app(TelegramApi::class);
-        $caption = "✅ Ekspor ke Google Sheets berhasil!\n"
-        . "📊 Buka spreadsheet di sini: " . $result['url'];
-
-        $telegramApi->sendMessage($chatId, $caption);
-
-        return response()->json([
-          'success' => true,
-          'message' => 'Data berhasil dikirim ke Google Sheets. Cek pesan Telegram Anda!',
-          'url' => $result['url'],
-        ]);
-      }
-
       // --- FILE-BASED (PDF/Excel/CSV) ---
       // 1. Generate file
       $filePath = $this->exportService->generate($data);
 
       // 2. Kirim via Telegram
       $telegramApi = app(TelegramApi::class);
+
+      // --- GOOGLE SHEETS ---
+      if ($format === 'gsheet') {
+        $url = $filePath;
+        $telegramApi->sendMessage($chatId, "✅ Data berhasil diekspor ke Google Sheets!\n📊 Buka: $url");
+
+        return response()->json(['success' => true, 'url' => $url]);
+      }
+
       $caption = "✅ Export " . ucfirst($data['type']) . " selesai!\n" . now()->format('d M Y H:i');
 
       $sent = $telegramApi->sendDocument(

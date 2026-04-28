@@ -21,7 +21,7 @@ window.toggleQuickActions = () => {
 };
 
 // ---------- EVENT DELEGATION (opsional, bisa menggantikan inline onclick secara bertahap) ----------
-function handleGlobalClick(e) {
+async function handleGlobalClick(e) {
   const target = e.target.closest('[data-action]');
   if (!target) return;
   const action = target.dataset.action;
@@ -73,6 +73,13 @@ function handleGlobalClick(e) {
     'show-export-guide': () => {
       const modal = new bootstrap.Modal(document.getElementById('exportGuideModal'));
       modal.show();
+    },
+    'connect-google': async () => {
+      const res = await Core.api.get('/api/fintech/oauth/google/redirect');
+      if (res.url) {
+        window.Telegram.WebApp.openTelegramLink(res.url);
+        tgApp.showToast('Silakan hubungkan akun Google Anda. Setelah itu, segarkan halaman.', 'info');
+      }
     },
     // tambahkan aksi lain sesuai kebutuhan
   };
