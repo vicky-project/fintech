@@ -2,15 +2,18 @@
 
 namespace Modules\FinTech\Services;
 
-use Modules\FinTech\Models\Transaction;
-use Modules\FinTech\Models\Transfer;
-use Modules\FinTech\Models\Budget;
-use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Models\ {
+  Transaction,
+  Transfer,
+  Budget,
+  Wallet
+};
 use Modules\FinTech\Enums\TransactionType;
-use Modules\FinTech\Exports\AllDataExport;
-use Modules\FinTech\Exports\CsvDataExport;
-use Modules\FinTech\Exports\ExcelDataExport;
-use Modules\FinTech\Services\GoogleSheetsService;
+use Modules\FinTech\Exports\ {
+  AllDataExport,
+  CsvDataExport,
+  ExcelDataExport
+};
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
@@ -22,82 +25,169 @@ class ExportService
   protected int $maxPdfRecords = 500;
 
   /**
-  * Generate file export, return path to temp file.
+  * Generate export – mengembalikan path file atau URL (untuk gsheet).
   */
   public function generate(array $filters): string
   {
     $type = $filters['type'];
     $format = $filters['format'];
     $wallet = Wallet::with('currencyDetails')->findOrFail($filters['wallet_id']);
-
-    $walletName = $wallet->name;
-    $formatRules = $this->getCurrencyFormat($wallet);
     $user = request()->user();
 
-    // Tentukan limit dan method data
-    $isPdf = $format === 'pdf';
-    $isExcel = $format === 'xlsx';
-    $limit = $isPdf ? $this->maxPdfRecords : $this->maxExcelRecords;
-
-    if ($format === 'gsheet') {
-      return $this->generateGsheet($type, $filters, $user);
+    // Validasi format ilegal untuk all
+    if ($type === 'all' && in_array($format, ['pdf', 'csv'])) {
+      throw new \Exception("Format {$format} tidak tersedia untuk semua data. Gunakan Excel atau Google Sheets.");
     }
 
-    // Jika semua tipe data (hanya Excel)
+    // Google Sheets menggunakan jalur sendiri karena tidak menghasilkan file lokal
+    if ($format === 'gsheet') {
+      return $this->generateGoogleSheets($type, $filters, $user, $wallet);
+    }
+
+    // Data + summary
+    $limit = $format === 'pdf' ? $this->maxPdfRecords : $this->maxExcelRecords;
+    $result = $this->fetchData($type, $user, $filters, $limit);
+    $formatRules = $this->getCurrencyFormat($wallet);
+
     if ($type === 'all') {
-      $this->ensureNotPdf($format);
+      // Gabungkan metadata & format rules ke setiap summary
+      foreach (['transactions', 'transfers', 'budgets'] as $subType) {
+        $result[$subType][1] = array_merge(
+          $result[$subType][1],
+          $formatRules,
+          ['metadata' => $this->buildMetadata($subType, $filters, $wallet->name)]
+        );
+      }
+      return $this->generateExcelAll($result);
+    }
 
-      // Ambil data per tipe dengan limit
-      $transactions = $this->getTransactionsData($user, $filters, $limit);
-      $transfers = $this->getTransfersData($user, $filters, $limit);
-      $budgets = $this->getBudgetsData($user, $filters, $limit);
-
-      // Metadata per sheet
-      $transactions[1] = array_merge($transactions[1], $formatRules, [
-        'metadata' => $this->buildMetadata('transactions', $filters, $walletName)
-      ]);
-      $transfers[1] = array_merge($transfers[1], $formatRules, [
-        'metadata' => $this->buildMetadata('transfers', $filters, $walletName)
-      ]);
-      $budgets[1] = array_merge($budgets[1], $formatRules, [
-        'metadata' => $this->buildMetadata('budgets', $filters, $walletName)
-      ]);
-
-      $allData = compact('transactions', 'transfers', 'budgets');
-
-      return $this->storeExcel(
-        new AllDataExport($allData),
-        'xlsx'
+    // Tipe tunggal
+    [$data,
+      $summary] = $result;
+    if ($format === 'pdf' && count($data) > $this->maxPdfRecords) {
+      throw new \Exception(
+        "Jumlah data (" . count($data) . ") melebihi batas PDF ({$this->maxPdfRecords}). Silakan gunakan Excel atau persempit filter."
       );
     }
 
-    // Tipe tunggal (transactions / transfers / budgets)
-    [$data,
-      $summary] = match ($type) {
+    $metadata = $this->buildMetadata($type, $filters, $wallet->name);
+    $summary = array_merge($summary, $formatRules, compact('metadata'));
+
+    return match ($format) {
+      'pdf' => $this->generatePdf($type, $data, $summary),
+      'xlsx' => $this->generateExcelSingle($type, $data, $summary),
+      'csv' => $this->generateCsv($data),
+    };
+  }
+
+  // ----------------------------------------------------------------
+  // DATA FETCHING (hindari duplikasi)
+  // ----------------------------------------------------------------
+
+  protected function fetchData(string $type, $user, array $filters, int $limit): array
+  {
+    if ($type === 'all') {
+      return [
+        'transactions' => $this->getTransactionsData($user, $filters, $limit),
+        'transfers' => $this->getTransfersData($user, $filters, $limit),
+        'budgets' => $this->getBudgetsData($user, $filters, $limit),
+      ];
+    }
+
+    return match ($type) {
       'transactions' => $this->getTransactionsData($user, $filters, $limit),
       'transfers' => $this->getTransfersData($user, $filters, $limit),
       'budgets' => $this->getBudgetsData($user, $filters, $limit),
     };
+  }
 
-    // Cek batas khusus PDF
-    if ($isPdf && count($data) > $this->maxPdfRecords) {
-      throw new \Exception(
-        "Jumlah data (" . count($data) . ") melebihi batas PDF ({$this->maxPdfRecords}). " .
-        "Silakan gunakan Excel atau persempit filter."
-      );
-    }
+  // ----------------------------------------------------------------
+  // GENERATORS (per format)
+  // ----------------------------------------------------------------
 
-    $metadata = $this->buildMetadata($type, $filters, $walletName);
-    $summary = array_merge($summary, $formatRules, compact('metadata'));
+  protected function generateExcelAll(array $allData): string
+  {
+    return $this->storeXlsx(new AllDataExport($allData));
+  }
 
-    if ($isPdf) {
-      return $this->generatePdf($type, $data, $summary);
-    } elseif ($isExcel) {
-      return $this->generateExcel($type, $data, $summary);
+  protected function generateExcelSingle(string $type, array $data, array $summary): string
+  {
+    return $this->storeXlsx(new ExcelDataExport($type, $data, $summary));
+  }
+
+  protected function generatePdf(string $type, array $data, array $summary): string
+  {
+    set_time_limit(60);
+    ini_set('memory_limit', '256M');
+
+    $html = view("fintech::exports.{$type}_pdf", [
+      'data' => $data,
+      'title' => $this->getTitle($type),
+      'summary' => $summary,
+    ])->render();
+
+    $dompdf = new \Dompdf\Dompdf();
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'landscape');
+    $dompdf->render();
+
+    $filename = Str::uuid()->toString() . '.pdf';
+    $tempPath = "temp/exports/{$filename}";
+
+    Storage::disk('local')->put($tempPath, $dompdf->output());
+
+    return Storage::disk('local')->path($tempPath);
+  }
+
+  protected function generateCsv(array $data): string
+  {
+    return $this->storeExport(new CsvDataExport($data), 'csv');
+  }
+
+  protected function generateGoogleSheets(string $type, array $filters, $user, Wallet $wallet): string
+  {
+    $googleService = app(GoogleSheetsService::class);
+    $googleService->setupForUser($user);
+    $spreadsheetId = $googleService->getOrCreateSpreadsheet($user);
+    $limit = $this->maxExcelRecords;
+
+    $metadata = $this->buildMetadata($type, $filters, $wallet->name);
+
+    if ($type === 'all') {
+      $all = $this->fetchData('all', $user, $filters, $limit);
+      $metaTx = $this->buildMetadata('transactions', $filters, $wallet->name);
+      $metaTf = $this->buildMetadata('transfers', $filters, $wallet->name);
+      $metaBg = $this->buildMetadata('budgets', $filters, $wallet->name);
+
+      $googleService->exportDataToSheet($spreadsheetId, GoogleSheetsService::SHEET_TRANSACTIONS, $all['transactions'][0], true, $metaTx, $all['transactions'][1], 'transactions');
+      $googleService->exportDataToSheet($spreadsheetId, GoogleSheetsService::SHEET_TRANSFERS, $all['transfers'][0], true, $metaTf, $all['transfers'][1], 'transfers');
+      $googleService->exportDataToSheet($spreadsheetId, GoogleSheetsService::SHEET_BUDGETS, $all['budgets'][0], true, $metaBg, $all['budgets'][1], 'budgets');
     } else {
-      return $this->generateCsv($data);
+      [$data,
+        $summary] = $this->fetchData($type, $user, $filters, $limit);
+      $sheetName = match ($type) {
+        'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
+        'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
+        'budgets' => GoogleSheetsService::SHEET_BUDGETS,
+      };
+      $googleService->exportDataToSheet($spreadsheetId, $sheetName, $data, true, $metadata, $summary, $type);
     }
 
+    return $googleService->getSpreadsheetUrl($spreadsheetId);
+  }
+
+  protected function storeXlsx($export): string
+  {
+    return $this->storeExport($export, 'xlsx');
+  }
+
+  protected function storeExport($export, string $extension): string
+  {
+    $filename = Str::uuid()->toString() . '.' . $extension;
+    $tempPath = "temp/exports/{$filename}";
+    $writerType = $extension === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX;
+    Excel::store($export, $tempPath, 'local', $writerType);
+    return Storage::disk('local')->path($tempPath);
   }
 
   // ----------------------------------------------------------------
@@ -151,9 +241,11 @@ class ExportService
     ];
   }
 
-  protected function getTransfersData($user,
+  protected function getTransfersData(
+    $user,
     array $filters,
-    int $limit): array
+    int $limit
+  ): array
   {
     $query = Transfer::with(['fromWallet',
       'toWallet'])
@@ -184,9 +276,11 @@ class ExportService
     return [$data, ['total' => $total]];
   }
 
-  protected function getBudgetsData($user,
+  protected function getBudgetsData(
+    $user,
     array $filters,
-    int $limit): array
+    int $limit
+  ): array
   {
     $query = Budget::where('user_id',
       $user->id)
@@ -286,111 +380,6 @@ class ExportService
     }
 
     // ----------------------------------------------------------------
-    // GENERATION (EXCEL / PDF / CSV)
-    // ----------------------------------------------------------------
-
-    protected function generateExcel(string $type, array $data, array $summary): string
-    {
-      return $this->storeExport(new ExcelDataExport($type, $data, $summary), 'xlsx');
-    }
-
-    protected function generatePdf(string $type, array $data, array $summary): string
-    {
-      set_time_limit(60);
-      ini_set('memory_limit', '256M');
-
-      $html = view("fintech::exports.{$type}_pdf", [
-        'data' => $data,
-        'title' => $this->getTitle($type),
-        'summary' => $summary,
-      ])->render();
-
-      $dompdf = new \Dompdf\Dompdf();
-      $dompdf->loadHtml($html);
-      $dompdf->setPaper('A4', 'landscape');
-      $dompdf->render();
-
-      $filename = Str::uuid()->toString() . '.pdf';
-      $tempPath = "temp/exports/{$filename}";
-
-      Storage::disk('local')->put($tempPath, $dompdf->output());
-
-      return Storage::disk('local')->path($tempPath);
-    }
-
-    protected function generateCsv(array $data): string
-    {
-      return $this->storeExport(new CsvDataExport($data), 'csv');
-    }
-
-    protected function storeExport($export, string $extension): string
-    {
-      $filename = Str::uuid()->toString() . '.' . $extension;
-      $tempPath = "temp/exports/{$filename}";
-
-      $writerType = $extension === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX;
-
-      Excel::store($export, $tempPath, 'local', $writerType);
-
-      return Storage::disk('local')->path($tempPath);
-    }
-
-    protected function generateGsheet(string $type, array $filters, $user): string
-    {
-      $googleService = app(GoogleSheetsService::class);
-      $googleService->setupForUser($user);
-
-      $spreadsheetId = $googleService->getOrCreateSpreadsheet($user);
-
-      if ($type === 'all') {
-        // Ambil semua data dengan limit besar (Excel)
-        $limit = $this->maxExcelRecords;
-
-        $transactions = $this->getTransactionsData($user, $filters, $limit);
-        $transfers = $this->getTransfersData($user, $filters, $limit);
-        $budgets = $this->getBudgetsData($user, $filters, $limit);
-
-        // Tulis masing-masing ke sheet
-        $googleService->exportDataToSheet(
-          $spreadsheetId,
-          GoogleSheetsService::SHEET_TRANSACTIONS,
-          $transactions[0],
-          true
-        );
-        $googleService->exportDataToSheet(
-          $spreadsheetId,
-          GoogleSheetsService::SHEET_TRANSFERS,
-          $transfers[0],
-          true
-        );
-        $googleService->exportDataToSheet(
-          $spreadsheetId,
-          GoogleSheetsService::SHEET_BUDGETS,
-          $budgets[0],
-          true
-        );
-      } else {
-        // Tipe tunggal
-        [$data,
-          $summary] = match ($type) {
-          'transactions' => $this->getTransactionsData($user, $filters, $this->maxExcelRecords),
-          'transfers' => $this->getTransfersData($user, $filters, $this->maxExcelRecords),
-          'budgets' => $this->getBudgetsData($user, $filters, $this->maxExcelRecords),
-        };
-
-        $sheetName = match ($type) {
-          'transactions' => GoogleSheetsService::SHEET_TRANSACTIONS,
-          'transfers' => GoogleSheetsService::SHEET_TRANSFERS,
-          'budgets' => GoogleSheetsService::SHEET_BUDGETS,
-        };
-
-        $googleService->exportDataToSheet($spreadsheetId, $sheetName, $data, true);
-      }
-
-      return $googleService->getSpreadsheetUrl($spreadsheetId);
-    }
-
-    // ----------------------------------------------------------------
     // HELPERS
     // ----------------------------------------------------------------
 
@@ -447,14 +436,5 @@ class ExportService
         'transfers' => 'Laporan Transfer',
         'budgets' => 'Laporan Budget',
       };
-    }
-
-    protected function ensureNotPdf(string $format): void
-    {
-      if ($format === 'pdf') {
-        throw new \Error(
-          "Export PDF tidak tersedia untuk semua data. Gunakan format Excel."
-        );
-      }
     }
   }

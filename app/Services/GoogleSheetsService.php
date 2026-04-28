@@ -155,14 +155,19 @@ class GoogleSheetsService
   /**
   * Menulis data ke sheet tertentu.
   */
-  public function exportDataToSheet(string $spreadsheetId, string $sheetName, array $data, bool $clear = true): void
+  public function exportDataToSheet(
+    string $spreadsheetId,
+    string $sheetName,
+    array $data,
+    bool $clear = true,
+    ?array $metadata = null,
+    ?array $summary = null,
+    ?string $dataType = null
+  ): void
   {
     if (empty($data)) return;
 
     $this->addSheetIfNotExists($spreadsheetId, $sheetName);
-
-    $headers = array_keys($data[0]);
-    $values = array_map(fn($row) => array_values($row), $data);
 
     if ($clear) {
       $this->service->spreadsheets_values->clear(
@@ -172,22 +177,57 @@ class GoogleSheetsService
       );
     }
 
+    // Hitung offset baris untuk data
+    $startRow = 1; // baris pertama setelah clear
+    $metaRows = 0;
+    if ($metadata) {
+      $this->writeMetadata($spreadsheetId, $sheetName, $metadata, $startRow);
+      $metaRows = count($metadata);
+      $startRow += $metaRows + 1; // +1 baris kosong setelah metadata
+    }
+
+    // Tulis header tabel
+    $headers = array_keys($data[0]);
+    $values = array_map(fn($row) => array_values($row), $data);
+
     $this->service->spreadsheets_values->update(
       $spreadsheetId,
-      $sheetName . '!A1',
+      $sheetName . '!A' . $startRow,
       new ValueRange(['values' => [$headers]]),
       ['valueInputOption' => 'RAW']
     );
 
+    $headerEndCol = chr(64 + count($headers)); // A, B, C, ...
+    $headerRange = $sheetName . '!A' . $startRow . ':' . $headerEndCol . $startRow;
+
+    // Tulis data
+    $dataStartRow = $startRow + 1;
     if (!empty($values)) {
       $this->service->spreadsheets_values->update(
         $spreadsheetId,
-        $sheetName . '!A2',
+        $sheetName . '!A' . $dataStartRow,
         new ValueRange(['values' => $values]),
         ['valueInputOption' => 'RAW']
       );
     }
 
+    $dataEndRow = $dataStartRow + count($values) - 1;
+
+    // Tulis footer/subtotal jika ada
+    $footerRows = 0;
+    if ($summary) {
+      $footerRows = $this->writeSubtotal($spreadsheetId, $sheetName, $summary, $dataType, $dataEndRow + 2, $headers);
+    }
+
+    // Terapkan styling
+    $this->applyStyling(
+      $spreadsheetId, $sheetName,
+      $startRow, $headerEndCol,
+      $dataStartRow, $dataEndRow,
+      $dataType, $values, $headers
+    );
+
+    // Auto-resize kolom
     $this->autoResizeColumns($spreadsheetId, $sheetName, count($headers));
   }
 
@@ -258,5 +298,293 @@ class GoogleSheetsService
       }
     }
     return null;
+  }
+
+  protected function writeMetadata(string $spreadsheetId, string $sheetName, array $metadata, int $startRow): void
+  {
+    $rows = [];
+    foreach ($metadata as $line) {
+      $rows[] = [$line];
+    }
+    $this->service->spreadsheets_values->update(
+      $spreadsheetId,
+      $sheetName . '!A' . $startRow,
+      new ValueRange(['values' => $rows]),
+      ['valueInputOption' => 'RAW']
+    );
+
+    // Merge cells untuk setiap baris metadata
+    $requests = [];
+    foreach (range(0, count($metadata) - 1) as $i) {
+      $requests[] = new SheetsRequest([
+        'mergeCells' => [
+          'range' => [
+            'sheetId' => $this->getSheetIdByName($spreadsheetId, $sheetName),
+            'startRowIndex' => $startRow - 1 + $i,
+            'endRowIndex' => $startRow + $i,
+            'startColumnIndex' => 0,
+            'endColumnIndex' => 6, // merge A..G
+          ],
+          'mergeType' => 'MERGE_ALL',
+        ]
+      ]);
+    }
+    if ($requests) {
+      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $this->service->spreadsheets->batchUpdate($spreadsheetId, $batch);
+    }
+  }
+
+  protected function writeSubtotal(string $spreadsheetId, string $sheetName, array $summary, ?string $dataType, int $startRow, array $headers): int
+  {
+    $rows = [];
+    $colCount = count($headers);
+
+    if ($dataType === 'transactions') {
+      // Asumsikan kolom: Tanggal(A), Tipe(B), Kategori(C), Dompet(D), Pemasukan(E), Pengeluaran(F), Deskripsi(G)
+      $rows[] = array_merge(['SUBTOTAL', '', '', ''], [
+        'Pemasukan: ' . ($summary['total_income'] ?? 0),
+        'Pengeluaran: ' . ($summary['total_expense'] ?? 0),
+        'Net: ' . ($summary['net'] ?? 0),
+      ]);
+      $writtenRows = 1;
+    } elseif ($dataType === 'transfers') {
+      // Kolom: Tanggal(A), Dari(B), Ke(C), Jumlah(D), Deskripsi(E)
+      $rows[] = array_merge(['SUBTOTAL', '', ''], [
+        'Total Transfer: ' . ($summary['total'] ?? 0),
+        ''
+      ]);
+      $writtenRows = 1;
+    } elseif ($dataType === 'budgets') {
+      // Kolom: Kategori(A), Dompet(B), Periode(C), Limit(D), Pengeluaran(E), Persentase(F), Status(G)
+      $rows[] = array_merge(['SUBTOTAL', '', ''], [
+        'Total Limit: ' . ($summary['total_limit'] ?? 0),
+        'Total Pengeluaran: ' . ($summary['total_spent'] ?? 0),
+        '',
+        'Sisa: ' . ($summary['remaining'] ?? 0),
+      ]);
+      $writtenRows = 1;
+    } else {
+      return 0;
+    }
+
+    $this->service->spreadsheets_values->update(
+      $spreadsheetId,
+      $sheetName . '!A' . $startRow,
+      new ValueRange(['values' => $rows]),
+      ['valueInputOption' => 'RAW']
+    );
+
+    return $writtenRows;
+  }
+
+  protected function applyStyling(
+    string $spreadsheetId,
+    string $sheetName,
+    int $headerRow,
+    string $headerEndCol,
+    int $dataStartRow,
+    int $dataEndRow,
+    ?string $dataType,
+    array $values,
+    array $headers
+  ): void {
+    $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
+    $requests = [];
+
+    // --- 1. Style header (background biru, bold putih) ---
+    $requests[] = new SheetsRequest([
+      'repeatCell' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $headerRow - 1,
+          'endRowIndex' => $headerRow,
+          'startColumnIndex' => 0,
+          'endColumnIndex' => count($headers),
+        ],
+        'cell' => [
+          'userEnteredFormat' => [
+            'backgroundColor' => ['red' => 79/255, 'green' => 129/255, 'blue' => 189/255],
+            'textFormat' => [
+              'foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1],
+              'bold' => true,
+              'fontSize' => 11,
+            ],
+            'horizontalAlignment' => 'CENTER',
+            'verticalAlignment' => 'MIDDLE',
+          ],
+        ],
+        'fields' => 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
+      ],
+    ]);
+
+    // --- 2. Border seluruh data (header + data) ---
+    $requests[] = new SheetsRequest([
+      'updateBorders' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $headerRow - 1,
+          'endRowIndex' => $dataEndRow,
+          'startColumnIndex' => 0,
+          'endColumnIndex' => count($headers),
+        ],
+        'top' => ['style' => 'SOLID', 'width' => 1, 'color' => ['red' => 0, 'green' => 0, 'blue' => 0]],
+        'bottom' => ['style' => 'SOLID', 'width' => 1, 'color' => ['red' => 0, 'green' => 0, 'blue' => 0]],
+        'left' => ['style' => 'SOLID', 'width' => 1, 'color' => ['red' => 0, 'green' => 0, 'blue' => 0]],
+        'right' => ['style' => 'SOLID', 'width' => 1, 'color' => ['red' => 0, 'green' => 0, 'blue' => 0]],
+        'innerHorizontal' => ['style' => 'SOLID', 'width' => 1, 'color' => ['red' => 0, 'green' => 0, 'blue' => 0]],
+        'innerVertical' => ['style' => 'SOLID', 'width' => 1, 'color' => ['red' => 0, 'green' => 0, 'blue' => 0]],
+      ],
+    ]);
+
+    // --- 3. Warna pemasukan/pengeluaran untuk transaksi ---
+    if ($dataType === 'transactions') {
+      // Kolom: A=Tanggal, B=Tipe, C=Kategori, D=Dompet, E=Pemasukan, F=Pengeluaran, G=Deskripsi
+      $colEIndex = 4; // kolom E (0-based)
+      $colFIndex = 5; // kolom F
+
+      foreach ($values as $idx => $row) {
+        $rowNum = $dataStartRow + $idx; // baris excel (1-based)
+        $tipe = $row[1] ?? ''; // kolom B (Tipe)
+        if ($tipe === 'Pemasukan') {
+          $requests[] = new SheetsRequest([
+            'repeatCell' => [
+              'range' => [
+                'sheetId' => $sheetId,
+                'startRowIndex' => $rowNum - 1,
+                'endRowIndex' => $rowNum,
+                'startColumnIndex' => $colEIndex,
+                'endColumnIndex' => $colEIndex + 1,
+              ],
+              'cell' => [
+                'userEnteredFormat' => [
+                  'textFormat' => [
+                    'foregroundColor' => ['red' => 40/255, 'green' => 167/255, 'blue' => 69/255],
+                    'bold' => true,
+                  ],
+                ],
+              ],
+              'fields' => 'userEnteredFormat(textFormat)',
+            ],
+          ]);
+          // Reset kolom F ke default (tidak merah)
+          $requests[] = new SheetsRequest([
+            'repeatCell' => [
+              'range' => [
+                'sheetId' => $sheetId,
+                'startRowIndex' => $rowNum - 1,
+                'endRowIndex' => $rowNum,
+                'startColumnIndex' => $colFIndex,
+                'endColumnIndex' => $colFIndex + 1,
+              ],
+              'cell' => [
+                'userEnteredFormat' => [
+                  'textFormat' => [
+                    'foregroundColor' => ['red' => 0, 'green' => 0, 'blue' => 0],
+                    'bold' => false,
+                  ],
+                ],
+              ],
+              'fields' => 'userEnteredFormat(textFormat)',
+            ],
+          ]);
+        } elseif ($tipe === 'Pengeluaran') {
+          $requests[] = new SheetsRequest([
+            'repeatCell' => [
+              'range' => [
+                'sheetId' => $sheetId,
+                'startRowIndex' => $rowNum - 1,
+                'endRowIndex' => $rowNum,
+                'startColumnIndex' => $colFIndex,
+                'endColumnIndex' => $colFIndex + 1,
+              ],
+              'cell' => [
+                'userEnteredFormat' => [
+                  'textFormat' => [
+                    'foregroundColor' => ['red' => 220/255, 'green' => 53/255, 'blue' => 69/255],
+                    'bold' => true,
+                  ],
+                ],
+              ],
+              'fields' => 'userEnteredFormat(textFormat)',
+            ],
+          ]);
+          $requests[] = new SheetsRequest([
+            'repeatCell' => [
+              'range' => [
+                'sheetId' => $sheetId,
+                'startRowIndex' => $rowNum - 1,
+                'endRowIndex' => $rowNum,
+                'startColumnIndex' => $colEIndex,
+                'endColumnIndex' => $colEIndex + 1,
+              ],
+              'cell' => [
+                'userEnteredFormat' => [
+                  'textFormat' => [
+                    'foregroundColor' => ['red' => 0, 'green' => 0, 'blue' => 0],
+                    'bold' => false,
+                  ],
+                ],
+              ],
+              'fields' => 'userEnteredFormat(textFormat)',
+            ],
+          ]);
+        }
+      }
+
+      // Rata kanan untuk kolom angka (E dan F)
+      $requests[] = new SheetsRequest([
+        'repeatCell' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $dataStartRow - 1,
+            'endRowIndex' => $dataEndRow,
+            'startColumnIndex' => $colEIndex,
+            'endColumnIndex' => $colFIndex + 1,
+          ],
+          'cell' => [
+            'userEnteredFormat' => [
+              'horizontalAlignment' => 'RIGHT',
+            ],
+          ],
+          'fields' => 'userEnteredFormat(horizontalAlignment)',
+        ],
+      ]);
+    }
+
+    // --- 4. Style footer/subtotal ---
+    $footerRow = $dataEndRow + 2; // setelah data + 1 baris kosong
+    if ($summary) {
+      $requests[] = new SheetsRequest([
+        'repeatCell' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $footerRow - 1,
+            'endRowIndex' => $footerRow,
+            'startColumnIndex' => 0,
+            'endColumnIndex' => count($headers),
+          ],
+          'cell' => [
+            'userEnteredFormat' => [
+              'backgroundColor' => ['red' => 217/255, 'green' => 226/255, 'blue' => 243/255],
+              'textFormat' => ['bold' => true, 'fontSize' => 11],
+              'borders' => [
+                'top' => ['style' => 'SOLID', 'width' => 1],
+                'bottom' => ['style' => 'SOLID', 'width' => 1],
+                'left' => ['style' => 'SOLID', 'width' => 1],
+                'right' => ['style' => 'SOLID', 'width' => 1],
+              ],
+            ],
+          ],
+          'fields' => 'userEnteredFormat(backgroundColor,textFormat,borders)',
+        ],
+      ]);
+    }
+
+    // Jalankan semua request
+    if ($requests) {
+      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $this->service->spreadsheets->batchUpdate($spreadsheetId, $batch);
+    }
   }
 }
