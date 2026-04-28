@@ -84,7 +84,7 @@ class SheetWriter
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
         $sheetName . '!A' . $currentRow,
-        new \Google\Service\Sheets\ValueRange(['values' => [$row1, $row2]]),
+        new ValueRange(['values' => [$row1, $row2]]),
         ['valueInputOption' => 'RAW']
       );
 
@@ -92,17 +92,7 @@ class SheetWriter
       $requests = [];
 
       // LANGKAH PENTING: Unmerge dulu area header (A sampai G, Baris 1 & 2)
-      $requests[] = new \Google\Service\Sheets\Request([
-        'unmergeCells' => [
-          'range' => [
-            'sheetId' => $sheetId,
-            'startRowIndex' => $currentRow - 1,
-            'endRowIndex' => $currentRow + 1,
-            'startColumnIndex' => 0,
-            'endColumnIndex' => 7,
-          ]
-        ]
-      ]);
+
 
       // A. MERGE VERTIKAL (Baris 1 & 2) - Kolom A, B, C, D, G
       $colsToMergeVertically = [0,
@@ -115,7 +105,7 @@ class SheetWriter
       }
 
       // B. MERGE HORIZONTAL (Hanya Baris 1) - Kolom E ke F (Amount)
-      $requests[] = new \Google\Service\Sheets\Request([
+      $requests[] = new SheetsRequest([
         'mergeCells' => [
           'range' => [
             'sheetId' => $sheetId,
@@ -129,7 +119,7 @@ class SheetWriter
       ]);
 
       // C. STYLING (Center, Bold, Middle)
-      $requests[] = new \Google\Service\Sheets\Request([
+      $requests[] = new SheetsRequest([
         'repeatCell' => [
           'range' => [
             'sheetId' => $sheetId,
@@ -149,7 +139,7 @@ class SheetWriter
         ]
       ]);
 
-      $batchUpdate = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
 
       $currentRow += 2;
@@ -158,7 +148,7 @@ class SheetWriter
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
         $sheetName . '!A' . $currentRow,
-        new \Google\Service\Sheets\ValueRange(['values' => [$headers]]),
+        new ValueRange(['values' => [$headers]]),
         ['valueInputOption' => 'RAW']
       );
       $this->applyBoldCenter($spreadsheetId, $sheetId, $currentRow, count($headers));
@@ -168,7 +158,7 @@ class SheetWriter
 
   private function createMergeRequest(int $sheetId, int $startRow, int $endRow, int $startCol, int $endCol): \Google\Service\Sheets\Request
   {
-    return new \Google\Service\Sheets\Request([
+    return new SheetsRequest([
       'mergeCells' => [
         'range' => [
           'sheetId' => $sheetId,
@@ -205,7 +195,7 @@ class SheetWriter
         'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
       ]
     ]);
-    $batchUpdate = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => [$request]]);
+    $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => [$request]]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
