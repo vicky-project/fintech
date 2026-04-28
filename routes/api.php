@@ -18,6 +18,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
   TransferController,
   WalletController
 };
+use Revolution\Google\Sheets\Facades\Sheets;
 
 /*
 |--------------------------------------------------------------------------
