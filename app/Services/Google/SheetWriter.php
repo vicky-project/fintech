@@ -6,8 +6,8 @@ use Google\Service\Sheets\ValueRange;
 use Google\Service\Sheets\ClearValuesRequest;
 use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
 use Google\Service\Sheets\Request as SheetsRequest;
-use Modules\FinTech\Service\Google\GoogleSheetsClient;
-use Modules\FinTech\Service\Google\SpreadsheetManager;
+use Modules\FinTech\Services\Google\GoogleSheetsClient;
+use Modules\FinTech\Services\Google\SpreadsheetManager;
 
 class SheetWriter
 {
