@@ -215,10 +215,10 @@ class ExportService
       if ($trx->type === TransactionType::INCOME) {
         $totalIncome += $amount;
         $income = $trx->getFormattedAmount();
-        $expense = '-';
+        $expense = 'Rp 0';
       } else {
         $totalExpense += $amount;
-        $income = '-';
+        $income = 'Rp 0';
         $expense = $trx->getFormattedAmount();
       }
 

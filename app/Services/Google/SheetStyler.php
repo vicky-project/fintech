@@ -122,8 +122,20 @@ class SheetStyler
         'textFormat' => ['italic' => true, 'foregroundColor' => ['red' => 136/255, 'green' => 136/255, 'blue' => 136/255], 'fontSize' => 10],
         'horizontalAlignment' => 'CENTER',
       ]],
-      'fields' => 'userEnteredFormat(textFormat,horizontalAlignment)',
+      'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)',
     ]]);
+
+    // Tambahkan ini ke dalam array $requests Anda
+    $requests[] = new SheetsRequest([
+      'autoResizeDimensions' => [
+        'dimensions' => [
+          'sheetId' => $sheetId,
+          'dimension' => 'COLUMNS',
+          'startIndex' => 0, // Mulai dari kolom A
+          'endIndex' => 7, // Sampai kolom G (eksklusif)
+        ]
+      ]
+    ]);
 
     if ($requests) {
       $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);

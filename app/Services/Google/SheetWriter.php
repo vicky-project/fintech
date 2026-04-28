@@ -91,9 +91,6 @@ class SheetWriter
       // 2. LOGIKA FORMATTING
       $requests = [];
 
-      // LANGKAH PENTING: Unmerge dulu area header (A sampai G, Baris 1 & 2)
-
-
       // A. MERGE VERTIKAL (Baris 1 & 2) - Kolom A, B, C, D, G
       $colsToMergeVertically = [0,
         1,
@@ -177,7 +174,7 @@ class SheetWriter
   */
   private function applyBoldCenter(string $spreadsheetId, int $sheetId, int $row, int $colCount): void
   {
-    $request = new \Google\Service\Sheets\Request([
+    $request = new SheetsRequest([
       'repeatCell' => [
         'range' => [
           'sheetId' => $sheetId,
@@ -302,5 +299,102 @@ class SheetWriter
       $sheetName,
       new ClearValuesRequest()
     );
+  }
+
+  /**
+  * Tambahkan column chart pemasukan vs pengeluaran.
+  *
+  * @param int $dataStartRow Baris pertama data (setelah header)
+  * @param int $dataEndRow   Baris terakhir data
+  * @param int $chartRow     Baris tempat chart akan diletakkan (misal 2 baris setelah footer)
+  */
+  public function writeTransactionChart(
+    string $spreadsheetId,
+    string $sheetName,
+    int $dataStartRow,
+    int $dataEndRow,
+    int $chartRow
+  ): void {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+
+    $chartRequest = new SheetsRequest([
+      'addChart' => [
+        'chart' => [
+          'spec' => [
+            'title' => 'Pemasukan vs Pengeluaran',
+            'basicChart' => [
+              'chartType' => 'COLUMN',
+              'legendPosition' => 'BOTTOM_LEGEND',
+              'axis' => [
+                ['position' => 'BOTTOM_AXIS', 'title' => 'Tanggal'],
+                ['position' => 'LEFT_AXIS', 'title' => 'Jumlah']
+              ],
+              'domains' => [
+                [
+                  'domain' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1, // 0-indexed
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 0, // Kolom A
+                        'endColumnIndex' => 1,
+                      ]]
+                    ]
+                  ]
+                ]
+              ],
+              'series' => [
+                [
+                  'series' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 4, // Kolom E (Pemasukan)
+                        'endColumnIndex' => 5,
+                      ]]
+                    ]
+                  ],
+                  'targetAxis' => 'LEFT_AXIS'
+                ],
+                [
+                  'series' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 5, // Kolom F (Pengeluaran)
+                        'endColumnIndex' => 6,
+                      ]]
+                    ]
+                  ],
+                  'targetAxis' => 'LEFT_AXIS'
+                ]
+              ],
+              'headerCount' => 1 // Baris pertama tiap range adalah header
+            ]
+          ],
+          'position' => [
+            'overlayPosition' => [
+              'anchorCell' => [
+                'sheetId' => $sheetId,
+                'rowIndex' => $chartRow - 1,
+                'columnIndex' => 0
+              ],
+              'widthPixels' => 600,
+              'heightPixels' => 350
+            ]
+          ]
+        ]
+      ]
+    ]);
+
+    $batchUpdate = new BatchUpdateSpreadsheetRequest([
+      'requests' => [$chartRequest]
+    ]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 }
