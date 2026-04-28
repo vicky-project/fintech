@@ -61,7 +61,7 @@ class SheetWriter
   /**
   * Tulis header tabel (mendukung dua baris untuk transaksi).
   */
-  public function writeHeaders(string $spreadsheetId, int $sheetId, string $sheetName, array $headers, int &$currentRow, ?string $dataType): void
+  public function writeHeaders(string $spreadsheetId, string $sheetName, int $sheetId, array $headers, int &$currentRow, ?string $dataType): void
   {
     if ($dataType === 'transactions') {
       // 1. ISI DATA TEKS (Baris 1 & 2)
