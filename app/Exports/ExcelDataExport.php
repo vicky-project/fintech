@@ -562,10 +562,12 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       });
     }
 
-    protected function addTrendChart(Worksheet $sheet,
+    protected function addTrendChart(
+      Worksheet $sheet,
       int $startRow,
       array $data,
-      string $chartCol = 'B'): void
+      string $chartCol = 'B'
+    ): void
     {
       MtJpGraph::load(['line']);
 
@@ -650,7 +652,6 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $graph->xaxis->SetLabelAngle(45);
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
       $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
-      $graph->yaxis->scale->SetAutoMin(0);
 
       $linePlot = new \LinePlot($nets);
       $linePlot->SetColor('#3366CC');
