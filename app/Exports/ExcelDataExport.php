@@ -13,6 +13,9 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use Amenadiel\JpGraph\Graph;
+use Amenadiel\JpGraph\Plot;
 
 class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents, WithTitle
 {
@@ -122,6 +125,17 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
+
+          if ($this->type === 'transactions' && count($this->data) > 0) {
+            $worksheet = $event->sheet->getDelegate();
+            // Tentukan baris data (sesuaikan dengan posisi sebenarnya)
+            $metaCount = count($this->summary['metadata'] ?? []);
+            $headerRow = $metaCount + 3;
+            $dataStartRow = $headerRow + 2; // setelah header 2 baris
+            $dataEndRow = $dataStartRow + count($this->data) - 1;
+
+            $this->addChartToSheet($worksheet, $dataStartRow, $dataEndRow);
+          }
         },
       ];
     }
@@ -303,5 +317,53 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty);
         $sheet->getStyle('D'.$d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
       }
+    }
+
+    protected function addChartToSheet(Worksheet $sheet, int $dataStartRow, int $dataEndRow): void
+    {
+      // 1. Ambil data dari sheet (kolom E dan F)
+      $data = [];
+      for ($r = $dataStartRow; $r <= $dataEndRow; $r++) {
+        $income = (float) $sheet->getCell('E'.$r)->getValue() ?: 0;
+        $expense = (float) $sheet->getCell('F'.$r)->getValue() ?: 0;
+        $data[] = [$income,
+          $expense];
+      }
+
+      // 2. Buat chart dengan JpGraph
+      $graph = new Graph(600, 350);
+      $graph->SetScale('textlin');
+      $graph->title->Set('Pemasukan vs Pengeluaran');
+      $graph->xaxis->title->Set('Data Ke-');
+      $graph->yaxis->title->Set('Jumlah');
+
+      $incomePlot = new Plot\BarPlot(array_column($data, 0));
+      $expensePlot = new Plot\BarPlot(array_column($data, 1));
+
+      $incomePlot->SetFillColor('#28A745');
+      $expensePlot->SetFillColor('#DC3545');
+
+      $incomePlot->SetLegend('Pemasukan');
+      $expensePlot->SetLegend('Pengeluaran');
+
+      $groupPlot = new Plot\GroupBarPlot([$incomePlot, $expensePlot]);
+      $graph->Add($groupPlot);
+
+      // 3. Simpan gambar sementara
+      $tempFile = tempnam(sys_get_temp_dir(), 'chart_').'.png';
+      $graph->Stroke($tempFile);
+
+      // 4. Sisipkan ke worksheet
+      $drawing = new Drawing();
+      $drawing->setPath($tempFile);
+      $drawing->setCoordinates('A'.($dataEndRow+7)); // di bawah subtotal
+      $drawing->setWidth(600);
+      $drawing->setHeight(350);
+      $drawing->setWorksheet($sheet);
+
+      // 5. Hapus file sementara (setelah digunakan)
+      register_shutdown_function(function () use ($tempFile) {
+        if (file_exists($tempFile)) unlink($tempFile);
+      });
     }
   }
