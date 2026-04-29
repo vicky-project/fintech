@@ -11,7 +11,6 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -23,19 +22,71 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
   protected array $data;
   protected array $summary;
 
+  // Style presets
+  private array $headerStyle;
+  private array $subtotalStyle;
+  private array $footerStyle;
+  private array $infoStyle;
+  private array $metadataStyle;
+  private array $emptyStyle;
+
   public function __construct(string $type, array $data, array $summary) {
     $this->type = $type;
     $this->data = $data;
     $this->summary = $summary;
+
+    $this->headerStyle = [
+      'font' => ['bold' => true,
+        'color' => ['rgb' => 'FFFFFF'],
+        'size' => 12],
+      'fill' => ['fillType' => Fill::FILL_SOLID,
+        'startColor' => ['rgb' => '4F81BD']],
+      'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
+        'vertical' => Alignment::VERTICAL_CENTER],
+      'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+    ];
+
+    $this->subtotalStyle = [
+      'font' => ['bold' => true,
+        'size' => 11],
+      'fill' => ['fillType' => Fill::FILL_SOLID,
+        'startColor' => ['rgb' => 'D9E2F3']],
+      'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+    ];
+
+    $this->footerStyle = [
+      'font' => ['italic' => true,
+        'color' => ['rgb' => '888888'],
+        'size' => 10],
+      'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+    ];
+
+    $this->infoStyle = [
+      'font' => ['bold' => true,
+        'size' => 12,
+        'color' => ['rgb' => '1F4E79']],
+    ];
+
+    $this->metadataStyle = [
+      'font' => ['size' => 10,
+        'italic' => true],
+    ];
+
+    $this->emptyStyle = [
+      'font' => ['italic' => true,
+        'color' => ['rgb' => '888888']],
+      'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+      'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+    ];
   }
 
-  public function headings(): array {
-    // Jika data tersedia, gunakan key dari baris pertama
+  // -------- Interface methods ----------
+
+  public function headings(): array
+  {
     if (!empty($this->data) && is_array($this->data[0])) {
       return array_keys($this->data[0]);
     }
-
-    // Default headings per tipe
     return match ($this->type) {
       'transactions' => ['Tanggal',
         'Tipe',
@@ -69,6 +120,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       default => 'Data'
       };
     }
+
     public function styles(Worksheet $sheet) {}
 
     public function registerEvents(): array
@@ -80,186 +132,161 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $metaCount = count($metadata);
           $highestCol = $this->getHighestColumn();
 
-          // 1. Metadata
-          if ($metaCount > 0) {
-            $sheet->setCellValue('A1', 'INFORMASI EKSPOR');
-            $sheet->mergeCells('A1:'.$highestCol.'1');
-            $sheet->getStyle('A1')->applyFromArray([
-              'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1F4E79']],
-            ]);
-            for ($i = 0; $i < $metaCount; $i++) {
-              $r = $i + 2;
-              $sheet->setCellValue('A'.$r, $metadata[$i]);
-              $sheet->mergeCells('A'.$r.':'.$highestCol.$r);
-              $sheet->getStyle('A'.$r)->applyFromArray([
-                'font' => ['size' => 10, 'italic' => true],
-              ]);
-            }
-          }
+          $this->writeMetadataSection($sheet, $metadata, $metaCount, $highestCol);
 
           $tableStart = $metaCount + 3;
-          // 3. Header Tabel
-          $this->writeHeaders($sheet, $tableStart, $highestCol);
           $headerRows = $this->headerRowCount();
           $dataStart = $tableStart + $headerRows;
           $lastData = $dataStart + count($this->data) - 1;
 
-          // 4. Data
+          $this->writeHeaders($sheet, $tableStart, $highestCol);
           $this->writeData($sheet, $dataStart, $highestCol);
           $this->styleData($sheet, $dataStart, $lastData, $highestCol);
 
-          // 4b. Ringkasan bulanan
-          $includeMonthly = $this->summary['include_monthly_summary'] ?? false;
-          if ($includeMonthly) {
+          // Ringkasan dalam-tabel (insert)
+          if ($this->summary['include_monthly_summary'] ?? false) {
             $this->insertMonthlySummaries($sheet, $dataStart, $lastData, $highestCol);
           }
 
-          // Freeze pane: bekukan header agar tetap terlihat saat scroll
-          //$sheet->freezePane('A' . $dataStart);
-
-          // AutoFilter: tambahkan dropdown filter di setiap kolom header
-          $sheet->setAutoFilter('A' . ($tableStart) . ':' . $highestCol . ($lastData > $dataStart ? $lastData : $dataStart));
-
-          // Auto-size columns
+          // Autofilter & auto-size kolom utama
+          $lastDataRow = max($lastData, $dataStart);
+          $sheet->setAutoFilter('A' . $tableStart . ':' . $highestCol . $lastDataRow);
           foreach (range('A', $highestCol) as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
           }
 
-          // 5. Subtotal
+          // Subtotal
           $subStart = $lastData + 2;
           $this->writeSubtotal($sheet, $subStart, $highestCol);
           $subDetailRows = $this->subtotalDetailRows();
-          $subEnd = $subStart + $subDetailRows; // baris setelah detail subtotal
+          $subEnd = $subStart + $subDetailRows;
 
-          // 6. Footer (setelah subtotal)
-          $footerRow = $subEnd + 2; // 1 baris kosong setelah subtotal
-          $sheet->setCellValue('A'.$footerRow, 'Generated by '.config('app.name', 'Laravel').' App - '.now()->format('d M Y H:i'));
-          $sheet->mergeCells('A'.$footerRow.':'.$highestCol.$footerRow);
-          $sheet->getStyle('A'.$footerRow)->applyFromArray([
-            'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-          ]);
+          // Footer
+          $footerRow = $subEnd + 2;
+          $this->writeFooter($sheet, $footerRow, $highestCol);
 
-          $includeMonthly = $this->summary['include_monthly_summary'] ?? false;
-          $includeTopSpending = $this->summary['include_top_spending'] ?? false;
-          $includeChart = $this->summary['include_chart'] ?? false;
-
-          if ($this->type === 'transactions' && count($this->data) > 0 && ($includeMonthly || $includeTopSpending || $includeChart)) {
-            $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
-            $blockColIndex = $dataEndColIndex + 2; // kolom awal blok vertikal
-            $nextColIndex = $blockColIndex; // akan digeser setelah blok vertikal selesai
-            $currentRow = $tableStart;
-
-            // 1. Ringkasan Bulanan
-            if ($includeMonthly) {
-              $summaryStartCol = Coordinate::stringFromColumnIndex($blockColIndex);
-              $currentRow = $this->writeMonthlySummaryTable($sheet, $currentRow, $this->data, $summaryStartCol);
-              $currentRow++; // 1 baris kosong
-            }
-
-            // 2. Top 5 Pengeluaran Tertinggi (di bawah ringkasan, kolom yang sama)
-            if ($includeTopSpending) {
-              $topStartCol = Coordinate::stringFromColumnIndex($blockColIndex);
-              $currentRow = $this->writeTopSpendingTable($sheet, $currentRow, $this->data, $topStartCol);
-              $currentRow++;
-            }
-
-            // 3. Geser nextColIndex jika minimal satu blok vertikal ditulis
-            if ($includeMonthly || $includeTopSpending) {
-              $nextColIndex = $blockColIndex + 5; // 4 kolom blok + 1 jarak
-            }
-
-            // 4. Chart
-            if ($includeChart) {
-              $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
-              $chartRow = $tableStart;
-              $this->addChartToSheet($sheet, $chartRow, $this->data, $chartStartCol);
-              $trendChartRow = $chartRow + 20 + 2;
-              $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
-            }
-          }
+          // Blok samping (ringkasan, top spending, chart)
+          $this->writeSideBlocks($sheet, $tableStart, $highestCol);
         },
       ];
     }
 
-    private function getHighestColumn(): string
+    // --------------- Section writers -------------------
+
+    private function writeMetadataSection(Worksheet $sheet, array $metadata, int $metaCount, string $highestCol): void
     {
-      return match ($this->type) {
-        'transactions' => 'G',
-        'transfers' => 'E',
-        'budgets' => 'G',
-      default => 'E',
-      };
+      if ($metaCount === 0) return;
+
+      $sheet->setCellValue('A1', 'INFORMASI EKSPOR');
+      $sheet->mergeCells('A1:' . $highestCol . '1');
+      $sheet->getStyle('A1')->applyFromArray($this->infoStyle);
+
+      for ($i = 0; $i < $metaCount; $i++) {
+        $r = $i + 2;
+        $sheet->setCellValue('A' . $r, $metadata[$i]);
+        $sheet->mergeCells('A' . $r . ':' . $highestCol . $r);
+        $sheet->getStyle('A' . $r)->applyFromArray($this->metadataStyle);
+      }
     }
 
-    private function headerRowCount(): int
+    private function writeFooter(Worksheet $sheet, int $footerRow, string $highestCol): void
     {
-      return $this->type === 'transactions' ? 2 : 1;
+      $sheet->setCellValue('A' . $footerRow,
+        'Generated by ' . config('app.name', 'Laravel') . ' App - ' . now()->format('d M Y H:i'));
+      $sheet->mergeCells('A' . $footerRow . ':' . $highestCol . $footerRow);
+      $sheet->getStyle('A' . $footerRow)->applyFromArray($this->footerStyle);
     }
 
-    private function subtotalDetailRows(): int
+    private function writeSideBlocks(Worksheet $sheet, int $tableStart, string $highestCol): void
     {
-      return match ($this->type) {
-        'transactions' => 3,
-        'transfers' => 1,
-        'budgets' => 2,
-      default => 1,
-      };
+      $includeMonthly = $this->summary['include_monthly_summary'] ?? false;
+      $includeTopSpending = $this->summary['include_top_spending'] ?? false;
+      $includeChart = $this->summary['include_chart'] ?? false;
+
+      if ($this->type !== 'transactions' || count($this->data) === 0) return;
+      if (!$includeMonthly && !$includeTopSpending && !$includeChart) return;
+
+      $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
+      $blockColIndex = $dataEndColIndex + 2;
+      $nextColIndex = $blockColIndex;
+      $currentRow = $tableStart;
+
+      if ($includeMonthly) {
+        $startCol = Coordinate::stringFromColumnIndex($blockColIndex);
+        $currentRow = $this->writeMonthlySummaryTable($sheet, $currentRow, $this->data, $startCol);
+        $currentRow++; // jarak 1 baris
+      }
+
+      if ($includeTopSpending) {
+        $startCol = Coordinate::stringFromColumnIndex($blockColIndex);
+        $currentRow = $this->writeTopSpendingTable($sheet, $currentRow, $this->data, $startCol);
+        $currentRow++;
+      }
+
+      if ($includeMonthly || $includeTopSpending) {
+        $nextColIndex = $blockColIndex + 5;
+      }
+
+      if ($includeChart) {
+        $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
+        $chartRow = $tableStart;
+        $this->addChartToSheet($sheet, $chartRow, $this->data, $chartStartCol);
+        $trendChartRow = $chartRow + 20 + 2;
+        $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
+      }
     }
+
+    // --------------- Formatting helpers ---------------
+
+    private function formatCurrencyValue(float $value): string
+    {
+      $f = $this->summary;
+      $num = number_format($value, $f['precision'], $f['decimal_mark'], $f['thousands_separator']);
+      return ($f['symbol_first'] ? $f['symbol'] . ' ' : '') . $num . (!$f['symbol_first'] ? ' ' . $f['symbol'] : '');
+    }
+
+    private function parseCurrencyString(string $input): float
+    {
+      return (float) str_replace(['Rp', '.', ','], '', $input);
+    }
+
+    // --------------- Header & Data ---------------
 
     private function writeHeaders(Worksheet $sheet, int $startRow, string $highestCol): void
     {
-      $style = [
-        'font' => ['bold' => true,
-          'color' => ['rgb' => 'FFFFFF'],
-          'size' => 12],
-        'fill' => ['fillType' => Fill::FILL_SOLID,
-          'startColor' => ['rgb' => '4F81BD']],
-        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
-          'vertical' => Alignment::VERTICAL_CENTER],
-        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-      ];
-      $headings = $this->headings();
-
       if ($this->type === 'transactions') {
-        // Baris 1
-        $sheet->mergeCells('A'.$startRow.':A'.($startRow+1));
-        $sheet->setCellValue('A'.$startRow, 'Tanggal');
-        $sheet->mergeCells('B'.$startRow.':B'.($startRow+1));
-        $sheet->setCellValue('B'.$startRow, 'Tipe');
-        $sheet->mergeCells('C'.$startRow.':C'.($startRow+1));
-        $sheet->setCellValue('C'.$startRow, 'Kategori');
-        $sheet->mergeCells('D'.$startRow.':D'.($startRow+1));
-        $sheet->setCellValue('D'.$startRow, 'Dompet');
-        $sheet->mergeCells('E'.$startRow.':F'.$startRow);
-        $sheet->setCellValue('E'.$startRow, 'Amount');
-        $sheet->mergeCells('G'.$startRow.':G'.($startRow+1));
-        $sheet->setCellValue('G'.$startRow, 'Deskripsi');
-        $sheet->getStyle('A'.$startRow.':G'.($startRow+1))->applyFromArray($style);
-        // Baris 2
-        $sheet->setCellValue('E'.($startRow+1), 'Pemasukan');
-        $sheet->setCellValue('F'.($startRow+1), 'Pengeluaran');
+        $sheet->mergeCells('A' . $startRow . ':A' . ($startRow + 1));
+        $sheet->setCellValue('A' . $startRow, 'Tanggal');
+        $sheet->mergeCells('B' . $startRow . ':B' . ($startRow + 1));
+        $sheet->setCellValue('B' . $startRow, 'Tipe');
+        $sheet->mergeCells('C' . $startRow . ':C' . ($startRow + 1));
+        $sheet->setCellValue('C' . $startRow, 'Kategori');
+        $sheet->mergeCells('D' . $startRow . ':D' . ($startRow + 1));
+        $sheet->setCellValue('D' . $startRow, 'Dompet');
+        $sheet->mergeCells('E' . $startRow . ':F' . $startRow);
+        $sheet->setCellValue('E' . $startRow, 'Amount');
+        $sheet->mergeCells('G' . $startRow . ':G' . ($startRow + 1));
+        $sheet->setCellValue('G' . $startRow, 'Deskripsi');
+        $sheet->getStyle('A' . $startRow . ':G' . ($startRow + 1))->applyFromArray($this->headerStyle);
+        $sheet->setCellValue('E' . ($startRow + 1), 'Pemasukan');
+        $sheet->setCellValue('F' . ($startRow + 1), 'Pengeluaran');
       } else {
+        $headings = $this->headings();
         $col = 'A';
         foreach ($headings as $h) {
-          $sheet->setCellValue($col.$startRow, $h);
+          $sheet->setCellValue($col . $startRow, $h);
           $col++;
         }
-        $sheet->getStyle('A'.$startRow.':'.$highestCol.$startRow)->applyFromArray($style);
+        $sheet->getStyle('A' . $startRow . ':' . $highestCol . $startRow)->applyFromArray($this->headerStyle);
       }
     }
 
     private function writeData(Worksheet $sheet, int $startRow, string $highestCol): void
     {
       if (empty($this->data)) {
-        // Tulis "Tidak ada data" di baris pertama, merge semua kolom
         $sheet->setCellValue('A' . $startRow, 'Tidak ada data');
         $sheet->mergeCells('A' . $startRow . ':' . $highestCol . $startRow);
-        $sheet->getStyle('A' . $startRow)->applyFromArray([
-          'font' => ['italic' => true, 'color' => ['rgb' => '888888']],
-          'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-          'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        ]);
+        $sheet->getStyle('A' . $startRow)->applyFromArray($this->emptyStyle);
         return;
       }
 
@@ -268,7 +295,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $col = 'A';
         foreach ($line as $val) {
           $display = ($val === '-' || $val === null) ? '0' : $val;
-          $sheet->setCellValue($col.$row, $display);
+          $sheet->setCellValue($col . $row, $display);
           $col++;
         }
         $row++;
@@ -277,24 +304,29 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
     private function styleData(Worksheet $sheet, int $first, int $last, string $highestCol): void
     {
-      $sheet->getStyle('A'.$first.':'.$highestCol.$last)->applyFromArray([
+      $sheet->getStyle('A' . $first . ':' . $highestCol . $last)->applyFromArray([
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         'font' => ['size' => 10],
       ]);
 
       if ($this->type === 'transactions') {
-        $sheet->getStyle('E'.$first.':F'.$last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('E' . $first . ':F' . $last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         for ($r = $first; $r <= $last; $r++) {
-          $t = $sheet->getCell('B'.$r)->getValue();
-          if ($t === 'Pemasukan') $sheet->getStyle('E'.$r)->getFont()->getColor()->setRGB('28A745');
-          elseif ($t === 'Pengeluaran') $sheet->getStyle('F'.$r)->getFont()->getColor()->setRGB('DC3545');
+          $t = $sheet->getCell('B' . $r)->getValue();
+          if ($t === 'Pemasukan') {
+            $sheet->getStyle('E' . $r)->getFont()->getColor()->setRGB('28A745');
+          } elseif ($t === 'Pengeluaran') {
+            $sheet->getStyle('F' . $r)->getFont()->getColor()->setRGB('DC3545');
+          }
         }
       } elseif ($this->type === 'transfers') {
-        $sheet->getStyle('D'.$first.':D'.$last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('D' . $first . ':D' . $last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
       } elseif ($this->type === 'budgets') {
-        $sheet->getStyle('D'.$first.':E'.$last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('D' . $first . ':E' . $last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
       }
     }
+
+    // --------------- In‑table summaries ---------------
 
     private function insertMonthlySummaries(Worksheet $sheet, int $dataStartRow, int &$lastDataRow, string $highestCol): void
     {
@@ -329,8 +361,8 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $totalExpense = 0;
         }
 
-        $incomeVal = (float) str_replace(['Rp', '.', ','], '', $rowData['Pemasukan'] ?? '0');
-        $expenseVal = (float) str_replace(['Rp', '.', ','], '', $rowData['Pengeluaran'] ?? '0');
+        $incomeVal = $this->parseCurrencyString($rowData['Pemasukan'] ?? '0');
+        $expenseVal = $this->parseCurrencyString($rowData['Pengeluaran'] ?? '0');
         $totalIncome += $incomeVal;
         $totalExpense += $expenseVal;
       }
@@ -346,25 +378,19 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         ];
       }
 
-      usort($insertions, function($a, $b) {
-        return $b['row'] - $a['row'];
-      });
-
-      $fmt = $this->summary;
-      $fmtNum = fn($v) => number_format($v, $fmt['precision'], $fmt['decimal_mark'], $fmt['thousands_separator']);
-      $fmtCur = fn($v) => ($fmt['symbol_first'] ? $fmt['symbol'].' ' : '') . $fmtNum($v) . (!$fmt['symbol_first'] ? ' '.$fmt['symbol'] : '');
+      usort($insertions, fn($a, $b) => $b['row'] - $a['row']);
 
       foreach ($insertions as $ins) {
         $r = $ins['row'];
         $sheet->insertNewRowBefore($r, 1);
 
         // Tulis data ringkasan
-        $sheet->setCellValue('A'.$r, 'Jumlah ' . $ins['monthKey']);
-        $sheet->mergeCells('A'.$r.':D'.$r);
-        $sheet->setCellValue('E'.$r, $fmtCur($ins['income'] ?? 0));
-        $sheet->setCellValue('F'.$r, $fmtCur($ins['expense'] ?? 0));
+        $sheet->setCellValue('A' . $r, 'Jumlah ' . $ins['monthKey']);
+        $sheet->mergeCells('A' . $r . ':D' . $r);
+        $sheet->setCellValue('E' . $r, $this->formatCurrencyValue($ins['income'] ?? 0));
+        $sheet->setCellValue('F' . $r, $this->formatCurrencyValue($ins['expense'] ?? 0));
         $diff = ($ins['income'] ?? 0) - ($ins['expense'] ?? 0);
-        $sheet->setCellValue('G'.$r, $fmtCur($diff));
+        $sheet->setCellValue('G' . $r, $this->formatCurrencyValue($diff));
 
         // Styling dasar
         $sty = [
@@ -374,21 +400,21 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             'startColor' => ['rgb' => 'E6F0FF']],
           'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ];
-        $sheet->getStyle('A'.$r.':'.$highestCol.$r)->applyFromArray($sty);
+        $sheet->getStyle('A' . $r . ':' . $highestCol . $r)->applyFromArray($sty);
 
         // Alignment individual
-        $sheet->getStyle('A'.$r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('E'.$r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('F'.$r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('G'.$r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('A' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('E' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('F' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('G' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
         // Warna font
-        $sheet->getStyle('E'.$r)->getFont()->getColor()->setRGB('28A745');
-        $sheet->getStyle('F'.$r)->getFont()->getColor()->setRGB('DC3545');
+        $sheet->getStyle('E' . $r)->getFont()->getColor()->setRGB('28A745');
+        $sheet->getStyle('F' . $r)->getFont()->getColor()->setRGB('DC3545');
         if ($diff >= 0) {
-          $sheet->getStyle('G'.$r)->getFont()->getColor()->setRGB('28A745');
+          $sheet->getStyle('G' . $r)->getFont()->getColor()->setRGB('28A745');
         } else {
-          $sheet->getStyle('G'.$r)->getFont()->getColor()->setRGB('DC3545');
+          $sheet->getStyle('G' . $r)->getFont()->getColor()->setRGB('DC3545');
         }
 
         $lastDataRow++;
@@ -398,67 +424,48 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
     private function writeSubtotal(Worksheet $sheet, int $startRow, string $highestCol): void
     {
       $f = $this->summary;
-      $fmtNum = fn($v) => number_format($v, $f['precision'], $f['decimal_mark'], $f['thousands_separator']);
-      $fmtCur = fn($v) => ($f['symbol_first'] ? $f['symbol'].' ' : '') . $fmtNum($v) . (!$f['symbol_first'] ? ' '.$f['symbol'] : '');
+      $fmt = fn($v) => $this->formatCurrencyValue($v);
 
-      $sty = [
-        'font' => ['bold' => true,
-          'size' => 11],
-        'fill' => ['fillType' => Fill::FILL_SOLID,
-          'startColor' => ['rgb' => 'D9E2F3']],
-        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-      ];
-
-      // Label SUBTOTAL
-      $sheet->setCellValue('A'.$startRow, 'SUBTOTAL');
-      $sheet->mergeCells('A'.$startRow.':'.$highestCol.$startRow);
-      $sheet->getStyle('A'.$startRow.':'.$highestCol.$startRow)->applyFromArray($sty);
+      $sheet->setCellValue('A' . $startRow, 'SUBTOTAL');
+      $sheet->mergeCells('A' . $startRow . ':' . $highestCol . $startRow);
+      $sheet->getStyle('A' . $startRow . ':' . $highestCol . $startRow)->applyFromArray($this->subtotalStyle);
 
       $d = $startRow + 1;
-      if ($this->type === 'transactions') {
-        $sheet->setCellValue('A'.$d, 'Pemasukan: '.$fmtCur($f['total_income']));
-        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
-        $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
+      switch ($this->type) {
+      case 'transactions':
+        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Pemasukan: ' . $fmt($f['total_income']));
+        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Pengeluaran: ' . $fmt($f['total_expense']));
+        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Net: ' . $fmt($f['net']));
+        break;
+      case 'transfers':
+        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Total Transfer: ' . $fmt($f['total']));
+        break;
+      case 'budgets':
+        // Limit & Pengeluaran
+        $sheet->setCellValue('D' . $d, 'Total Limit: ' . $fmt($f['total_limit']));
+        $sheet->setCellValue('E' . $d, 'Total Pengeluaran: ' . $fmt($f['total_spent']));
+        $sheet->getStyle('A' . $d . ':' . $highestCol . $d)->applyFromArray($this->subtotalStyle);
+        $sheet->getStyle('D' . $d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('E' . $d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $d++;
-        $sheet->setCellValue('A'.$d, 'Pengeluaran: '.$fmtCur($f['total_expense']));
-        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
-        $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty+ ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
-        $d++;
-        $sheet->setCellValue('A'.$d, 'Net: '.$fmtCur($f['net']));
-        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
-        $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty+ ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
-      } elseif ($this->type === 'transfers') {
-        $sheet->setCellValue('A'.$d, 'Total Transfer: '.$fmtCur($f['total']));
-        $sheet->mergeCells('A'.$d.':'.$highestCol.$d);
-        $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
-      } elseif ($this->type === 'budgets') {
-        // Baris 1: Total Limit & Total Pengeluaran
-        $sheet->setCellValue('A'.$d, '');
-        $sheet->setCellValue('B'.$d, '');
-        $sheet->setCellValue('C'.$d, '');
-        $sheet->setCellValue('D'.$d, 'Total Limit: '.$fmtCur($f['total_limit']));
-        $sheet->setCellValue('E'.$d, 'Total Pengeluaran: '.$fmtCur($f['total_spent']));
-        $sheet->setCellValue('F'.$d, '');
-        $sheet->setCellValue('G'.$d, '');
-        $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty);
-        // Rata kanan untuk sel angka
-        $sheet->getStyle('D'.$d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('E'.$d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
-        $d++;
-
-        // Baris 2: Sisa
-        $sheet->setCellValue('A'.$d, '');
-        $sheet->setCellValue('B'.$d, '');
-        $sheet->setCellValue('C'.$d, '');
-        $sheet->setCellValue('D'.$d, 'Sisa: '.$fmtCur($f['remaining']));
-        $sheet->setCellValue('E'.$d, '');
-        $sheet->setCellValue('F'.$d, '');
-        $sheet->setCellValue('G'.$d, '');
-        $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty);
-        $sheet->getStyle('D'.$d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        // Sisa
+        $sheet->setCellValue('D' . $d, 'Sisa: ' . $fmt($f['remaining']));
+        $sheet->getStyle('A' . $d . ':' . $highestCol . $d)->applyFromArray($this->subtotalStyle);
+        $sheet->getStyle('D' . $d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        break;
       }
     }
+
+    private function writeSubtotalRow(Worksheet $sheet, int $row, string $highestCol, string $text): void
+    {
+      $sheet->setCellValue('A' . $row, $text);
+      $sheet->mergeCells('A' . $row . ':' . $highestCol . $row);
+      $sheet->getStyle('A' . $row . ':' . $highestCol . $row)->applyFromArray(
+        $this->subtotalStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]
+      );
+    }
+
+    // --------------- Side blocks (monthly table, top spending) ---------------
 
     private function writeMonthlySummaryTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
     {
@@ -474,10 +481,8 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             'label' => $date->format('M Y'),
           ];
         }
-        $incomeVal = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-        $expenseVal = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-        $grouped[$monthKey]['income'] += $incomeVal;
-        $grouped[$monthKey]['expense'] += $expenseVal;
+        $grouped[$monthKey]['income'] += $this->parseCurrencyString($row['Pemasukan'] ?? '0');
+        $grouped[$monthKey]['expense'] += $this->parseCurrencyString($row['Pengeluaran'] ?? '0');
       }
       ksort($grouped);
 
@@ -493,33 +498,22 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
       $sheet->setCellValue($colA . $startRow, 'Ringkasan Bulanan');
       $sheet->mergeCells($colA . $startRow . ':' . $colD . $startRow);
-      $sheet->getStyle($colA . $startRow)->applyFromArray([
-        'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '1F4E79']],
-      ]);
+      $sheet->getStyle($colA . $startRow)->applyFromArray($this->infoStyle);
 
       $headerRow = $startRow + 1;
       $sheet->setCellValue($colA . $headerRow, 'Bulan');
       $sheet->setCellValue($colB . $headerRow, 'Pemasukan');
       $sheet->setCellValue($colC . $headerRow, 'Pengeluaran');
       $sheet->setCellValue($colD . $headerRow, 'Net');
-      $sheet->getStyle($colA . $headerRow . ':' . $colD . $headerRow)->applyFromArray([
-        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
-        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-      ]);
-
-      $fmt = $this->summary;
-      $fmtNum = fn($v) => number_format($v, $fmt['precision'], $fmt['decimal_mark'], $fmt['thousands_separator']);
-      $fmtCur = fn($v) => ($fmt['symbol_first'] ? $fmt['symbol'].' ' : '') . $fmtNum($v) . (!$fmt['symbol_first'] ? ' '.$fmt['symbol'] : '');
+      $sheet->getStyle($colA . $headerRow . ':' . $colD . $headerRow)->applyFromArray($this->headerStyle);
 
       $row = $headerRow + 1;
       foreach ($grouped as $monthKey => $values) {
         $net = $values['income'] - $values['expense'];
         $sheet->setCellValue($colA . $row, $values['label']);
-        $sheet->setCellValue($colB . $row, $fmtCur($values['income']));
-        $sheet->setCellValue($colC . $row, $fmtCur($values['expense']));
-        $sheet->setCellValue($colD . $row, $fmtCur($net));
+        $sheet->setCellValue($colB . $row, $this->formatCurrencyValue($values['income']));
+        $sheet->setCellValue($colC . $row, $this->formatCurrencyValue($values['expense']));
+        $sheet->setCellValue($colD . $row, $this->formatCurrencyValue($net));
 
         $sheet->getStyle($colB . $row)->getFont()->getColor()->setRGB('28A745');
         $sheet->getStyle($colC . $row)->getFont()->getColor()->setRGB('DC3545');
@@ -528,26 +522,22 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         } else {
           $sheet->getStyle($colD . $row)->getFont()->getColor()->setRGB('DC3545');
         }
-
         $row++;
       }
 
-      // Setelah loop bulan
+      // Total
       $totalRow = $row;
       $sheet->setCellValue($colA . $totalRow, 'Total');
-      $sheet->setCellValue($colB . $totalRow, $fmtCur(array_sum(array_column($grouped, 'income'))));
-      $sheet->setCellValue($colC . $totalRow, $fmtCur(array_sum(array_column($grouped, 'expense'))));
+      $sheet->setCellValue($colB . $totalRow, $this->formatCurrencyValue(array_sum(array_column($grouped, 'income'))));
+      $sheet->setCellValue($colC . $totalRow, $this->formatCurrencyValue(array_sum(array_column($grouped, 'expense'))));
       $totalNet = array_sum(array_column($grouped, 'income')) - array_sum(array_column($grouped, 'expense'));
-      $sheet->setCellValue($colD . $totalRow, $fmtCur($totalNet));
+      $sheet->setCellValue($colD . $totalRow, $this->formatCurrencyValue($totalNet));
 
-      // Styling baris Total
       $sheet->getStyle($colA . $totalRow . ':' . $colD . $totalRow)->applyFromArray([
         'font' => ['bold' => true, 'size' => 10],
         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E2F3']],
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
       ]);
-
-      // Warna angka
       $sheet->getStyle($colB . $totalRow)->getFont()->getColor()->setRGB('28A745');
       $sheet->getStyle($colC . $totalRow)->getFont()->getColor()->setRGB('DC3545');
       if ($totalNet >= 0) {
@@ -556,7 +546,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->getStyle($colD . $totalRow)->getFont()->getColor()->setRGB('DC3545');
       }
 
-      $row++; // baris setelah Total
+      $row++; // setelah Total
 
       $lastRow = $row - 1;
       $sheet->getStyle($colA . $headerRow . ':' . $colD . $lastRow)->applyFromArray([
@@ -573,16 +563,10 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
     private function writeTopSpendingTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
     {
-      // Saring hanya pengeluaran
       $expenses = array_filter($data, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
       if (empty($expenses)) return $startRow;
 
-      // Urutkan menurun
-      usort($expenses, function ($a, $b) {
-        $aVal = (float) str_replace(['Rp', '.', ','], '', $a['Pengeluaran'] ?? '0');
-        $bVal = (float) str_replace(['Rp', '.', ','], '', $b['Pengeluaran'] ?? '0');
-        return $bVal <=> $aVal;
-      });
+      usort($expenses, fn($a, $b) => $this->parseCurrencyString($b['Pengeluaran'] ?? '0') <=> $this->parseCurrencyString($a['Pengeluaran'] ?? '0'));
       $top5 = array_slice($expenses, 0, 5);
 
       $colIdx = Coordinate::columnIndexFromString($startCol);
@@ -591,36 +575,23 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $colJumlah = Coordinate::stringFromColumnIndex($colIdx + 2);
       $colDeskripsi = Coordinate::stringFromColumnIndex($colIdx + 3);
 
-      // Judul
       $sheet->setCellValue($colTanggal . $startRow, 'Top 5 Pengeluaran');
       $sheet->mergeCells($colTanggal . $startRow . ':' . $colDeskripsi . $startRow);
-      $sheet->getStyle($colTanggal . $startRow)->applyFromArray([
-        'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '1F4E79']],
-      ]);
+      $sheet->getStyle($colTanggal . $startRow)->applyFromArray($this->infoStyle);
 
-      // Header
       $hRow = $startRow + 1;
       $sheet->setCellValue($colTanggal . $hRow, 'Tanggal');
       $sheet->setCellValue($colKategori . $hRow, 'Kategori');
       $sheet->setCellValue($colJumlah . $hRow, 'Jumlah');
       $sheet->setCellValue($colDeskripsi . $hRow, 'Deskripsi');
-      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $hRow)->applyFromArray([
-        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
-        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-      ]);
-
-      $fmt = $this->summary;
-      $fmtNum = fn($v) => number_format($v, $fmt['precision'], $fmt['decimal_mark'], $fmt['thousands_separator']);
-      $fmtCur = fn($v) => ($fmt['symbol_first'] ? $fmt['symbol'].' ' : '') . $fmtNum($v) . (!$fmt['symbol_first'] ? ' '.$fmt['symbol'] : '');
+      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $hRow)->applyFromArray($this->headerStyle);
 
       $row = $hRow + 1;
       foreach ($top5 as $item) {
-        $amount = (float) str_replace(['Rp', '.', ','], '', $item['Pengeluaran'] ?? '0');
+        $amount = $this->parseCurrencyString($item['Pengeluaran'] ?? '0');
         $sheet->setCellValue($colTanggal . $row, $item['Tanggal'] ?? '');
         $sheet->setCellValue($colKategori . $row, $item['Kategori'] ?? '');
-        $sheet->setCellValue($colJumlah . $row, $fmtCur($amount));
+        $sheet->setCellValue($colJumlah . $row, $this->formatCurrencyValue($amount));
         $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
         $sheet->getStyle($colJumlah . $row)->getFont()->getColor()->setRGB('DC3545');
         $row++;
@@ -639,218 +610,58 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       return $row;
     }
 
-    protected function addChartToSheet(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
+    // --------------- Charts ---------------
+
+    private function addChartToSheet(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
     {
       MtJpGraph::load(['bar']);
 
-      // 1. Urutkan data dari tanggal terlama ke terbaru
-      usort($data, function ($a, $b) {
-        $dateA = \DateTime::createFromFormat('d/m/Y', $a['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
-        $dateB = \DateTime::createFromFormat('d/m/Y', $b['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
-        return $dateA <=> $dateB;
-      });
+      usort($data, fn($a, $b) => strcmp($a['Tanggal'] ?? '', $b['Tanggal'] ?? ''));
 
-      $firstDate = \DateTime::createFromFormat('d/m/Y', $data[0]['Tanggal'] ?? '');
-      $lastDate = \DateTime::createFromFormat('d/m/Y', $data[count($data)-1]['Tanggal'] ?? '');
-      if (!$firstDate || !$lastDate) {
-        // Fallback: tidak ada tanggal valid, hentikan
-        return;
-      }
+      [$labels,
+        $incomes,
+        $expenses] = $this->groupChartData($data);
+      $chartWidth = min(2000, max(800, count($labels) * max(18, 50)));
 
-      $interval = $firstDate->diff($lastDate);
-      $totalYears = $interval->y + ($interval->m > 0 ? 1 : 0); // aproksimasi tahun
-
-      $labels = [];
-      $incomes = [];
-      $expenses = [];
-
-      if ($totalYears >= 3) {
-        // ----- Rangkum per TAHUN -----
-        $grouped = [];
-        foreach ($data as $row) {
-          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
-          if (!$date) continue;
-          $yearKey = $date->format('Y');
-          if (!isset($grouped[$yearKey])) {
-            $grouped[$yearKey] = ['income' => 0,
-              'expense' => 0];
-          }
-          $grouped[$yearKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-          $grouped[$yearKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-        }
-        ksort($grouped);
-        foreach ($grouped as $yearKey => $values) {
-          $labels[] = $yearKey;
-          $incomes[] = $values['income'];
-          $expenses[] = $values['expense'];
-        }
-        $xAxisTitle = 'Tahun';
-        $chartWidth = min(2000, max(800, count($labels) * 80));
-      } elseif ($interval->m > 0 || $interval->y > 0) {
-        // ----- Rangkum per BULAN (lebih dari 1 bulan) -----
-        $grouped = [];
-        foreach ($data as $row) {
-          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
-          if (!$date) continue;
-          $monthKey = $date->format('Y-m');
-          if (!isset($grouped[$monthKey])) {
-            $grouped[$monthKey] = ['income' => 0,
-              'expense' => 0];
-          }
-          $grouped[$monthKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-          $grouped[$monthKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-        }
-        ksort($grouped);
-        foreach ($grouped as $monthKey => $values) {
-          $date = \DateTime::createFromFormat('!Y-m', $monthKey);
-          $labels[] = $date ? $date->format('M Y') : $monthKey;
-          $incomes[] = $values['income'];
-          $expenses[] = $values['expense'];
-        }
-        $xAxisTitle = 'Bulan';
-        $chartWidth = min(2000, max(800, count($labels) * 50));
-      } else {
-        // ----- Tampilkan per TANGGAL -----
-        foreach ($data as $row) {
-          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
-          $labels[] = $date ? $date->format('j M Y') : ($row['Tanggal'] ?? '');
-          $incomes[] = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-          $expenses[] = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-        }
-        $xAxisTitle = 'Tanggal';
-        $chartWidth = min(2000, max(800, count($labels) * 18));
-      }
-
-      // Buat chart
       $graph = new \Graph($chartWidth, 400);
       $graph->SetScale('textlin');
       $graph->img->SetMargin(80, 20, 20, 60);
       $graph->title->Set('Pemasukan vs Pengeluaran');
-      $graph->xaxis->title->Set($xAxisTitle);
-
-      // Sumbu X
       $graph->xaxis->SetTickLabels($labels);
       $graph->xaxis->SetLabelAngle(45);
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
-
-      // Sumbu Y
       $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
       $graph->yaxis->scale->SetAutoMin(0);
 
-      // Plot
       $incomePlot = new \BarPlot($incomes);
       $expensePlot = new \BarPlot($expenses);
       $incomePlot->SetFillColor('#28A745');
       $expensePlot->SetFillColor('#DC3545');
       $incomePlot->SetLegend(null);
       $expensePlot->SetLegend(null);
+      $graph->Add(new \GroupBarPlot([$incomePlot, $expensePlot]));
 
-      $groupPlot = new \GroupBarPlot([$incomePlot, $expensePlot]);
-      $graph->Add($groupPlot);
-
-      // Simpan gambar sementara
-      $tempFile = tempnam(sys_get_temp_dir(), 'chart_').'.png';
+      $tempFile = tempnam(sys_get_temp_dir(), 'chart_') . '.png';
       $graph->Stroke($tempFile);
-
-      // Sisipkan ke worksheet
-      $drawing = new Drawing();
-      $drawing->setPath($tempFile);
-      $drawing->setCoordinates($chartCol . $startRow);
-      $drawing->setWidth($chartWidth);
-      $drawing->setHeight(400);
-      $drawing->setWorksheet($sheet);
-
-      register_shutdown_function(function () use ($tempFile) {
-        if (file_exists($tempFile)) unlink($tempFile);
-      });
+      $this->embedImage($sheet, $tempFile, $chartCol . $startRow, $chartWidth, 400);
     }
 
-    protected function addTrendChart(
-      Worksheet $sheet,
-      int $startRow,
-      array $data,
-      string $chartCol = 'B'
-    ): void
+    private function addTrendChart(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
     {
       MtJpGraph::load(['line']);
 
-      usort($data,
-        function ($a, $b) {
-          $dateA = \DateTime::createFromFormat('d/m/Y', $a['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
-          $dateB = \DateTime::createFromFormat('d/m/Y', $b['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
-          return $dateA <=> $dateB;
-        });
+      usort($data, fn($a, $b) => strcmp($a['Tanggal'] ?? '', $b['Tanggal'] ?? ''));
 
-      $firstDate = \DateTime::createFromFormat('d/m/Y',
-        $data[0]['Tanggal'] ?? '');
-      $lastDate = \DateTime::createFromFormat('d/m/Y',
-        $data[count($data)-1]['Tanggal'] ?? '');
-      if (!$firstDate || !$lastDate) return;
-
-      $interval = $firstDate->diff($lastDate);
-      $totalYears = $interval->y + ($interval->m > 0 ? 1 : 0);
-
-      $labels = [];
-      $nets = [];
-
-      if ($totalYears >= 3) {
-        $grouped = [];
-        foreach ($data as $row) {
-          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
-          if (!$date) continue;
-          $yearKey = $date->format('Y');
-          if (!isset($grouped[$yearKey])) {
-            $grouped[$yearKey] = ['income' => 0,
-              'expense' => 0];
-          }
-          $grouped[$yearKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-          $grouped[$yearKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-        }
-        ksort($grouped);
-        foreach ($grouped as $yearKey => $values) {
-          $labels[] = $yearKey;
-          $nets[] = $values['income'] - $values['expense'];
-        }
-        $xAxisTitle = 'Tahun';
-        $chartWidth = min(2000, max(800, count($labels) * 80));
-      } elseif ($interval->m > 0 || $interval->y > 0) {
-        $grouped = [];
-        foreach ($data as $row) {
-          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
-          if (!$date) continue;
-          $monthKey = $date->format('Y-m');
-          if (!isset($grouped[$monthKey])) {
-            $grouped[$monthKey] = ['income' => 0,
-              'expense' => 0];
-          }
-          $grouped[$monthKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-          $grouped[$monthKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-        }
-        ksort($grouped);
-        foreach ($grouped as $monthKey => $values) {
-          $date = \DateTime::createFromFormat('!Y-m', $monthKey);
-          $labels[] = $date ? $date->format('M Y') : $monthKey;
-          $nets[] = $values['income'] - $values['expense'];
-        }
-        $xAxisTitle = 'Bulan';
-        $chartWidth = min(2000, max(800, count($labels) * 50));
-      } else {
-        foreach ($data as $row) {
-          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
-          $labels[] = $date ? $date->format('j M Y') : ($row['Tanggal'] ?? '');
-          $income = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-          $expense = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-          $nets[] = $income - $expense;
-        }
-        $xAxisTitle = 'Tanggal';
-        $chartWidth = min(2000, max(800, count($labels) * 18));
-      }
+      [$labels,
+        $incomes,
+        $expenses] = $this->groupChartData($data);
+      $nets = array_map(fn($i, $e) => $i - $e, $incomes, $expenses);
+      $chartWidth = min(2000, max(800, count($labels) * max(18, 50)));
 
       $graph = new \Graph($chartWidth, 300);
       $graph->SetScale('textlin');
       $graph->img->SetMargin(60, 20, 20, 60);
       $graph->title->Set('Tren Net (Pemasukan - Pengeluaran)');
-      $graph->xaxis->title->Set($xAxisTitle);
       $graph->xaxis->SetTickLabels($labels);
       $graph->xaxis->SetLabelAngle(45);
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
@@ -863,18 +674,87 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $linePlot->SetFillColor('#CCE5FF');
       $graph->Add($linePlot);
 
-      $tempFile = tempnam(sys_get_temp_dir(), 'chart_trend_').'.png';
+      $tempFile = tempnam(sys_get_temp_dir(), 'chart_trend_') . '.png';
       $graph->Stroke($tempFile);
+      $this->embedImage($sheet, $tempFile, $chartCol . $startRow, $chartWidth, 300);
+    }
 
+    private function groupChartData(array $data): array
+    {
+      $firstDate = \DateTime::createFromFormat('d/m/Y', $data[0]['Tanggal'] ?? '');
+      $lastDate = \DateTime::createFromFormat('d/m/Y', $data[count($data) - 1]['Tanggal'] ?? '');
+      if (!$firstDate || !$lastDate) {
+        return [[],
+          [],
+          []];
+      }
+      $interval = $firstDate->diff($lastDate);
+      $totalYears = $interval->y + ($interval->m > 0 ? 1 : 0);
+      $labels = $incomes = $expenses = [];
+
+      $grouped = [];
+      foreach ($data as $row) {
+        $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+        if (!$date) continue;
+        $key = $totalYears >= 3 ? $date->format('Y') : ($interval->m > 0 || $interval->y > 0 ? $date->format('Y-m') : $date->format('Y-m-d'));
+        if (!isset($grouped[$key])) $grouped[$key] = ['income' => 0,
+          'expense' => 0,
+          'label' => ''];
+        $grouped[$key]['income'] += $this->parseCurrencyString($row['Pemasukan'] ?? '0');
+        $grouped[$key]['expense'] += $this->parseCurrencyString($row['Pengeluaran'] ?? '0');
+        if (empty($grouped[$key]['label'])) {
+          $grouped[$key]['label'] = $totalYears >= 3 ? $date->format('Y') : ($interval->m > 0 || $interval->y > 0 ? $date->format('M Y') : $date->format('j M Y'));
+        }
+      }
+      ksort($grouped);
+      foreach ($grouped as $item) {
+        $labels[] = $item['label'];
+        $incomes[] = $item['income'];
+        $expenses[] = $item['expense'];
+      }
+      return [$labels,
+        $incomes,
+        $expenses];
+    }
+
+    private function embedImage(Worksheet $sheet, string $tempFile, string $coordinate, int $width, int $height): void
+    {
       $drawing = new Drawing();
       $drawing->setPath($tempFile);
-      $drawing->setCoordinates($chartCol . $startRow);
-      $drawing->setWidth($chartWidth);
-      $drawing->setHeight(300);
+      $drawing->setCoordinates($coordinate);
+      $drawing->setWidth($width);
+      $drawing->setHeight($height);
       $drawing->setWorksheet($sheet);
 
       register_shutdown_function(function () use ($tempFile) {
         if (file_exists($tempFile)) unlink($tempFile);
       });
+    }
+
+    // --------------- Misc ---------------
+
+    private function getHighestColumn(): string
+    {
+      return match ($this->type) {
+        'transactions' => 'G',
+        'transfers' => 'E',
+        'budgets' => 'G',
+      default => 'E',
+      };
+    }
+
+    private function headerRowCount(): int
+    {
+      return $this->type === 'transactions' ? 2 : 1;
+    }
+
+    private function subtotalDetailRows(): int
+    {
+      return match ($this->type) {
+        'transactions' => 3,
+        'transfers' => 1,
+        'budgets' => 2,
+      default => 1,
+      };
     }
   }
