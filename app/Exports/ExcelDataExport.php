@@ -346,21 +346,8 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $graph->title->Set('Pemasukan vs Pengeluaran');
       $graph->xaxis->title->Set('Tanggal');
       $graph->yaxis->title->Set('Jumlah');
-      \Log::debug("Label Tanggal", $labels);
-
       // --- Sumbu X ---
-      $maxLabels = 30;
-      if ($dataCount > $maxLabels) {
-        $step = ceil($dataCount / $maxLabels);
-        $visibleLabels = [];
-        for ($i = 0; $i < $dataCount; $i += $step) {
-          $visibleLabels[] = $labels[$i];
-        }
-        $graph->xaxis->SetTickLabels($visibleLabels);
-        $graph->xaxis->SetTextTickInterval($step, 0);
-      } else {
-        $graph->xaxis->SetTickLabels($labels);
-      }
+      $graph->xaxis->SetTickLabels($labels);
       $graph->xaxis->SetLabelAngle(45);
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 7);
 
