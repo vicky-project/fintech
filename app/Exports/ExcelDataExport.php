@@ -126,7 +126,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           }
 
           // Freeze pane: bekukan header agar tetap terlihat saat scroll
-          $sheet->freezePane('A' . $dataStart);
+          //$sheet->freezePane('A' . $dataStart);
 
           // AutoFilter: tambahkan dropdown filter di setiap kolom header
           $sheet->setAutoFilter('A' . ($tableStart) . ':' . $highestCol . ($lastData > $dataStart ? $lastData : $dataStart));
@@ -150,12 +150,6 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
-
-          // Sembunyikan baris di bawah footer agar scroll berhenti
-          $lastRow = $footerRow + 100; // sembunyikan 100 baris setelah footer
-          for ($i = $footerRow + 1; $i <= $lastRow; $i++) {
-            $sheet->getRowDimension($i)->setVisible(false);
-          }
         },
       ];
     }
