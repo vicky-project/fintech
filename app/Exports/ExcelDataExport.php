@@ -326,20 +326,44 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         return $dateA <=> $dateB;
       });
 
-      // 2. Tentukan rentang bulan
       $firstDate = \DateTime::createFromFormat('d/m/Y', $data[0]['Tanggal'] ?? '');
       $lastDate = \DateTime::createFromFormat('d/m/Y', $data[count($data)-1]['Tanggal'] ?? '');
-      $diffMonths = ($lastDate && $firstDate)
-      ? (($lastDate->format('Y') - $firstDate->format('Y')) * 12 + $lastDate->format('m') - $firstDate->format('m'))
-      : 0;
+      if (!$firstDate || !$lastDate) {
+        // Fallback: tidak ada tanggal valid, hentikan
+        return;
+      }
 
-      // 3. Siapkan label dan nilai yang akan ditampilkan
+      $interval = $firstDate->diff($lastDate);
+      $totalYears = $interval->y + ($interval->m > 0 ? 1 : 0); // aproksimasi tahun
+
       $labels = [];
       $incomes = [];
       $expenses = [];
 
-      if ($diffMonths > 1) {
-        // Kelompokkan per bulan
+      if ($totalYears >= 3) {
+        // ----- Rangkum per TAHUN -----
+        $grouped = [];
+        foreach ($data as $row) {
+          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+          if (!$date) continue;
+          $yearKey = $date->format('Y');
+          if (!isset($grouped[$yearKey])) {
+            $grouped[$yearKey] = ['income' => 0,
+              'expense' => 0];
+          }
+          $grouped[$yearKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+          $grouped[$yearKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        }
+        ksort($grouped);
+        foreach ($grouped as $yearKey => $values) {
+          $labels[] = $yearKey;
+          $incomes[] = $values['income'];
+          $expenses[] = $values['expense'];
+        }
+        $xAxisTitle = 'Tahun';
+        $chartWidth = min(2000, max(800, count($labels) * 80));
+      } elseif ($interval->m > 0 || $interval->y > 0) {
+        // ----- Rangkum per BULAN (lebih dari 1 bulan) -----
         $grouped = [];
         foreach ($data as $row) {
           $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
@@ -352,32 +376,32 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $grouped[$monthKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
           $grouped[$monthKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
         }
-
+        ksort($grouped);
         foreach ($grouped as $monthKey => $values) {
-          [$year,
-            $month] = explode('-', $monthKey);
           $date = \DateTime::createFromFormat('!Y-m', $monthKey);
           $labels[] = $date ? $date->format('M Y') : $monthKey;
           $incomes[] = $values['income'];
           $expenses[] = $values['expense'];
         }
+        $xAxisTitle = 'Bulan';
+        $chartWidth = min(2000, max(800, count($labels) * 50));
       } else {
-        // Tampilkan per tanggal
+        // ----- Tampilkan per TANGGAL -----
         foreach ($data as $row) {
           $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
           $labels[] = $date ? $date->format('j M Y') : ($row['Tanggal'] ?? '');
           $incomes[] = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
           $expenses[] = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
         }
+        $xAxisTitle = 'Tanggal';
+        $chartWidth = min(2000, max(800, count($labels) * 18));
       }
 
-      $dataCount = count($labels);
-      $chartWidth = min(2000, max(800, $dataCount * 50)); // lebih lebar untuk label bulan
-
+      // Buat chart
       $graph = new \Graph($chartWidth, 400);
       $graph->SetScale('textlin');
       $graph->title->Set('Pemasukan vs Pengeluaran');
-      $graph->xaxis->title->Set($diffMonths > 1 ? 'Bulan' : 'Tanggal');
+      $graph->xaxis->title->Set($xAxisTitle);
       $graph->yaxis->title->Set('Jumlah');
 
       // Sumbu X
