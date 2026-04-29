@@ -297,16 +297,19 @@ class SheetWriter
     );
 
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    $request = new SheetsRequest(['mergeCells' => [
-      'range' => [
-        'sheetId' => $sheetId,
-        'startRowIndex' => $currentRow-1,
-        'endRowIndex' => $currentRow,
-        'startColumnIndex' => 0,
-        'endColumnIndex' => count($headers),
-      ],
-      'mergeType' => 'MERGE_ALL',
-    ]]);
+    $request = new SheetsRequest([
+      'mergeCells' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $currentRow-1,
+          'endRowIndex' => $currentRow,
+          'startColumnIndex' => 0,
+          'endColumnIndex' => count($headers),
+        ],
+        'mergeType' => 'MERGE_ALL',
+        'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
+      ]
+    ]);
     $batch = new BatchUpdateSpreadsheetRequest(['requests' => [$request]]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
 
