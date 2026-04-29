@@ -132,7 +132,11 @@ class ExportService
     ini_set('memory_limit', '256M');
 
     $extra = [];
+    $chartBase64 = "";
     if ($type === 'transactions') {
+      if ($summary['include_chart'] ?? false && !empty($data)) {
+        $chartBase64 = $this->generateChartImageBase64($data);
+      }
       if ($summary['include_monthly_summary'] ?? false) {
         $extra['monthlySummary'] = $this->buildMonthlySummaryData($data);
       }
