@@ -2053,9 +2053,11 @@ function toggleExportOptions() {
   if (!optionsDiv) return;
 
   const formatXlsx = document.getElementById('format-xlsx');
+  const formatPdf = document.getElementById('format-pdf');
   const isExcel = formatXlsx && formatXlsx.checked;
+  const isPdf = formatPdf && formatPdf.checked;
 
-  if (isExcel) {
+  if (isExcel || isPdf) {
     optionsDiv.style.display = 'block';
   } else {
     optionsDiv.style.display = 'none';
@@ -2233,7 +2235,7 @@ async function performExport() {
         if (selected.length) payload.category_ids = selected;
       }
       // Opsi tambahan hanya jika format Excel
-      if (format === 'xlsx') {
+      if (format === 'xlsx' || format === 'pdf') {
         payload.include_chart = document.getElementById('include-chart')?.checked ?? false;
         payload.include_monthly_summary = document.getElementById('include-monthly-summary')?.checked ?? false;
         payload.include_top_spending = document.getElementById('include-top-spending')?.checked ?? false;
