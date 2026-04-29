@@ -319,25 +319,53 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
     {
       MtJpGraph::load(['bar']);
 
-      // Ekstrak data asli
+      // 1. Bersihkan dan siapkan data
       $labels = [];
       $incomes = [];
       $expenses = [];
       foreach ($data as $row) {
         $labels[] = $row['Tanggal'] ?? '';
-        // Bersihkan format mata uang menjadi float
-        $incomes[] = (float) preg_replace('/[^0-9\-]/', '', $row['Pemasukan'] ?? '0');
-        $expenses[] = (float) preg_replace('/[^0-9\-]/', '', $row['Pengeluaran'] ?? '0');
+        $incomes[] = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+        $expenses[] = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
       }
+      $dataCount = count($data);
 
-      // Buat chart
-      $graph = new \Graph(800, 350);
+      // 2. Lebar chart dinamis (min 800, maks 2000)
+      $chartWidth = min(2000, max(800, $dataCount * 20));
+
+      // 3. Atur label X agar tidak menumpuk
+      $graph = new \Graph($chartWidth, 400);
       $graph->SetScale('textlin');
       $graph->title->Set('Pemasukan vs Pengeluaran');
       $graph->xaxis->title->Set('Tanggal');
       $graph->yaxis->title->Set('Jumlah');
-      $graph->xaxis->SetTickLabels($labels);
 
+      // Jika data terlalu banyak, tampilkan hanya setiap n label
+      $maxLabels = 30; // maksimal label yang ditampilkan
+      if ($dataCount > $maxLabels) {
+        $step = ceil($dataCount / $maxLabels);
+        $shownLabels = [];
+        for ($i = 0; $i < $dataCount; $i += $step) {
+          $shownLabels[$i] = $labels[$i];
+        }
+        // Atur label manual
+        $graph->xaxis->SetTickLabels(array_values($shownLabels));
+        // Sesuaikan posisi tick
+        $graph->xaxis->SetTextTickInterval($step, 0);
+      } else {
+        $graph->xaxis->SetTickLabels($labels);
+      }
+
+      // Miringkan label
+      $graph->xaxis->SetLabelAngle(45);
+      // Perkecil font label X
+      $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 7);
+
+      // Sumbu Y format angka pendek
+      $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 9);
+      $graph->yaxis->scale->SetAutoMin(0);
+
+      // 4. Buat plot
       $incomePlot = new \BarPlot($incomes);
       $expensePlot = new \BarPlot($expenses);
       $incomePlot->SetFillColor('#28A745');
@@ -348,16 +376,16 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $groupPlot = new \GroupBarPlot([$incomePlot, $expensePlot]);
       $graph->Add($groupPlot);
 
-      // Simpan gambar sementara
+      // 5. Simpan ke file sementara
       $tempFile = tempnam(sys_get_temp_dir(), 'chart_').'.png';
       $graph->Stroke($tempFile);
 
-      // Sisipkan ke worksheet
+      // 6. Sisipkan ke worksheet
       $drawing = new Drawing();
       $drawing->setPath($tempFile);
       $drawing->setCoordinates('B' . $startRow);
-      $drawing->setWidth(600);
-      $drawing->setHeight(350);
+      $drawing->setWidth($chartWidth);
+      $drawing->setHeight(400);
       $drawing->setWorksheet($sheet);
 
       register_shutdown_function(function () use ($tempFile) {
