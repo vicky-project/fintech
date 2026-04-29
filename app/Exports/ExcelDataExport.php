@@ -521,10 +521,9 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       // Buat chart
       $graph = new \Graph($chartWidth, 400);
       $graph->SetScale('textlin');
-      $graph->img->SetMargin(60, 20, 20, 60);
+      $graph->img->SetMargin(80, 20, 20, 60);
       $graph->title->Set('Pemasukan vs Pengeluaran');
       $graph->xaxis->title->Set($xAxisTitle);
-      $graph->yaxis->title->Set('Jumlah');
 
       // Sumbu X
       $graph->xaxis->SetTickLabels($labels);
@@ -649,7 +648,6 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $graph->img->SetMargin(60, 20, 20, 60);
       $graph->title->Set('Tren Net (Pemasukan - Pengeluaran)');
       $graph->xaxis->title->Set($xAxisTitle);
-      $graph->yaxis->title->Set('Selisih');
       $graph->xaxis->SetTickLabels($labels);
       $graph->xaxis->SetLabelAngle(45);
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
