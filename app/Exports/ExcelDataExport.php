@@ -645,6 +645,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
       $graph = new \Graph($chartWidth, 300);
       $graph->SetScale('textlin');
+      $graph->img->SetMargin(40, 20, 20, 60);
       $graph->title->Set('Tren Net (Pemasukan - Pengeluaran)');
       $graph->xaxis->title->Set($xAxisTitle);
       $graph->yaxis->title->Set('Selisih');
