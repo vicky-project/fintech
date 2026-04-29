@@ -222,9 +222,9 @@ class SheetWriter
     $colCount = count($headers);
     $emptyRow = array_fill(0, $colCount, '');
 
+    // Transaksi: tulis langsung dan return (tidak menggunakan $rows)
     if ($dataType === 'transactions') {
-      // Baris label SUBTOTAL (kolom A saja, tanpa merge)
-      $labelRow = array_fill(0, $colCount, '');
+      $labelRow = $emptyRow;
       $labelRow[0] = 'SUBTOTAL';
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
@@ -234,14 +234,13 @@ class SheetWriter
       );
       $currentRow++;
 
-      // Detail: satu baris per metrik, semuanya di kolom A
       $metrics = [
         'Pemasukan: ' . ($summary['total_income'] ?? 0),
         'Pengeluaran: ' . ($summary['total_expense'] ?? 0),
         'Net: ' . ($summary['net'] ?? 0),
       ];
       foreach ($metrics as $text) {
-        $detailRow = array_fill(0, $colCount, '');
+        $detailRow = $emptyRow;
         $detailRow[0] = $text;
         $this->client->getSheetsService()->spreadsheets_values->update(
           $spreadsheetId,
@@ -251,7 +250,11 @@ class SheetWriter
         );
         $currentRow++;
       }
-    } elseif ($dataType === 'transfers') {
+      return; // selesai, tidak ada yang perlu dilakukan lagi
+    }
+
+    // Transfer & Budget: gunakan $rows seragam
+    if ($dataType === 'transfers') {
       $row1 = $emptyRow; $row1[0] = 'SUBTOTAL';
       $row2 = $emptyRow; $row2[3] = 'Total Transfer: ' . ($summary['total'] ?? 0);
       $rows = [$row1,
@@ -265,7 +268,7 @@ class SheetWriter
       $rows = [$row1,
         $row2];
     } else {
-      return;
+      return; // tipe tidak dikenal
     }
 
     $this->client->getSheetsService()->spreadsheets_values->update(
@@ -274,7 +277,7 @@ class SheetWriter
       new ValueRange(['values' => $rows]),
       ['valueInputOption' => 'RAW']
     );
-    $currentRow += count($rows); // update pointer
+    $currentRow += count($rows);
   }
 
   /**
