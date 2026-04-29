@@ -223,41 +223,33 @@ class SheetWriter
     $emptyRow = array_fill(0, $colCount, '');
 
     if ($dataType === 'transactions') {
-      $row1 = $emptyRow;
-      $row1[0] = 'SUBTOTAL';
-      // merge seluruh baris label agar teks rata tengah
-      $requests = [];
-      $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-      $requests[] = new SheetsRequest([
-        'mergeCells' => [
-          'range' => [
-            'sheetId' => $sheetId,
-            'startRowIndex' => $currentRow - 1,
-            'endRowIndex' => $currentRow,
-            'startColumnIndex' => 0,
-            'endColumnIndex' => 7,
-          ],
-          'mergeType' => 'MERGE_ALL',
-        ],
-      ]);
-      // tulis nilai setelah merge (merge bisa menghapus nilai, jadi tulis lagi)
+      // Baris label SUBTOTAL (kolom A)
+      $labelRow = $emptyRow;
+      $labelRow[0] = 'SUBTOTAL';
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
         $sheetName . '!A' . $currentRow,
-        new ValueRange(['values' => [[$row1[0]]]]),
+        new ValueRange(['values' => [$labelRow]]),
         ['valueInputOption' => 'RAW']
       );
-      if ($requests) {
-        $batch = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => $requests]);
-        $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+      $currentRow++;
+
+      // Detail ditulis di kolom A, B, C (atau tetap satu kolom A jika Anda suka)
+      // Opsi 1: Semua di kolom A (rapat ke bawah)
+      $rows = [
+        array_merge([''], ['Pemasukan: ' . ($summary['total_income'] ?? 0)], array_fill(2, $colCount-2, '')),
+        array_merge([''], ['Pengeluaran: ' . ($summary['total_expense'] ?? 0)], array_fill(2, $colCount-2, '')),
+        array_merge([''], ['Net: ' . ($summary['net'] ?? 0)], array_fill(2, $colCount-2, '')),
+      ];
+      foreach ($rows as $row) {
+        $this->client->getSheetsService()->spreadsheets_values->update(
+          $spreadsheetId,
+          $sheetName . '!A' . $currentRow,
+          new ValueRange(['values' => [$row]]),
+          ['valueInputOption' => 'RAW']
+        );
+        $currentRow++;
       }
-      // baris kedua detail
-      $row2 = $emptyRow;
-      $row2[4] = 'Pemasukan: ' . ($summary['total_income'] ?? 0);
-      $row2[5] = 'Pengeluaran: ' . ($summary['total_expense'] ?? 0);
-      $row2[6] = 'Net: ' . ($summary['net'] ?? 0);
-      $rows = [$row1,
-        $row2];
     } elseif ($dataType === 'transfers') {
       $row1 = $emptyRow; $row1[0] = 'SUBTOTAL';
       $row2 = $emptyRow; $row2[3] = 'Total Transfer: ' . ($summary['total'] ?? 0);
