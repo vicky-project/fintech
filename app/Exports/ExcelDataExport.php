@@ -125,6 +125,12 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             $this->insertMonthlySummaries($sheet, $dataStart, $lastData, $highestCol);
           }
 
+          // Freeze pane: bekukan header agar tetap terlihat saat scroll
+          $sheet->freezePane('A' . $dataStart);
+
+          // AutoFilter: tambahkan dropdown filter di setiap kolom header
+          $sheet->setAutoFilter('A' . ($tableStart) . ':' . $highestCol . ($lastData > $dataStart ? $lastData : $dataStart));
+
           // Auto-size columns
           foreach (range('A', $highestCol) as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);

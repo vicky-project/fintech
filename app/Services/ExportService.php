@@ -51,10 +51,9 @@ class ExportService
     $result = $this->fetchData($type, $user, $filters, $limit);
     $formatRules = $this->getCurrencyFormat($wallet);
 
-    $includeChart = $filters['include_chart'] ?? false;
-    $includeMonthly = $filters['include_monthly_summary'] ?? false;
-
     if ($type === 'all') {
+      $includeChart = $filters['include_chart'] ?? true;
+      $includeMonthly = $filters['include_monthly_summary'] ?? true;
       foreach (['transactions', 'transfers', 'budgets'] as $subType) {
         $summaryArr = array_merge(
           $result[$subType][1],
@@ -81,8 +80,8 @@ class ExportService
     }
 
     $metadata = $this->buildMetadata($type, $filters, $wallet->name);
-    $summary['include_chart'] = $includeChart;
-    $summary['include_monthly_summary'] = $includeMonthly;
+    $summary['include_chart'] = $filters['include_chart'] ?? false;
+    $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
     $summary = array_merge($summary, $formatRules, compact('metadata'));
 
     return match ($format) {
