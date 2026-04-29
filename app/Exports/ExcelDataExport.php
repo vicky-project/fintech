@@ -150,6 +150,12 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
+
+          // Sembunyikan baris di bawah footer agar scroll berhenti
+          $lastRow = $footerRow + 100; // sembunyikan 100 baris setelah footer
+          for ($i = $footerRow + 1; $i <= $lastRow; $i++) {
+            $sheet->getRowDimension($i)->setVisible(false);
+          }
         },
       ];
     }
