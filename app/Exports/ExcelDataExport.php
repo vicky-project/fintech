@@ -324,9 +324,15 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $incomes = [];
       $expenses = [];
       foreach ($data as $row) {
-        // Format tanggal sudah berupa "d/m/Y", ambil langsung
-        $labels[] = $row['Tanggal'] ?? '';
-        // Bersihkan format uang
+        // Ubah format tanggal dari d/m/Y menjadi j M Y agar lebih singkat & lengkap
+        try {
+          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+          $label = $date ? $date->format('j M Y') : ($row['Tanggal'] ?? '');
+        } catch (\Exception $e) {
+          \Log::warning($e->getMessage());
+          $label = $row['Tanggal'] ?? '';
+        }
+        $labels[] = $label;
         $incomes[] = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
         $expenses[] = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
       }
@@ -335,44 +341,39 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       // Lebar chart dinamis, minimal 800, maksimal 2000
       $chartWidth = min(2000, max(800, $dataCount * 18));
 
-      // Buat objek Graph
       $graph = new \Graph($chartWidth, 400);
       $graph->SetScale('textlin');
       $graph->title->Set('Pemasukan vs Pengeluaran');
       $graph->xaxis->title->Set('Tanggal');
       $graph->yaxis->title->Set('Jumlah');
+      \Log::debug("Label Tanggal", $labels);
 
-      // --- Pengaturan sumbu X ---
-      $maxLabels = 30; // maksimal label yang ditampilkan
+      // --- Sumbu X ---
+      $maxLabels = 30;
       if ($dataCount > $maxLabels) {
         $step = ceil($dataCount / $maxLabels);
-        // Ambil hanya label pada indeks tertentu
         $visibleLabels = [];
         for ($i = 0; $i < $dataCount; $i += $step) {
-          // Tetap gunakan format tanggal lengkap
           $visibleLabels[] = $labels[$i];
         }
-        // Atur tick dan label
         $graph->xaxis->SetTickLabels($visibleLabels);
         $graph->xaxis->SetTextTickInterval($step, 0);
       } else {
         $graph->xaxis->SetTickLabels($labels);
       }
-      // Miringkan label agar muat
       $graph->xaxis->SetLabelAngle(45);
-      // Perkecil font sumbu X
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 7);
 
-      // --- Pengaturan sumbu Y (format angka pendek) ---
+      // --- Sumbu Y ---
       $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
       $graph->yaxis->scale->SetAutoMin(0);
 
-      // --- Plot batang ---
+      // --- Plot ---
       $incomePlot = new \BarPlot($incomes);
       $expensePlot = new \BarPlot($expenses);
       $incomePlot->SetFillColor('#28A745');
       $expensePlot->SetFillColor('#DC3545');
-      // HILANGKAN legenda
+      // Tanpa legenda
       $incomePlot->SetLegend(null);
       $expensePlot->SetLegend(null);
 
