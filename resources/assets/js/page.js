@@ -1833,7 +1833,7 @@ async function renderExportPage() {
   </div>
   </div>
 
-  <!-- Modal Panduan (tetap seperti sebelumnya) -->
+  <!-- Modal Panduan (diperbarui) -->
   <div class="modal fade" id="exportGuideModal" tabindex="-1" aria-labelledby="exportGuideModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
   <div class="modal-content" style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
@@ -1851,26 +1851,41 @@ async function renderExportPage() {
   </button>
   </div>
   <div class="mb-4">
-  <h6 class="fw-bold"><i class="bi bi-2-circle-fill text-primary me-2"></i>Pilih Jenis & Filter</h6>
-  <p class="small opacity-75">Pilih tipe data (<strong>Transaksi</strong>, <strong>Transfer</strong>, <strong>Budget</strong>, atau <strong>Semua Data</strong>). Filter akan menyesuaikan dengan tipe yang dipilih.</p>
+  <h6 class="fw-bold"><i class="bi bi-2-circle-fill text-primary me-2"></i>Pilih Dompet</h6>
+  <p class="small opacity-75">Pilih <strong>dompet</strong> yang datanya ingin diekspor. Field ini wajib diisi dan menentukan mata uang yang digunakan di dalam laporan.</p>
+  </div>
+  <div class="mb-4">
+  <h6 class="fw-bold"><i class="bi bi-3-circle-fill text-primary me-2"></i>Pilih Jenis Data & Filter</h6>
+  <p class="small opacity-75">Pilih tipe data yang akan diekspor. Filter yang muncul akan menyesuaikan:</p>
   <ul class="small opacity-75">
-  <li><strong>Transaksi:</strong> Bisa difilter per dompet, tanggal/bulan, tipe (pemasukan/pengeluaran), dan kategori.</li>
-  <li><strong>Transfer:</strong> Hanya bisa difilter per dompet dan rentang tanggal/bulan.</li>
-  <li><strong>Budget:</strong> Bisa difilter per dompet, tipe periode (bulanan/tahunan), status, dan kategori.</li>
-  <li><strong>Semua Data:</strong> Hanya dompet dan rentang tanggal yang tersedia.</li>
+  <li><strong>Transaksi:</strong> Bisa difilter berdasarkan rentang tanggal, bulan, tipe (pemasukan/pengeluaran), dan kategori. Kategori ditampilkan sebagai badge interaktif yang bisa diklik untuk memilih.</li>
+  <li><strong>Transfer:</strong> Bisa difilter berdasarkan rentang tanggal.</li>
+  <li><strong>Budget:</strong> Bisa difilter berdasarkan tipe periode (bulanan/tahunan), bulan/tahun, status (terlampaui/mendekati/aman), dan kategori (khusus pengeluaran).</li>
+  <li><strong>Semua Data:</strong> Hanya rentang tanggal yang tersedia sebagai filter.</li>
   </ul>
   </div>
   <div class="mb-4">
-  <h6 class="fw-bold"><i class="bi bi-3-circle-fill text-primary me-2"></i>Pilih Format File</h6>
+  <h6 class="fw-bold"><i class="bi bi-4-circle-fill text-primary me-2"></i>Pilih Format File</h6>
   <p class="small opacity-75">
-  <strong>Excel (.xlsx):</strong> Data lengkap dengan tabel, subtotal, dan metadata. Cocok untuk analisis lebih lanjut.<br>
-  <strong>PDF:</strong> Laporan siap cetak dengan tampilan profesional. Batas data 500 baris.<br>
-  <strong>CSV:</strong> Format ringan untuk diimpor ke spreadsheet lain (Excel, Google Sheets, dsb).
+  <strong>Excel (.xlsx):</strong> Data lengkap dengan tabel, subtotal, metadata, serta opsi tambahan seperti chart, ringkasan bulanan, dan top 5 pengeluaran tertinggi.<br>
+  <strong>PDF:</strong> Laporan siap cetak dengan tampilan profesional. Maksimal 500 baris data.<br>
+  <strong>CSV:</strong> Format ringan untuk diimpor ke spreadsheet lain (Excel, Google Sheets, dsb).<br>
+  <strong>Google Sheets:</strong> Data langsung dikirim ke spreadsheet Google Sheets Anda. <em>Wajib hubungkan akun Google terlebih dahulu di halaman Pengaturan.</em>
   </p>
   </div>
+  <div class="mb-4">
+  <h6 class="fw-bold"><i class="bi bi-5-circle-fill text-primary me-2"></i>Opsi Lanjutan</h6>
+  <p class="small opacity-75">Klik bagian <strong>"Lanjutan"</strong> untuk mengatur opsi tambahan:</p>
+  <ul class="small opacity-75">
+  <li><strong>Sertakan Deskripsi:</strong> Menampilkan kolom deskripsi di laporan.</li>
+  <li><strong>Sertakan Chart:</strong> Menyertakan grafik batang pemasukan vs pengeluaran (hanya untuk format Excel dan PDF).</li>
+  <li><strong>Sertakan Ringkasan Bulanan:</strong> Menambahkan tabel ringkasan bulanan di samping data utama (Excel dan PDF).</li>
+  <li><strong>Sertakan Top 5 Pengeluaran Tertinggi:</strong> Menampilkan 5 transaksi pengeluaran terbesar (Excel dan PDF).</li>
+  </ul>
+  </div>
   <div>
-  <h6 class="fw-bold"><i class="bi bi-4-circle-fill text-primary me-2"></i>Ekspor & Cek Telegram</h6>
-  <p class="small opacity-75">Setelah menekan tombol <strong>Ekspor Sekarang</strong>, file akan diproses dan dikirim ke chat Telegram Anda. Pastikan koneksi internet stabil.</p>
+  <h6 class="fw-bold"><i class="bi bi-6-circle-fill text-primary me-2"></i>Ekspor & Cek Telegram</h6>
+  <p class="small opacity-75">Setelah semua filter dan opsi diatur, klik <strong>Ekspor Sekarang</strong>. File akan diproses oleh sistem dan dikirimkan langsung ke chat Telegram Anda dalam beberapa saat. Pastikan koneksi internet stabil.</p>
   </div>
   </div>
   <div class="modal-footer">
