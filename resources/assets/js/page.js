@@ -1963,7 +1963,6 @@ function renderExportFilters(type) {
     </select>
     </div>
     <div class="mb-3">
-    <label class="form-label">Kategori</label>
     <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
     <select class="d-none" id="filter-category-hidden" multiple></select>
     </div>
@@ -2171,7 +2170,7 @@ function renderCategoryBadges(categories = null) {
   .map(opt => opt.value);
 
   hiddenSelect.innerHTML = '';
-  let html = '';
+  let html = '<label class="form-label mb-2">Kategori</label>';
 
   catList.forEach(cat => {
     const isSelected = selectedValues.includes(cat.id.toString());
