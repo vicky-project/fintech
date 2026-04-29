@@ -3,7 +3,7 @@ $symbol = $summary['symbol'] ?? 'Rp';
 $prec   = $summary['precision'] ?? 0;
 $dec    = $summary['decimal_mark'] ?? ',';
 $thou   = $summary['thousands_separator'] ?? '.';
-$fmt    = fn($v) => $symbol . ' ' . number_format($v, $prec, $dec, $thou);
+$fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou);
 @endphp
 <table>
   <thead>

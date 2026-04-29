@@ -91,10 +91,13 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
   </thead>
   <tbody>
     @foreach($extra['topSpending'] as $item)
+    @php
+    $amount = (float) str_replace(['Rp', '.', ','], '', $item['Pengeluaran'] ?? '0');
+    @endphp
     <tr>
       <td>{{ $item['Tanggal'] }}</td>
       <td>{{ $item['Kategori'] }}</td>
-      <td class="text-right text-expense">{{ $fmt($item['Pengeluaran']) }}</td>
+      <td class="text-right text-expense">{{ $fmt($amount) }}</td>
       <td>{{ $item['Deskripsi'] ?? '-' }}</td>
     </tr>
     @endforeach
