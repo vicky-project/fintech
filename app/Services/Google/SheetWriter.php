@@ -223,8 +223,8 @@ class SheetWriter
     $emptyRow = array_fill(0, $colCount, '');
 
     if ($dataType === 'transactions') {
-      // Baris label SUBTOTAL (kolom A)
-      $labelRow = $emptyRow;
+      // Baris label SUBTOTAL (kolom A saja, tanpa merge)
+      $labelRow = array_fill(0, $colCount, '');
       $labelRow[0] = 'SUBTOTAL';
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
@@ -234,18 +234,19 @@ class SheetWriter
       );
       $currentRow++;
 
-      // Detail ditulis di kolom A, B, C (atau tetap satu kolom A jika Anda suka)
-      // Opsi 1: Semua di kolom A (rapat ke bawah)
-      $rows = [
-        array_merge([''], ['Pemasukan: ' . ($summary['total_income'] ?? 0)], array_fill(2, $colCount-2, '')),
-        array_merge([''], ['Pengeluaran: ' . ($summary['total_expense'] ?? 0)], array_fill(2, $colCount-2, '')),
-        array_merge([''], ['Net: ' . ($summary['net'] ?? 0)], array_fill(2, $colCount-2, '')),
+      // Detail: satu baris per metrik, semuanya di kolom A
+      $metrics = [
+        'Pemasukan: ' . ($summary['total_income'] ?? 0),
+        'Pengeluaran: ' . ($summary['total_expense'] ?? 0),
+        'Net: ' . ($summary['net'] ?? 0),
       ];
-      foreach ($rows as $row) {
+      foreach ($metrics as $text) {
+        $detailRow = array_fill(0, $colCount, '');
+        $detailRow[0] = $text;
         $this->client->getSheetsService()->spreadsheets_values->update(
           $spreadsheetId,
           $sheetName . '!A' . $currentRow,
-          new ValueRange(['values' => [$row]]),
+          new ValueRange(['values' => [$detailRow]]),
           ['valueInputOption' => 'RAW']
         );
         $currentRow++;

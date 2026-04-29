@@ -98,9 +98,15 @@ class SheetStyler
     }
 
     // Subtotal styling
-    if ($subEndRow >= $subStartRow) {
+    if ($subEndRow >= $subStartRow && $subStartRow > 0) {
       $requests[] = new SheetsRequest(['repeatCell' => [
-        'range' => ['sheetId' => $sheetId, 'startRowIndex' => $subStartRow-1, 'endRowIndex' => $subEndRow, 'startColumnIndex' => 0, 'endColumnIndex' => $colCount],
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $subStartRow - 1,
+          'endRowIndex' => $subEndRow,
+          'startColumnIndex' => 0,
+          'endColumnIndex' => 1, // hanya kolom A, karena teks hanya di A
+        ],
         'cell' => ['userEnteredFormat' => [
           'backgroundColor' => ['red' => 217/255, 'green' => 226/255, 'blue' => 243/255],
           'textFormat' => ['bold' => true, 'fontSize' => 11],
@@ -113,6 +119,29 @@ class SheetStyler
         ]],
         'fields' => 'userEnteredFormat(backgroundColor,textFormat,borders)',
       ]]);
+
+      // Untuk kolom B..G (atau sesuai jumlah kolom) diisi background biru muda juga tanpa teks
+      if ($colCount > 1) {
+        $requests[] = new SheetsRequest(['repeatCell' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $subStartRow - 1,
+            'endRowIndex' => $subEndRow,
+            'startColumnIndex' => 1,
+            'endColumnIndex' => $colCount,
+          ],
+          'cell' => ['userEnteredFormat' => [
+            'backgroundColor' => ['red' => 217/255, 'green' => 226/255, 'blue' => 243/255],
+            'borders' => [
+              'top' => ['style' => 'SOLID', 'width' => 1],
+              'bottom' => ['style' => 'SOLID', 'width' => 1],
+              'left' => ['style' => 'SOLID', 'width' => 1],
+              'right' => ['style' => 'SOLID', 'width' => 1],
+            ],
+          ]],
+          'fields' => 'userEnteredFormat(backgroundColor,borders)',
+        ]]);
+      }
     }
 
     // Footer styling
