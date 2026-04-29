@@ -106,6 +106,8 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           // 3. Data
           $this->writeData($sheet, $dataStart, $highestCol);
           $this->styleData($sheet, $dataStart, $lastData, $highestCol);
+          // 3b. Sisipkan ringkasan bulanan
+          $this->insertMonthlySummaries($sheet, $dataStart, $lastData, $highestCol);
 
           // Auto-size columns
           foreach (range('A', $highestCol) as $col) {
@@ -247,6 +249,107 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->getStyle('D'.$first.':D'.$last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
       } elseif ($this->type === 'budgets') {
         $sheet->getStyle('D'.$first.':E'.$last)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+      }
+    }
+
+    // Di dalam class, tambahkan method baru:
+    private function insertMonthlySummaries(Worksheet $sheet, int $dataStartRow, int &$lastDataRow, string $highestCol): void
+    {
+      $insertions = [];
+      $currentMonth = null;
+      $totalIncome = 0;
+      $totalExpense = 0;
+      $startIdx = 0;
+      $dataCount = count($this->data);
+
+      for ($i = 0; $i < $dataCount; $i++) {
+        $rowData = $this->data[$i];
+        $date = \DateTime::createFromFormat('d/m/Y', $rowData['Tanggal'] ?? '');
+        $month = $date ? $date->format('Y-m') : null;
+
+        if ($currentMonth === null) {
+          $currentMonth = $month;
+          $totalIncome = 0;
+          $totalExpense = 0;
+          $startIdx = $i;
+        }
+
+        if ($month !== $currentMonth) {
+          // Bulan sebelumnya berakhir di $i-1
+          $endIdx = $i - 1;
+          $insertRow = $dataStartRow + $endIdx + 1; // setelah baris terakhir bulan itu
+          $insertions[] = [
+            'row' => $insertRow,
+            'income' => $totalIncome,
+            'expense' => $totalExpense,
+            'monthKey' => $currentMonth,
+          ];
+          // Reset untuk bulan baru
+          $currentMonth = $month;
+          $totalIncome = 0;
+          $totalExpense = 0;
+          $startIdx = $i;
+        }
+
+        // Akumulasi
+        $incomeVal = (float) str_replace(['Rp', '.', ','], '', $rowData['Pemasukan'] ?? '0');
+        $expenseVal = (float) str_replace(['Rp', '.', ','], '', $rowData['Pengeluaran'] ?? '0');
+        $totalIncome += $incomeVal;
+        $totalExpense += $expenseVal;
+      }
+
+      // Bulan terakhir
+      if ($currentMonth !== null) {
+        $endIdx = $dataCount - 1;
+        $insertRow = $dataStartRow + $endIdx + 1;
+        $insertions[] = [
+          'row' => $insertRow,
+          'income' => $totalIncome,
+          'expense' => $totalExpense,
+          'monthKey' => $currentMonth,
+        ];
+      }
+
+      // Urutkan dari baris terbesar agar penyisipan tidak mengacaukan indeks
+      usort($insertions, function($a, $b) {
+        return $b['row'] - $a['row'];
+      });
+
+      $fmt = $this->summary;
+      $fmtNum = fn($v) => number_format($v, $fmt['precision'], $fmt['decimal_mark'], $fmt['thousands_separator']);
+      $fmtCur = fn($v) => ($fmt['symbol_first'] ? $fmt['symbol'].' ' : '') . $fmtNum($v) . (!$fmt['symbol_first'] ? ' '.$fmt['symbol'] : '');
+
+      foreach ($insertions as $ins) {
+        $r = $ins['row'];
+        $sheet->insertNewRowBefore($r, 1); // sisipkan 1 baris kosong di posisi $r
+        // Tulis data ringkasan
+        $sheet->setCellValue('A'.$r, 'Jumlah '.$ins['monthKey']);
+        $sheet->mergeCells('A'.$r.':D'.$r);
+        $sheet->setCellValue('E'.$r, $fmtCur($ins['income'] ?? 0));
+        $sheet->setCellValue('F'.$r, $fmtCur($ins['expense'] ?? 0));
+        $diff = ($ins['income'] ?? 0) - ($ins['expense'] ?? 0);
+        $sheet->setCellValue('G'.$r, $fmtCur($diff));
+        // Styling ringkasan
+        $sty = [
+          'font' => ['bold' => true,
+            'size' => 10],
+          'fill' => ['fillType' => Fill::FILL_SOLID,
+            'startColor' => ['rgb' => 'E6F0FF']],
+          'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+          'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
+            'vertical' => Alignment::VERTICAL_CENTER],
+        ];
+        $sheet->getStyle('A'.$r.':'.$highestCol.$r)->applyFromArray($sty);
+        // Warna pemasukan/pengeluaran tetap
+        $sheet->getStyle('E'.$r)->getFont()->getColor()->setRGB('28A745');
+        $sheet->getStyle('F'.$r)->getFont()->getColor()->setRGB('DC3545');
+        if ($diff >= 0) {
+          $sheet->getStyle('G'.$r)->getFont()->getColor()->setRGB('28A745');
+        } else {
+          $sheet->getStyle('G'.$r)->getFont()->getColor()->setRGB('DC3545');
+        }
+
+        $lastDataRow++; // setiap sisipan menambah jumlah baris
       }
     }
 
