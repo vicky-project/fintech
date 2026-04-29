@@ -8,12 +8,13 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use mitoteam\jpgraph\MtJpGraph;
 
 class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithEvents, WithTitle
@@ -96,19 +97,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             }
           }
 
-          // 2. Chart (sebelum tabel)
-          $chartRow = $metaCount + 3; // setelah metadata + 2 baris kosong
-          $includeChart = $this->summary['include_chart'] ?? false;
-          if ($this->type === 'transactions' && count($this->data) > 0 && $includeChart) {
-            $this->addChartToSheet($sheet, $chartRow, $this->data);
-            // Tinggi chart ~400px ≈ 20 baris, tambahkan jarak 1 baris setelah chart
-            $chartHeightRows = 20;
-            $tableStart = $chartRow + $chartHeightRows + 1; // 1 baris kosong setelah chart
-          } else {
-            // Tanpa chart, posisi header seperti semula
-            $tableStart = $metaCount + 3;
-          }
-
+          $tableStart = $metaCount + 3;
           // 3. Header Tabel
           $this->writeHeaders($sheet, $tableStart, $highestCol);
           $headerRows = $this->headerRowCount();
@@ -150,6 +139,17 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             'font' => ['italic' => true, 'color' => ['rgb' => '888888'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
+
+          // ===== CHART DI SAMPING TABEL =====
+          $includeChart = $this->summary['include_chart'] ?? false;
+          if ($this->type === 'transactions' && count($this->data) > 0 && $includeChart) {
+            // Tentukan kolom chart: kolom setelah highestCol + 1 (jarak 1 kolom kosong)
+            $chartColIndex = Coordinate::columnIndexFromString($highestCol);
+            $chartCol = Coordinate::stringFromColumnIndex($chartColIndex + 2); // +1 kosong, +1 untuk chart
+            $chartRowSameAsHeader = $tableStart;
+
+            $this->addChartToSheet($sheet, $chartRowSameAsHeader, $this->data, $chartCol);
+          }
         },
       ];
     }
@@ -432,7 +432,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       }
     }
 
-    protected function addChartToSheet(Worksheet $sheet, int $startRow, array $data): void
+    protected function addChartToSheet(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
     {
       MtJpGraph::load(['bar']);
 
@@ -548,7 +548,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       // Sisipkan ke worksheet
       $drawing = new Drawing();
       $drawing->setPath($tempFile);
-      $drawing->setCoordinates('B' . $startRow);
+      $drawing->setCoordinates($chartCol . $startRow);
       $drawing->setWidth($chartWidth);
       $drawing->setHeight(400);
       $drawing->setWorksheet($sheet);
