@@ -277,16 +277,24 @@
 
 @push('styles')
 <style>
+  /* ----------------------------- */
+  /* MODAL & OVERLAY               */
+  /* ----------------------------- */
   #pinModal {
     z-index: 10001 !important;
   }
 
+  /* ----------------------------- */
+  /* QUICK ACTION BUTTONS          */
+  /* ----------------------------- */
   .quick-action-btn:hover {
     transform: scale(1.15);
     box-shadow: 0 8px 25px rgba(255,255,255,0.3) !important;
   }
 
-  /* Pastikan dropdown mengikuti tema Telegram */
+  /* ----------------------------- */
+  /* DROPDOWN & NAV                */
+  /* ----------------------------- */
   .dropdown-menu {
     background-color: var(--tg-theme-secondary-bg-color) !important;
     color: var(--tg-theme-text-color) !important;
@@ -313,43 +321,48 @@
     border-top-color: var(--tg-theme-section-separator-color) !important;
   }
 
-  /* Perbaikan ikon search */
+  /* ----------------------------- */
+  /* SEARCH                        */
+  /* ----------------------------- */
   #search-input-group .input-group-text {
     background-color: var(--tg-theme-secondary-bg-color);
     color: var(--tg-theme-text-color);
     border-right: none;
   }
+
   #search-input {
     border-left: none;
   }
 
-  /* Filter button aktif */
   .search-filter-btn.active {
     background-color: var(--tg-theme-button-color) !important;
     color: var(--tg-theme-button-text-color) !important;
     border-color: var(--tg-theme-button-color) !important;
   }
+
   .search-filter-btn {
     color: var(--tg-theme-button-color);
     border-color: var(--tg-theme-button-color);
   }
 
-  /* Badge di filter */
   .filter-badge {
     margin-left: 4px;
     font-size: 0.7rem;
   }
 
-  /* Item hasil pencarian */
   .search-result-item {
     border-radius: 12px;
     margin-bottom: 8px;
     transition: background-color 0.2s;
   }
+
   .search-result-item:hover {
     background-color: var(--tg-theme-hint-color, rgba(0,0,0,0.03));
   }
 
+  /* ----------------------------- */
+  /* NOTIFICATIONS                 */
+  /* ----------------------------- */
   .notification-title {
     color: var(--tg-theme-text-color) !important;
     font-weight: 600;
@@ -373,13 +386,18 @@
 
   .notification-row {
     transition: background-color 0.2s;
+    position: relative;
+    /* agar badge absolute bisa diposisikan */
   }
+
   .notification-row:hover {
     background-color: var(--tg-theme-hint-color, rgba(0,0,0,0.03));
   }
+
   .notification-row.unread {
     border-left: 3px solid var(--tg-theme-button-color, #007aff);
     }
+
     .notification-row.unread::before {
     content: '';
     width: 8px;
@@ -391,18 +409,14 @@
     top: 50%;
     transform: translateY(-50%);
     }
+
     .notification-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 4px;
     }
-    .notification-time {
-    font-size: 0.75rem;
-    color: var(--tg-theme-hint-color, #8e8e93);
-    white-space: nowrap;
-    margin-left: 8px;
-    }
+
     .notification-icon {
     width: 32px;
     height: 32px;
@@ -413,17 +427,81 @@
     font-size: 1rem;
     flex-shrink: 0;
     }
+
     .notification-icon.budget-warning { background-color: rgba(255, 193, 7, 0.15); color: #f0ad4e; }
     .notification-icon.cashflow-warning { background-color: rgba(220, 53, 69, 0.15); color: #dc3545; }
     .notification-icon.subscription-reminder { background-color: rgba(13, 110, 253, 0.15); color: #0d6efd; }
 
-    .form-select, .form-control, .form-check-input, .modal-content {
+    /* ----------------------------- */
+    /* FORM ELEMENTS                 */
+    /* ----------------------------- */
+    .form-select,
+    .form-control,
+    .form-check-input,
+    .modal-content {
     background-color: var(--tg-theme-bg-color) !important;
     color: var(--tg-theme-text-color) !important;
     border-color: var(--tg-theme-hint-color) !important;
     }
+
+    /* Saat form element fokus, kita beri highlight dengan warna tombol */
+    .form-select:focus,
+    .form-control:focus,
+    .form-check-input:focus {
+    border-color: var(--tg-theme-button-color) !important;
+    box-shadow: 0 0 0 0.25rem rgba(var(--tg-theme-button-color), 0.25) !important;
+    /* Untuk browser yang mendukung color-mix, gunakan yang lebih halus */
+    box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--tg-theme-button-color) 25%, transparent) !important;
+    }
+
+    /* Checkbox dan radio khusus */
     .form-check-input:checked {
     background-color: var(--tg-theme-button-color);
+    border-color: var(--tg-theme-button-color);
+    }
+
+    /* Efek hover pada input */
+    .form-select:hover,
+    .form-control:hover {
+    border-color: var(--tg-theme-button-color);
+    }
+
+    /* Accordion dalam tema */
+    .accordion-button {
+    background-color: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+    }
+
+    .accordion-button:not(.collapsed) {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    }
+
+    .accordion-item {
+    background-color: var(--tg-theme-bg-color);
+    border-color: var(--tg-theme-hint-color);
+    }
+
+    /* Placeholder */
+    ::placeholder {
+    color: var(--tg-theme-hint-color) !important;
+    opacity: 0.7;
+    }
+
+    /* Card */
+    .card {
+    background-color: var(--tg-theme-bg-color);
+    border-color: var(--tg-theme-hint-color);
+    }
+
+    /* Badge (misal untuk filter) */
+    .badge {
+    color: var(--tg-theme-button-text-color);
+    }
+
+    /* Background gradient untuk header card bisa disesuaikan */
+    .bg-gradient-primary {
+    background: linear-gradient(135deg, var(--tg-theme-button-color), var(--tg-theme-secondary-bg-color)) !important;
     color: var(--tg-theme-button-text-color);
     }
     </style>

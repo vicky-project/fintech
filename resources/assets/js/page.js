@@ -1963,7 +1963,7 @@ function renderExportFilters(type) {
     </h2>
     <div id="collapseAdvanced" class="accordion-collapse collapse" aria-labelledby="headingAdvanced" data-bs-parent="#advancedAccordion">
     <div class="accordion-body">
-    <div class="form-check mb-3">
+    <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
     <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
     </div>
