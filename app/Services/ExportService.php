@@ -579,7 +579,7 @@ class ExportService
 
     private function generateTrendChartImageBase64(array $transactions): string
     {
-      \mitoteam\jpgraph\MtJpGraph::load(['line']);
+      MtJpGraph::load(['line']);
 
       usort($transactions, function ($a, $b) {
         $dateA = \DateTime::createFromFormat('d/m/Y', $a['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
@@ -618,7 +618,7 @@ class ExportService
       $dataCount = count($labels);
       $chartWidth = min(2000, max(800, $dataCount * 18));
 
-      $graph = new \Amenadiel\JpGraph\Graph($chartWidth, 300);
+      $graph = new \Graph($chartWidth, 300);
       $graph->SetScale('textlin');
       $graph->img->SetMargin(60, 20, 20, 60);
       $graph->title->Set('Tren Net (Pemasukan - Pengeluaran)');
@@ -628,7 +628,7 @@ class ExportService
       $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
       $graph->xaxis->SetPos('min');
 
-      $linePlot = new \Amenadiel\JpGraph\Plot\LinePlot($nets);
+      $linePlot = new \LinePlot($nets);
       $linePlot->SetColor('#3366CC');
       $linePlot->SetLegend(null);
       $linePlot->SetFillColor('#CCE5FF');
