@@ -223,7 +223,35 @@ class SheetWriter
     $emptyRow = array_fill(0, $colCount, '');
 
     if ($dataType === 'transactions') {
-      $row1 = $emptyRow; $row1[0] = 'SUBTOTAL';
+      $row1 = $emptyRow;
+      $row1[0] = 'SUBTOTAL';
+      // merge seluruh baris label agar teks rata tengah
+      $requests = [];
+      $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+      $requests[] = new SheetsRequest([
+        'mergeCells' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $currentRow - 1,
+            'endRowIndex' => $currentRow,
+            'startColumnIndex' => 0,
+            'endColumnIndex' => 7,
+          ],
+          'mergeType' => 'MERGE_ALL',
+        ],
+      ]);
+      // tulis nilai setelah merge (merge bisa menghapus nilai, jadi tulis lagi)
+      $this->client->getSheetsService()->spreadsheets_values->update(
+        $spreadsheetId,
+        $sheetName . '!A' . $currentRow,
+        new ValueRange(['values' => [[$row1[0]]]]),
+        ['valueInputOption' => 'RAW']
+      );
+      if ($requests) {
+        $batch = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+        $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+      }
+      // baris kedua detail
       $row2 = $emptyRow;
       $row2[4] = 'Pemasukan: ' . ($summary['total_income'] ?? 0);
       $row2[5] = 'Pengeluaran: ' . ($summary['total_expense'] ?? 0);
