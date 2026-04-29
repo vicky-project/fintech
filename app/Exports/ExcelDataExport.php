@@ -365,10 +365,6 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
       // --- Pengaturan sumbu Y (format angka pendek) ---
       $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
-      // Callback untuk format ribuan
-      $graph->yaxis->scale->SetLabelFormatCallback(function($val) {
-        return number_format($val, 0, ',', '.');
-      });
       $graph->yaxis->scale->SetAutoMin(0);
 
       // --- Plot batang ---
