@@ -10,7 +10,7 @@ use Modules\FinTech\Models\ {
 };
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Exports\ {
-  AllDataExport,
+  AllExcelDataExport,
   CsvDataExport,
   ExcelDataExport
 };
@@ -121,7 +121,7 @@ class ExportService
 
   protected function generateExcelAll(array $allData): string
   {
-    return $this->storeXlsx(new AllDataExport($allData));
+    return $this->storeXlsx(new AllExcelDataExport($allData));
   }
 
   protected function generateExcelSingle(string $type, array $data, array $summary): string
