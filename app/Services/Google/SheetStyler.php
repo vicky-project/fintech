@@ -138,9 +138,8 @@ class SheetStyler
               'left' => ['style' => 'SOLID', 'width' => 1],
               'right' => ['style' => 'SOLID', 'width' => 1],
             ],
-          ]],
-          'fields' => 'userEnteredFormat(backgroundColor,borders)',
-        ]]);
+          ]]]
+        ]);
       }
     }
 
