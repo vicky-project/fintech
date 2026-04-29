@@ -58,7 +58,7 @@ $fmt    = fn($v) => $symbol . ' ' . number_format($v, $prec, $dec, $thou);
     </tr>
   </thead>
   <tbody>
-    @foreach($extra['monthlySummary'] as $item)
+    @foreach($extra['monthlySummary'] as $date => $item)
     <tr>
       <td>{{ $item['label'] }}</td>
       <td class="text-right text-income">{{ $fmt($item['income']) }}</td>
