@@ -1952,14 +1952,24 @@ function renderExportFilters(type) {
     <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
     <select class="d-none" id="filter-category-hidden" multiple></select>
     </div>
+
+    <!-- Advanced Options Accordion -->
+    <div class="accordion mb-3" id="advancedAccordion">
+    <div class="accordion-item">
+    <h2 class="accordion-header" id="headingAdvanced">
+    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced" aria-expanded="false" aria-controls="collapseAdvanced">
+    <i class="bi bi-sliders me-2"></i> Lanjutan
+    </button>
+    </h2>
+    <div id="collapseAdvanced" class="accordion-collapse collapse" aria-labelledby="headingAdvanced" data-bs-parent="#advancedAccordion">
+    <div class="accordion-body">
     <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
     <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
     </div>
-    <!-- Opsi Tambahan (hanya Excel) -->
-    <div class="mb-3" id="export-options" style="display: none;">
+    <div id="export-options" style="display: none;">
     <label class="form-label fw-semibold">
-    <i class="bi bi-gear me-2"></i>Opsi Tambahan (Hanya Excel)
+    <i class="bi bi-gear me-2"></i>Opsi Tambahan
     </label>
     <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-chart">
@@ -1979,7 +1989,12 @@ function renderExportFilters(type) {
     <i class="bi bi-graph-down me-1"></i> Sertakan Top 5 Pengeluaran Tertinggi
     </label>
     </div>
+    </div>
+    </div>
+    </div>
+    </div>
     </div>`;
+
     container.innerHTML = html;
     updateTransactionCategoryFilter();
     toggleExportOptions();
@@ -2000,9 +2015,22 @@ function renderExportFilters(type) {
     <input type="date" class="form-control" id="filter-date-to">
     </div>
     </div>
-    <div class="form-check mb-3">
+    <div class="accordion mb-3" id="advancedAccordion">
+    <div class="accordion-item">
+    <h2 class="accordion-header" id="headingAdvanced">
+    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced" aria-expanded="false" aria-controls="collapseAdvanced">
+    <i class="bi bi-sliders me-2"></i> Lanjutan
+    </button>
+    </h2>
+    <div id="collapseAdvanced" class="accordion-collapse collapse" aria-labelledby="headingAdvanced" data-bs-parent="#advancedAccordion">
+    <div class="accordion-body">
+    <div class="form-check mb-0">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
     <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
+    </div>
+    </div>
+    </div>
+    </div>
     </div>`;
     container.innerHTML = html;
     updateExportFormatAvailability();
@@ -2034,13 +2062,25 @@ function renderExportFilters(type) {
     <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
     <select class="d-none" id="filter-category-hidden" multiple></select>
     </div>
-    <div class="form-check mb-3">
+    <div class="accordion mb-3" id="advancedAccordion">
+    <div class="accordion-item">
+    <h2 class="accordion-header" id="headingAdvanced">
+    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced" aria-expanded="false" aria-controls="collapseAdvanced">
+    <i class="bi bi-sliders me-2"></i> Lanjutan
+    </button>
+    </h2>
+    <div id="collapseAdvanced" class="accordion-collapse collapse" aria-labelledby="headingAdvanced" data-bs-parent="#advancedAccordion">
+    <div class="accordion-body">
+    <div class="form-check mb-0">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
     <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
+    </div>
+    </div>
+    </div>
+    </div>
     </div>`;
     container.innerHTML = html;
     renderBudgetPeriodInput();
-    // Kategori hanya expense
     Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
     renderCategoryBadges(Core.state.currentFilteredCategories);
     updateExportFormatAvailability();
