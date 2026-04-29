@@ -652,7 +652,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $graph->xaxis->SetLabelAngle(45);
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
       $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
-      $graph->axis->SetPos('min');
+      $graph->xaxis->SetPos('min');
 
       $linePlot = new \LinePlot($nets);
       $linePlot->SetColor('#3366CC');
