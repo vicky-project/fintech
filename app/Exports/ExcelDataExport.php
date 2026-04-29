@@ -319,48 +319,81 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
     {
       MtJpGraph::load(['bar']);
 
-      // Siapkan data
+      // 1. Urutkan data dari tanggal terlama ke terbaru
+      usort($data, function ($a, $b) {
+        $dateA = \DateTime::createFromFormat('d/m/Y', $a['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
+        $dateB = \DateTime::createFromFormat('d/m/Y', $b['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
+        return $dateA <=> $dateB;
+      });
+
+      // 2. Tentukan rentang bulan
+      $firstDate = \DateTime::createFromFormat('d/m/Y', $data[0]['Tanggal'] ?? '');
+      $lastDate = \DateTime::createFromFormat('d/m/Y', $data[count($data)-1]['Tanggal'] ?? '');
+      $diffMonths = ($lastDate && $firstDate)
+      ? (($lastDate->format('Y') - $firstDate->format('Y')) * 12 + $lastDate->format('m') - $firstDate->format('m'))
+      : 0;
+
+      // 3. Siapkan label dan nilai yang akan ditampilkan
       $labels = [];
       $incomes = [];
       $expenses = [];
-      foreach ($data as $row) {
-        // Ubah format tanggal dari d/m/Y menjadi j M Y agar lebih singkat & lengkap
-        try {
-          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
-          $label = $date ? $date->format('j M Y') : ($row['Tanggal'] ?? '');
-        } catch (\Exception $e) {
-          \Log::warning($e->getMessage());
-          $label = $row['Tanggal'] ?? '';
-        }
-        $labels[] = $label;
-        $incomes[] = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
-        $expenses[] = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
-      }
-      $dataCount = count($data);
 
-      // Lebar chart dinamis, minimal 800, maksimal 2000
-      $chartWidth = min(2000, max(800, $dataCount * 18));
+      if ($diffMonths > 1) {
+        // Kelompokkan per bulan
+        $grouped = [];
+        foreach ($data as $row) {
+          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+          if (!$date) continue;
+          $monthKey = $date->format('Y-m');
+          if (!isset($grouped[$monthKey])) {
+            $grouped[$monthKey] = ['income' => 0,
+              'expense' => 0];
+          }
+          $grouped[$monthKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+          $grouped[$monthKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        }
+
+        foreach ($grouped as $monthKey => $values) {
+          [$year,
+            $month] = explode('-', $monthKey);
+          $date = \DateTime::createFromFormat('!Y-m', $monthKey);
+          $labels[] = $date ? $date->format('M Y') : $monthKey;
+          $incomes[] = $values['income'];
+          $expenses[] = $values['expense'];
+        }
+      } else {
+        // Tampilkan per tanggal
+        foreach ($data as $row) {
+          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+          $labels[] = $date ? $date->format('j M Y') : ($row['Tanggal'] ?? '');
+          $incomes[] = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+          $expenses[] = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        }
+      }
+
+      $dataCount = count($labels);
+      $chartWidth = min(2000, max(800, $dataCount * 50)); // lebih lebar untuk label bulan
 
       $graph = new \Graph($chartWidth, 400);
       $graph->SetScale('textlin');
       $graph->title->Set('Pemasukan vs Pengeluaran');
-      $graph->xaxis->title->Set('Tanggal');
+      $graph->xaxis->title->Set($diffMonths > 1 ? 'Bulan' : 'Tanggal');
       $graph->yaxis->title->Set('Jumlah');
-      // --- Sumbu X ---
+
+      // Sumbu X
       $graph->xaxis->SetTickLabels($labels);
       $graph->xaxis->SetLabelAngle(45);
-      $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 7);
+      $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
 
-      // --- Sumbu Y ---
+      // Sumbu Y
       $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
       $graph->yaxis->scale->SetAutoMin(0);
 
-      // --- Plot ---
+      // Plot
       $incomePlot = new \BarPlot($incomes);
       $expensePlot = new \BarPlot($expenses);
       $incomePlot->SetFillColor('#28A745');
       $expensePlot->SetFillColor('#DC3545');
-      // Tanpa legenda
       $incomePlot->SetLegend(null);
       $expensePlot->SetLegend(null);
 
