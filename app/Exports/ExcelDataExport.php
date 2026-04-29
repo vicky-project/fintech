@@ -142,17 +142,25 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
           // ===== CHART DI SAMPING TABEL =====
           $includeChart = $this->summary['include_chart'] ?? false;
-          if ($this->type === 'transactions' && count($this->data) > 0 && $includeChart) {
-            $chartColIndex = Coordinate::columnIndexFromString($highestCol);
-            $chartCol = Coordinate::stringFromColumnIndex($chartColIndex + 2);
-            $chartRow = $tableStart; // sejajar header
+          if ($this->type === 'transactions' && count($this->data) > 0 && ($includeChart || $includeMonthly)) {
+            $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
+            $nextColIndex = $dataEndColIndex + 2;
 
-            // Chart batang pemasukan vs pengeluaran
-            $this->addChartToSheet($sheet, $chartRow, $this->data, $chartCol);
+            if ($includeMonthly) {
+              $summaryStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
+              $this->writeMonthlySummaryTable($sheet, $tableStart, $this->data, $summaryStartCol);
+              $nextColIndex += 5;
+            }
 
-            // Chart trend di bawahnya
-            $trendChartRow = $chartRow + 20 + 2; // 20 baris untuk chart pertama, 2 baris spasi
-            $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartCol);
+            if ($includeChart) {
+              $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
+              $chartRow = $tableStart; // sejajar header
+              // Chart batang pemasukan vs pengeluaran
+              $this->addChartToSheet($sheet, $chartRow, $this->data, $chartCol);
+              // Chart trend di bawahnya
+              $trendChartRow = $chartRow + 20 + 2; // 20 baris untuk chart pertama, 2 baris spasi
+              $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartCol);
+            }
           }
         },
       ];
@@ -434,6 +442,91 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->getStyle('A'.$d.':'.$highestCol.$d)->applyFromArray($sty);
         $sheet->getStyle('D'.$d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
       }
+    }
+
+    private function writeMonthlySummaryTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
+    {
+      $grouped = [];
+      foreach ($data as $row) {
+        $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+        if (!$date) continue;
+        $monthKey = $date->format('Y-m');
+        if (!isset($grouped[$monthKey])) {
+          $grouped[$monthKey] = [
+            'income' => 0,
+            'expense' => 0,
+            'label' => $date->format('M Y'),
+          ];
+        }
+        $incomeVal = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+        $expenseVal = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        $grouped[$monthKey]['income'] += $incomeVal;
+        $grouped[$monthKey]['expense'] += $expenseVal;
+      }
+      ksort($grouped);
+
+      if (empty($grouped)) {
+        return $startRow;
+      }
+
+      $colIndex = Coordinate::columnIndexFromString($startCol);
+      $colA = $startCol;
+      $colB = Coordinate::stringFromColumnIndex($colIndex + 1);
+      $colC = Coordinate::stringFromColumnIndex($colIndex + 2);
+      $colD = Coordinate::stringFromColumnIndex($colIndex + 3);
+
+      $sheet->setCellValue($colA . $startRow, 'Ringkasan Bulanan');
+      $sheet->mergeCells($colA . $startRow . ':' . $colD . $startRow);
+      $sheet->getStyle($colA . $startRow)->applyFromArray([
+        'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '1F4E79']],
+      ]);
+
+      $headerRow = $startRow + 1;
+      $sheet->setCellValue($colA . $headerRow, 'Bulan');
+      $sheet->setCellValue($colB . $headerRow, 'Pemasukan');
+      $sheet->setCellValue($colC . $headerRow, 'Pengeluaran');
+      $sheet->setCellValue($colD . $headerRow, 'Net');
+      $sheet->getStyle($colA . $headerRow . ':' . $colD . $headerRow)->applyFromArray([
+        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+      ]);
+
+      $fmt = $this->summary;
+      $fmtNum = fn($v) => number_format($v, $fmt['precision'], $fmt['decimal_mark'], $fmt['thousands_separator']);
+      $fmtCur = fn($v) => ($fmt['symbol_first'] ? $fmt['symbol'].' ' : '') . $fmtNum($v) . (!$fmt['symbol_first'] ? ' '.$fmt['symbol'] : '');
+
+      $row = $headerRow + 1;
+      foreach ($grouped as $monthKey => $values) {
+        $net = $values['income'] - $values['expense'];
+        $sheet->setCellValue($colA . $row, $values['label']);
+        $sheet->setCellValue($colB . $row, $fmtCur($values['income']));
+        $sheet->setCellValue($colC . $row, $fmtCur($values['expense']));
+        $sheet->setCellValue($colD . $row, $fmtCur($net));
+
+        $sheet->getStyle($colB . $row)->getFont()->getColor()->setRGB('28A745');
+        $sheet->getStyle($colC . $row)->getFont()->getColor()->setRGB('DC3545');
+        if ($net >= 0) {
+          $sheet->getStyle($colD . $row)->getFont()->getColor()->setRGB('28A745');
+        } else {
+          $sheet->getStyle($colD . $row)->getFont()->getColor()->setRGB('DC3545');
+        }
+
+        $row++;
+      }
+
+      $lastRow = $row - 1;
+      $sheet->getStyle($colA . $headerRow . ':' . $colD . $lastRow)->applyFromArray([
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'font' => ['size' => 10],
+      ]);
+
+      foreach ([$colA, $colB, $colC, $colD] as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+      }
+
+      return $row;
     }
 
     protected function addChartToSheet(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
