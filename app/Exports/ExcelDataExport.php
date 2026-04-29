@@ -516,6 +516,32 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $row++;
       }
 
+      // Setelah loop bulan
+      $totalRow = $row;
+      $sheet->setCellValue($colA . $totalRow, 'Total');
+      $sheet->setCellValue($colB . $totalRow, $fmtCur(array_sum(array_column($grouped, 'income'))));
+      $sheet->setCellValue($colC . $totalRow, $fmtCur(array_sum(array_column($grouped, 'expense'))));
+      $totalNet = array_sum(array_column($grouped, 'income')) - array_sum(array_column($grouped, 'expense'));
+      $sheet->setCellValue($colD . $totalRow, $fmtCur($totalNet));
+
+      // Styling baris Total
+      $sheet->getStyle($colA . $totalRow . ':' . $colD . $totalRow)->applyFromArray([
+        'font' => ['bold' => true, 'size' => 10],
+        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E2F3']],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+      ]);
+
+      // Warna angka
+      $sheet->getStyle($colB . $totalRow)->getFont()->getColor()->setRGB('28A745');
+      $sheet->getStyle($colC . $totalRow)->getFont()->getColor()->setRGB('DC3545');
+      if ($totalNet >= 0) {
+        $sheet->getStyle($colD . $totalRow)->getFont()->getColor()->setRGB('28A745');
+      } else {
+        $sheet->getStyle($colD . $totalRow)->getFont()->getColor()->setRGB('DC3545');
+      }
+
+      $row++; // baris setelah Total
+
       $lastRow = $row - 1;
       $sheet->getStyle($colA . $headerRow . ':' . $colD . $lastRow)->applyFromArray([
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
