@@ -56,7 +56,7 @@
       text-align: center;
       font-size: 9px;
       color: #888;
-      margin-top: 20px;
+      margin-top: 50px;
     }
   </style>
 </head>
