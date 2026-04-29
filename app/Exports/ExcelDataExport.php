@@ -143,12 +143,16 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           // ===== CHART DI SAMPING TABEL =====
           $includeChart = $this->summary['include_chart'] ?? false;
           if ($this->type === 'transactions' && count($this->data) > 0 && $includeChart) {
-            // Tentukan kolom chart: kolom setelah highestCol + 1 (jarak 1 kolom kosong)
             $chartColIndex = Coordinate::columnIndexFromString($highestCol);
-            $chartCol = Coordinate::stringFromColumnIndex($chartColIndex + 2); // +1 kosong, +1 untuk chart
-            $chartRowSameAsHeader = $tableStart;
+            $chartCol = Coordinate::stringFromColumnIndex($chartColIndex + 2);
+            $chartRow = $tableStart; // sejajar header
 
-            $this->addChartToSheet($sheet, $chartRowSameAsHeader, $this->data, $chartCol);
+            // Chart batang pemasukan vs pengeluaran
+            $this->addChartToSheet($sheet, $chartRow, $this->data, $chartCol);
+
+            // Chart trend di bawahnya
+            $trendChartRow = $chartRow + 20 + 2; // 20 baris untuk chart pertama, 2 baris spasi
+            $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartCol);
           }
         },
       ];
@@ -551,6 +555,117 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $drawing->setCoordinates($chartCol . $startRow);
       $drawing->setWidth($chartWidth);
       $drawing->setHeight(400);
+      $drawing->setWorksheet($sheet);
+
+      register_shutdown_function(function () use ($tempFile) {
+        if (file_exists($tempFile)) unlink($tempFile);
+      });
+    }
+
+    protected function addTrendChart(Worksheet $sheet,
+      int $startRow,
+      array $data,
+      string $chartCol = 'B'): void
+    {
+      MtJpGraph::load(['line']);
+
+      usort($data,
+        function ($a, $b) {
+          $dateA = \DateTime::createFromFormat('d/m/Y', $a['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
+          $dateB = \DateTime::createFromFormat('d/m/Y', $b['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
+          return $dateA <=> $dateB;
+        });
+
+      $firstDate = \DateTime::createFromFormat('d/m/Y',
+        $data[0]['Tanggal'] ?? '');
+      $lastDate = \DateTime::createFromFormat('d/m/Y',
+        $data[count($data)-1]['Tanggal'] ?? '');
+      if (!$firstDate || !$lastDate) return;
+
+      $interval = $firstDate->diff($lastDate);
+      $totalYears = $interval->y + ($interval->m > 0 ? 1 : 0);
+
+      $labels = [];
+      $nets = [];
+
+      if ($totalYears >= 3) {
+        $grouped = [];
+        foreach ($data as $row) {
+          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+          if (!$date) continue;
+          $yearKey = $date->format('Y');
+          if (!isset($grouped[$yearKey])) {
+            $grouped[$yearKey] = ['income' => 0,
+              'expense' => 0];
+          }
+          $grouped[$yearKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+          $grouped[$yearKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        }
+        ksort($grouped);
+        foreach ($grouped as $yearKey => $values) {
+          $labels[] = $yearKey;
+          $nets[] = $values['income'] - $values['expense'];
+        }
+        $xAxisTitle = 'Tahun';
+        $chartWidth = min(2000, max(800, count($labels) * 80));
+      } elseif ($interval->m > 0 || $interval->y > 0) {
+        $grouped = [];
+        foreach ($data as $row) {
+          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+          if (!$date) continue;
+          $monthKey = $date->format('Y-m');
+          if (!isset($grouped[$monthKey])) {
+            $grouped[$monthKey] = ['income' => 0,
+              'expense' => 0];
+          }
+          $grouped[$monthKey]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+          $grouped[$monthKey]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        }
+        ksort($grouped);
+        foreach ($grouped as $monthKey => $values) {
+          $date = \DateTime::createFromFormat('!Y-m', $monthKey);
+          $labels[] = $date ? $date->format('M Y') : $monthKey;
+          $nets[] = $values['income'] - $values['expense'];
+        }
+        $xAxisTitle = 'Bulan';
+        $chartWidth = min(2000, max(800, count($labels) * 50));
+      } else {
+        foreach ($data as $row) {
+          $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+          $labels[] = $date ? $date->format('j M Y') : ($row['Tanggal'] ?? '');
+          $income = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+          $expense = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+          $nets[] = $income - $expense;
+        }
+        $xAxisTitle = 'Tanggal';
+        $chartWidth = min(2000, max(800, count($labels) * 18));
+      }
+
+      $graph = new \Graph($chartWidth, 300);
+      $graph->SetScale('textlin');
+      $graph->title->Set('Tren Net (Pemasukan - Pengeluaran)');
+      $graph->xaxis->title->Set($xAxisTitle);
+      $graph->yaxis->title->Set('Selisih');
+      $graph->xaxis->SetTickLabels($labels);
+      $graph->xaxis->SetLabelAngle(45);
+      $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+      $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+      $graph->yaxis->scale->SetAutoMin(0);
+
+      $linePlot = new \LinePlot($nets);
+      $linePlot->SetColor('#3366CC');
+      $linePlot->SetLegend(null);
+      $linePlot->SetFillColor('#CCE5FF');
+      $graph->Add($linePlot);
+
+      $tempFile = tempnam(sys_get_temp_dir(), 'chart_trend_').'.png';
+      $graph->Stroke($tempFile);
+
+      $drawing = new Drawing();
+      $drawing->setPath($tempFile);
+      $drawing->setCoordinates($chartCol . $startRow);
+      $drawing->setWidth($chartWidth);
+      $drawing->setHeight(300);
       $drawing->setWorksheet($sheet);
 
       register_shutdown_function(function () use ($tempFile) {
