@@ -3,7 +3,7 @@ $symbol = $summary['symbol'] ?? 'Rp';
 $prec   = $summary['precision'] ?? 0;
 $dec    = $summary['decimal_mark'] ?? ',';
 $thou   = $summary['thousands_separator'] ?? '.';
-$fmt    = fn($v) => $symbol . ' ' . number_format($v, $prec, $dec, $thou);
+$fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou);
 @endphp
 <table>
   <thead>
@@ -58,7 +58,7 @@ $fmt    = fn($v) => $symbol . ' ' . number_format($v, $prec, $dec, $thou);
     </tr>
   </thead>
   <tbody>
-    @foreach($extra['monthlySummary'] as $date => $item)
+    @foreach($extra['monthlySummary'] as $item)
     <tr>
       <td>{{ $item['label'] }}</td>
       <td class="text-right text-income">{{ $fmt($item['income']) }}</td>
