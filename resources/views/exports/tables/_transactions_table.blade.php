@@ -46,3 +46,58 @@ $fmt    = fn($v) => $symbol . ' ' . number_format($v, $prec, $dec, $thou);
     @endif
   </tbody>
 </table>
+@if(!empty($extra['monthlySummary']))
+<h4>Ringkasan Bulanan</h4>
+<table>
+  <thead>
+    <tr>
+      <th>Bulan</th>
+      <th>Pemasukan</th>
+      <th>Pengeluaran</th>
+      <th>Net</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach($extra['monthlySummary'] as $item)
+    <tr>
+      <td>{{ $item['label'] }}</td>
+      <td class="text-right text-income">{{ $fmt($item['income']) }}</td>
+      <td class="text-right text-expense">{{ $fmt($item['expense']) }}</td>
+      @php $net = $item['income'] - $item['expense']; @endphp
+      <td class="text-right {{ $net >= 0 ? 'text-income' : 'text-expense' }}">{{ $fmt($net) }}</td>
+    </tr>
+    @endforeach
+    <tr class="sub-row">
+      <td><strong>Total</strong></td>
+      <td class="text-right"><strong>{{ $fmt(array_sum(array_column($extra['monthlySummary'], 'income'))) }}</strong></td>
+      <td class="text-right"><strong>{{ $fmt(array_sum(array_column($extra['monthlySummary'], 'expense'))) }}</strong></td>
+      @php $totalNet = array_sum(array_column($extra['monthlySummary'], 'income')) - array_sum(array_column($extra['monthlySummary'], 'expense')); @endphp
+      <td class="text-right"><strong>{{ $fmt($totalNet) }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+@endif
+
+@if(!empty($extra['topSpending']))
+<h4>Top 5 Pengeluaran</h4>
+<table>
+  <thead>
+    <tr>
+      <th>Tanggal</th>
+      <th>Kategori</th>
+      <th>Jumlah</th>
+      <th>Deskripsi</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach($extra['topSpending'] as $item)
+    <tr>
+      <td>{{ $item['Tanggal'] }}</td>
+      <td>{{ $item['Kategori'] }}</td>
+      <td class="text-right text-expense">{{ $fmt($item['Pengeluaran']) }}</td>
+      <td>{{ $item['Deskripsi'] ?? '-' }}</td>
+    </tr>
+    @endforeach
+  </tbody>
+</table>
+@endif

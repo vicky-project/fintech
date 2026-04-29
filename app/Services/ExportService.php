@@ -134,10 +134,21 @@ class ExportService
     set_time_limit(60);
     ini_set('memory_limit', '256M');
 
+    $extra = [];
+    if ($type === 'transactions') {
+      if ($summary['include_monthly_summary'] ?? false) {
+        $extra['monthlySummary'] = $this->buildMonthlySummaryData($data);
+      }
+      if ($summary['include_top_spending'] ?? false) {
+        $extra['topSpending'] = $this->buildTopSpendingData($data);
+      }
+    }
+
     $html = view("fintech::exports.{$type}_pdf", [
       'data' => $data,
       'title' => $this->getTitle($type),
       'summary' => $summary,
+      'extra' => $extra,
     ])->render();
 
     $dompdf = new \Dompdf\Dompdf();
@@ -450,5 +461,38 @@ class ExportService
         'transfers' => 'Laporan Transfer',
         'budgets' => 'Laporan Budget',
       };
+    }
+
+    private function buildMonthlySummaryData(array $transactions): array
+    {
+      $grouped = [];
+      foreach ($transactions as $row) {
+        $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+        if (!$date) continue;
+        $key = $date->format('Y-m');
+        if (!isset($grouped[$key])) {
+          $grouped[$key] = ['income' => 0,
+            'expense' => 0,
+            'label' => $date->format('M Y')];
+        }
+        // Parse formatted currency strings
+        $incomeVal = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+        $expenseVal = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        $grouped[$key]['income'] += $incomeVal;
+        $grouped[$key]['expense'] += $expenseVal;
+      }
+      ksort($grouped);
+      return $grouped;
+    }
+
+    private function buildTopSpendingData(array $transactions): array
+    {
+      $expenses = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
+      usort($expenses, function ($a, $b) {
+        $aVal = (float) str_replace(['Rp', '.', ','], '', $a['Pengeluaran'] ?? '0');
+        $bVal = (float) str_replace(['Rp', '.', ','], '', $b['Pengeluaran'] ?? '0');
+        return $bVal <=> $aVal;
+      });
+      return array_slice($expenses, 0, 5);
     }
   }
