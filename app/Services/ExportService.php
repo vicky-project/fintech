@@ -150,6 +150,7 @@ class ExportService
       'title' => $this->getTitle($type),
       'summary' => $summary,
       'extra' => $extra,
+      'chartBase64' => $chartBase64,
     ])->render();
 
     $dompdf = new \Dompdf\Dompdf();

@@ -104,3 +104,9 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
   </tbody>
 </table>
 @endif
+
+@if(!empty($chartBase64))
+<div style="text-align: center; margin-bottom: 20px;">
+  <img src="{{ $chartBase64 }}" alt="Chart Pemasukan vs Pengeluaran" style="max-width: 100%; height: auto;">
+</div>
+@endif
