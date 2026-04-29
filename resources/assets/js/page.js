@@ -1892,124 +1892,6 @@ async function renderExportPage() {
   updateExportFormatAvailability();
 }
 
-function renderExportFilters(type) {
-  const container = document.getElementById('export-filter-container');
-  if (!container) return;
-
-  let html = '';
-
-  // Wallet (selalu ada)
-  const defaultWalletId = Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '');
-  html += `
-  <div class="mb-3">
-  <label for="filter-wallet" class="form-label fw-semibold">
-  <i class="bi bi-wallet2 me-2"></i>Dompet <span class="text-danger">*</span>
-  </label>
-  <select class="form-select" id="filter-wallet"
-  style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
-  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id == defaultWalletId ? 'selected': ''}>${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
-  </select>
-  </div>`;
-  if (type === 'all') {
-    html += `
-    <div class="row mb-3">
-    <div class="col">
-    <label class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
-    </div>
-    <div class="col">
-    <label class="form-label">Sampai Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-to">
-    </div>
-    </div>
-    `;
-    container.innerHTML = html;
-    return;
-  }
-
-  if (type === 'transactions') {
-    html += `
-    <div class="row mb-3">
-    <div class="col">
-    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
-    </div>
-    <div class="col">
-    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-to">
-    </div>
-    </div>
-    <div class="mb-3">
-    <label for="filter-month" class="form-label">Atau Bulan (abaikan tanggal)</label>
-    <input type="month" class="form-control" id="filter-month">
-    </div>
-    <div class="mb-3">
-    <label for="filter-type" class="form-label">Tipe</label>
-    <select class="form-select" id="filter-type" data-action="change-transaction-type">
-    <option value="">Semua</option>
-    <option value="income">Pemasukan</option>
-    <option value="expense">Pengeluaran</option>
-    </select>
-    </div>
-    <div class="mb-3">
-    <label class="form-label">Kategori</label>
-    <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
-    <select class="d-none" id="filter-category-hidden" multiple></select>
-    </div>
-    <div class="form-check mb-3">
-    <input class="form-check-input" type="checkbox" id="include-description" checked>
-    <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
-    </div>`;
-    setTimeout(() => updateTransactionCategoryFilter(), 10);
-  } else if (type === 'transfers') {
-    html += `
-    <div class="row mb-3">
-    <div class="col">
-    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
-    </div>
-    <div class="col">
-    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-to">
-    </div>
-    </div>`;
-  } else if (type === 'budgets') {
-    html += `
-    <div class="mb-3">
-    <label for="filter-period-type" class="form-label">Tipe Periode</label>
-    <select class="form-select" id="filter-period-type" data-action="change-budget-period">
-    <option value="monthly" selected>Bulanan</option>
-    <option value="yearly">Tahunan</option>
-    </select>
-    </div>
-    <div class="mb-3" id="budget-period-detail">
-    <!-- Dinamis: input month atau year -->
-    </div>
-    <div class="mb-3">
-    <label for="filter-status" class="form-label">Status Budget</label>
-    <select class="form-select" id="filter-status">
-    <option value="">Semua</option>
-    <option value="overspent">Terlampaui (≥100%)</option>
-    <option value="near_limit">Mendekati (80-99%)</option>
-    <option value="on_track">Aman (<80%)</option>
-    </select>
-    </div>
-    <div class="mb-3">
-    <label class="form-label">Kategori</label>
-    <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
-    <select class="d-none" id="filter-category-hidden" multiple></select>
-    </div>`;
-
-    Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense');
-
-    // Render period input awal
-    setTimeout(() =>
-      renderCategoryBadges(Core.state.currentFilteredCategories), 10);
-  }
-
-  container.innerHTML = html;
-}
-
 function toggleCategoryBadge(categoryId) {
   const hiddenSelect = document.getElementById('filter-category-hidden');
   if (!hiddenSelect) return;
@@ -2061,24 +1943,6 @@ function renderCategoryBadges(categories = null) {
   });
 
   badgesContainer.innerHTML = html;
-}
-
-function renderBudgetPeriodInput() {
-  const periodType = document.getElementById('filter-period-type').value;
-  const container = document.getElementById('budget-period-detail');
-  if (!container) return;
-
-  if (periodType === 'monthly') {
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    container.innerHTML = `
-    <label for="filter-month" class="form-label">Bulan</label>
-    <input type="month" class="form-control" id="filter-month" value="${currentMonth}">`;
-  } else {
-    const currentYear = new Date().getFullYear();
-    container.innerHTML = `
-    <label for="filter-year" class="form-label">Tahun</label>
-    <input type="number" class="form-control" id="filter-year" value="${currentYear}" min="2000" max="${currentYear}">`;
-  }
 }
 
 async function updateExportFormatAvailability() {
@@ -2150,13 +2014,206 @@ function updateTransactionCategoryFilter() {
   renderCategoryBadges(currentFilteredCategories);
 }
 
+// ==================== EXPORT FILTERS ====================
+function renderExportFilters(type) {
+  const container = document.getElementById('export-filter-container');
+  if (!container) return;
+
+  let html = '';
+
+  // Wallet (selalu required)
+  const defaultWalletId = Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '');
+  html += `
+  <div class="mb-3">
+  <label for="filter-wallet" class="form-label fw-semibold">
+  <i class="bi bi-wallet2 me-2"></i>Dompet <span class="text-danger">*</span>
+  </label>
+  <select class="form-select" id="filter-wallet"
+  style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
+  ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id == defaultWalletId ? 'selected': ''}>${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
+  </select>
+  </div>`;
+
+  // ---- ALL ----
+  if (type === 'all') {
+    html += `
+    <div class="row mb-3">
+    <div class="col">
+    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
+    </div>
+    <div class="col">
+    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>`;
+    container.innerHTML = html;
+    updateExportFormatAvailability();
+    return;
+  }
+
+  // ---- TRANSACTIONS ----
+  if (type === 'transactions') {
+    html += `
+    <div class="row mb-3">
+    <div class="col">
+    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
+    </div>
+    <div class="col">
+    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>
+    <div class="mb-3">
+    <label for="filter-month" class="form-label">Atau Bulan (abaikan rentang tanggal)</label>
+    <input type="month" class="form-control" id="filter-month">
+    </div>
+    <div class="mb-3">
+    <label for="filter-type" class="form-label">Tipe Transaksi</label>
+    <select class="form-select" id="filter-type" data-action="change-transaction-type">
+    <option value="">Semua</option>
+    <option value="income">Pemasukan</option>
+    <option value="expense">Pengeluaran</option>
+    </select>
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Kategori</label>
+    <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
+    <select class="d-none" id="filter-category-hidden" multiple></select>
+    </div>
+    <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="include-description" checked>
+    <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
+    </div>
+    <!-- Opsi Tambahan (hanya Excel) -->
+    <div class="mb-3" id="export-options" style="display: none;">
+    <label class="form-label fw-semibold">
+    <i class="bi bi-gear me-2"></i>Opsi Tambahan (Hanya Excel)
+    </label>
+    <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="include-chart">
+    <label class="form-check-label" for="include-chart">
+    <i class="bi bi-bar-chart me-1"></i> Sertakan Chart
+    </label>
+    </div>
+    <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="include-monthly-summary">
+    <label class="form-check-label" for="include-monthly-summary">
+    <i class="bi bi-list-columns me-1"></i> Sertakan Ringkasan Bulanan
+    </label>
+    </div>
+    </div>`;
+    container.innerHTML = html;
+    updateTransactionCategoryFilter();
+    toggleExportOptions();
+    updateExportFormatAvailability();
+    return;
+  }
+
+  // ---- TRANSFERS ----
+  if (type === 'transfers') {
+    html += `
+    <div class="row mb-3">
+    <div class="col">
+    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
+    </div>
+    <div class="col">
+    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>
+    <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="include-description" checked>
+    <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
+    </div>`;
+    container.innerHTML = html;
+    updateExportFormatAvailability();
+    return;
+  }
+
+  // ---- BUDGETS ----
+  if (type === 'budgets') {
+    html += `
+    <div class="mb-3">
+    <label for="filter-period-type" class="form-label">Tipe Periode</label>
+    <select class="form-select" id="filter-period-type" data-action="change-budget-period">
+    <option value="monthly" selected>Bulanan</option>
+    <option value="yearly">Tahunan</option>
+    </select>
+    </div>
+    <div class="mb-3" id="budget-period-detail"></div>
+    <div class="mb-3">
+    <label for="filter-status" class="form-label">Status Budget</label>
+    <select class="form-select" id="filter-status">
+    <option value="">Semua</option>
+    <option value="overspent">Terlampaui (≥100%)</option>
+    <option value="near_limit">Mendekati (80-99%)</option>
+    <option value="on_track">Aman (<80%)</option>
+    </select>
+    </div>
+    <div class="mb-3">
+    <label class="form-label">Kategori</label>
+    <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
+    <select class="d-none" id="filter-category-hidden" multiple></select>
+    </div>
+    <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="include-description" checked>
+    <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
+    </div>`;
+    container.innerHTML = html;
+    renderBudgetPeriodInput();
+    // Kategori hanya expense
+    Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
+    renderCategoryBadges(Core.state.currentFilteredCategories);
+    updateExportFormatAvailability();
+    return;
+  }
+}
+
+// ---- Fungsi bantu ----
+
+function toggleExportOptions() {
+  const optionsDiv = document.getElementById('export-options');
+  if (!optionsDiv) return;
+
+  const formatXlsx = document.getElementById('format-xlsx');
+  const isExcel = formatXlsx && formatXlsx.checked;
+
+  if (isExcel) {
+    optionsDiv.style.display = 'block';
+  } else {
+    optionsDiv.style.display = 'none';
+  }
+}
+
+function renderBudgetPeriodInput() {
+  const periodType = document.getElementById('filter-period-type')?.value;
+  const container = document.getElementById('budget-period-detail');
+  if (!container) return;
+
+  if (periodType === 'monthly') {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    container.innerHTML = `
+    <label for="filter-month" class="form-label">Bulan</label>
+    <input type="month" class="form-control" id="filter-month" value="${currentMonth}">`;
+  } else {
+    const currentYear = new Date().getFullYear();
+    container.innerHTML = `
+    <label for="filter-year" class="form-label">Tahun</label>
+    <input type="number" class="form-control" id="filter-year" value="${currentYear}" min="2000" max="${currentYear}">`;
+  }
+}
+
+// ---- performExport (update) ----
 async function performExport() {
   const type = document.getElementById('export-type').value;
   const formatRadio = document.querySelector('input[name="export-format"]:checked');
   const format = formatRadio ? formatRadio.value: 'xlsx';
   const walletEl = document.getElementById('filter-wallet');
   if (!walletEl) {
-    tgApp.showToast('Komponen dompet tidak ditemukan. Coba muat ulang halaman.', 'danger');
+    tgApp.showToast('Komponen dompet tidak ditemukan.', 'danger');
     return;
   }
   const walletId = walletEl.value;
@@ -2172,27 +2229,34 @@ async function performExport() {
   };
 
   try {
-    // Filter transaksi
-    if (type === 'transactions') {
-      payload.transaction_type = document.getElementById('filter-type')?.value || undefined;
-      payload.month = document.getElementById('filter-month')?.value || undefined;
+    if (type === 'all') {
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
       payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
-      payload.include_description = document.getElementById('include-description')?.checked;
+      // backend default include_chart, include_monthly_summary, include_description = true
+    } else if (type === 'transactions') {
+      payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
+      payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
+      payload.month = document.getElementById('filter-month')?.value || undefined;
+      payload.transaction_type = document.getElementById('filter-type')?.value || undefined;
+      payload.include_description = document.getElementById('include-description')?.checked ?? true;
       const hiddenSelect = document.getElementById('filter-category-hidden');
       if (hiddenSelect) {
         const selected = [...hiddenSelect.selectedOptions].map(o => o.value);
         if (selected.length) payload.category_ids = selected;
       }
-    }
-    // Filter transfer
-    else if (type === 'transfers') {
+      // Opsi tambahan hanya jika format Excel
+      if (format === 'xlsx') {
+        payload.include_chart = document.getElementById('include-chart')?.checked ?? false;
+        payload.include_monthly_summary = document.getElementById('include-monthly-summary')?.checked ?? false;
+      } else {
+        payload.include_chart = false;
+        payload.include_monthly_summary = false;
+      }
+    } else if (type === 'transfers') {
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
       payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
-      payload.month = document.getElementById('filter-month')?.value || undefined;
-    }
-    // Filter budget
-    else if (type === 'budgets') {
+      payload.include_description = document.getElementById('include-description')?.checked ?? true;
+    } else if (type === 'budgets') {
       const periodTypeEl = document.getElementById('filter-period-type');
       if (!periodTypeEl) {
         tgApp.showToast('Form tipe periode tidak tersedia.', 'danger');
@@ -2213,16 +2277,7 @@ async function performExport() {
         const selected = [...hiddenSelect.selectedOptions].map(o => o.value);
         if (selected.length) payload.category_ids = selected;
       }
-    }
-    // Semua data
-    else if (type === 'all') {
-      if (['pdf', 'csv'].includes(payload.format)) {
-        tgApp.showToast('Format tersebut tidak didukung untuk semua data. Silakan gunakan excel atau googlesheet', 'warning');
-        return;
-      }
-
-      payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
-      payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
+      payload.include_description = document.getElementById('include-description')?.checked ?? true;
     }
 
     tgApp.showLoading('Mengekspor...');

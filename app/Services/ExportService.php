@@ -51,14 +51,22 @@ class ExportService
     $result = $this->fetchData($type, $user, $filters, $limit);
     $formatRules = $this->getCurrencyFormat($wallet);
 
+    $includeChart = $filters['include_chart'] ?? false;
+    $includeMonthly = $filters['include_monthly_summary'] ?? false;
+
     if ($type === 'all') {
-      // Gabungkan metadata & format rules ke setiap summary
       foreach (['transactions', 'transfers', 'budgets'] as $subType) {
-        $result[$subType][1] = array_merge(
+        $summaryArr = array_merge(
           $result[$subType][1],
           $formatRules,
           ['metadata' => $this->buildMetadata($subType, $filters, $wallet->name)]
         );
+        // Hanya untuk sheet transaksi
+        if ($subType === 'transactions') {
+          $summaryArr['include_chart'] = $includeChart;
+          $summaryArr['include_monthly_summary'] = $includeMonthly;
+        }
+        $result[$subType][1] = $summaryArr;
       }
       return $this->generateExcelAll($result);
     }
@@ -73,6 +81,8 @@ class ExportService
     }
 
     $metadata = $this->buildMetadata($type, $filters, $wallet->name);
+    $summary['include_chart'] = $includeChart;
+    $summary['include_monthly_summary'] = $includeMonthly;
     $summary = array_merge($summary, $formatRules, compact('metadata'));
 
     return match ($format) {

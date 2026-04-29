@@ -62,7 +62,10 @@ class ExportRequest extends FormRequest
       'status' => ['nullable',
         Rule::in(['overspent', 'near_limit', 'on_track'])],
 
-      // Transfers (menggunakan wallet_id, date_from, date_to, month yang sama)
+      'include_chart' => ['nullable',
+        'boolean'],
+      'include_monthly_summary' => ['nullable',
+        'boolean'],
     ];
   }
 
