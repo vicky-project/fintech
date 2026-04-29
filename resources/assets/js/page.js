@@ -1968,9 +1968,6 @@ function renderExportFilters(type) {
     <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
     </div>
     <div id="export-options" style="display: none;">
-    <label class="form-label fw-semibold">
-    <i class="bi bi-gear me-2"></i>Opsi Tambahan
-    </label>
     <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-chart">
     <label class="form-check-label" for="include-chart">
