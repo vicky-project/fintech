@@ -19,7 +19,7 @@
     "nnjeim/world": "^1.1",
     "elegantly/laravel-money": "^2.4",
     "smalot/pdfparser": "^2.12",
-    "maatwebsite/excel": "^3.1",
+    "maatwebsite/excel": "^3.1.26",
     "dompdf/dompdf": "^3.1",
     "revolution/laravel-google-sheets": "^7.2",
     "vicky-project/telegram-module": "^1.1"
