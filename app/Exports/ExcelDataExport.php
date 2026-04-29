@@ -97,12 +97,12 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           }
 
           // 2. Chart (sebelum tabel)
-          $chartRow = $metaCount + 2; // setelah metadata + 1 baris kosong
+          $chartRow = $metaCount + 3; // setelah metadata + 2 baris kosong
           if ($this->type === 'transactions' && count($this->data) > 0) {
             $this->addChartToSheet($sheet, $chartRow, $this->data);
             // Tinggi chart ~400px ≈ 20 baris, tambahkan jarak 1 baris setelah chart
             $chartHeightRows = 20;
-            $tableStart = $chartRow + $chartHeightRows + 1; // 1 baris kosong setelah chart
+            $tableStart = $chartRow + $chartHeightRows + 2; // 2 baris kosong setelah chart
           } else {
             // Tanpa chart, posisi header seperti semula
             $tableStart = $metaCount + 3;
