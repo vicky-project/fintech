@@ -2236,7 +2236,7 @@ async function performExport() {
       if (format === 'xlsx') {
         payload.include_chart = document.getElementById('include-chart')?.checked ?? false;
         payload.include_monthly_summary = document.getElementById('include-monthly-summary')?.checked ?? false;
-        payload.include_top_spending = document.getElementById('include_top_spending')?.checked ?? false;
+        payload.include_top_spending = document.getElementById('include-top-spending')?.checked ?? false;
       } else {
         payload.include_chart = false;
         payload.include_monthly_summary = false;
