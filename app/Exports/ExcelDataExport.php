@@ -140,25 +140,37 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
           ]);
 
-          // ===== CHART DI SAMPING TABEL =====
+          $includeMonthly = $this->summary['include_monthly_summary'] ?? false;
+          $includeTopSpending = $this->summary['include_top_spending'] ?? false;
           $includeChart = $this->summary['include_chart'] ?? false;
-          if ($this->type === 'transactions' && count($this->data) > 0 && ($includeChart || $includeMonthly)) {
+
+          if ($this->type === 'transactions' && count($this->data) > 0 && ($includeMonthly || $includeTopSpending || $includeChart)) {
             $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
             $nextColIndex = $dataEndColIndex + 2;
 
+            // 1. Ringkasan bulanan
             if ($includeMonthly) {
               $summaryStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
-              $this->writeMonthlySummaryTable($sheet, $tableStart, $this->data, $summaryStartCol);
+              $rowAfterSummary = $this->writeMonthlySummaryTable($sheet, $tableStart, $this->data, $summaryStartCol);
+              $nextColIndex += 5;
+            } else {
+              $rowAfterSummary = $tableStart;
+            }
+
+            // 2. Top 5 pengeluaran
+            if ($includeTopSpending) {
+              $topStartRow = $includeMonthly ? $rowAfterSummary + 1 : $tableStart;
+              $topStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
+              $this->writeTopSpendingTable($sheet, $topStartRow, $this->data, $topStartCol);
               $nextColIndex += 5;
             }
 
+            // 3. Chart
             if ($includeChart) {
               $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
-              $chartRow = $tableStart; // sejajar header
-              // Chart batang pemasukan vs pengeluaran
+              $chartRow = $tableStart;
               $this->addChartToSheet($sheet, $chartRow, $this->data, $chartStartCol);
-              // Chart trend di bawahnya
-              $trendChartRow = $chartRow + 20 + 2; // 20 baris untuk chart pertama, 2 baris spasi
+              $trendChartRow = $chartRow + 20 + 2;
               $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
             }
           }
@@ -550,6 +562,74 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
       foreach ([$colA, $colB, $colC, $colD] as $col) {
         $sheet->getColumnDimension($col)->setAutoSize(true);
+      }
+
+      return $row;
+    }
+
+    private function writeTopSpendingTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
+    {
+      // Saring hanya pengeluaran
+      $expenses = array_filter($data, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
+      if (empty($expenses)) return $startRow;
+
+      // Urutkan menurun
+      usort($expenses, function ($a, $b) {
+        $aVal = (float) str_replace(['Rp', '.', ','], '', $a['Pengeluaran'] ?? '0');
+        $bVal = (float) str_replace(['Rp', '.', ','], '', $b['Pengeluaran'] ?? '0');
+        return $bVal <=> $aVal;
+      });
+      $top5 = array_slice($expenses, 0, 5);
+
+      $colIdx = Coordinate::columnIndexFromString($startCol);
+      $colTanggal = $startCol;
+      $colKategori = Coordinate::stringFromColumnIndex($colIdx + 1);
+      $colJumlah = Coordinate::stringFromColumnIndex($colIdx + 2);
+      $colDeskripsi = Coordinate::stringFromColumnIndex($colIdx + 3);
+
+      // Judul
+      $sheet->setCellValue($colTanggal . $startRow, 'Top 5 Pengeluaran');
+      $sheet->mergeCells($colTanggal . $startRow . ':' . $colDeskripsi . $startRow);
+      $sheet->getStyle($colTanggal . $startRow)->applyFromArray([
+        'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '1F4E79']],
+      ]);
+
+      // Header
+      $hRow = $startRow + 1;
+      $sheet->setCellValue($colTanggal . $hRow, 'Tanggal');
+      $sheet->setCellValue($colKategori . $hRow, 'Kategori');
+      $sheet->setCellValue($colJumlah . $hRow, 'Jumlah');
+      $sheet->setCellValue($colDeskripsi . $hRow, 'Deskripsi');
+      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $hRow)->applyFromArray([
+        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+      ]);
+
+      $fmt = $this->summary;
+      $fmtNum = fn($v) => number_format($v, $fmt['precision'], $fmt['decimal_mark'], $fmt['thousands_separator']);
+      $fmtCur = fn($v) => ($fmt['symbol_first'] ? $fmt['symbol'].' ' : '') . $fmtNum($v) . (!$fmt['symbol_first'] ? ' '.$fmt['symbol'] : '');
+
+      $row = $hRow + 1;
+      foreach ($top5 as $item) {
+        $amount = (float) str_replace(['Rp', '.', ','], '', $item['Pengeluaran'] ?? '0');
+        $sheet->setCellValue($colTanggal . $row, $item['Tanggal'] ?? '');
+        $sheet->setCellValue($colKategori . $row, $item['Kategori'] ?? '');
+        $sheet->setCellValue($colJumlah . $row, $fmtCur($amount));
+        $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
+        $sheet->getStyle($colJumlah . $row)->getFont()->getColor()->setRGB('DC3545');
+        $row++;
+      }
+
+      $lastRow = $row - 1;
+      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $lastRow)->applyFromArray([
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'font' => ['size' => 10],
+      ]);
+
+      foreach ([$colTanggal, $colKategori, $colJumlah, $colDeskripsi] as $c) {
+        $sheet->getColumnDimension($c)->setAutoSize(true);
       }
 
       return $row;

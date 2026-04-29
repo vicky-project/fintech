@@ -1973,6 +1973,12 @@ function renderExportFilters(type) {
     <i class="bi bi-list-columns me-1"></i> Sertakan Ringkasan Bulanan
     </label>
     </div>
+    <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="include-top-spending">
+    <label class="form-check-label" for="include-top-spending">
+    <i class="bi bi-graph-down me-1"></i> Sertakan Top 5 Pengeluaran Tertinggi
+    </label>
+    </div>
     </div>`;
     container.innerHTML = html;
     updateTransactionCategoryFilter();
@@ -2230,9 +2236,11 @@ async function performExport() {
       if (format === 'xlsx') {
         payload.include_chart = document.getElementById('include-chart')?.checked ?? false;
         payload.include_monthly_summary = document.getElementById('include-monthly-summary')?.checked ?? false;
+        payload.include_top_spending = document.getElementById('include_top_spending')?.checked ?? false;
       } else {
         payload.include_chart = false;
         payload.include_monthly_summary = false;
+        payload.include_top_spending = false;
       }
     } else if (type === 'transfers') {
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
