@@ -133,9 +133,11 @@ class ExportService
 
     $extra = [];
     $chartBase64 = "";
+    $trendChartBase64 = "";
     if ($type === 'transactions') {
       if ($summary['include_chart'] ?? false && !empty($data)) {
         $chartBase64 = $this->generateChartImageBase64($data);
+        $trendChartBase64 = $this->generateTrendChartImageBase64($data);
       }
       if ($summary['include_monthly_summary'] ?? false) {
         $extra['monthlySummary'] = $this->buildMonthlySummaryData($data);
@@ -151,6 +153,7 @@ class ExportService
       'summary' => $summary,
       'extra' => $extra,
       'chartBase64' => $chartBase64,
+      'trendChartBase64' => $trendChartBase64,
     ])->render();
 
     $dompdf = new \Dompdf\Dompdf();
@@ -567,6 +570,71 @@ class ExportService
 
       // Simpan ke file sementara
       $tempFile = tempnam(sys_get_temp_dir(), 'chart_pdf_').'.png';
+      $graph->Stroke($tempFile);
+      $imageData = base64_encode(file_get_contents($tempFile));
+      unlink($tempFile);
+
+      return 'data:image/png;base64,' . $imageData;
+    }
+
+    private function generateTrendChartImageBase64(array $transactions): string
+    {
+      \mitoteam\jpgraph\MtJpGraph::load(['line']);
+
+      usort($transactions, function ($a, $b) {
+        $dateA = \DateTime::createFromFormat('d/m/Y', $a['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
+        $dateB = \DateTime::createFromFormat('d/m/Y', $b['Tanggal'] ?? '') ?: new \DateTime('1970-01-01');
+        return $dateA <=> $dateB;
+      });
+
+      $firstDate = \DateTime::createFromFormat('d/m/Y', $transactions[0]['Tanggal'] ?? '');
+      $lastDate = \DateTime::createFromFormat('d/m/Y', $transactions[count($transactions)-1]['Tanggal'] ?? '');
+      if (!$firstDate || !$lastDate) return '';
+
+      $interval = $firstDate->diff($lastDate);
+      $totalYears = $interval->y + ($interval->m > 0 ? 1 : 0);
+      $labels = $nets = [];
+
+      $grouped = [];
+      foreach ($transactions as $row) {
+        $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+        if (!$date) continue;
+        $key = $totalYears >= 3 ? $date->format('Y') : ($interval->m > 0 || $interval->y > 0 ? $date->format('Y-m') : $date->format('Y-m-d'));
+        if (!isset($grouped[$key])) $grouped[$key] = ['income' => 0,
+          'expense' => 0,
+          'label' => ''];
+        $grouped[$key]['income'] += (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
+        $grouped[$key]['expense'] += (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
+        if (empty($grouped[$key]['label'])) {
+          $grouped[$key]['label'] = $totalYears >= 3 ? $date->format('Y') : ($interval->m > 0 || $interval->y > 0 ? $date->format('M Y') : $date->format('j M Y'));
+        }
+      }
+      ksort($grouped);
+      foreach ($grouped as $item) {
+        $labels[] = $item['label'];
+        $nets[] = $item['income'] - $item['expense'];
+      }
+
+      $dataCount = count($labels);
+      $chartWidth = min(2000, max(800, $dataCount * 18));
+
+      $graph = new \Amenadiel\JpGraph\Graph($chartWidth, 300);
+      $graph->SetScale('textlin');
+      $graph->img->SetMargin(60, 20, 20, 60);
+      $graph->title->Set('Tren Net (Pemasukan - Pengeluaran)');
+      $graph->xaxis->SetTickLabels($labels);
+      $graph->xaxis->SetLabelAngle(45);
+      $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+      $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+      $graph->xaxis->SetPos('min');
+
+      $linePlot = new \Amenadiel\JpGraph\Plot\LinePlot($nets);
+      $linePlot->SetColor('#3366CC');
+      $linePlot->SetLegend(null);
+      $linePlot->SetFillColor('#CCE5FF');
+      $graph->Add($linePlot);
+
+      $tempFile = tempnam(sys_get_temp_dir(), 'chart_trend_pdf_').'.png';
       $graph->Stroke($tempFile);
       $imageData = base64_encode(file_get_contents($tempFile));
       unlink($tempFile);

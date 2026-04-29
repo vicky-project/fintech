@@ -106,7 +106,13 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
 @endif
 
 @if(!empty($chartBase64))
-<div style="text-align: center; margin-bottom: 20px;">
+<div style="text-align: center; margin-bottom: 20px; margin-top: 20px;">
   <img src="{{ $chartBase64 }}" alt="Chart Pemasukan vs Pengeluaran" style="max-width: 100%; height: auto;">
+</div>
+@endif
+
+@if(!empty($trendChartBase64))
+<div style="text-align: center; margin: 20px 0;">
+  <img src="{{ $trendChartBase64 }}" alt="Chart Tren Net" style="max-width: 100%; height: auto;">
 </div>
 @endif
