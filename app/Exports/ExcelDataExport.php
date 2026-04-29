@@ -156,10 +156,10 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
               $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
               $chartRow = $tableStart; // sejajar header
               // Chart batang pemasukan vs pengeluaran
-              $this->addChartToSheet($sheet, $chartRow, $this->data, $chartCol);
+              $this->addChartToSheet($sheet, $chartRow, $this->data, $chartStartCol);
               // Chart trend di bawahnya
               $trendChartRow = $chartRow + 20 + 2; // 20 baris untuk chart pertama, 2 baris spasi
-              $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartCol);
+              $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
             }
           }
         },
