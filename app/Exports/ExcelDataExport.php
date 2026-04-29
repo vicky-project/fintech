@@ -146,26 +146,30 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
           if ($this->type === 'transactions' && count($this->data) > 0 && ($includeMonthly || $includeTopSpending || $includeChart)) {
             $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
-            $nextColIndex = $dataEndColIndex + 2;
+            $blockColIndex = $dataEndColIndex + 2; // kolom awal blok vertikal
+            $nextColIndex = $blockColIndex; // akan digeser setelah blok vertikal selesai
+            $currentRow = $tableStart;
 
-            // 1. Ringkasan bulanan
+            // 1. Ringkasan Bulanan
             if ($includeMonthly) {
-              $summaryStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
-              $rowAfterSummary = $this->writeMonthlySummaryTable($sheet, $tableStart, $this->data, $summaryStartCol);
-              $nextColIndex += 5;
-            } else {
-              $rowAfterSummary = $tableStart;
+              $summaryStartCol = Coordinate::stringFromColumnIndex($blockColIndex);
+              $currentRow = $this->writeMonthlySummaryTable($sheet, $currentRow, $this->data, $summaryStartCol);
+              $currentRow++; // 1 baris kosong
             }
 
-            // 2. Top 5 pengeluaran
+            // 2. Top 5 Pengeluaran Tertinggi (di bawah ringkasan, kolom yang sama)
             if ($includeTopSpending) {
-              $topStartRow = $includeMonthly ? $rowAfterSummary + 1 : $tableStart;
-              $topStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
-              $this->writeTopSpendingTable($sheet, $topStartRow, $this->data, $topStartCol);
-              $nextColIndex += 5;
+              $topStartCol = Coordinate::stringFromColumnIndex($blockColIndex);
+              $currentRow = $this->writeTopSpendingTable($sheet, $currentRow, $this->data, $topStartCol);
+              $currentRow++;
             }
 
-            // 3. Chart
+            // 3. Geser nextColIndex jika minimal satu blok vertikal ditulis
+            if ($includeMonthly || $includeTopSpending) {
+              $nextColIndex = $blockColIndex + 5; // 4 kolom blok + 1 jarak
+            }
+
+            // 4. Chart
             if ($includeChart) {
               $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
               $chartRow = $tableStart;
