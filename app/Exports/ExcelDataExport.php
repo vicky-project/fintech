@@ -319,66 +319,75 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
     {
       MtJpGraph::load(['bar']);
 
-      // 1. Bersihkan dan siapkan data
+      // Siapkan data
       $labels = [];
       $incomes = [];
       $expenses = [];
       foreach ($data as $row) {
+        // Format tanggal sudah berupa "d/m/Y", ambil langsung
         $labels[] = $row['Tanggal'] ?? '';
+        // Bersihkan format uang
         $incomes[] = (float) str_replace(['Rp', '.', ','], '', $row['Pemasukan'] ?? '0');
         $expenses[] = (float) str_replace(['Rp', '.', ','], '', $row['Pengeluaran'] ?? '0');
       }
       $dataCount = count($data);
 
-      // 2. Lebar chart dinamis (min 800, maks 2000)
-      $chartWidth = min(2000, max(800, $dataCount * 20));
+      // Lebar chart dinamis, minimal 800, maksimal 2000
+      $chartWidth = min(2000, max(800, $dataCount * 18));
 
-      // 3. Atur label X agar tidak menumpuk
+      // Buat objek Graph
       $graph = new \Graph($chartWidth, 400);
       $graph->SetScale('textlin');
       $graph->title->Set('Pemasukan vs Pengeluaran');
+      $graph->xaxis->title->Set('Tanggal');
+      $graph->yaxis->title->Set('Jumlah');
 
-      // Jika data terlalu banyak, tampilkan hanya setiap n label
+      // --- Pengaturan sumbu X ---
       $maxLabels = 30; // maksimal label yang ditampilkan
       if ($dataCount > $maxLabels) {
         $step = ceil($dataCount / $maxLabels);
-        $shownLabels = [];
+        // Ambil hanya label pada indeks tertentu
+        $visibleLabels = [];
         for ($i = 0; $i < $dataCount; $i += $step) {
-          $shownLabels[$i] = $labels[$i];
+          // Tetap gunakan format tanggal lengkap
+          $visibleLabels[] = $labels[$i];
         }
-        // Atur label manual
-        $graph->xaxis->SetTickLabels(array_values($shownLabels));
-        // Sesuaikan posisi tick
+        // Atur tick dan label
+        $graph->xaxis->SetTickLabels($visibleLabels);
         $graph->xaxis->SetTextTickInterval($step, 0);
       } else {
         $graph->xaxis->SetTickLabels($labels);
       }
-
-      // Miringkan label
+      // Miringkan label agar muat
       $graph->xaxis->SetLabelAngle(45);
-      // Perkecil font label X
+      // Perkecil font sumbu X
       $graph->xaxis->SetFont(FF_DEFAULT, FS_NORMAL, 7);
 
-      // Sumbu Y format angka pendek
-      $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 9);
+      // --- Pengaturan sumbu Y (format angka pendek) ---
+      $graph->yaxis->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+      // Callback untuk format ribuan
+      $graph->yaxis->scale->SetLabelFormatCallback(function($val) {
+        return number_format($val, 0, ',', '.');
+      });
       $graph->yaxis->scale->SetAutoMin(0);
 
-      // 4. Buat plot
+      // --- Plot batang ---
       $incomePlot = new \BarPlot($incomes);
       $expensePlot = new \BarPlot($expenses);
       $incomePlot->SetFillColor('#28A745');
       $expensePlot->SetFillColor('#DC3545');
-      $incomePlot->SetLegend('Pemasukan');
-      $expensePlot->SetLegend('Pengeluaran');
+      // HILANGKAN legenda
+      $incomePlot->SetLegend(null);
+      $expensePlot->SetLegend(null);
 
       $groupPlot = new \GroupBarPlot([$incomePlot, $expensePlot]);
       $graph->Add($groupPlot);
 
-      // 5. Simpan ke file sementara
+      // Simpan gambar sementara
       $tempFile = tempnam(sys_get_temp_dir(), 'chart_').'.png';
       $graph->Stroke($tempFile);
 
-      // 6. Sisipkan ke worksheet
+      // Sisipkan ke worksheet
       $drawing = new Drawing();
       $drawing->setPath($tempFile);
       $drawing->setCoordinates('B' . $startRow);
