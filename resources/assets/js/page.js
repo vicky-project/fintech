@@ -1761,12 +1761,11 @@ async function forceDeleteTransfer(id) {
   renderTransferTrashPage();
 }
 
-// Export
+// ==================== EXPORT PAGE ====================
 async function renderExportPage() {
   const html = `
   <div class="export-page">
   <div class="container py-3">
-  <!-- Header dengan tombol panduan -->
   <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
   <h3 class="fw-bold mb-0"><i class="bi bi-cloud-arrow-down-fill me-2"></i>Ekspor Data Keuangan</h3>
@@ -1777,10 +1776,8 @@ async function renderExportPage() {
   </button>
   </div>
 
-  <!-- Card Utama -->
   <div class="card border-0 shadow-sm" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);">
   <div class="card-body p-4">
-  <!-- Jenis Data -->
   <div class="mb-4">
   <label class="form-label fw-semibold">
   <i class="bi bi-stack me-2"></i>Jenis Data
@@ -1794,35 +1791,33 @@ async function renderExportPage() {
   </select>
   </div>
 
-  <!-- Filter Dinamis -->
   <div id="export-filter-container" class="mb-4"></div>
 
-  <!-- Format File -->
   <div class="mb-4">
   <label class="form-label fw-semibold">
   <i class="bi bi-file-earmark me-2"></i>Format File
   </label>
   <div class="d-flex gap-3 flex-wrap">
   <div class="form-check">
-  <input class="form-check-input" type="radio" name="export-format" id="format-xlsx" value="xlsx" checked>
+  <input class="form-check-input" type="radio" name="export-format" id="format-xlsx" value="xlsx" checked data-action="change-export-format">
   <label class="form-check-label" for="format-xlsx">
   <i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> Excel
   </label>
   </div>
   <div class="form-check">
-  <input class="form-check-input" type="radio" name="export-format" id="format-pdf" value="pdf">
+  <input class="form-check-input" type="radio" name="export-format" id="format-pdf" value="pdf" data-action="change-export-format">
   <label class="form-check-label" for="format-pdf">
   <i class="bi bi-file-earmark-pdf text-danger me-1"></i> PDF
   </label>
   </div>
   <div class="form-check">
-  <input class="form-check-input" type="radio" name="export-format" id="format-csv" value="csv">
+  <input class="form-check-input" type="radio" name="export-format" id="format-csv" value="csv" data-action="change-export-format">
   <label class="form-check-label" for="format-csv">
   <i class="bi bi-file-earmark-text text-secondary me-1"></i> CSV
   </label>
   </div>
   <div class="form-check">
-  <input class="form-check-input" type="radio" name="export-format" id="format-gsheet" value="gsheet">
+  <input class="form-check-input" type="radio" name="export-format" id="format-gsheet" value="gsheet" data-action="change-export-format">
   <label class="form-check-label" for="format-gsheet">
   <i class="bi bi-google text-primary me-1"></i> Google Sheets
   </label>
@@ -1830,7 +1825,6 @@ async function renderExportPage() {
   </div>
   </div>
 
-  <!-- Tombol Ekspor -->
   <button class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
   data-action="export-data">
   <i class="bi bi-rocket-takeoff"></i> Ekspor Sekarang
@@ -1839,7 +1833,7 @@ async function renderExportPage() {
   </div>
   </div>
 
-  <!-- Modal Panduan -->
+  <!-- Modal Panduan (tetap seperti sebelumnya) -->
   <div class="modal fade" id="exportGuideModal" tabindex="-1" aria-labelledby="exportGuideModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
   <div class="modal-content" style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
@@ -1885,143 +1879,19 @@ async function renderExportPage() {
   </div>
   </div>
   </div>
-  </div>
   `;
   document.getElementById('main-content').innerHTML = html;
   renderExportFilters('transactions');
   updateExportFormatAvailability();
 }
 
-function toggleCategoryBadge(categoryId) {
-  const hiddenSelect = document.getElementById('filter-category-hidden');
-  if (!hiddenSelect) return;
-
-  const option = [...hiddenSelect.options].find(opt => opt.value === categoryId);
-  if (option) {
-    option.selected = !option.selected;
-    // Render ulang badge agar tampilan berubah
-    renderCategoryBadges(Core.state.currentFilteredCategories);
-  }
-}
-
-function renderCategoryBadges(categories = null) {
-  // Gunakan currentFilteredCategories jika tidak ada parameter
-  const catList = categories || Core.state.currentFilteredCategories;
-  const badgesContainer = document.getElementById('category-badges');
-  const hiddenSelect = document.getElementById('filter-category-hidden');
-  if (!badgesContainer || !hiddenSelect) return;
-
-  // Ambil opsi yang sudah dipilih sebelumnya dari hidden select
-  const selectedValues = [...hiddenSelect.options]
-  .filter(opt => opt.selected)
-  .map(opt => opt.value);
-
-  // Kosongkan hidden select dan badge
-  hiddenSelect.innerHTML = '';
-  let html = '';
-
-  catList.forEach(cat => {
-    const isSelected = selectedValues.includes(cat.id.toString());
-    const bgColor = cat.color || '#6c757d';
-    const opacityStyle = isSelected ? '1': '0.45';
-    const borderStyle = isSelected ? 'border border-2 border-dark': '';
-    const checkIcon = isSelected ? '<i class="bi bi-check-circle-fill ms-1 small"></i>': '';
-
-    html += `
-    <span class="badge rounded-pill d-inline-flex align-items-center"
-    style="background-color: ${bgColor}; opacity: ${opacityStyle}; cursor: pointer; ${borderStyle}; font-size: 0.85rem; padding: 0.5rem 0.85rem;"
-    data-action="toggle-category-badge"
-    data-category-id="${cat.id}">
-    <i class="${cat.icon || 'bi-tag'} me-1"></i>${cat.name}${checkIcon}
-    </span>`;
-
-    // Tambahkan opsi ke hidden select
-    const option = document.createElement('option');
-    option.value = cat.id;
-    option.selected = isSelected;
-    hiddenSelect.appendChild(option);
-  });
-
-  badgesContainer.innerHTML = html;
-}
-
-async function updateExportFormatAvailability() {
-  const type = document.getElementById('export-type').value;
-  const formatPdf = document.getElementById('format-pdf');
-  const formatXlsx = document.getElementById('format-xlsx');
-  const formatCsv = document.getElementById('format-csv');
-  const formatGsheet = document.getElementById('format-gsheet');
-  const labelGsheet = document.querySelector('label[for="format-gsheet"]');
-  const labels = document.querySelectorAll('label[for="format-pdf"], label[for="format-csv"]');
-
-  if (!formatPdf || !formatCsv || !formatGsheet) return;
-
-  if (type === 'all') {
-    // Sembunyikan semua selain Excel
-    formatPdf.disabled = true;
-    formatPdf.checked = false;
-    formatCsv.disabled = true;
-    formatCsv.checked = false;
-    formatXlsx.checked = true;
-    labels.forEach(l => l?.classList.add('text-muted'));
-  } else {
-    formatPdf.disabled = false;
-    formatCsv.disabled = false;
-    labels.forEach(l => l?.classList.remove('text-muted'));
-  }
-
-  const connected = await checkGoogleConnection();
-  if (formatGsheet) {
-    if (connected) {
-      formatGsheet.disabled = false;
-      labelGsheet?.classList.remove('text-muted');
-    } else {
-      formatGsheet.disabled = true;
-      formatGsheet.checked = false;
-      labelGsheet?.classList.add('text-muted');
-      if (document.querySelector('input[name="export-format"]:checked') === formatGsheet) {
-        formatXlsx.checked = true;
-      }
-    }
-  }
-}
-
-function updateTransactionCategoryFilter() {
-  const typeSelect = document.getElementById('filter-type');
-  const badgesContainer = document.getElementById('category-badges');
-  if (!typeSelect || !badgesContainer) return;
-
-  const selectedType = typeSelect.value; // '' (semua), 'income', 'expense'
-
-  // Kosongkan badge jika tidak ada tipe spesifik
-  if (selectedType === '' || selectedType === 'all') {
-    badgesContainer.innerHTML = '';
-    const hiddenSelect = document.getElementById('filter-category-hidden');
-    if (hiddenSelect) hiddenSelect.innerHTML = '';
-    currentFilteredCategories = [];
-    return;
-  }
-
-  // Filter kategori sesuai tipe
-  let filteredCategories = Core.state.categories;
-  if (selectedType === 'income') {
-    filteredCategories = Core.state.categories.filter(c => ['income', 'both'].includes(c.type));
-  } else if (selectedType === 'expense') {
-    filteredCategories = Core.state.categories.filter(c => ['expense', 'both'].includes(c.type));
-  }
-
-  currentFilteredCategories = filteredCategories;
-  renderCategoryBadges(currentFilteredCategories);
-}
-
-// ==================== EXPORT FILTERS ====================
 function renderExportFilters(type) {
   const container = document.getElementById('export-filter-container');
   if (!container) return;
 
   let html = '';
 
-  // Wallet (selalu required)
+  // Wallet (required)
   const defaultWalletId = Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '');
   html += `
   <div class="mb-3">
@@ -2034,7 +1904,7 @@ function renderExportFilters(type) {
   </select>
   </div>`;
 
-  // ---- ALL ----
+  // ALL
   if (type === 'all') {
     html += `
     <div class="row mb-3">
@@ -2052,7 +1922,7 @@ function renderExportFilters(type) {
     return;
   }
 
-  // ---- TRANSACTIONS ----
+  // TRANSACTIONS
   if (type === 'transactions') {
     html += `
     <div class="row mb-3">
@@ -2111,7 +1981,7 @@ function renderExportFilters(type) {
     return;
   }
 
-  // ---- TRANSFERS ----
+  // TRANSFERS
   if (type === 'transfers') {
     html += `
     <div class="row mb-3">
@@ -2133,7 +2003,7 @@ function renderExportFilters(type) {
     return;
   }
 
-  // ---- BUDGETS ----
+  // BUDGETS
   if (type === 'budgets') {
     html += `
     <div class="mb-3">
@@ -2172,8 +2042,6 @@ function renderExportFilters(type) {
   }
 }
 
-// ---- Fungsi bantu ----
-
 function toggleExportOptions() {
   const optionsDiv = document.getElementById('export-options');
   if (!optionsDiv) return;
@@ -2206,7 +2074,121 @@ function renderBudgetPeriodInput() {
   }
 }
 
-// ---- performExport (update) ----
+function updateTransactionCategoryFilter() {
+  const typeSelect = document.getElementById('filter-type');
+  const badgesContainer = document.getElementById('category-badges');
+  if (!typeSelect || !badgesContainer) return;
+
+  const selectedType = typeSelect.value; // '' (semua), 'income', 'expense'
+
+  if (selectedType === '' || selectedType === 'all') {
+    badgesContainer.innerHTML = '';
+    const hiddenSelect = document.getElementById('filter-category-hidden');
+    if (hiddenSelect) hiddenSelect.innerHTML = '';
+    Core.state.currentFilteredCategories = [];
+    return;
+  }
+
+  let filteredCategories = Core.state.categories;
+  if (selectedType === 'income') {
+    filteredCategories = Core.state.categories.filter(c => ['income', 'both'].includes(c.type));
+  } else if (selectedType === 'expense') {
+    filteredCategories = Core.state.categories.filter(c => ['expense', 'both'].includes(c.type));
+  }
+
+  Core.state.currentFilteredCategories = filteredCategories;
+  renderCategoryBadges(filteredCategories);
+}
+
+function renderCategoryBadges(categories = null) {
+  const catList = categories || Core.state.currentFilteredCategories;
+  const badgesContainer = document.getElementById('category-badges');
+  const hiddenSelect = document.getElementById('filter-category-hidden');
+  if (!badgesContainer || !hiddenSelect) return;
+
+  const selectedValues = [...hiddenSelect.options]
+  .filter(opt => opt.selected)
+  .map(opt => opt.value);
+
+  hiddenSelect.innerHTML = '';
+  let html = '';
+
+  catList.forEach(cat => {
+    const isSelected = selectedValues.includes(cat.id.toString());
+    const bgColor = cat.color || '#6c757d';
+    const opacityStyle = isSelected ? '1': '0.45';
+    const borderStyle = isSelected ? 'border border-2 border-dark': '';
+    const checkIcon = isSelected ? '<i class="bi bi-check-circle-fill ms-1 small"></i>': '';
+
+    html += `
+    <span class="badge rounded-pill d-inline-flex align-items-center"
+    style="background-color: ${bgColor}; opacity: ${opacityStyle}; cursor: pointer; ${borderStyle}; font-size: 0.85rem; padding: 0.5rem 0.85rem;"
+    data-action="toggle-category-badge"
+    data-category-id="${cat.id}">
+    <i class="${cat.icon || 'bi-tag'} me-1"></i>${cat.name}${checkIcon}
+    </span>`;
+
+    const option = document.createElement('option');
+    option.value = cat.id;
+    option.selected = isSelected;
+    hiddenSelect.appendChild(option);
+  });
+
+  badgesContainer.innerHTML = html;
+}
+
+function toggleCategoryBadge(categoryId) {
+  const hiddenSelect = document.getElementById('filter-category-hidden');
+  if (!hiddenSelect) return;
+
+  const option = [...hiddenSelect.options].find(opt => opt.value === categoryId);
+  if (option) {
+    option.selected = !option.selected;
+    renderCategoryBadges(Core.state.currentFilteredCategories);
+  }
+}
+
+async function updateExportFormatAvailability() {
+  const type = document.getElementById('export-type').value;
+  const formatPdf = document.getElementById('format-pdf');
+  const formatXlsx = document.getElementById('format-xlsx');
+  const formatCsv = document.getElementById('format-csv');
+  const formatGsheet = document.getElementById('format-gsheet');
+  const labelGsheet = document.querySelector('label[for="format-gsheet"]');
+  const labels = document.querySelectorAll('label[for="format-pdf"], label[for="format-csv"]');
+
+  if (!formatPdf || !formatCsv || !formatGsheet) return;
+
+  if (type === 'all') {
+    // Hanya Excel & Google Sheets untuk all
+    formatPdf.disabled = true;
+    formatPdf.checked = false;
+    formatCsv.disabled = true;
+    formatCsv.checked = false;
+    formatXlsx.checked = true;
+    labels.forEach(l => l?.classList.add('text-muted'));
+  } else {
+    formatPdf.disabled = false;
+    formatCsv.disabled = false;
+    labels.forEach(l => l?.classList.remove('text-muted'));
+  }
+
+  const connected = await checkGoogleConnection();
+  if (formatGsheet) {
+    if (connected) {
+      formatGsheet.disabled = false;
+      labelGsheet?.classList.remove('text-muted');
+    } else {
+      formatGsheet.disabled = true;
+      formatGsheet.checked = false;
+      labelGsheet?.classList.add('text-muted');
+      if (document.querySelector('input[name="export-format"]:checked') === formatGsheet) {
+        formatXlsx.checked = true;
+      }
+    }
+  }
+}
+
 async function performExport() {
   const type = document.getElementById('export-type').value;
   const formatRadio = document.querySelector('input[name="export-format"]:checked');
@@ -2295,7 +2277,6 @@ async function checkGoogleConnection() {
     const res = await Core.api.get('/api/fintech/oauth/google/status');
     const btn = document.getElementById('btn-connect-google');
     const badge = document.getElementById('google-connected-badge');
-
     if (btn && badge) {
       if (res.connected) {
         btn.classList.add('d-none');

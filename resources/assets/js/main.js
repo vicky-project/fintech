@@ -147,6 +147,11 @@ function handleGlobalChange(e) {
         endEl.value = new Date().toISOString().slice(0, 10);
       }
     },
+    'change-export-format': () => {
+      if (typeof toggleExportOptions === 'function') {
+        toggleExportOptions();
+      }
+    },
     // Tambahkan aksi lain sesuai kebutuhan
   };
 
