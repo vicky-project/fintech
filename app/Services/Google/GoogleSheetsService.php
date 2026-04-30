@@ -2,10 +2,6 @@
 
 namespace Modules\FinTech\Services\Google;
 
-use Modules\FinTech\Services\Google\GoogleSheetsClient;
-use Modules\FinTech\Services\Google\SpreadsheetManager;
-use Modules\FinTech\Services\Google\SheetWriter;
-use Modules\FinTech\Services\Google\SheetStyler;
 use Modules\FinTech\Exports\ChartDataProcessor;
 
 class GoogleSheetsService
@@ -27,25 +23,16 @@ class GoogleSheetsService
     $this->styler = $styler;
   }
 
-  /**
-  * Setup untuk user tertentu.
-  */
   public function setupForUser($user): void
   {
     $this->client->setupForUser($user);
   }
 
-  /**
-  * Dapatkan atau buat spreadsheet user.
-  */
   public function getOrCreateSpreadsheet($user): string
   {
     return $this->spreadsheetManager->getOrCreateSpreadsheet($user);
   }
 
-  /**
-  * Ekspor data ke sheet.
-  */
   public function exportDataToSheet(
     string $spreadsheetId,
     string $sheetName,
@@ -67,7 +54,7 @@ class GoogleSheetsService
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
 
-    // Inisialisasi kursor
+    // Initialize cursor
     $cursor = new SheetCursor();
 
     // Metadata
@@ -75,29 +62,29 @@ class GoogleSheetsService
       $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor);
     }
 
-    // Header tabel utama
+    // Main table header
     $headerStartRow = $cursor->row;
     $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
-    $headerEndRow = $cursor->row - 1; // baris terakhir header
+    $headerEndRow = $cursor->row - 1;
 
     // Data
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
     // Subtotal
-    $cursor->advanceRow(); // jarak 1 baris kosong
+    $cursor->advanceRow();
     $subStartRow = $cursor->row;
     if ($summary) {
       $this->writer->writeSubtotal($spreadsheetId, $sheetName, $summary, $dataType, $cursor, $headers);
     }
     $subEndRow = $cursor->row - 1;
 
-    // Tabel tambahan (ringkasan bulanan, top 5 pengeluaran)
+    // Additional tables (monthly summary, top spending)
     if ($dataType === 'transactions' && $rawTransactions) {
-      $cursor->advanceRow(); // jarak 1 baris setelah subtotal
+      $cursor->advanceRow();
       if ($summary['include_monthly_summary'] ?? false) {
         $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
-        $cursor->advanceRow(); // jarak setelah tabel
+        $cursor->advanceRow(); // spacing
       }
       if ($summary['include_top_spending'] ?? false) {
         $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
@@ -106,13 +93,13 @@ class GoogleSheetsService
     }
 
     // Footer
-    $cursor->advanceRow(); // jarak 1 baris sebelum footer
+    $cursor->advanceRow();
     $footerRow = $cursor->row;
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    // Chart (khusus transaksi, jika ada data)
+    // Chart (transactions only)
     if ($dataType === 'transactions' && !empty($values)) {
-      $cursor->advanceRow(2); // jarak 2 baris setelah footer
+      $cursor->advanceRow(2);
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart(
         $spreadsheetId,
@@ -123,33 +110,40 @@ class GoogleSheetsService
       );
     }
 
-    // Styling data utama + footer
+    // Styling
     $this->styler->apply(
-      $spreadsheetId, $sheetName,
-      $headerStartRow, $dataType, $headers, $values,
-      $dataStartRow, $dataEndRow,
-      $subStartRow, $subEndRow,
+      $spreadsheetId,
+      $sheetName,
+      $headerStartRow,
+      $dataType,
+      $headers,
+      $values,
+      $dataStartRow,
+      $dataEndRow,
+      $subStartRow,
+      $subEndRow,
       $footerRow
     );
 
-    // Auto-resize semua kolom
+    // Auto-resize
     $this->styler->autoResizeColumns($spreadsheetId, $sheetName, count($headers));
   }
 
-  /**
-  * URL spreadsheet.
-  */
   public function getSpreadsheetUrl(string $spreadsheetId): string
   {
     return $this->spreadsheetManager->getSpreadsheetUrl($spreadsheetId);
   }
 
   /**
-  * Tulis tabel Ringkasan Bulanan di bawah data utama.
+  * Write monthly summary table using cursor.
   */
-  private function writeMonthlySummaryToSheet(string $spreadsheetId, string $sheetName, array $transactions, int &$currentRow, array $summary): void
-  {
-    // Bangun data ringkasan
+  private function writeMonthlySummaryToSheet(
+    string $spreadsheetId,
+    string $sheetName,
+    array $transactions,
+    SheetCursor $cursor,
+    array $summary
+  ): void {
     $grouped = [];
     foreach ($transactions as $row) {
       $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
@@ -164,16 +158,15 @@ class GoogleSheetsService
       $grouped[$key]['expense'] += ChartDataProcessor::parseCurrency($row['Pengeluaran'] ?? '0');
     }
     ksort($grouped);
-
     if (empty($grouped)) return;
 
-    // Siapkan data array untuk ditulis
     $headers = ['Bulan',
       'Pemasukan',
       'Pengeluaran',
       'Net'];
     $values = [];
     $totalIncome = $totalExpense = 0;
+
     foreach ($grouped as $item) {
       $net = $item['income'] - $item['expense'];
       $totalIncome += $item['income'];
@@ -185,7 +178,7 @@ class GoogleSheetsService
         ChartDataProcessor::formatCurrency($net, $summary),
       ];
     }
-    // Baris Total
+    // Total row
     $values[] = [
       'Total',
       ChartDataProcessor::formatCurrency($totalIncome, $summary),
@@ -193,23 +186,26 @@ class GoogleSheetsService
       ChartDataProcessor::formatCurrency($totalIncome - $totalExpense, $summary),
     ];
 
-    // Tulis ke sheet
-    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $currentRow, 'other'); // 'other' untuk header biasa
-    $this->writer->writeData($spreadsheetId, $sheetName, $values, $currentRow);
-    $currentRow++; // spasi setelah tabel
+    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
+    $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
   }
 
   /**
-  * Tulis tabel Top 5 Pengeluaran di bawah data utama.
+  * Write top 5 spending table using cursor.
   */
-  private function writeTopSpendingToSheet(string $spreadsheetId, string $sheetName, array $transactions, int &$currentRow, array $summary): void
-  {
+  private function writeTopSpendingToSheet(
+    string $spreadsheetId,
+    string $sheetName,
+    array $transactions,
+    SheetCursor $cursor,
+    array $summary
+  ): void {
     $expenses = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
     if (empty($expenses)) return;
 
     usort($expenses, fn($a, $b) =>
-      \Modules\FinTech\Exports\ChartDataProcessor::parseCurrency($b['Pengeluaran'] ?? '0') <=>
-      \Modules\FinTech\Exports\ChartDataProcessor::parseCurrency($a['Pengeluaran'] ?? '0')
+      ChartDataProcessor::parseCurrency($b['Pengeluaran'] ?? '0') <=>
+      ChartDataProcessor::parseCurrency($a['Pengeluaran'] ?? '0')
     );
     $top5 = array_slice($expenses, 0, 5);
 
@@ -222,16 +218,15 @@ class GoogleSheetsService
       $values[] = [
         $item['Tanggal'] ?? '',
         $item['Kategori'] ?? '',
-        \Modules\FinTech\Exports\ChartDataProcessor::formatCurrency(
-          \Modules\FinTech\Exports\ChartDataProcessor::parseCurrency($item['Pengeluaran'] ?? '0'),
+        ChartDataProcessor::formatCurrency(
+          ChartDataProcessor::parseCurrency($item['Pengeluaran'] ?? '0'),
           $summary
         ),
         $item['Deskripsi'] ?? '-',
       ];
     }
 
-    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $currentRow, 'other');
-    $this->writer->writeData($spreadsheetId, $sheetName, $values, $currentRow);
-    $currentRow++;
+    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
+    $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
   }
 }
