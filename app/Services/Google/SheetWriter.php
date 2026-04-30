@@ -462,4 +462,27 @@ class SheetWriter
     ]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
+
+  /**
+  * Tulis header tabel sederhana (tanpa merge) dan beri style header.
+  */
+  public function writeSimpleHeader(string $spreadsheetId, string $sheetName, array $headers, int &$currentRow): void
+  {
+    $colCount = count($headers);
+    $range = $sheetName . '!A' . $currentRow . ':' . chr(64 + $colCount) . $currentRow;
+
+    // Tulis nilai
+    $this->client->getSheetsService()->spreadsheets_values->update(
+      $spreadsheetId,
+      $range,
+      new ValueRange(['values' => [$headers]]),
+      ['valueInputOption' => 'RAW']
+    );
+
+    // Terapkan style header
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    $this->applyHeaderStyle($spreadsheetId, $sheetId, $currentRow, $colCount);
+
+    $currentRow++;
+  }
 }

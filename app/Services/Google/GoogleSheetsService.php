@@ -189,7 +189,7 @@ class GoogleSheetsService
     ];
 
     // Tulis ke sheet
-    $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $currentRow, 'other'); // 'other' untuk header biasa
+    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $currentRow, 'other'); // 'other' untuk header biasa
     $this->writer->writeData($spreadsheetId, $sheetName, $values, $currentRow);
     $currentRow++; // spasi setelah tabel
   }
@@ -225,7 +225,7 @@ class GoogleSheetsService
       ];
     }
 
-    $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $currentRow, 'other');
+    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $currentRow, 'other');
     $this->writer->writeData($spreadsheetId, $sheetName, $values, $currentRow);
     $currentRow++;
   }
