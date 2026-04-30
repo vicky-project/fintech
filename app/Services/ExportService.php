@@ -137,12 +137,12 @@ class ExportService
       $amount = $trx->getAmountFloat();
       if ($trx->type === TransactionType::INCOME) {
         $totalIncome += $amount;
-        $income = $trx->getFormattedAmount();
-        $expense = 'Rp 0';
+        $incomeNum = $amount;
+        $expenseNum = 0;
       } else {
         $totalExpense += $amount;
-        $income = 'Rp 0';
-        $expense = $trx->getFormattedAmount();
+        $incomeNum = 0;
+        $expenseNum = $amount;
       }
 
       return [
@@ -150,8 +150,8 @@ class ExportService
         'Tipe' => $trx->type->label(),
         'Kategori' => $trx->category->name,
         'Dompet' => $trx->wallet->name,
-        'Pemasukan' => $income,
-        'Pengeluaran' => $expense,
+        'Pemasukan' => $incomeNum,
+        'Pengeluaran' => $expenseNum,
         'Deskripsi' => $trx->description ?? '-',
       ];
     })->toArray();
