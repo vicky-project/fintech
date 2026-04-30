@@ -163,7 +163,7 @@ class SheetWriter
     );
 
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row, $colCount);
+    $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row, $colCount, $cursor->col);
     $cursor->advanceRow();
   }
 
