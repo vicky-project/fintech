@@ -33,7 +33,9 @@ class SheetStyler
     int $subEndRow,
     int $footerRow
   ): void
-  {
+  {}
+
+  private function unknown() {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     $colCount = count($headers);
     $requests = [];
