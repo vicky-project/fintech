@@ -121,6 +121,57 @@ class SheetWriter
     $cursor->advanceRow();
   }
 
+  public function writeSimpleTitle(string $spreadsheetId, string $sheetName, string $title, SheetCursor $cursor): void
+  {
+    $colCount = 4; // lebar tabel tambahan = 4 kolom
+    $range = $sheetName . '!' . $cursor->getColLetter() . $cursor->row . ':' .
+    chr(65 + $cursor->col + $colCount - 1) . $cursor->row;
+
+    $this->client->getSheetsService()->spreadsheets_values->update(
+      $spreadsheetId,
+      $range,
+      new ValueRange(['values' => [[$title]]]),
+      ['valueInputOption' => 'RAW']
+    );
+
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    // Merge & style
+    $requests = [
+      new SheetsRequest([
+        'mergeCells' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $cursor->row - 1,
+            'endRowIndex' => $cursor->row,
+            'startColumnIndex' => $cursor->col,
+            'endColumnIndex' => $cursor->col + $colCount,
+          ],
+          'mergeType' => 'MERGE_ALL',
+        ]
+      ]),
+      new SheetsRequest([
+        'repeatCell' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $cursor->row - 1,
+            'endRowIndex' => $cursor->row,
+            'startColumnIndex' => $cursor->col,
+            'endColumnIndex' => $cursor->col + $colCount,
+          ],
+          'cell' => ['userEnteredFormat' => [
+            'textFormat' => ['bold' => true, 'fontSize' => 11],
+            'horizontalAlignment' => 'CENTER',
+          ]],
+          'fields' => 'userEnteredFormat(textFormat,horizontalAlignment)',
+        ],
+      ]),
+    ];
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+
+    $cursor->advanceRow();
+  }
+
   // ======================== DATA ========================
   public function writeData(string $spreadsheetId, string $sheetName, array $values, SheetCursor $cursor): int
   {
@@ -146,7 +197,9 @@ class SheetWriter
     string $sheetName,
     int $dataStartRow,
     int $dataEndRow,
-    array $summary
+    array $summary,
+    int $startCol = 4,
+    int $colCount = 2
   ): void {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     if ($sheetId === null) return;
@@ -168,8 +221,8 @@ class SheetWriter
             'sheetId' => $sheetId,
             'startRowIndex' => $dataStartRow - 1,
             'endRowIndex' => $dataEndRow,
-            'startColumnIndex' => 4, // E
-            'endColumnIndex' => 6, // F
+            'startColumnIndex' => $startCol,
+            'endColumnIndex' => $startCol + $colCount,
           ],
           'cell' => [
             'userEnteredFormat' => [

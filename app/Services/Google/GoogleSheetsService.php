@@ -97,10 +97,12 @@ class GoogleSheetsService
       }
     }
 
-    // 7. Tabel tambahan di sebelah kanan
-    $rightColIndex = $colCount + 1; // 1 kolom kosong
+    // ... setelah subtotal (kode Anda sampai langkah 6 tetap sama)
+
+    // 7. Tabel tambahan di sebelah kanan (tanpa pindah posisi)
+    $rightColIndex = $colCount + 1;
     $cursor->setCol($rightColIndex);
-    $cursor->row = $tableStartRow; // sejajar header
+    $cursor->row = $tableStartRow; // sejajar header utama
 
     $includeMonthly = $summary['include_monthly_summary'] ?? false;
     $includeTop = $summary['include_top_spending'] ?? false;
@@ -120,29 +122,30 @@ class GoogleSheetsService
       }
     }
 
-    // Kembalikan kursor ke kolom A untuk footer
-    $cursor->setCol(0);
-    // Tentukan baris akhir (mana yang lebih besar: subtotal atau tabel tambahan)
-    $lastMainRow = $subStartRow + ($summary ? 4 : 0); // perkiraan baris setelah subtotal
-    $lastAddRow = ($dataType === 'transactions') ? $cursor->row : 0;
-    $finalRow = max($lastMainRow, $lastAddRow);
-    $cursor->row = $finalRow + 1; // 1 baris kosong
-
-    // 8. Footer
-    $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
-
-    // 9. Chart (sederhana, langsung dari kolom E/F)
+    // 8. CHART (ditempatkan di bawah subtotal, di KIRI)
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     if ($includeChart) {
-      $cursor->advanceRow(2);
-      $chartRow = $cursor->row;
+      // chart diletakkan 2 baris setelah baris terakhir subtotal (bukan finalRow)
+      $chartRow = $subStartRow + 4 + 2; // +4 untuk 3 baris detail + 1 spasi, +2 untuk jarak
       $this->writer->writeTransactionChart(
         $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow
       );
     }
 
-    // 10. Auto-resize semua kolom
-    $maxCol = max($colCount, $rightColIndex + 4); // +4 untuk tabel tambahan
+    // 9. FOOTER (di paling bawah, setelah chart dan/atau tabel tambahan)
+    // Ambil baris maksimum: akhir subtotal, akhir chart, akhir tabel kanan
+    $chartEndRow = $includeChart ? $chartRow + 20 : 0; // perkiraan tinggi chart 20 baris
+    $lastMainRow = $subStartRow + 4; // setelah subtotal (3 detail + 1 label)
+    $lastAddRow = ($dataType === 'transactions') ? $cursor->row : 0;
+    $finalRow = max($lastMainRow, $chartEndRow, $lastAddRow);
+
+    $cursor->setCol(0);
+    $cursor->row = $finalRow + 2; // 1 baris kosong
+
+    $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
+
+    // 10. Auto-resize
+    $maxCol = max($colCount, $rightColIndex + 4);
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxCol);
   }
 
@@ -201,9 +204,12 @@ class GoogleSheetsService
     ];
 
     $startCol = $cursor->col;
+    $title = "Ringkasan Bulanan";
+    $this->writer->writeSimpleTitle($spreadsheetId, $sheetName, $title, $cursor);
     $summaryHeaderRow = $cursor->row;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $this->writer->applyCurrencyFormat($spreadsheetId, $sheetName, $summaryHeaderRow + 1, $dataEndRow, $summary, $startCol + 1, 3);
     $this->writer->applySummaryColors($spreadsheetId, $sheetName, $summaryHeaderRow, $values, $startCol);
     $this->writer->applyBordersToRange(
       $spreadsheetId, $sheetName, $summaryHeaderRow, $dataEndRow, $startCol, count($headers), $headers
@@ -240,9 +246,12 @@ class GoogleSheetsService
     }
 
     $startCol = $cursor->col;
+    $title = "Top 5 Pengeluaran";
+    $this->writer->writeSimpleTitle($spreadsheetId, $sheetName, $title, $cursor);
     $topHeaderRow = $cursor->row;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $this->writer->applyCurrencyFormat($spreadsheetId, $sheetName, $topHeaderRow + 1, $dataEndRow, $summary, $startCol + 2, 1);
     $this->writer->applyTopSpendingColors($spreadsheetId, $sheetName, $topHeaderRow, $values, $startCol);
     $this->writer->applyBordersToRange(
       $spreadsheetId, $sheetName, $topHeaderRow, $dataEndRow, $startCol, count($headers), $headers
