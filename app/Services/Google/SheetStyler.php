@@ -145,25 +145,23 @@ class SheetStyler
 
     // Footer styling
     $requests[] = new SheetsRequest(['repeatCell' => [
-      'range' => ['sheetId' => $sheetId, 'startRowIndex' => $footerRow-1, 'endRowIndex' => $footerRow, 'startColumnIndex' => 0, 'endColumnIndex' => $colCount],
+      'range' => [
+        'sheetId' => $sheetId,
+        'startRowIndex' => $footerRow-1,
+        'endRowIndex' => $footerRow,
+        'startColumnIndex' => 0,
+        'endColumnIndex' => $colCount,
+      ],
       'cell' => ['userEnteredFormat' => [
-        'textFormat' => ['italic' => true, 'foregroundColor' => ['red' => 136/255, 'green' => 136/255, 'blue' => 136/255], 'fontSize' => 10],
+        'textFormat' => [
+          'italic' => true,
+          'foregroundColor' => ['red' => 136/255, 'green' => 136/255, 'blue' => 136/255],
+          'fontSize' => 10,
+        ],
         'horizontalAlignment' => 'CENTER',
       ]],
-      'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)',
+      'fields' => 'userEnteredFormat(textFormat,horizontalAlignment)',
     ]]);
-
-    // Tambahkan ini ke dalam array $requests Anda
-    $requests[] = new SheetsRequest([
-      'autoResizeDimensions' => [
-        'dimensions' => [
-          'sheetId' => $sheetId,
-          'dimension' => 'COLUMNS',
-          'startIndex' => 0, // Mulai dari kolom A
-          'endIndex' => 7, // Sampai kolom G (eksklusif)
-        ]
-      ]
-    ]);
 
     if ($requests) {
       $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);

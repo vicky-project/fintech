@@ -64,6 +64,8 @@ class SheetWriter
   public function writeHeaders(string $spreadsheetId, string $sheetName, array $headers, int &$currentRow, ?string $dataType): void
   {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    $colCount = count($headers);
+
     if ($dataType === 'transactions') {
       // 1. ISI DATA TEKS
       $row1 = ['Tanggal',
@@ -140,6 +142,15 @@ class SheetWriter
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
 
       $currentRow += 2;
+    } elseif ($dataType === 'other') {
+      $this->client->getSheetsService()->spreadsheets_values->update(
+        $spreadsheetId,
+        $sheetName. '!A'. $currentRow . ':' . chr(64 + $colCount) . $currentRow,
+        new ValueRange(['values' => [$headers]]),
+        ['valueInputOption' => 'RAW']
+      );
+      $this->applyHeaderStyle($spreadsheetId, $sheetId, $currentRow, $colCount);
+      $currentRow++;
     } else {
       // Logika header standar (tetap sama)
       $this->client->getSheetsService()->spreadsheets_values->update(
@@ -151,6 +162,34 @@ class SheetWriter
       $this->applyBoldCenter($spreadsheetId, $sheetId, $currentRow, count($headers));
       $currentRow++;
     }
+  }
+
+  private function applyHeaderStyle(string $spreadsheetId, int $sheetId, int $row, int $colCount): void
+  {
+    $requests = [
+      new SheetsRequest([
+        'repeatCell' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $row - 1,
+            'endRowIndex' => $row,
+            'startColumnIndex' => 0,
+            'endColumnIndex' => $colCount,
+          ],
+          'cell' => [
+            'userEnteredFormat' => [
+              'backgroundColor' => ['red' => 79/255, 'green' => 129/255, 'blue' => 189/255],
+              'textFormat' => ['foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1], 'bold' => true, 'fontSize' => 11],
+              'horizontalAlignment' => 'CENTER',
+              'verticalAlignment' => 'MIDDLE',
+            ],
+          ],
+          'fields' => 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
+        ],
+      ]),
+    ];
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
   }
 
   private function createMergeRequest(int $sheetId, int $startRow, int $endRow, int $startCol, int $endCol): \Google\Service\Sheets\Request
@@ -307,7 +346,6 @@ class SheetWriter
           'endColumnIndex' => count($headers),
         ],
         'mergeType' => 'MERGE_ALL',
-        'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
       ]
     ]);
     $batch = new BatchUpdateSpreadsheetRequest(['requests' => [$request]]);

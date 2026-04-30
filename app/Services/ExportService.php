@@ -316,6 +316,7 @@ class ExportService
       $limit = $this->maxExcelRecords;
 
       $metadata = $this->buildMetadata($type, $filters, $wallet->name);
+      $formatRules = $this->getCurrencyFormat($wallet);
 
       if ($type === 'all') {
         $all = $this->fetchData('all', $user, $filters, $limit);
