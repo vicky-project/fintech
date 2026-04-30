@@ -2288,7 +2288,7 @@ async function performExport() {
         if (selected.length) payload.category_ids = selected;
       }
       // Opsi tambahan hanya jika format Excel
-      if (format === 'xlsx' || format === 'pdf') {
+      if (format === 'xlsx' || format === 'pdf' || format === 'gsheet') {
         payload.include_chart = document.getElementById('include-chart')?.checked ?? false;
         payload.include_monthly_summary = document.getElementById('include-monthly-summary')?.checked ?? false;
         payload.include_top_spending = document.getElementById('include-top-spending')?.checked ?? false;
