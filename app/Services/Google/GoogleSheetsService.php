@@ -89,6 +89,11 @@ class GoogleSheetsService
       }
     }
 
+    // ... (setelah subtotal)
+
+    // Simpan baris terakhir setelah subtotal (data utama)
+    $lastMainRow = $cursor->row;
+
     // ---- TABEL TAMBAHAN DI SEBELAH KANAN ----
     $rightColIndex = $colCount + 1; // 1 kolom kosong
     $cursor->setCol($rightColIndex);
@@ -96,22 +101,29 @@ class GoogleSheetsService
 
     $includeMonthly = $summary['include_monthly_summary'] ?? false;
     $includeTop = $summary['include_top_spending'] ?? false;
+    $lastAddRow = $tableStartRow; // inisialisasi
 
     if ($dataType === 'transactions' && $rawTransactions && ($includeMonthly || $includeTop)) {
       if ($includeMonthly) {
         $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
-        $cursor->advanceRow(); // jarak 1 baris sebelum top spending
+        // Jika top spending juga disertakan, beri jarak 1 baris
+        if ($includeTop) {
+          $cursor->advanceRow();
+        }
+        $lastAddRow = max($lastAddRow, $cursor->row);
       }
       if ($includeTop) {
         $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
-        $cursor->advanceRow();
+        $lastAddRow = max($lastAddRow, $cursor->row);
       }
     }
 
-    // Kembalikan kolom ke A agar footer ditulis dengan benar
+    // Baris paling bawah di antara data utama dan blok tambahan
+    $finalRow = max($lastMainRow, $lastAddRow);
+
+    // Kembalikan kursor ke kolom A, dan letakkan 1 baris setelah konten terakhir
     $cursor->setCol(0);
-    // Sisakan 1 baris kosong setelah blok tambahan (atau setelah subtotal jika tidak ada blok tambahan)
-    $cursor->advanceRow();
+    $cursor->row = $finalRow + 1;
 
     // 5. Footer
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
@@ -123,8 +135,8 @@ class GoogleSheetsService
       $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow);
     }
 
-    // 7. Auto-resize (mencakup semua kolom yang mungkin digunakan)
-    $maxColCount = $rightColIndex + 4; // 4 kolom untuk tabel tambahan
+    // 7. Auto-resize
+    $maxColCount = $rightColIndex + 4;
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxColCount);
   }
 
