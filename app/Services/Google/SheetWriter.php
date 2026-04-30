@@ -126,12 +126,13 @@ class SheetWriter
         ]
       ]);
 
+      $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row, $colCount);
+      $this->applyBoldCenter($spreadsheetId, $sheetId, $cursor->row, $colCount);
+
       $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
 
       $cursor->advanceRow(2);
-    } elseif ($dataType === 'other') {
-      $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     } else {
       $this->client->getSheetsService()->spreadsheets_values->update(
         $spreadsheetId,
@@ -284,7 +285,7 @@ class SheetWriter
     );
   }
 
-  private function createMergeRequest(int $sheetId, int $startRow, int $endRow, int $startCol, int $endCol): \Google\Service\Sheets\Request
+  private function createMergeRequest(int $sheetId, int $startRow, int $endRow, int $startCol, int $endCol): SheetsRequest
   {
     return new SheetsRequest([
       'mergeCells' => [
