@@ -318,13 +318,34 @@ class ExportService
       $metadata = $this->buildMetadata($type, $filters, $wallet->name);
       $formatRules = $this->getCurrencyFormat($wallet);
 
+      // Data mentah transaksi untuk tabel tambahan
+      $rawTransactions = [];
+
       if ($type === 'all') {
         $all = $this->fetchData('all', $user, $filters, $limit);
+        $rawTransactions = $all['transactions'][0] ?? [];
+
         $metaTx = $this->buildMetadata('transactions', $filters, $wallet->name);
         $metaTf = $this->buildMetadata('transfers', $filters, $wallet->name);
         $metaBg = $this->buildMetadata('budgets', $filters, $wallet->name);
 
-        $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_TRANSACTIONS, $all['transactions'][0], true, $metaTx, $all['transactions'][1], 'transactions');
+        // Gabungkan flag dan rules ke summary transaksi
+        $txSummary = array_merge($all['transactions'][1], $formatRules, [
+          'metadata' => $metaTx,
+          'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
+          'include_top_spending' => $filters['include_top_spending'] ?? true,
+        ]);
+
+        $googleService->exportDataToSheet(
+          $spreadsheetId,
+          SpreadsheetManager::SHEET_TRANSACTIONS,
+          $all['transactions'][0],
+          true,
+          $metaTx,
+          $txSummary,
+          'transactions',
+          $rawTransactions // <-- kirim data mentah
+        );
         $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_TRANSFERS, $all['transfers'][0], true, $metaTf, $all['transfers'][1], 'transfers');
         $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_BUDGETS, $all['budgets'][0], true, $metaBg, $all['budgets'][1], 'budgets');
       } else {
@@ -335,7 +356,24 @@ class ExportService
           'transfers' => SpreadsheetManager::SHEET_TRANSFERS,
           'budgets' => SpreadsheetManager::SHEET_BUDGETS,
         };
-        $googleService->exportDataToSheet($spreadsheetId, $sheetName, $data, true, $metadata, $summary, $type);
+
+        if ($type === 'transactions') {
+          $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
+          $summary['include_top_spending'] = $filters['include_top_spending'] ?? false;
+          $rawTransactions = $data;
+        }
+
+        $summary = array_merge($summary, $formatRules);
+        $googleService->exportDataToSheet(
+          $spreadsheetId,
+          $sheetName,
+          $data,
+          true,
+          $metadata,
+          $summary,
+          $type,
+          $rawTransactions // <-- kirim data mentah
+        );
       }
 
       return $googleService->getSpreadsheetUrl($spreadsheetId);
