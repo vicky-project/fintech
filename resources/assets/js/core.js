@@ -150,7 +150,7 @@ const Core = (() => {
   function checkPinRequired() {
     const settings = state.userSettings;
     if (settings && settings.pin_enabled) {
-      getEl('loading-overlay').classList.add('d-none');
+      //getEl('loading-overlay').classList.add('d-none');
       return new Promise((resolve) => {
         showPinModal((pinOk) => {
           if (!pinOk) {
@@ -159,7 +159,7 @@ const Core = (() => {
             `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
             resolve(false);
           } else {
-            getEl('loading-overlay').classList.add('d-none');
+            //getEl('loading-overlay').classList.add('d-none');
             resolve(true);
           }
         });
