@@ -129,7 +129,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $metaCount = count($metadata);
           $highestCol = $this->getHighestColumn();
 
-          $titleRow = $this->writeTitle($sheet, $this->getTitle($this->type), $highestCol);
+          $titleRow = $this->writeTitle($sheet, $this->title($this->type), $highestCol);
 
           $metaStart = $titleRow + 1;
           $this->writeMetadataSection($sheet, $metadata, $metaCount, $highestCol, $metaStart);
