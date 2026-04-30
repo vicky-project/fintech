@@ -59,12 +59,12 @@ class GoogleSheetsService
       $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
     }
 
-    // 2. Header + Filter
-    $headerStartRow = $cursor->row;
+    // 2. Header tabel utama
+    $tableStartRow = $cursor->row;
     $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
     $headerEndRow = $cursor->row - 1;
 
-    // 3. Data
+    // 3. Data utama
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
@@ -72,15 +72,11 @@ class GoogleSheetsService
     if ($dataType === 'transactions') {
       $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
     }
-    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $headerStartRow, $dataEndRow, 0, $colCount, $headers);
+    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers);
 
-    // 3c. Filter (setelah data ada)
-    if ($dataType === 'transactions') {
-      // Filter hanya pada baris kedua header (sub‑header)
-      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerEndRow, $headerEndRow, 0, $colCount);
-    } else {
-      // Tipe lain: filter pada seluruh header
-      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerStartRow, $headerEndRow, 0, $colCount);
+    // Filter (kecuali transaksi karena merge vertikal)
+    if ($dataType !== 'transactions') {
+      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount);
     }
 
     // 4. Subtotal
@@ -92,34 +88,47 @@ class GoogleSheetsService
         $this->writer->applySubtotalColors($spreadsheetId, $sheetName, $subStartRow, $cursor->row - 1, $summary);
       }
     }
-    $subEndRow = $cursor->row - 1;
+    $cursor->advanceRow(); // jarak 1 baris sebelum blok tambahan
 
-    // 5. Tabel tambahan
+    // ---- TABEL TAMBAHAN DI SEBELAH KANAN ----
     if ($dataType === 'transactions' && $rawTransactions) {
-      $cursor->advanceRow();
-      if ($summary['include_monthly_summary'] ?? false) {
+      // Kolom mulai untuk blok tambahan (1 kolom kosong setelah tabel utama)
+      $rightColIndex = $colCount + 1;
+      $cursor->setCol($rightColIndex);
+      $cursor->row = $tableStartRow; // sejajar header
+
+      $includeMonthly = $summary['include_monthly_summary'] ?? false;
+      $includeTop = $summary['include_top_spending'] ?? false;
+
+      if ($includeMonthly) {
         $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
-        $cursor->advanceRow();
+        $cursor->advanceRow(); // jarak 1 baris
       }
-      if ($summary['include_top_spending'] ?? false) {
+      if ($includeTop) {
         $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
         $cursor->advanceRow();
       }
+
+      // Hitung kolom maksimal untuk auto-resize
+      $maxColCount = $rightColIndex + 4; // 4 kolom tabel tambahan
+      $cursor->setCol(0); // kembali ke kolom A
+    } else {
+      $maxColCount = $colCount;
     }
 
-    // 6. Footer
-    $cursor->advanceRow();
+    // 5. Footer (mengikuti baris terakhir dari blok tambahan atau data utama)
+    $cursor->advanceRow(); // jarak 1 baris
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    // 7. Chart
+    // 6. Chart (opsional)
     if ($dataType === 'transactions' && !empty($values)) {
       $cursor->advanceRow(2);
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow);
     }
 
-    // 8. Auto-resize (terakhir)
-    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
+    // 7. Auto-resize (menggunakan jumlah kolom maksimal)
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxColCount);
   }
 
   public function getSpreadsheetUrl(string $spreadsheetId): string
