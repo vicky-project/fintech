@@ -201,6 +201,7 @@ const Core = (() => {
     modalEl.addEventListener('hidden.bs.modal',
       () => {
         form.removeEventListener('submit', handleSubmit);
+        pinInput.value = "";
         if (!state.pinVerified) callback(false);
       });
   }
@@ -233,9 +234,11 @@ const Core = (() => {
         if (res.locked_until) showLockoutTimer(res.locked_until);
       }
     } catch (error) {
-      getEl('pinError').textContent = 'Terjadi kesalahan. Coba lagi.';
+      getEl('pinError').textContent = error.message || 'Terjadi kesalahan. Coba lagi.';
       getEl('pinError').classList.remove('d-none');
-      tgApp.showToast(error.message);
+      pinInput.value = "";
+      pinInput.focus();
+      tgApp.showToast(error.message, 'danger');
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;

@@ -173,6 +173,8 @@ function setupNavigation() {
 // ---------- INISIALISASI APLIKASI ----------
 async function initializeApp() {
   const overlay = document.getElementById('loading-overlay');
+  overlay.style.zIndex = '10000';
+  document.body.style.overflow = 'hidden';
   try {
     overlay.classList.remove('d-none');
     overlay.innerHTML = `<div class="text-center"><div class="spinner-border text-primary mb-3"></div><p class="text-muted">Memuat data keuangan...</p></div>`;
@@ -218,6 +220,8 @@ async function initializeApp() {
     </button>
     </div>`;
     overlay.classList.remove('d-none');
+  } finally {
+    document.body.style.overflow = '';
   }
 }
 
