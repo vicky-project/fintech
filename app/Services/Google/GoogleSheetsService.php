@@ -52,7 +52,7 @@ class GoogleSheetsService
     bool $clear = true,
     ?array $metadata = null,
     ?array $summary = null,
-    ?string $dataType = null
+    ?string $dataType = null,
     ?array $rawTransactions = null
   ): void
   {
