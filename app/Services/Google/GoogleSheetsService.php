@@ -61,6 +61,7 @@ class GoogleSheetsService
 
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
 
     $cursor->advanceRow();
     $subStartRow = $cursor->row;
@@ -68,6 +69,7 @@ class GoogleSheetsService
       $this->writer->writeSubtotal($spreadsheetId, $sheetName, $summary, $dataType, $cursor, $headers);
     }
     $subEndRow = $cursor->row - 1;
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
 
     if ($dataType === 'transactions' && $rawTransactions) {
       $cursor->advanceRow();
