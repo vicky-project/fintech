@@ -317,95 +317,93 @@ class SheetWriter
     int $dataEndRow,
     int $chartRow
   ): void {
-    // dapatkan sheetId yang benar
-    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    if ($sheetId === null) return;
-
-    // Pastikan chartRow minimal 1 baris setelah data
+    // Pastikan chartRow minimal 1 baris di bawah data
     if ($chartRow <= $dataEndRow) {
-      $chartRow = $dataEndRow + 2; // beri jarak 2 baris
+      $chartRow = $dataEndRow + 2;
     }
 
-    $chartRequest = [];
-    $chartRequest['addChart']['chart']['spec'] = [
-      'title' => 'Pemasukan vs Pengeluaran',
-      'basicChart' => [
-        'chartType' => 'COLUMN',
-        'legendPosition' => 'BOTTOM_LEGEND',
-        'axis' => [
-          ['position' => 'BOTTOM_AXIS',
-            'title' => 'Tanggal'],
-          ['position' => 'LEFT_AXIS',
-            'title' => 'Jumlah']
-        ],
-        'domains' => [[
-          'domain' => [
-            'sourceRange' => [
-              'sources' => [[
+    // Dapatkan sheetId – sheet Transaksi selalu sheet pertama → ID = 0
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName) ?? 0;
+
+    $chartRequest = new SheetsRequest([
+      'addChart' => [
+        'chart' => [
+          'spec' => [
+            'title' => 'Pemasukan vs Pengeluaran',
+            'basicChart' => [
+              'chartType' => 'COLUMN',
+              'legendPosition' => 'BOTTOM_LEGEND',
+              'axis' => [
+                ['position' => 'BOTTOM_AXIS', 'title' => 'Tanggal'],
+                ['position' => 'LEFT_AXIS', 'title' => 'Jumlah']
+              ],
+              'domains' => [
+                [
+                  'domain' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 0,
+                        'endColumnIndex' => 1,
+                      ]]
+                    ]
+                  ]
+                ]
+              ],
+              'series' => [
+                [
+                  'series' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 4,
+                        'endColumnIndex' => 5,
+                      ]]
+                    ]
+                  ],
+                  'targetAxis' => 'LEFT_AXIS'
+                ],
+                [
+                  'series' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 5,
+                        'endColumnIndex' => 6,
+                      ]]
+                    ]
+                  ],
+                  'targetAxis' => 'LEFT_AXIS'
+                ]
+              ],
+              'headerCount' => 1
+            ]
+          ],
+          'position' => [
+            'overlayPosition' => [
+              'anchorCell' => [
                 'sheetId' => $sheetId,
-                'startRowIndex' => $dataStartRow - 1,
-                'endRowIndex' => $dataEndRow,
-                'startColumnIndex' => 0,
-                'endColumnIndex' => 1
-              ]]
+                'rowIndex' => $chartRow - 1,
+                'columnIndex' => 0
+              ],
+              'widthPixels' => 600,
+              'heightPixels' => 350
             ]
           ]
-        ]],
-        'series' => [
-          [
-            'series' => [
-              'sourceRange' => [
-                'sources' => [[
-                  'sheetId' => $sheetId,
-                  'startRowIndex' => $dataStartRow - 1,
-                  'endRowIndex' => $dataEndRow,
-                  'startColumnIndex' => 4,
-                  'endColumnIndex' => 5
-                ]]
-              ]
-            ],
-            'targetAxis' => 'LEFT_AXIS'
-          ],
-          [
-            'series' => [
-              'sourceRange' => [
-                'sources' => [[
-                  'sheetId' => $sheetId,
-                  'startRowIndex' => $dataStartRow - 1,
-                  'endRowIndex' => $dataEndRow,
-                  'startColumnIndex' => 5,
-                  'endColumnIndex' => 6
-                ]]
-              ]
-            ],
-            'targetAxis' => 'LEFT_AXIS'
-          ]
-        ],
-        'headerCount' => 1
+        ]
       ]
-    ];
-    $chartRequest['addChart']['chart']['position'] = [
-      'overlayPosition' => [
-        'anchorCell' => [
-          'sheetId' => $sheetId,
-          'rowIndex' => $chartRow - 1,
-          'columnIndex' => 0
-        ],
-        'widthPixels' => 600,
-        'heightPixels' => 350
-      ]
-    ];
-
-    $batchUpdate = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest([
-      'requests' => [$chartRequest]
     ]);
 
-    try {
-      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
-    } catch (\Exception $e) {
-      // Log error untuk debugging
-      \Log::error('Gagal menambahkan chart: ' . $e->getMessage());
-    }
+    $batchUpdate = new BatchUpdateSpreadsheetRequest([
+      'requests' => [$chartRequest]
+    ]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
   // ======================== HELPERS ========================
