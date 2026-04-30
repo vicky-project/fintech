@@ -2,34 +2,29 @@
 
 namespace Modules\FinTech\Services\Google;
 
-use Modules\FinTech\Exports\ChartDataProcessor;
+use Modules\FinTech\Support\ChartDataProcessor;
 
 class GoogleSheetsService
 {
   protected GoogleSheetsClient $client;
   protected SpreadsheetManager $spreadsheetManager;
   protected SheetWriter $writer;
-  protected SheetStyler $styler;
 
   public function __construct(
     GoogleSheetsClient $client,
     SpreadsheetManager $spreadsheetManager,
-    SheetWriter $writer,
-    SheetStyler $styler
+    SheetWriter $writer
   ) {
     $this->client = $client;
     $this->spreadsheetManager = $spreadsheetManager;
     $this->writer = $writer;
-    $this->styler = $styler;
   }
 
-  public function setupForUser($user): void
-  {
+  public function setupForUser($user): void {
     $this->client->setupForUser($user);
   }
 
-  public function getOrCreateSpreadsheet($user): string
-  {
+  public function getOrCreateSpreadsheet($user): string {
     return $this->spreadsheetManager->getOrCreateSpreadsheet($user);
   }
 
@@ -53,25 +48,20 @@ class GoogleSheetsService
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
+    $colCount = count($headers);
 
-    // Initialize cursor
     $cursor = new SheetCursor();
 
-    // Metadata
     if ($metadata) {
-      $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor);
+      $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
     }
 
-    // Main table header
     $headerStartRow = $cursor->row;
     $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
-    $headerEndRow = $cursor->row - 1;
 
-    // Data
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
-    // Subtotal
     $cursor->advanceRow();
     $subStartRow = $cursor->row;
     if ($summary) {
@@ -79,12 +69,11 @@ class GoogleSheetsService
     }
     $subEndRow = $cursor->row - 1;
 
-    // Additional tables (monthly summary, top spending)
     if ($dataType === 'transactions' && $rawTransactions) {
       $cursor->advanceRow();
       if ($summary['include_monthly_summary'] ?? false) {
         $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
-        $cursor->advanceRow(); // spacing
+        $cursor->advanceRow();
       }
       if ($summary['include_top_spending'] ?? false) {
         $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
@@ -92,23 +81,29 @@ class GoogleSheetsService
       }
     }
 
-    // Footer
     $cursor->advanceRow();
     $footerRow = $cursor->row;
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    // Auto-resize
-    $this->styler->autoResizeColumns($spreadsheetId, $sheetName, count($headers));
+    if ($dataType === 'transactions' && !empty($values)) {
+      $cursor->advanceRow(2);
+      $chartRow = $cursor->row;
+      $this->writer->writeTransactionChart(
+        $spreadsheetId,
+        $sheetName,
+        $dataStartRow,
+        $dataEndRow,
+        $chartRow
+      );
+    }
+
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
   }
 
-  public function getSpreadsheetUrl(string $spreadsheetId): string
-  {
+  public function getSpreadsheetUrl(string $spreadsheetId): string {
     return $this->spreadsheetManager->getSpreadsheetUrl($spreadsheetId);
   }
 
-  /**
-  * Write monthly summary table using cursor.
-  */
   private function writeMonthlySummaryToSheet(
     string $spreadsheetId,
     string $sheetName,
@@ -150,7 +145,7 @@ class GoogleSheetsService
         ChartDataProcessor::formatCurrency($net, $summary),
       ];
     }
-    // Total row
+
     $values[] = [
       'Total',
       ChartDataProcessor::formatCurrency($totalIncome, $summary),
@@ -162,9 +157,6 @@ class GoogleSheetsService
     $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
   }
 
-  /**
-  * Write top 5 spending table using cursor.
-  */
   private function writeTopSpendingToSheet(
     string $spreadsheetId,
     string $sheetName,

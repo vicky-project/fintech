@@ -6,8 +6,7 @@ use Google\Service\Sheets\ValueRange;
 use Google\Service\Sheets\ClearValuesRequest;
 use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
 use Google\Service\Sheets\Request as SheetsRequest;
-use Modules\FinTech\Services\Google\GoogleSheetsClient;
-use Modules\FinTech\Services\Google\SpreadsheetManager;
+use Modules\FinTech\Exports\ChartDataProcessor;
 
 class SheetWriter
 {
@@ -19,7 +18,7 @@ class SheetWriter
     $this->manager = $manager;
   }
 
-  public function writeMetadata(string $spreadsheetId, string $sheetName, array $metadata, SheetCursor $cursor): void
+  public function writeMetadata(string $spreadsheetId, string $sheetName, array $metadata, SheetCursor $cursor, int $colCount = 7): void
   {
     if (empty($metadata)) return;
 
@@ -41,7 +40,7 @@ class SheetWriter
             'startRowIndex' => $cursor->row - 1 + $i,
             'endRowIndex' => $cursor->row + $i,
             'startColumnIndex' => 0,
-            'endColumnIndex' => 7,
+            'endColumnIndex' => $colCount,
           ],
           'mergeType' => 'MERGE_ALL',
         ]
@@ -117,52 +116,17 @@ class SheetWriter
           ],
           'cell' => [
             'userEnteredFormat' => [
-              'horizontalAlignment' => 'CENTER',
-              'verticalAlignment' => 'MIDDLE',
-              'textFormat' => ['bold' => true]
-            ]
-          ],
-          'fields' => 'userEnteredFormat(horizontalAlignment,verticalAlignment,textFormat)'
-        ]
-      ]);
-
-      $requests[] = new SheetsRequest([
-        'repeatCell' => [
-          'range' => [
-            'sheetId' => $sheetId,
-            'startRowIndex' => $cursor->row - 1,
-            'endRowIndex' => $cursor->row,
-            'startColumnIndex' => 0,
-            'endColumnIndex' => $colCount,
-          ],
-          'cell' => [
-            'userEnteredFormat' => [
               'backgroundColor' => ['red' => 79/255, 'green' => 129/255, 'blue' => 189/255],
-              'textFormat' => ['foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1], 'bold' => true, 'fontSize' => 11],
+              'textFormat' => [
+                'foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1],
+                'bold' => true,
+                'fontSize' => 11
+              ],
               'horizontalAlignment' => 'CENTER',
               'verticalAlignment' => 'MIDDLE',
-            ],
-          ],
-          'fields' => 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
-        ],
-      ]);
-
-      $requests[] = new SheetsRequest([
-        'repeatCell' => [
-          'range' => [
-            'sheetId' => $sheetId,
-            'startRowIndex' => $cursor->row - 1,
-            'endRowIndex' => $cursor->row,
-            'startColumnIndex' => 0,
-            'endColumnIndex' => $colCount,
-          ],
-          'cell' => [
-            'userEnteredFormat' => [
-              'horizontalAlignment' => 'CENTER',
-              'textFormat' => ['bold' => true]
             ]
           ],
-          'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
+          'fields' => 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
         ]
       ]);
 
@@ -220,6 +184,7 @@ class SheetWriter
   {
     $colCount = count($headers);
     $emptyRow = array_fill(0, $colCount, '');
+    $fmt = fn($val) => ChartDataProcessor::formatCurrency($val, $summary);
 
     if ($dataType === 'transactions') {
       $labelRow = $emptyRow;
@@ -233,9 +198,9 @@ class SheetWriter
       $cursor->advanceRow();
 
       $metrics = [
-        'Pemasukan: ' . ($summary['total_income'] ?? 0),
-        'Pengeluaran: ' . ($summary['total_expense'] ?? 0),
-        'Net: ' . ($summary['net'] ?? 0),
+        'Pemasukan: ' . $fmt($summary['total_income'] ?? 0),
+        'Pengeluaran: ' . $fmt($summary['total_expense'] ?? 0),
+        'Net: ' . $fmt($summary['net'] ?? 0),
       ];
       foreach ($metrics as $text) {
         $detailRow = $emptyRow;
@@ -250,7 +215,7 @@ class SheetWriter
       }
     } elseif ($dataType === 'transfers') {
       $row1 = $emptyRow; $row1[0] = 'SUBTOTAL';
-      $row2 = $emptyRow; $row2[3] = 'Total Transfer: ' . ($summary['total'] ?? 0);
+      $row2 = $emptyRow; $row2[3] = 'Total Transfer: ' . $fmt($summary['total'] ?? 0);
       $rows = [$row1,
         $row2];
 
@@ -264,9 +229,9 @@ class SheetWriter
     } elseif ($dataType === 'budgets') {
       $row1 = $emptyRow; $row1[0] = 'SUBTOTAL';
       $row2 = $emptyRow;
-      $row2[3] = 'Total Limit: ' . ($summary['total_limit'] ?? 0);
-      $row2[4] = 'Total Pengeluaran: ' . ($summary['total_spent'] ?? 0);
-      $row2[6] = 'Sisa: ' . ($summary['remaining'] ?? 0);
+      $row2[3] = 'Total Limit: ' . $fmt($summary['total_limit'] ?? 0);
+      $row2[4] = 'Total Pengeluaran: ' . $fmt($summary['total_spent'] ?? 0);
+      $row2[6] = 'Sisa: ' . $fmt($summary['remaining'] ?? 0);
       $rows = [$row1,
         $row2];
 
@@ -294,7 +259,8 @@ class SheetWriter
     );
 
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    $request = new SheetsRequest([
+
+    $mergeRequest = new SheetsRequest([
       'mergeCells' => [
         'range' => [
           'sheetId' => $sheetId,
@@ -307,7 +273,30 @@ class SheetWriter
       ]
     ]);
 
-    $batch = new BatchUpdateSpreadsheetRequest(['requests' => [$request]]);
+    $styleRequest = new SheetsRequest([
+      'repeatCell' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $cursor->row - 1,
+          'endRowIndex' => $cursor->row,
+          'startColumnIndex' => 0,
+          'endColumnIndex' => count($headers),
+        ],
+        'cell' => [
+          'userEnteredFormat' => [
+            'textFormat' => [
+              'italic' => true,
+              'foregroundColor' => ['red' => 136/255, 'green' => 136/255, 'blue' => 136/255],
+              'fontSize' => 10,
+            ],
+            'horizontalAlignment' => 'CENTER',
+          ],
+        ],
+        'fields' => 'userEnteredFormat(textFormat,horizontalAlignment)',
+      ],
+    ]);
+
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => [$mergeRequest, $styleRequest]]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
 
     $cursor->advanceRow();
@@ -320,6 +309,115 @@ class SheetWriter
       $sheetName,
       new ClearValuesRequest()
     );
+  }
+
+  public function autoResizeColumns(string $spreadsheetId, string $sheetName, int $columnCount): void
+  {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    if ($sheetId === null) return;
+
+    $requests = [new SheetsRequest([
+      'autoResizeDimensions' => [
+        'dimensions' => [
+          'sheetId' => $sheetId,
+          'dimension' => 'COLUMNS',
+          'startIndex' => 0,
+          'endIndex' => $columnCount,
+        ]
+      ]
+    ])];
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+  }
+
+  public function writeTransactionChart(
+    string $spreadsheetId,
+    string $sheetName,
+    int $dataStartRow,
+    int $dataEndRow,
+    int $chartRow
+  ): void {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+
+    $chartRequest = new SheetsRequest([
+      'addChart' => [
+        'chart' => [
+          'spec' => [
+            'title' => 'Pemasukan vs Pengeluaran',
+            'basicChart' => [
+              'chartType' => 'COLUMN',
+              'legendPosition' => 'BOTTOM_LEGEND',
+              'axis' => [
+                ['position' => 'BOTTOM_AXIS', 'title' => 'Tanggal'],
+                ['position' => 'LEFT_AXIS', 'title' => 'Jumlah']
+              ],
+              'domains' => [
+                [
+                  'domain' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 0,
+                        'endColumnIndex' => 1,
+                      ]]
+                    ]
+                  ]
+                ]
+              ],
+              'series' => [
+                [
+                  'series' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 4,
+                        'endColumnIndex' => 5,
+                      ]]
+                    ]
+                  ],
+                  'targetAxis' => 'LEFT_AXIS'
+                ],
+                [
+                  'series' => [
+                    'sourceRange' => [
+                      'sources' => [[
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $dataStartRow - 1,
+                        'endRowIndex' => $dataEndRow,
+                        'startColumnIndex' => 5,
+                        'endColumnIndex' => 6,
+                      ]]
+                    ]
+                  ],
+                  'targetAxis' => 'LEFT_AXIS'
+                ]
+              ],
+              'headerCount' => 1
+            ]
+          ],
+          'position' => [
+            'overlayPosition' => [
+              'anchorCell' => [
+                'sheetId' => $sheetId,
+                'rowIndex' => $chartRow - 1,
+                'columnIndex' => 0
+              ],
+              'widthPixels' => 600,
+              'heightPixels' => 350
+            ]
+          ]
+        ]
+      ]
+    ]);
+
+    $batchUpdate = new BatchUpdateSpreadsheetRequest([
+      'requests' => [$chartRequest]
+    ]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
   private function createMergeRequest(int $sheetId, int $startRow, int $endRow, int $startCol, int $endCol): SheetsRequest
