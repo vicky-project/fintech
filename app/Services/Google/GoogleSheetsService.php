@@ -2,7 +2,7 @@
 
 namespace Modules\FinTech\Services\Google;
 
-use Modules\FinTech\Support\ChartDataProcessor;
+use Modules\FinTech\Exports\ChartDataProcessor;
 
 class GoogleSheetsService
 {
