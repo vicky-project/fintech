@@ -20,11 +20,13 @@ class GoogleSheetsService
     $this->writer = $writer;
   }
 
-  public function setupForUser($user): void {
+  public function setupForUser($user): void
+  {
     $this->client->setupForUser($user);
   }
 
-  public function getOrCreateSpreadsheet($user): string {
+  public function getOrCreateSpreadsheet($user): string
+  {
     return $this->spreadsheetManager->getOrCreateSpreadsheet($user);
   }
 
@@ -52,25 +54,34 @@ class GoogleSheetsService
 
     $cursor = new SheetCursor();
 
+    // 1. Metadata
     if ($metadata) {
       $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
     }
 
-    $headerStartRow = $cursor->row;
+    // 2. Header tabel utama
     $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
 
+    // 3. Data utama
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
-    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
 
+    // 3b. Warna transaksi
+    if ($dataType === 'transactions') {
+      $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
+    }
+
+    // 4. Subtotal
     $cursor->advanceRow();
     $subStartRow = $cursor->row;
     if ($summary) {
       $this->writer->writeSubtotal($spreadsheetId, $sheetName, $summary, $dataType, $cursor, $headers);
+      if ($dataType === 'transactions') {
+        $this->writer->applySubtotalColors($spreadsheetId, $sheetName, $subStartRow, $cursor->row - 1, $summary);
+      }
     }
-    $subEndRow = $cursor->row - 1;
-    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
 
+    // 5. Tabel tambahan
     if ($dataType === 'transactions' && $rawTransactions) {
       $cursor->advanceRow();
       if ($summary['include_monthly_summary'] ?? false) {
@@ -83,26 +94,23 @@ class GoogleSheetsService
       }
     }
 
+    // 6. Footer
     $cursor->advanceRow();
-    $footerRow = $cursor->row;
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
+    // 7. Chart (opsional)
     if ($dataType === 'transactions' && !empty($values)) {
       $cursor->advanceRow(2);
       $chartRow = $cursor->row;
-      $this->writer->writeTransactionChart(
-        $spreadsheetId,
-        $sheetName,
-        $dataStartRow,
-        $dataEndRow,
-        $chartRow
-      );
+      $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow);
     }
 
+    // 8. Auto-resize kolom
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
   }
 
-  public function getSpreadsheetUrl(string $spreadsheetId): string {
+  public function getSpreadsheetUrl(string $spreadsheetId): string
+  {
     return $this->spreadsheetManager->getSpreadsheetUrl($spreadsheetId);
   }
 
@@ -147,7 +155,7 @@ class GoogleSheetsService
         ChartDataProcessor::formatCurrency($net, $summary),
       ];
     }
-
+    // Total row
     $values[] = [
       'Total',
       ChartDataProcessor::formatCurrency($totalIncome, $summary),
@@ -155,8 +163,10 @@ class GoogleSheetsService
       ChartDataProcessor::formatCurrency($totalIncome - $totalExpense, $summary),
     ];
 
+    $summaryHeaderRow = $cursor->row;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $this->writer->applySummaryColors($spreadsheetId, $sheetName, $summaryHeaderRow, $values);
   }
 
   private function writeTopSpendingToSheet(
@@ -192,7 +202,9 @@ class GoogleSheetsService
       ];
     }
 
+    $topHeaderRow = $cursor->row;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $this->writer->applyTopSpendingColors($spreadsheetId, $sheetName, $topHeaderRow, $values);
   }
 }
