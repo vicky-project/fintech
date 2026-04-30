@@ -2105,10 +2105,12 @@ function toggleExportOptions() {
 
   const formatXlsx = document.getElementById('format-xlsx');
   const formatPdf = document.getElementById('format-pdf');
+  const formatGsheet = document.getElementById('format-gsheet');
   const isExcel = formatXlsx && formatXlsx.checked;
   const isPdf = formatPdf && formatPdf.checked;
+  const isGsheet = formatGsheet && formatGsheet.checked;
 
-  if (isExcel || isPdf) {
+  if (isExcel || isPdf || isGsheet) {
     optionsDiv.style.display = 'block';
   } else {
     optionsDiv.style.display = 'none';
