@@ -55,8 +55,7 @@ class GoogleSheetsService
     ?array $summary = null,
     ?string $dataType = null,
     ?array $rawTransactions = null
-  ): void
-  {
+  ): void {
     if (empty($data)) return;
 
     $this->spreadsheetManager->addSheetIfNotExists($spreadsheetId, $sheetName);
@@ -67,68 +66,73 @@ class GoogleSheetsService
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
-    $currentRow = 1;
-    $metaRows = 0;
 
-    // metadata
+    // Inisialisasi kursor
+    $cursor = new SheetCursor();
+
+    // Metadata
     if ($metadata) {
-      $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $currentRow);
+      $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor);
     }
 
-    // header
-    $headerStartRow = $currentRow;
-    $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $currentRow, $dataType);
-    $headerRows = ($dataType === 'transactions') ? 2 : 1;
-    $dataStartRow = $headerStartRow + $headerRows;
+    // Header tabel utama
+    $headerStartRow = $cursor->row;
+    $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
+    $headerEndRow = $cursor->row - 1; // baris terakhir header
 
-    // data
-    $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $currentRow);
+    // Data
+    $dataStartRow = $cursor->row;
+    $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
-    // subtotal
-    $subStartRow = $currentRow + 1; // jarak 1 baris
-    $currentRow = $subStartRow;
+    // Subtotal
+    $cursor->advanceRow(); // jarak 1 baris kosong
+    $subStartRow = $cursor->row;
     if ($summary) {
-      $this->writer->writeSubtotal($spreadsheetId, $sheetName, $summary, $dataType, $currentRow, $headers);
+      $this->writer->writeSubtotal($spreadsheetId, $sheetName, $summary, $dataType, $cursor, $headers);
     }
-    $subEndRow = $currentRow - 1;
+    $subEndRow = $cursor->row - 1;
 
+    // Tabel tambahan (ringkasan bulanan, top 5 pengeluaran)
     if ($dataType === 'transactions' && $rawTransactions) {
-      $currentRow++;
+      $cursor->advanceRow(); // jarak 1 baris setelah subtotal
       if ($summary['include_monthly_summary'] ?? false) {
-        $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $currentRow, $summary);
-        $currentRow++;
+        $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
+        $cursor->advanceRow(); // jarak setelah tabel
       }
-      if ($summary['include_top_spending']??false) {
-        $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $currentRow, $summary);
-        $currentRow++;
+      if ($summary['include_top_spending'] ?? false) {
+        $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
+        $cursor->advanceRow();
       }
     }
 
-    // footer
-    $footerRow = $currentRow + 1;
-    $this->writer->writeFooter($spreadsheetId, $sheetName, $footerRow, $headers);
+    // Footer
+    $cursor->advanceRow(); // jarak 1 baris sebelum footer
+    $footerRow = $cursor->row;
+    $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    //if ($dataType === 'transactions' && !empty($values)) {
-    //  $chartRow = $footerRow + 2; // dua baris setelah footer
-    //  $this->writer->writeTransactionChart(
-    //    $spreadsheetId,
-    //    $sheetName,
-    //    $dataStartRow,
-    //    $dataEndRow,
-    //    $chartRow
-    //  );
-    // }
+    // Chart (khusus transaksi, jika ada data)
+    if ($dataType === 'transactions' && !empty($values)) {
+      $cursor->advanceRow(2); // jarak 2 baris setelah footer
+      $chartRow = $cursor->row;
+      $this->writer->writeTransactionChart(
+        $spreadsheetId,
+        $sheetName,
+        $dataStartRow,
+        $dataEndRow,
+        $chartRow
+      );
+    }
 
-    // styling
-    //$this->styler->apply(
-    //  $spreadsheetId, $sheetName,
-    //  $headerStartRow, $dataType, $headers, $values,
-    // $dataStartRow, $dataEndRow,
-    // $subStartRow, $subEndRow,
-    //  $footerRow
-    //);
+    // Styling data utama + footer
+    $this->styler->apply(
+      $spreadsheetId, $sheetName,
+      $headerStartRow, $dataType, $headers, $values,
+      $dataStartRow, $dataEndRow,
+      $subStartRow, $subEndRow,
+      $footerRow
+    );
 
-    // auto‑resize
+    // Auto-resize semua kolom
     $this->styler->autoResizeColumns($spreadsheetId, $sheetName, count($headers));
   }
 
