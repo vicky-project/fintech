@@ -77,8 +77,8 @@ class GoogleSheetsService
     $this->writer->setColumnWidth($spreadsheetId, $sheetName, $cursor->col, $colCount, 150);
 
     // Filter (kecuali transaksi karena merge vertikal)
-    if ($dataType !== 'transactions') {
-      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount);
+    if ($dataType === 'transactions') {
+      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerEndRow, $dataEndRow, 0, $colCount);
     }
 
     // 4. Subtotal
