@@ -92,11 +92,14 @@ class GoogleSheetsService
     $subEndRow = $currentRow - 1;
 
     if ($dataType === 'transactions' && $rawTransactions) {
+      $currentRow++;
       if ($summary['include_monthly_summary'] ?? false) {
         $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $currentRow, $summary);
+        $currentRow++;
       }
       if ($summary['include_top_spending']??false) {
         $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $currentRow, $summary);
+        $currentRow++;
       }
     }
 
