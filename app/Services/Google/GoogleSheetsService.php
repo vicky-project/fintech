@@ -78,7 +78,7 @@ class GoogleSheetsService
 
     // Filter (kecuali transaksi karena merge vertikal)
     if ($dataType === 'transactions') {
-      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerEndRow, $dataEndRow, 0, $colCount);
+      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, 0, $colCount);
     }
 
     // 4. Subtotal
