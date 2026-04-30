@@ -495,6 +495,44 @@ class SheetWriter
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
   }
 
+  // ======================== BORDER ========================
+  public function applyBordersToRange(
+    string $spreadsheetId,
+    string $sheetName,
+    int $startRow,
+    int $endRow,
+    int $startCol = 0,
+    int $endCol = 0,
+    array $headers = []
+  ): void {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    if ($sheetId === null || $endRow < $startRow) return;
+
+    // Jika endCol tidak diisi, gunakan jumlah header (atau fallback ke 7)
+    $colCount = $endCol > 0 ? $endCol : (count($headers) > 0 ? count($headers) : 7);
+
+    $request = new SheetsRequest([
+      'updateBorders' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'startRowIndex' => $startRow - 1,
+          'endRowIndex' => $endRow,
+          'startColumnIndex' => $startCol,
+          'endColumnIndex' => $colCount,
+        ],
+        'top' => ['style' => 'SOLID', 'width' => 1],
+        'bottom' => ['style' => 'SOLID', 'width' => 1],
+        'left' => ['style' => 'SOLID', 'width' => 1],
+        'right' => ['style' => 'SOLID', 'width' => 1],
+        'innerHorizontal' => ['style' => 'SOLID', 'width' => 1],
+        'innerVertical' => ['style' => 'SOLID', 'width' => 1],
+      ]
+    ]);
+
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => [$request]]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+  }
+
   // ======================== COLOR HELPERS ========================
   private function setCellColor(int $sheetId, int $row, int $col, array $color, bool $bold, array &$requests): void
   {

@@ -60,6 +60,7 @@ class GoogleSheetsService
     }
 
     // 2. Header tabel utama
+    $headerStartRow = $cursor->row;
     $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
 
     // 3. Data utama
@@ -71,6 +72,9 @@ class GoogleSheetsService
       $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
     }
 
+    // 3c. Border tabel utama
+    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $headerStartRow, $dataEndRow, 0, $colCount, $headers);
+
     // 4. Subtotal
     $cursor->advanceRow();
     $subStartRow = $cursor->row;
@@ -80,6 +84,7 @@ class GoogleSheetsService
         $this->writer->applySubtotalColors($spreadsheetId, $sheetName, $subStartRow, $cursor->row - 1, $summary);
       }
     }
+    $subEndRow = $cursor->row - 1;
 
     // 5. Tabel tambahan
     if ($dataType === 'transactions' && $rawTransactions) {
@@ -105,7 +110,7 @@ class GoogleSheetsService
       $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow);
     }
 
-    // 8. Auto-resize kolom
+    // 8. Auto-resize kolom (terakhir, agar semua konten terukur)
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
   }
 
@@ -165,8 +170,9 @@ class GoogleSheetsService
 
     $summaryHeaderRow = $cursor->row;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
-    $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
     $this->writer->applySummaryColors($spreadsheetId, $sheetName, $summaryHeaderRow, $values);
+    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $summaryHeaderRow, $dataEndRow, 0, 4, $headers);
   }
 
   private function writeTopSpendingToSheet(
@@ -204,7 +210,8 @@ class GoogleSheetsService
 
     $topHeaderRow = $cursor->row;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
-    $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
     $this->writer->applyTopSpendingColors($spreadsheetId, $sheetName, $topHeaderRow, $values);
+    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $topHeaderRow, $dataEndRow, 0, 4, $headers);
   }
 }
