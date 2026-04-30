@@ -97,34 +97,6 @@ class GoogleSheetsService
     $footerRow = $cursor->row;
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    // Chart (transactions only)
-    if ($dataType === 'transactions' && !empty($values)) {
-      $cursor->advanceRow(2);
-      $chartRow = $cursor->row;
-      $this->writer->writeTransactionChart(
-        $spreadsheetId,
-        $sheetName,
-        $dataStartRow,
-        $dataEndRow,
-        $chartRow
-      );
-    }
-
-    // Styling
-    $this->styler->apply(
-      $spreadsheetId,
-      $sheetName,
-      $headerStartRow,
-      $dataType,
-      $headers,
-      $values,
-      $dataStartRow,
-      $dataEndRow,
-      $subStartRow,
-      $subEndRow,
-      $footerRow
-    );
-
     // Auto-resize
     $this->styler->autoResizeColumns($spreadsheetId, $sheetName, count($headers));
   }
