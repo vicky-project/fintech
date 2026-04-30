@@ -532,6 +532,58 @@ class SheetWriter
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
   }
 
+  public function setColumnWidth(string $spreadsheetId, string $sheetName, int $startCol, int $endCol, int $pixelWidth): void
+  {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    $requests = [new SheetsRequest([
+      'updateDimensionProperties' => [
+        'range' => [
+          'sheetId' => $sheetId,
+          'dimension' => 'COLUMNS',
+          'startIndex' => $startCol,
+          'endIndex' => $endCol,
+        ],
+        'properties' => ['pixelSize' => $pixelWidth],
+        'fields' => 'pixelSize'
+      ]
+    ])];
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+  }
+
+
+  /**
+  * Menyembunyikan sejumlah kolom mulai dari indeks tertentu.
+  *
+  * @param int $startIndex indeks kolom pertama yang akan disembunyikan (0‑based)
+  * @param int $count      jumlah kolom yang akan disembunyikan
+  */
+  public function hideColumns(string $spreadsheetId, string $sheetName, int $startIndex, int $count): void
+  {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    if ($sheetId === null) return;
+
+    $requests = [
+      new SheetsRequest([
+        'updateDimensionProperties' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'dimension' => 'COLUMNS',
+            'startIndex' => $startIndex,
+            'endIndex' => $startIndex + $count,
+          ],
+          'properties' => [
+            'hiddenByUser' => true,
+          ],
+          'fields' => 'hiddenByUser',
+        ],
+      ]),
+    ];
+
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+  }
+
   // ======================== BORDER ========================
   public function applyBordersToRange(
     string $spreadsheetId,

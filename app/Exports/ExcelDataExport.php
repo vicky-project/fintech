@@ -270,7 +270,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       foreach ($this->data as $line) {
         $col = 'A';
         foreach ($line as $val) {
-          $display = ($val === '-' || $val === null) ? '0' : $val;
+          $display = ($val === 0 || $val === null) ? '0' : $val;
           $sheet->setCellValue($col . $row, $display);
           $col++;
         }

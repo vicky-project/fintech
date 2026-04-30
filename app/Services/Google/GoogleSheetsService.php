@@ -74,6 +74,7 @@ class GoogleSheetsService
     }
     $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers);
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
+    $this->writer->setColumnWidth($spreadsheetId, $sheetName, $cursor->col, $colCount, 150);
 
     // Filter (kecuali transaksi karena merge vertikal)
     if ($dataType !== 'transactions') {
