@@ -75,20 +75,15 @@ class GoogleSheetsService
         $spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow
       );
     }
-    // (transfer & budget tidak perlu format spesial selain border)
 
     // 5. Border tabel utama
     $this->writer->applyBordersToRange(
       $spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers
     );
 
-    // Filter (kecuali transaksi jika tidak diperlukan, tapi bisa tetap dipasang)
-    // Karena header satu baris, filter bisa dipasang langsung
-    if ($dataType !== 'transactions') {
-      $this->writer->applyBasicFilter(
-        $spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount
-      );
-    }
+    $this->writer->applyBasicFilter(
+      $spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount
+    );
 
     // 6. Subtotal
     $cursor->advanceRow();
