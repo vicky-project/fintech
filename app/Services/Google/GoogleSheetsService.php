@@ -74,7 +74,7 @@ class GoogleSheetsService
     }
     $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers);
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
-    //$this->writer->setColumnWidth($spreadsheetId, $sheetName, $cursor->col, $colCount, 150);
+    $this->writer->setColumnWidth($spreadsheetId, $sheetName, $cursor->col, $colCount, 150);
 
     // Filter (kecuali transaksi karena merge vertikal)
     if ($dataType !== 'transactions') {
@@ -141,7 +141,7 @@ class GoogleSheetsService
     // 7. Auto-resize
     $maxColCount = $rightColIndex + 4;
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxColCount);
-    $this->writer->setColumnWidth($spreadsheetId, $sheetName, 0, $cursor->col, 150);
+    $this->writer->setColumnWidth($spreadsheetId, $sheetName, $rightColIndex, $maxColCount, 150);
   }
 
   public function getSpreadsheetUrl(string $spreadsheetId): string
