@@ -3,7 +3,7 @@
 namespace Modules\FinTech\Services;
 
 use Modules\FinTech\Models\Transaction;
-use Modules\FinTech\Models\Transfer,;
+use Modules\FinTech\Models\Transfer;
 use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
