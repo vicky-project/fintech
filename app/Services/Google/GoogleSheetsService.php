@@ -75,7 +75,13 @@ class GoogleSheetsService
     $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $headerStartRow, $dataEndRow, 0, $colCount, $headers);
 
     // 3c. Filter (setelah data ada)
-    $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerStartRow, $headerEndRow, 0, $colCount);
+    if ($dataType === 'transactions') {
+      // Filter hanya pada baris kedua header (sub‑header)
+      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerEndRow, $headerEndRow, 0, $colCount);
+    } else {
+      // Tipe lain: filter pada seluruh header
+      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerStartRow, $headerEndRow, 0, $colCount);
+    }
 
     // 4. Subtotal
     $cursor->advanceRow();
