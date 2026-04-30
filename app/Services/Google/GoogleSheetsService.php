@@ -73,6 +73,7 @@ class GoogleSheetsService
       $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
     }
     $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers);
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
 
     // Filter (kecuali transaksi karena merge vertikal)
     if ($dataType !== 'transactions') {
