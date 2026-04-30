@@ -3,7 +3,7 @@
 namespace Modules\FinTech\Services;
 
 use Modules\FinTech\Models\Transaction;
-use Modules\FinTech\Models\Transfer;
+use Modules\FinTech\Models\Transfer,;
 use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
@@ -15,10 +15,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Modules\FinTech\Services\Google\ {
-  GoogleSheetsService,
-  SpreadsheetManager
-};
+use Modules\FinTech\Services\Google\GoogleSheetsService;
+use Modules\FinTech\Services\Google\SpreadsheetManager;
 
 class ExportService
 {
@@ -61,7 +59,6 @@ class ExportService
           $formatRules,
           ['metadata' => $this->buildMetadata($subType, $filters, $wallet->name)]
         );
-        // Hanya untuk sheet transaksi
         if ($subType === 'transactions') {
           $summaryArr['include_chart'] = $includeChart;
           $summaryArr['include_monthly_summary'] = $includeMonthly;
@@ -137,12 +134,12 @@ class ExportService
       $amount = $trx->getAmountFloat();
       if ($trx->type === TransactionType::INCOME) {
         $totalIncome += $amount;
-        $incomeNum = $amount;
-        $expenseNum = 0;
+        $income = $amount;
+        $expense = 0;
       } else {
         $totalExpense += $amount;
-        $incomeNum = 0;
-        $expenseNum = $amount;
+        $income = 0;
+        $expense = $amount;
       }
 
       return [
@@ -150,8 +147,10 @@ class ExportService
         'Tipe' => $trx->type->label(),
         'Kategori' => $trx->category->name,
         'Dompet' => $trx->wallet->name,
-        'Pemasukan' => $incomeNum,
-        'Pengeluaran' => $expenseNum,
+        'Pemasukan' => $income,
+        // float
+        'Pengeluaran' => $expense,
+        // float
         'Deskripsi' => $trx->description ?? '-',
       ];
     })->toArray();
@@ -191,7 +190,8 @@ class ExportService
         'Tanggal' => $t->transfer_date->format('d/m/Y'),
         'Dari' => $t->fromWallet->name,
         'Ke' => $t->toWallet->name,
-        'Jumlah' => $t->getFormattedAmount(),
+        'Jumlah' => $amount,
+        // float
         'Deskripsi' => $t->description ?? '-',
       ];
     })->toArray();
@@ -241,12 +241,12 @@ class ExportService
           'Kategori' => $b->category->name,
           'Dompet' => $b->wallet?->name ?? '-',
           'Periode' => $b->period_type->label(),
-          'Limit' => $b->getFormattedAmount(),
-          'Pengeluaran' => $b->formatCurrency($spent),
+          'Limit' => $limit,
+          // float
+          'Pengeluaran' => $spent,
+          // float
           'Persentase' => $b->getPercentage() . '%',
-          'Status' => $b->isOverspent()
-          ? 'Terlampaui'
-          : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
+          'Status' => $b->isOverspent() ? 'Terlampaui' : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
         ];
       })->values()->toArray();
 
@@ -325,7 +325,6 @@ class ExportService
         $metaTf = $this->buildMetadata('transfers', $filters, $wallet->name);
         $metaBg = $this->buildMetadata('budgets', $filters, $wallet->name);
 
-        // Gabungkan flag dan rules ke summary transaksi
         $txSummary = array_merge($all['transactions'][1], $formatRules, [
           'metadata' => $metaTx,
           'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
@@ -334,14 +333,8 @@ class ExportService
         ]);
 
         $googleService->exportDataToSheet(
-          $spreadsheetId,
-          SpreadsheetManager::SHEET_TRANSACTIONS,
-          $all['transactions'][0],
-          true,
-          $metaTx,
-          $txSummary,
-          'transactions',
-          $rawTransactions // <-- kirim data mentah
+          $spreadsheetId, SpreadsheetManager::SHEET_TRANSACTIONS,
+          $all['transactions'][0], true, $metaTx, $txSummary, 'transactions', $rawTransactions
         );
         $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_TRANSFERS, $all['transfers'][0], true, $metaTf, $all['transfers'][1], 'transfers');
         $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_BUDGETS, $all['budgets'][0], true, $metaBg, $all['budgets'][1], 'budgets');
@@ -363,14 +356,7 @@ class ExportService
 
         $summary = array_merge($summary, $formatRules);
         $googleService->exportDataToSheet(
-          $spreadsheetId,
-          $sheetName,
-          $data,
-          true,
-          $metadata,
-          $summary,
-          $type,
-          $rawTransactions // <-- kirim data mentah
+          $spreadsheetId, $sheetName, $data, true, $metadata, $summary, $type, $rawTransactions
         );
       }
 

@@ -59,95 +59,104 @@ class GoogleSheetsService
       $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
     }
 
-    // 2. Header tabel utama
+    // 2. Header tabel utama (satu baris, tanpa merge)
     $tableStartRow = $cursor->row;
     $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
-    $headerEndRow = $cursor->row - 1;
+    $headerEndRow = $cursor->row - 1; // 1 baris header
 
-    // 3. Data utama
+    // 3. Data utama (nilai float)
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
-    // 3b. Warna & border data utama
+    // 4. Format mata uang untuk kolom E & F (khusus transaksi)
     if ($dataType === 'transactions') {
-      $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
+      $this->writer->applyCurrencyFormat($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $summary);
+      $this->writer->applyTransactionColors(
+        $spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow
+      );
     }
-    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers);
-    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
-    $this->writer->setColumnWidth($spreadsheetId, $sheetName, $cursor->col, $colCount, 150);
+    // (transfer & budget tidak perlu format spesial selain border)
 
-    // Filter (kecuali transaksi karena merge vertikal)
-    if ($dataType === 'transactions') {
-      $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, 0, $colCount);
+    // 5. Border tabel utama
+    $this->writer->applyBordersToRange(
+      $spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers
+    );
+
+    // Filter (kecuali transaksi jika tidak diperlukan, tapi bisa tetap dipasang)
+    // Karena header satu baris, filter bisa dipasang langsung
+    if ($dataType !== 'transactions') {
+      $this->writer->applyBasicFilter(
+        $spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount
+      );
     }
 
-    // 4. Subtotal
+    // 6. Subtotal
     $cursor->advanceRow();
     $subStartRow = $cursor->row;
     if ($summary) {
       $this->writer->writeSubtotal($spreadsheetId, $sheetName, $summary, $dataType, $cursor, $headers);
       if ($dataType === 'transactions') {
-        $this->writer->applySubtotalColors($spreadsheetId, $sheetName, $subStartRow, $cursor->row - 1, $summary);
+        $this->writer->applySubtotalColors(
+          $spreadsheetId, $sheetName, $subStartRow, $cursor->row - 1, $summary
+        );
       }
     }
 
-    // ... (setelah subtotal)
-
-    // Simpan baris terakhir setelah subtotal (data utama)
-    $lastMainRow = $cursor->row;
-
-    // ---- TABEL TAMBAHAN DI SEBELAH KANAN ----
+    // 7. Tabel tambahan di sebelah kanan
     $rightColIndex = $colCount + 1; // 1 kolom kosong
     $cursor->setCol($rightColIndex);
     $cursor->row = $tableStartRow; // sejajar header
 
     $includeMonthly = $summary['include_monthly_summary'] ?? false;
     $includeTop = $summary['include_top_spending'] ?? false;
-    $lastAddRow = $tableStartRow; // inisialisasi
 
     if ($dataType === 'transactions' && $rawTransactions && ($includeMonthly || $includeTop)) {
       if ($includeMonthly) {
-        $this->writeMonthlySummaryToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
-        // Jika top spending juga disertakan, beri jarak 1 baris
-        if ($includeTop) {
-          $cursor->advanceRow();
-        }
-        $lastAddRow = max($lastAddRow, $cursor->row);
+        $this->writeMonthlySummaryToSheet(
+          $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
+        );
+        $cursor->advanceRow(); // jarak 1 baris
       }
       if ($includeTop) {
-        $this->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
-        $lastAddRow = max($lastAddRow, $cursor->row);
+        $this->writeTopSpendingToSheet(
+          $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
+        );
+        $cursor->advanceRow();
       }
     }
 
-    // Baris paling bawah di antara data utama dan blok tambahan
-    $finalRow = max($lastMainRow, $lastAddRow);
-
-    // Kembalikan kursor ke kolom A, dan letakkan 1 baris setelah konten terakhir
+    // Kembalikan kursor ke kolom A untuk footer
     $cursor->setCol(0);
-    $cursor->row = $finalRow + 1;
+    // Tentukan baris akhir (mana yang lebih besar: subtotal atau tabel tambahan)
+    $lastMainRow = $subStartRow + ($summary ? 4 : 0); // perkiraan baris setelah subtotal
+    $lastAddRow = ($dataType === 'transactions') ? $cursor->row : 0;
+    $finalRow = max($lastMainRow, $lastAddRow);
+    $cursor->row = $finalRow + 1; // 1 baris kosong
 
-    // 5. Footer
+    // 8. Footer
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    // 6. Chart (opsional)
-    $includeChart = $dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($values);
+    // 9. Chart (sederhana, langsung dari kolom E/F)
+    $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     if ($includeChart) {
       $cursor->advanceRow(2);
       $chartRow = $cursor->row;
-      $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow);
+      $this->writer->writeTransactionChart(
+        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow
+      );
     }
 
-    // 7. Auto-resize
-    $maxColCount = $rightColIndex + 4;
-    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxColCount);
-    $this->writer->setColumnWidth($spreadsheetId, $sheetName, $rightColIndex, $maxColCount, 150);
+    // 10. Auto-resize semua kolom
+    $maxCol = max($colCount, $rightColIndex + 4); // +4 untuk tabel tambahan
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxCol);
   }
 
   public function getSpreadsheetUrl(string $spreadsheetId): string
   {
     return $this->spreadsheetManager->getSpreadsheetUrl($spreadsheetId);
   }
+
+  // ======================== TABEL TAMBAHAN ========================
 
   private function writeMonthlySummaryToSheet(
     string $spreadsheetId,
@@ -166,8 +175,8 @@ class GoogleSheetsService
           'expense' => 0,
           'label' => $date->format('M Y')];
       }
-      $grouped[$key]['income'] += ChartDataProcessor::parseCurrency($row['Pemasukan'] ?? '0');
-      $grouped[$key]['expense'] += ChartDataProcessor::parseCurrency($row['Pengeluaran'] ?? '0');
+      $grouped[$key]['income'] += (float)($row['Pemasukan'] ?? 0);
+      $grouped[$key]['expense'] += (float)($row['Pengeluaran'] ?? 0);
     }
     ksort($grouped);
     if (empty($grouped)) return;
@@ -178,23 +187,22 @@ class GoogleSheetsService
       'Net'];
     $values = [];
     $totalIncome = $totalExpense = 0;
-
     foreach ($grouped as $item) {
       $net = $item['income'] - $item['expense'];
       $totalIncome += $item['income'];
       $totalExpense += $item['expense'];
       $values[] = [
         $item['label'],
-        ChartDataProcessor::formatCurrency($item['income'], $summary),
-        ChartDataProcessor::formatCurrency($item['expense'], $summary),
-        ChartDataProcessor::formatCurrency($net, $summary),
+        $item['income'],
+        $item['expense'],
+        $net
       ];
     }
     $values[] = [
       'Total',
-      ChartDataProcessor::formatCurrency($totalIncome, $summary),
-      ChartDataProcessor::formatCurrency($totalExpense, $summary),
-      ChartDataProcessor::formatCurrency($totalIncome - $totalExpense, $summary),
+      $totalIncome,
+      $totalExpense,
+      $totalIncome - $totalExpense
     ];
 
     $startCol = $cursor->col;
@@ -202,7 +210,9 @@ class GoogleSheetsService
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
     $this->writer->applySummaryColors($spreadsheetId, $sheetName, $summaryHeaderRow, $values, $startCol);
-    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $summaryHeaderRow, $dataEndRow, $startCol, count($headers), $headers);
+    $this->writer->applyBordersToRange(
+      $spreadsheetId, $sheetName, $summaryHeaderRow, $dataEndRow, $startCol, count($headers), $headers
+    );
   }
 
   private function writeTopSpendingToSheet(
@@ -216,8 +226,7 @@ class GoogleSheetsService
     if (empty($expenses)) return;
 
     usort($expenses, fn($a, $b) =>
-      ChartDataProcessor::parseCurrency($b['Pengeluaran'] ?? '0') <=>
-      ChartDataProcessor::parseCurrency($a['Pengeluaran'] ?? '0')
+      ((float)($b['Pengeluaran'] ?? 0)) <=> ((float)($a['Pengeluaran'] ?? 0))
     );
     $top5 = array_slice($expenses, 0, 5);
 
@@ -230,11 +239,8 @@ class GoogleSheetsService
       $values[] = [
         $item['Tanggal'] ?? '',
         $item['Kategori'] ?? '',
-        ChartDataProcessor::formatCurrency(
-          ChartDataProcessor::parseCurrency($item['Pengeluaran'] ?? '0'),
-          $summary
-        ),
-        $item['Deskripsi'] ?? '-',
+        (float)($item['Pengeluaran'] ?? 0),
+        $item['Deskripsi'] ?? '-'
       ];
     }
 
@@ -243,6 +249,8 @@ class GoogleSheetsService
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
     $this->writer->applyTopSpendingColors($spreadsheetId, $sheetName, $topHeaderRow, $values, $startCol);
-    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $topHeaderRow, $dataEndRow, $startCol, count($headers), $headers);
+    $this->writer->applyBordersToRange(
+      $spreadsheetId, $sheetName, $topHeaderRow, $dataEndRow, $startCol, count($headers), $headers
+    );
   }
 }
