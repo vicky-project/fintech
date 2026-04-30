@@ -6,6 +6,7 @@ use Modules\FinTech\Services\Google\GoogleSheetsClient;
 use Modules\FinTech\Services\Google\SpreadsheetManager;
 use Modules\FinTech\Services\Google\SheetWriter;
 use Modules\FinTech\Services\Google\SheetStyler;
+use Modules\FinTech\Exports\ChartDataProcessor;
 
 class GoogleSheetsService
 {
@@ -155,8 +156,8 @@ class GoogleSheetsService
           'expense' => 0,
           'label' => $date->format('M Y')];
       }
-      $grouped[$key]['income'] += \Modules\FinTech\Exports\ChartDataProcessor::parseCurrency($row['Pemasukan'] ?? '0');
-      $grouped[$key]['expense'] += \Modules\FinTech\Exports\ChartDataProcessor::parseCurrency($row['Pengeluaran'] ?? '0');
+      $grouped[$key]['income'] += ChartDataProcessor::parseCurrency($row['Pemasukan'] ?? '0');
+      $grouped[$key]['expense'] += ChartDataProcessor::parseCurrency($row['Pengeluaran'] ?? '0');
     }
     ksort($grouped);
 
@@ -175,17 +176,17 @@ class GoogleSheetsService
       $totalExpense += $item['expense'];
       $values[] = [
         $item['label'],
-        \Modules\FinTech\Exports\ChartDataProcessor::formatCurrency($item['income'], $summary),
-        \Modules\FinTech\Exports\ChartDataProcessor::formatCurrency($item['expense'], $summary),
-        \Modules\FinTech\Exports\ChartDataProcessor::formatCurrency($net, $summary),
+        ChartDataProcessor::formatCurrency($item['income'], $summary),
+        ChartDataProcessor::formatCurrency($item['expense'], $summary),
+        ChartDataProcessor::formatCurrency($net, $summary),
       ];
     }
     // Baris Total
     $values[] = [
       'Total',
-      \Modules\FinTech\Exports\ChartDataProcessor::formatCurrency($totalIncome, $summary),
-      \Modules\FinTech\Exports\ChartDataProcessor::formatCurrency($totalExpense, $summary),
-      \Modules\FinTech\Exports\ChartDataProcessor::formatCurrency($totalIncome - $totalExpense, $summary),
+      ChartDataProcessor::formatCurrency($totalIncome, $summary),
+      ChartDataProcessor::formatCurrency($totalExpense, $summary),
+      ChartDataProcessor::formatCurrency($totalIncome - $totalExpense, $summary),
     ];
 
     // Tulis ke sheet
