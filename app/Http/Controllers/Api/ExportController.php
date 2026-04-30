@@ -45,7 +45,7 @@ class ExportController extends Controller
         $url = $filePath;
         $telegramApi->sendMessage($chatId, "✅ Data berhasil diekspor ke Google Sheets!\n📊 Buka: $url");
 
-        return response()->json(['success' => true, 'url' => $url]);
+        return response()->json(['success' => true, 'message' => 'Berhasil export ke google sheet. Buka telegram Anda', 'url' => $url]);
       }
 
       $caption = "✅ Export " . ucfirst($data['type']) . " selesai!\n" . now()->format('d M Y H:i');
