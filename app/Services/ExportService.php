@@ -413,7 +413,7 @@ class ExportService
       $meta = [
         'Dompet: ' . $walletName,
         'Tipe Data: ' . ($type === 'all' ? 'Semua Data' : $this->getTitle($type)),
-        'Tanggal Ekspor: ' . now()->format('d M Y H:i'),
+        'Tanggal Ekspor: ' . now()->setTimezone(config('app.timezone'))->format('d M Y H:i'),
       ];
 
       if (!empty($filters['month'])) {

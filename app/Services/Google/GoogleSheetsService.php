@@ -54,6 +54,9 @@ class GoogleSheetsService
 
     $cursor = new SheetCursor();
 
+    $title = $metadata[0] ?? $this->getTitle($dataType);
+    $this->writer->writeTitle($spreadsheetId, $sheetName, $title, $cursor, $colCount);
+
     // 1. Metadata
     if ($metadata) {
       $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
