@@ -111,10 +111,10 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
     public function title(): string
     {
       return match ($this->type) {
-        'transactions' => 'Transaksi',
-        'transfers' => 'Transfer',
-        'budgets' => 'Budget',
-      default => 'Data'
+        'transactions' => 'Riwayat Transaksi',
+        'transfers' => 'Riwayat Transfer',
+        'budgets' => 'Ringkasan Budget',
+      default => 'Laporan Lengkap Keuangan'
       };
     }
 
@@ -129,7 +129,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $metaCount = count($metadata);
           $highestCol = $this->getHighestColumn();
 
-          $titleRow = $this->writeTitle($sheet, $this->title($this->type), $highestCol);
+          $titleRow = $this->writeTitle($sheet, $this->title(), $highestCol);
 
           $metaStart = $titleRow + 1;
           $this->writeMetadataSection($sheet, $metadata, $metaCount, $highestCol, $metaStart);

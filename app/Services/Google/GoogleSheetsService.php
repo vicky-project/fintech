@@ -54,7 +54,7 @@ class GoogleSheetsService
 
     $cursor = new SheetCursor();
 
-    $title = $metadata[0] ?? $this->getTitle($dataType);
+    $title = $this->getTitle($dataType);
     $this->writer->writeTitle($spreadsheetId, $sheetName, $title, $cursor, $colCount);
 
     // 1. Metadata
@@ -260,4 +260,13 @@ class GoogleSheetsService
       $spreadsheetId, $sheetName, $topHeaderRow, $dataEndRow, $startCol, count($headers), $headers
     );
   }
-}
+
+  private function getTitle(string $dataType) {
+    return match($dataType) {
+      'transactions' => 'Riwayat Transaksi',
+      'budgets' => 'Ringkasan Budget',
+      'transfer' = 'Riwayat Transfer',
+      default => 'Laporan Keuangan Lengkap'
+      };
+    }
+  }
