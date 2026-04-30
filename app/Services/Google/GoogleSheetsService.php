@@ -265,7 +265,7 @@ class GoogleSheetsService
     return match($dataType) {
       'transactions' => 'Riwayat Transaksi',
       'budgets' => 'Ringkasan Budget',
-      'transfer' = 'Riwayat Transfer',
+      'transfer' => 'Riwayat Transfer',
       default => 'Laporan Keuangan Lengkap'
       };
     }
