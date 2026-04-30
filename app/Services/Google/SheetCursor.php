@@ -9,7 +9,6 @@ class SheetCursor
 
   public function advanceRow(int $count = 1): void {
     $this->row += $count;
-    $this->col = 0;
   }
 
   public function setCol(int $col): void {

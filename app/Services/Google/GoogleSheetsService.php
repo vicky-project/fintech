@@ -186,10 +186,11 @@ class GoogleSheetsService
     ];
 
     $summaryHeaderRow = $cursor->row;
+    $startCol = $cursor->col;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
-    $this->writer->applySummaryColors($spreadsheetId, $sheetName, $summaryHeaderRow, $values);
-    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $summaryHeaderRow, $dataEndRow, 0, 4, $headers);
+    $this->writer->applySummaryColors($spreadsheetId, $sheetName, $summaryHeaderRow, $values, $startCol);
+    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $summaryHeaderRow, $dataEndRow, $startCol, count($headers), $headers);
   }
 
   private function writeTopSpendingToSheet(

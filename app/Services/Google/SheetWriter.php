@@ -151,7 +151,9 @@ class SheetWriter
   public function writeSimpleHeader(string $spreadsheetId, string $sheetName, array $headers, SheetCursor $cursor): void
   {
     $colCount = count($headers);
-    $range = $sheetName . '!A' . $cursor->row . ':' . chr(64 + $colCount) . $cursor->row;
+    $startColLetter = $cursor->getColLetter();
+    $endColLetter = chr(65 + $cursor->col + $colCount - 1);
+    $range = $sheetName . '!'. $startColLetter . $cursor->row . ':' . $endColLetter . $cursor->row;
 
     $this->client->getSheetsService()->spreadsheets_values->update(
       $spreadsheetId,
@@ -169,17 +171,17 @@ class SheetWriter
   public function writeData(string $spreadsheetId, string $sheetName, array $values, SheetCursor $cursor): int
   {
     if (empty($values)) return 0;
+    $startColLetter = $cursor->getColLetter();
 
     $this->client->getSheetsService()->spreadsheets_values->update(
       $spreadsheetId,
-      $sheetName . '!A' . $cursor->row,
+      $sheetName . '!'. $startColLetter . $cursor->row,
       new ValueRange(['values' => $values]),
       ['valueInputOption' => 'RAW']
     );
 
     $endRow = $cursor->row + count($values) - 1;
     $cursor->row = $endRow + 1;
-    $cursor->col = 0;
     return $endRow;
   }
 
@@ -439,7 +441,7 @@ class SheetWriter
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
-  private function applyHeaderStyle(string $spreadsheetId, int $sheetId, int $row, int $colCount): void
+  private function applyHeaderStyle(string $spreadsheetId, int $sheetId, int $row, int $colCount, int $startCol = 0): void
   {
     $requests = [
       new SheetsRequest([
@@ -448,8 +450,8 @@ class SheetWriter
             'sheetId' => $sheetId,
             'startRowIndex' => $row - 1,
             'endRowIndex' => $row,
-            'startColumnIndex' => 0,
-            'endColumnIndex' => $colCount,
+            'startColumnIndex' => $startCol,
+            'endColumnIndex' => $startCol + $colCount,
           ],
           'cell' => [
             'userEnteredFormat' => [
@@ -547,7 +549,7 @@ class SheetWriter
           'startRowIndex' => $startRow - 1,
           'endRowIndex' => $endRow,
           'startColumnIndex' => $startCol,
-          'endColumnIndex' => $colCount,
+          'endColumnIndex' => $startCol + $colCount,
         ],
         'top' => ['style' => 'SOLID', 'width' => 1],
         'bottom' => ['style' => 'SOLID', 'width' => 1],
@@ -665,7 +667,8 @@ class SheetWriter
     string $spreadsheetId,
     string $sheetName,
     int $headerRow,
-    array $values
+    array $values,
+    int $startCol = 0
   ): void {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     if ($sheetId === null || empty($values)) return;
@@ -677,9 +680,9 @@ class SheetWriter
     $red = ['red' => 220/255,
       'green' => 53/255,
       'blue' => 69/255];
-    $colIncome = 1;
-    $colExpense = 2;
-    $colNet = 3;
+    $colIncome = $startCol + 1;
+    $colExpense = $startCol + 2;
+    $colNet = $startCol + 3;
     $dataStartRow = $headerRow + 1;
 
     foreach ($values as $idx => $row) {
@@ -703,7 +706,8 @@ class SheetWriter
     string $spreadsheetId,
     string $sheetName,
     int $headerRow,
-    array $values
+    array $values,
+    int $startCol = 0
   ): void {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     if ($sheetId === null || empty($values)) return;
@@ -712,7 +716,7 @@ class SheetWriter
     $red = ['red' => 220/255,
       'green' => 53/255,
       'blue' => 69/255];
-    $colJumlah = 2;
+    $colJumlah = $startCol + 2;
     $dataStartRow = $headerRow + 1;
 
     foreach ($values as $idx => $row) {
