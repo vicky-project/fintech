@@ -2,19 +2,15 @@
 
 namespace Modules\FinTech\Services;
 
-use Modules\FinTech\Models\ {
-  Transaction,
-  Transfer,
-  Budget,
-  Wallet
-};
+use Modules\FinTech\Models\Transaction;
+use Modules\FinTech\Models\Transfer;
+use Modules\FinTech\Models\Budget;
+use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
-use Modules\FinTech\Exports\ {
-  AllExcelDataExport,
-  CsvDataExport,
-  ExcelDataExport,
-  PdfDataExport
-};
+use Modules\FinTech\Exports\AllExcelDataExport;
+use Modules\FinTech\Exports\CsvDataExport;
+use Modules\FinTech\Exports\ExcelDataExport;
+use Modules\FinTech\Exports\PdfDataExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
@@ -334,6 +330,7 @@ class ExportService
           'metadata' => $metaTx,
           'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
           'include_top_spending' => $filters['include_top_spending'] ?? true,
+          'include_chart' => $filters['include_chart'] ?? true,
         ]);
 
         $googleService->exportDataToSheet(
@@ -360,6 +357,7 @@ class ExportService
         if ($type === 'transactions') {
           $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
           $summary['include_top_spending'] = $filters['include_top_spending'] ?? false;
+          $summary['include_chart'] = $filters['include_chart'] ?? false;
           $rawTransactions = $data;
         }
 

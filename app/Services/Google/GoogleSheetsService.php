@@ -129,7 +129,8 @@ class GoogleSheetsService
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
     // 6. Chart (opsional)
-    if ($dataType === 'transactions' && !empty($values)) {
+    $includeChart = $dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($values);
+    if ($includeChart) {
       $cursor->advanceRow(2);
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow);
