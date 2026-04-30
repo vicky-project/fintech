@@ -59,21 +59,23 @@ class GoogleSheetsService
       $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
     }
 
-    // 2. Header tabel utama
+    // 2. Header + Filter
     $headerStartRow = $cursor->row;
     $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
+    $headerEndRow = $cursor->row - 1;
 
-    // 3. Data utama
+    // 3. Data
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
-    // 3b. Warna transaksi
+    // 3b. Warna & border data utama
     if ($dataType === 'transactions') {
       $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
     }
-
-    // 3c. Border tabel utama
     $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $headerStartRow, $dataEndRow, 0, $colCount, $headers);
+
+    // 3c. Filter (setelah data ada)
+    $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $headerStartRow, $headerEndRow, 0, $colCount);
 
     // 4. Subtotal
     $cursor->advanceRow();
@@ -103,14 +105,14 @@ class GoogleSheetsService
     $cursor->advanceRow();
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    // 7. Chart (opsional)
+    // 7. Chart
     if ($dataType === 'transactions' && !empty($values)) {
       $cursor->advanceRow(2);
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow);
     }
 
-    // 8. Auto-resize kolom (terakhir, agar semua konten terukur)
+    // 8. Auto-resize (terakhir)
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $colCount);
   }
 

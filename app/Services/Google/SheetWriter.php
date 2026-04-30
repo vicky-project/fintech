@@ -476,6 +476,35 @@ class SheetWriter
     );
   }
 
+  public function applyBasicFilter(
+    string $spreadsheetId,
+    string $sheetName,
+    int $headerStartRow,
+    int $headerEndRow,
+    int $startCol = 0,
+    int $colCount = 7
+  ): void {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    if ($sheetId === null) return;
+
+    $request = new SheetsRequest([
+      'setBasicFilter' => [
+        'filter' => [
+          'range' => [
+            'sheetId' => $sheetId,
+            'startRowIndex' => $headerStartRow - 1,
+            'endRowIndex' => $headerEndRow,
+            'startColumnIndex' => $startCol,
+            'endColumnIndex' => $colCount,
+          ],
+        ],
+      ],
+    ]);
+
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => [$request]]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+  }
+
   public function autoResizeColumns(string $spreadsheetId, string $sheetName, int $columnCount): void
   {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
