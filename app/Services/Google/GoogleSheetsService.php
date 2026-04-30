@@ -107,25 +107,25 @@ class GoogleSheetsService
     $footerRow = $currentRow + 1;
     $this->writer->writeFooter($spreadsheetId, $sheetName, $footerRow, $headers);
 
-    if ($dataType === 'transactions' && !empty($values)) {
-      $chartRow = $footerRow + 2; // dua baris setelah footer
-      $this->writer->writeTransactionChart(
-        $spreadsheetId,
-        $sheetName,
-        $dataStartRow,
-        $dataEndRow,
-        $chartRow
-      );
-    }
+    //if ($dataType === 'transactions' && !empty($values)) {
+    //  $chartRow = $footerRow + 2; // dua baris setelah footer
+    //  $this->writer->writeTransactionChart(
+    //    $spreadsheetId,
+    //    $sheetName,
+    //    $dataStartRow,
+    //    $dataEndRow,
+    //    $chartRow
+    //  );
+    // }
 
     // styling
-    $this->styler->apply(
-      $spreadsheetId, $sheetName,
-      $headerStartRow, $dataType, $headers, $values,
-      $dataStartRow, $dataEndRow,
-      $subStartRow, $subEndRow,
-      $footerRow
-    );
+    //$this->styler->apply(
+    //  $spreadsheetId, $sheetName,
+    //  $headerStartRow, $dataType, $headers, $values,
+    // $dataStartRow, $dataEndRow,
+    // $subStartRow, $subEndRow,
+    //  $footerRow
+    //);
 
     // auto‑resize
     $this->styler->autoResizeColumns($spreadsheetId, $sheetName, count($headers));
