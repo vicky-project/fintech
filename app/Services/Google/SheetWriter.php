@@ -431,8 +431,8 @@ class SheetWriter
                 'rowIndex' => $chartRow - 1,
                 'columnIndex' => 0,
               ],
-              'widthPixels' => 600,
-              'heightPixels' => 350,
+              'widthPixels' => 1200,
+              'heightPixels' => 500,
             ]
           ]
         ]
