@@ -105,7 +105,7 @@ class SheetStyler
           'startRowIndex' => $subStartRow - 1,
           'endRowIndex' => $subEndRow,
           'startColumnIndex' => 0,
-          'endColumnIndex' => 1, // hanya kolom A, karena teks hanya di A
+          'endColumnIndex' => 1,
         ],
         'cell' => ['userEnteredFormat' => [
           'backgroundColor' => ['red' => 217/255, 'green' => 226/255, 'blue' => 243/255],
@@ -138,8 +138,9 @@ class SheetStyler
               'left' => ['style' => 'SOLID', 'width' => 1],
               'right' => ['style' => 'SOLID', 'width' => 1],
             ],
-          ]]]
-        ]);
+          ]],
+          'fields' => 'userEnteredFormat(backgroundColor,borders)',
+        ]]);
       }
     }
 
