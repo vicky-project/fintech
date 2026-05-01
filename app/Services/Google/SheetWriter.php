@@ -56,28 +56,6 @@ class SheetWriter
   }
 
   // ======================== HEADER ========================
-  public function writeHeaders(string $spreadsheetId, string $sheetName, array $headers, SheetCursor $cursor, ?string $dataType): void
-  {
-    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    $colCount = count($headers);
-
-    // Semua tipe menggunakan header satu baris
-    $this->client->getSheetsService()->spreadsheets_values->update(
-      $spreadsheetId,
-      $sheetName . '!A' . $cursor->row,
-      new ValueRange(['values' => [$headers]]),
-      ['valueInputOption' => 'RAW']
-    );
-
-    if ($dataType === 'transactions') {
-      $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row, $colCount);
-    } else {
-      $this->applyBoldCenter($spreadsheetId, $sheetId, $cursor->row, $colCount);
-    }
-
-    $cursor->advanceRow(1);
-  }
-
   public function writeSimpleHeader(string $spreadsheetId, string $sheetName, array $headers, SheetCursor $cursor): void
   {
     $colCount = count($headers);
@@ -521,6 +499,57 @@ class SheetWriter
 
     $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => [$chartRequest]]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
+  }
+
+  // ======================= TOP SPENDING =======================
+  private function writeTopSpendingToSheet(
+    string $spreadsheetId,
+    string $sheetName,
+    array $transactions,
+    SheetCursor $cursor,
+    array $summary
+  ): void {
+    $expenses = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
+    if (empty($expenses)) return;
+
+    usort($expenses, fn($a, $b) => ((float)($b['Pengeluaran'] ?? 0)) <=> ((float)($a['Pengeluaran'] ?? 0)));
+    $top5 = array_slice($expenses, 0, 5);
+
+    $startCol = $cursor->col;
+    $title = "Top 5 Pengeluaran";
+    $this->writeSimpleTitle($spreadsheetId, $sheetName, $title, $cursor);
+
+    $headers = ['Tanggal',
+      'Kategori',
+      'Jumlah',
+      'Deskripsi'];
+    $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
+
+    $values = [];
+    foreach ($top5 as $item) {
+      $values[] = [
+        $item['Tanggal'] ?? '',
+        $item['Kategori'] ?? '',
+        (float)($item['Pengeluaran'] ?? 0),
+        $item['Deskripsi'] ?? '-'
+      ];
+    }
+    $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
+
+    $this->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values), $dataEndRow, $summary,
+      $startCol + 2, 1
+    );
+    $this->applyTopSpendingColors(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - 1, $values, $startCol
+    );
+    $this->applyBordersToRange(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - 1, $dataEndRow,
+      $startCol, count($headers), $headers
+    );
   }
 
   // ======================== BORDER ========================
