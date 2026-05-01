@@ -164,8 +164,9 @@ class ChartDataProcessor
     $total = array_sum($values);
     if ($total <= 0) return '';
 
+    // Ukuran gambar: legend di bawah, jadi perlu lebih tinggi
     $width = 500;
-    $height = 400;
+    $height = 450;
 
     $graph = new \PieGraph($width, $height);
     $graph->title->Set('Distribusi Pengeluaran (%)');
@@ -176,12 +177,16 @@ class ChartDataProcessor
     $piePlot->SetLabelType(PIE_VALUE_ABS);
     $piePlot->value->SetFormat('%.1f%%');
     $piePlot->value->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+    // Posisi label agak keluar
     $piePlot->SetLabelPos(0.6);
+    // Garis bantu dari pie ke label
     $piePlot->SetGuideLines(true, true, 1.5);
+    // Ukuran pie (diameter)
     $piePlot->SetSize(0.35);
-    $piePlot->SetLegends($labels);
+
+    // Legend di bawah
     $graph->legend->SetFont(FF_DEFAULT, FS_NORMAL, 8);
-    $graph->legend->SetPos(0.02, 0.02, 'right', 'top');
+    $graph->legend->SetPos(0.5, 0.98, 'center', 'bottom');
 
     $graph->Add($piePlot);
 
