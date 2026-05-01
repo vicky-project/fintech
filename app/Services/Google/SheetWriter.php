@@ -69,36 +69,9 @@ class SheetWriter
       ['valueInputOption' => 'RAW']
     );
 
-    if ($dataType === 'transactions') {
-      // Style header biru (seperti sebelumnya)
-      $requests = [
-        new SheetsRequest([
-          'repeatCell' => [
-            'range' => [
-              'sheetId' => $sheetId,
-              'startRowIndex' => $cursor->row - 1,
-              'endRowIndex' => $cursor->row,
-              'startColumnIndex' => 0,
-              'endColumnIndex' => $colCount,
-            ],
-            'cell' => [
-              'userEnteredFormat' => [
-                'backgroundColor' => ['red' => 79/255, 'green' => 129/255, 'blue' => 189/255],
-                'textFormat' => ['foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1], 'bold' => true, 'fontSize' => 11],
-                'horizontalAlignment' => 'CENTER',
-                'verticalAlignment' => 'MIDDLE',
-              ]
-            ],
-            'fields' => 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
-          ],
-        ]),
-      ];
-      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
-      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
-    } else {
-      // Style bold + center biasa
-      $this->applyBoldCenter($spreadsheetId, $sheetId, $cursor->row, $colCount);
-    }
+    $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row? $colCount);
+    // Style bold + center biasa
+    $this->applyBoldCenter($spreadsheetId, $sheetId, $cursor->row, $colCount);
 
     $cursor->advanceRow(1);
   }
