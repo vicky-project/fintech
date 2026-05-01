@@ -455,9 +455,9 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
     {
       $includeTop5 = $this->summary['include_top5'] ?? false;
       $includeChart = $this->summary['include_chart'] ?? false;
+      $includeCategoryExpense = $this->summary['include_category_expense'] ?? false;
 
       if ($this->type !== 'transactions' || count($this->data) === 0) return;
-      if (!$includeTop5 && !$includeChart) return;
 
       $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
       $blockColIndex = $dataEndColIndex + 2;
@@ -472,10 +472,12 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $currentRow++;
       }
 
-      $currentRow = $this->writeCategoryExpenseTable($sheet, $currentRow, $this->data, Coordinate::stringFromColumnIndex($blockColIndex));
-      $currentRow++;
+      if ($includeCategoryExpense) {
+        $currentRow = $this->writeCategoryExpenseTable($sheet, $currentRow, $this->data, Coordinate::stringFromColumnIndex($blockColIndex));
+        $currentRow++;
+      }
 
-      if ($includeTop5) {
+      if ($includeTop5 || $includeCategoryExpense) {
         $nextColIndex = $blockColIndex + 5; // 4 kolom + 1 jarak
       }
 
@@ -486,8 +488,10 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $trendChartRow = $chartRow + 20 + 2;
         $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
 
-        $pieChartRow = $trendChartRow + 20 + 2;
-        $this->writeCategoryPieChart($sheet, $pieChartRow, $this->data, $chartStartCol);
+        if ($includeCategoryExpense) {
+          $pieChartRow = $trendChartRow + 20 + 2;
+          $this->writeCategoryPieChart($sheet, $pieChartRow, $this->data, $chartStartCol);
+        }
       }
     }
 

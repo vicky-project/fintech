@@ -68,6 +68,8 @@ class ExportRequest extends FormRequest
         'boolean'],
       'include_top5' => ['nullable',
         'boolean'],
+      'include_category_expense' => ['nullable',
+        'boolean'],
     ];
   }
 

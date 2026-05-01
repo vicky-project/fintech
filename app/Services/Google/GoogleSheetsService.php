@@ -109,8 +109,9 @@ class GoogleSheetsService
       $nextColIndex = $rightColIndex + 5;
     }
 
+    $inclueCategoryExpense = $summary['include_category_expense'] ?? false;
     $categoryTableInfo = null;
-    if ($dataType === 'transactions' && $rawTransactions) {
+    if ($dataType === 'transactions' && $rawTransactions && $inclueCategoryExpense) {
       $categoryTableInfo = $this->writer->writeCategoryExpenseTable(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );

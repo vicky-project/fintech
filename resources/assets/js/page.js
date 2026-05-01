@@ -1972,33 +1972,56 @@ function renderExportFilters(type) {
     <div class="accordion-item">
     <h2 class="accordion-header" id="headingAdvanced">
     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced" aria-expanded="false" aria-controls="collapseAdvanced">
-    <i class="bi bi-sliders me-2"></i> Lanjutan
+    <i class="bi bi-sliders me-2"></i> Opsi Lanjutan
     </button>
     </h2>
     <div id="collapseAdvanced" class="accordion-collapse collapse" aria-labelledby="headingAdvanced" data-bs-parent="#advancedAccordion">
     <div class="accordion-body">
+    <div class="mb-3">
     <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
-    <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
+    <label for="include-description" class="form-check-label">
+    <strong>Sertakan Deskripsi</strong><br>
+    <small class="text-muted">Menampilkan kolom deskripsi pada tiap transaksi.</small>
+    </label>
+    </div>
     </div>
     <div id="export-options" style="display: none;">
+    <div class="mb-3">
     <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-chart">
-    <label class="form-check-label" for="include-chart">
-    <i class="bi bi-bar-chart me-1"></i> Sertakan Chart
+    <label for="include-chart" class="form-check-label">
+    <strong>Sertakan Chart</strong><br>
+    <small class="text-muted">Menampilkan grafik batang pemasukan vs pengeluaran.</small>
     </label>
     </div>
+    </div>
+    <div class="mb-3">
     <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-monthly-summary">
-    <label class="form-check-label" for="include-monthly-summary">
-    <i class="bi bi-list-columns me-1"></i> Sertakan Ringkasan Bulanan
+    <label for="include-monthly-summary" class="form-check-label">
+    <strong>Sertakan Ringkasan Bulanan</strong><br>
+    <small class="text-muted">Menampilkan tabel ringkasan pemasukan, pengeluaran, dan net per bulan.</small>
     </label>
     </div>
+    </div>
+    <div class="mb-3">
     <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-top5">
-    <label class="form-check-label" for="include-top5">
-    <i class="bi bi-trophy me-1"></i> Sertakan Top 5 Transaksi (Pemasukan/Pengeluaran)
+    <label for="include-top5" class="form-check-label">
+    <strong>Sertakan Top 5 Transaksi</strong><br>
+    <small class="text-muted">Menampilkan 5 pemasukan dan pengeluaran tertinggi.</small>
     </label>
+    </div>
+    </div>
+    <div class="mb-3">
+    <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="include-category-expense">
+    <label for="include-category-expense" class="form-check-label">
+    <strong>Sertakan Persentase Kategori Pengeluaran</strong><br>
+    <small class="text-muted">Menampilkan tabel distribusi pengeluaran per kategori beserta pie chart.</small>
+    </label>
+    </div>
     </div>
     </div>
     </div>
@@ -2292,6 +2315,7 @@ async function performExport() {
         payload.include_chart = document.getElementById('include-chart')?.checked ?? false;
         payload.include_monthly_summary = document.getElementById('include-monthly-summary')?.checked ?? false;
         payload.include_top5 = document.getElementById('include-top5')?.checked ?? false;
+        payload.include_category_expense = document.getElementById('include-category-expense')?.checked ?? false;
       } else {
         payload.include_chart = false;
         payload.include_monthly_summary = false;

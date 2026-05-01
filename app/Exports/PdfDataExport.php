@@ -24,11 +24,14 @@ class PdfDataExport
 
         $chartBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($chartFile));
         $trendChartBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($trendFile));
-        $categoryChartBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($pieFile));
+        if ($summary['include_category_expense']) {
+
+          $categoryChartBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($pieFile));
+          @unlink($pieFile);
+        }
 
         @unlink($chartFile);
         @unlink($trendFile);
-        @unlink($pieFile);
       }
 
       if ($summary['include_monthly_summary'] ?? false) {
@@ -40,7 +43,9 @@ class PdfDataExport
         $extra['topIncome'] = self::buildTopIncome($data);
       }
 
-      $extra['categoryExpense'] = self::buildCategoryExpenseTable($data);
+      if ($summary['include_category_expense']) {
+        $extra['categoryExpense'] = self::buildCategoryExpenseTable($data);
+      }
     }
 
     $html = view("fintech::exports.{$type}_pdf", [

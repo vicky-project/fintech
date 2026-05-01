@@ -52,6 +52,7 @@ class ExportService
       $includeChart = $filters['include_chart'] ?? true;
       $includeMonthly = $filters['include_monthly_summary'] ?? true;
       $includeTop5 = $filters['include_top5'] ?? true;
+      $includeCategoryExpense = $filters['include_category_expense'] ?? true;
 
       foreach (['transactions', 'transfers', 'budgets'] as $subType) {
         $summaryArr = array_merge(
@@ -63,6 +64,7 @@ class ExportService
           $summaryArr['include_chart'] = $includeChart;
           $summaryArr['include_monthly_summary'] = $includeMonthly;
           $summaryArr['include_top5'] = $includeTop5;
+          $summaryArr['include_category_expense'] = $includeCategoryExpense;
         }
         $result[$subType][1] = $summaryArr;
       }
@@ -82,6 +84,7 @@ class ExportService
     $summary['include_chart'] = $filters['include_chart'] ?? false;
     $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
     $summary['include_top5'] = $filters['include_top5'] ?? false;
+    $summary['include_category_expense'] = $filters['include_category_expense'] ?? false;
     $summary = array_merge($summary, $formatRules, compact('metadata'));
 
     return match ($format) {
@@ -330,6 +333,7 @@ class ExportService
           'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
           'include_top5' => $filters['include_top5'] ?? true,
           'include_chart' => $filters['include_chart'] ?? true,
+          'include_category_expense' => $filters['include_category_expense'] ?? true,
         ]);
 
         $googleService->exportDataToSheet(
@@ -351,6 +355,7 @@ class ExportService
           $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
           $summary['include_top5'] = $filters['include_top5'] ?? false;
           $summary['include_chart'] = $filters['include_chart'] ?? false;
+          $summary['include_category_expense'] = $filters['include_category_expense'] ?? false;
           $rawTransactions = $data;
         }
 
