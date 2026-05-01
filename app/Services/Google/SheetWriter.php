@@ -501,7 +501,7 @@ class SheetWriter
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
-  // ======================= TOP SPENDING =======================
+  // ======================= TOP SPENDING & Income =======================
   public function writeTopSpendingToSheet(
     string $spreadsheetId,
     string $sheetName,
@@ -545,6 +545,69 @@ class SheetWriter
       $spreadsheetId, $sheetName,
       $cursor->row - count($values) - 1, $values, $startCol
     );
+    $this->applyBordersToRange(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - 1, $dataEndRow,
+      $startCol, count($headers), $headers
+    );
+  }
+
+  private function writeTopIncomeToSheet(
+    string $spreadsheetId,
+    string $sheetName,
+    array $transactions,
+    SheetCursor $cursor,
+    array $summary
+  ): void {
+    $incomes = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pemasukan');
+    if (empty($incomes)) return;
+
+    usort($incomes, fn($a, $b) => ((float)($b['Pemasukan'] ?? 0)) <=> ((float)($a['Pemasukan'] ?? 0)));
+    $top5 = array_slice($incomes, 0, 5);
+
+    $startCol = $cursor->col;
+    $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Top 5 Pemasukan', $cursor);
+
+    $headers = ['Tanggal',
+      'Kategori',
+      'Jumlah',
+      'Deskripsi'];
+    $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
+
+    $values = [];
+    foreach ($top5 as $item) {
+      $values[] = [
+        $item['Tanggal'] ?? '',
+        $item['Kategori'] ?? '',
+        (float)($item['Pemasukan'] ?? 0),
+        $item['Deskripsi'] ?? '-'
+      ];
+    }
+    $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
+
+    $this->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values), $dataEndRow, $summary,
+      $startCol + 2, 1
+    );
+
+    // Warna hijau untuk pemasukan
+    $sheetId = $this->spreadsheetManager->getSheetIdByName($spreadsheetId, $sheetName);
+    $requests = [];
+    $green = ['red' => 40/255,
+      'green' => 167/255,
+      'blue' => 69/255];
+    $colJumlah = $startCol + 2;
+    $dataStartRow = $cursor->row - count($values);
+    foreach ($values as $idx => $row) {
+      $rowNum = $dataStartRow + $idx;
+      $this->setCellColor($sheetId, $rowNum, $colJumlah, $green, true, $requests);
+    }
+    if ($requests) {
+      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+    }
+
     $this->applyBordersToRange(
       $spreadsheetId, $sheetName,
       $cursor->row - count($values) - 1, $dataEndRow,

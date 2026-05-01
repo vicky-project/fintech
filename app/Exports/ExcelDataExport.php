@@ -453,20 +453,23 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
     private function writeSideBlocks(Worksheet $sheet, int $tableStart, string $highestCol): void
     {
-      $includeTopSpending = $this->summary['include_top_spending'] ?? false;
+      $includeTop5 = $this->summary['include_top5'] ?? false;
       $includeChart = $this->summary['include_chart'] ?? false;
 
       if ($this->type !== 'transactions' || count($this->data) === 0) return;
-      if (!$includeTopSpending && !$includeChart) return;
+      if (!$includeTop5 && !$includeChart) return;
 
       $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
       $blockColIndex = $dataEndColIndex + 2;
       $nextColIndex = $blockColIndex;
       $currentRow = $tableStart;
 
-      if ($includeTopSpending) {
+      if ($includeTop5) {
         $startCol = Coordinate::stringFromColumnIndex($blockColIndex);
         $currentRow = $this->writeTopSpendingTable($sheet, $currentRow, $this->data, $startCol);
+        $currentRow++;
+        $currentRow = $this->writeTopIncomeTable($sheet, $currentRow, $this->data, $startCol);
+        $currentRow++;
         $nextColIndex = $blockColIndex + 5; // 4 kolom + 1 jarak
       }
 
@@ -479,7 +482,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       }
     }
 
-    // -------- Top Spending Table ----------
+    // -------- Top Spending / Income Table ----------
 
     private function writeTopSpendingTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
     {
@@ -517,6 +520,58 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->setCellValue($colJumlah . $row, ChartDataProcessor::formatCurrency($amount, $this->summary));
         $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
         $sheet->getStyle($colJumlah . $row)->getFont()->getColor()->setRGB('DC3545');
+        $row++;
+      }
+
+      $lastRow = $row - 1;
+      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $lastRow)->applyFromArray([
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'font' => ['size' => 10],
+      ]);
+
+      foreach ([$colTanggal, $colKategori, $colJumlah, $colDeskripsi] as $c) {
+        $sheet->getColumnDimension($c)->setAutoSize(true);
+      }
+
+      return $row;
+    }
+
+    private function writeTopIncomeTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
+    {
+      $incomes = array_filter($data, fn($r) => ($r['Tipe'] ?? '') === 'Pemasukan');
+      if (empty($incomes)) return $startRow;
+
+      usort($incomes, fn($a, $b) =>
+        ChartDataProcessor::parseCurrency($b['Pemasukan'] ?? '0') <=>
+        ChartDataProcessor::parseCurrency($a['Pemasukan'] ?? '0')
+      );
+      $top5 = array_slice($incomes, 0, 5);
+
+      $colIdx = Coordinate::columnIndexFromString($startCol);
+      $colTanggal = $startCol;
+      $colKategori = Coordinate::stringFromColumnIndex($colIdx + 1);
+      $colJumlah = Coordinate::stringFromColumnIndex($colIdx + 2);
+      $colDeskripsi = Coordinate::stringFromColumnIndex($colIdx + 3);
+
+      $sheet->setCellValue($colTanggal . $startRow, 'Top 5 Pemasukan');
+      $sheet->mergeCells($colTanggal . $startRow . ':' . $colDeskripsi . $startRow);
+      $sheet->getStyle($colTanggal . $startRow)->applyFromArray($this->infoStyle);
+
+      $hRow = $startRow + 1;
+      $sheet->setCellValue($colTanggal . $hRow, 'Tanggal');
+      $sheet->setCellValue($colKategori . $hRow, 'Kategori');
+      $sheet->setCellValue($colJumlah . $hRow, 'Jumlah');
+      $sheet->setCellValue($colDeskripsi . $hRow, 'Deskripsi');
+      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $hRow)->applyFromArray($this->headerStyle);
+
+      $row = $hRow + 1;
+      foreach ($top5 as $item) {
+        $amount = ChartDataProcessor::parseCurrency($item['Pemasukan'] ?? '0');
+        $sheet->setCellValue($colTanggal . $row, $item['Tanggal'] ?? '');
+        $sheet->setCellValue($colKategori . $row, $item['Kategori'] ?? '');
+        $sheet->setCellValue($colJumlah . $row, ChartDataProcessor::formatCurrency($amount, $this->summary));
+        $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
+        $sheet->getStyle($colJumlah . $row)->getFont()->getColor()->setRGB('28A745');
         $row++;
       }
 

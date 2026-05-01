@@ -1995,9 +1995,9 @@ function renderExportFilters(type) {
     </label>
     </div>
     <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="include-top-spending">
+    <input class="form-check-input" type="checkbox" id="include-top5">
     <label class="form-check-label" for="include-top-spending">
-    <i class="bi bi-graph-down me-1"></i> Sertakan Top 5 Pengeluaran Tertinggi
+    <i class="bi bi-trophy me-1"></i> Sertakan Top 5 Transaksi (Pemasukan/Pengeluaran)
     </label>
     </div>
     </div>
@@ -2291,7 +2291,7 @@ async function performExport() {
       if (format === 'xlsx' || format === 'pdf' || format === 'gsheet') {
         payload.include_chart = document.getElementById('include-chart')?.checked ?? false;
         payload.include_monthly_summary = document.getElementById('include-monthly-summary')?.checked ?? false;
-        payload.include_top_spending = document.getElementById('include-top-spending')?.checked ?? false;
+        payload.include_top5 = document.getElementById('include-top5')?.checked ?? false;
       } else {
         payload.include_chart = false;
         payload.include_monthly_summary = false;

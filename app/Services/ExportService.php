@@ -51,7 +51,7 @@ class ExportService
     if ($type === 'all') {
       $includeChart = $filters['include_chart'] ?? true;
       $includeMonthly = $filters['include_monthly_summary'] ?? true;
-      $includeTopSpending = $filters['include_top_spending'] ?? true;
+      $includeTop5 = $filters['include_top5'] ?? true;
 
       foreach (['transactions', 'transfers', 'budgets'] as $subType) {
         $summaryArr = array_merge(
@@ -62,7 +62,7 @@ class ExportService
         if ($subType === 'transactions') {
           $summaryArr['include_chart'] = $includeChart;
           $summaryArr['include_monthly_summary'] = $includeMonthly;
-          $summaryArr['include_top_spending'] = $includeTopSpending;
+          $summaryArr['include_top5'] = $includeTop5;
         }
         $result[$subType][1] = $summaryArr;
       }
@@ -81,7 +81,7 @@ class ExportService
     $metadata = $this->buildMetadata($type, $filters, $wallet->name);
     $summary['include_chart'] = $filters['include_chart'] ?? false;
     $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
-    $summary['include_top_spending'] = $filters['include_top_spending'] ?? false;
+    $summary['include_top5'] = $filters['include_top5'] ?? false;
     $summary = array_merge($summary, $formatRules, compact('metadata'));
 
     return match ($format) {

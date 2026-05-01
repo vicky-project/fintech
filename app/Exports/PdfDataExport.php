@@ -32,8 +32,9 @@ class PdfDataExport
         $extra['monthlySummary'] = self::buildMonthlySummary($data);
         $extra['stats'] = self::buildStats($data);
       }
-      if ($summary['include_top_spending'] ?? false) {
+      if ($summary['include_top5'] ?? false) {
         $extra['topSpending'] = self::buildTopSpending($data);
+        $extra['topIncome'] = self::buildTopIncome($data);
       }
     }
 
@@ -86,6 +87,15 @@ class PdfDataExport
       return $bVal <=> $aVal;
     });
     return array_slice($expenses, 0, 5);
+  }
+
+  private static function buildTopIncome(array $transactions): array
+  {
+    $incomes = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pemasukan');
+    usort($incomes, fn($a, $b) =>
+      (float)($b['Pemasukan'] ?? 0) <=> (float)($a['Pemasukan'] ?? 0)
+    );
+    return array_slice($incomes, 0, 5);
   }
 
   private static function getTitle(string $type): string

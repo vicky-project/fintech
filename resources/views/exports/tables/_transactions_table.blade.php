@@ -151,6 +151,25 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
 </table>
 @endif
 
+@if(!empty($extra['topIncome']))
+<h4>Top 5 Pemasukan</h4>
+<table>
+  <thead>
+    <tr><th>Tanggal</th><th>Kategori</th><th>Jumlah</th><th>Deskripsi</th></tr>
+  </thead>
+  <tbody>
+    @foreach($extra['topIncome'] as $item)
+    <tr>
+      <td>{{ $item['Tanggal'] }}</td>
+      <td>{{ $item['Kategori'] }}</td>
+      <td class="text-right text-income">{{ $fmt((float) str_replace(['Rp','.',','], '', $item['Pemasukan'])) }}</td>
+      <td>{{ $item['Deskripsi'] ?? '-' }}</td>
+    </tr>
+    @endforeach
+  </tbody>
+</table>
+@endif
+
 @if(!empty($chartBase64))
 <div style="text-align: center; margin-bottom: 20px; margin-top: 20px;">
   <img src="{{ $chartBase64 }}" alt="Chart Pemasukan vs Pengeluaran" style="max-width: 100%; height: auto;">

@@ -104,11 +104,13 @@ class GoogleSheetsService
     $cursor->setCol($rightColIndex);
     $cursor->row = $tableStartRow; // sejajar header
 
-    $includeTop = $summary['include_top_spending'] ?? false;
+    $includeTop = $summary['include_top5'] ?? false;
     if ($dataType === 'transactions' && $rawTransactions && $includeTop) {
       $this->writer->writeTopSpendingToSheet(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
+      $cursor->advanceRow();
+      $this->write->writeTopIncomeToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
       $cursor->advanceRow();
     }
 

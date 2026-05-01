@@ -66,7 +66,7 @@ class ExportRequest extends FormRequest
         'boolean'],
       'include_monthly_summary' => ['nullable',
         'boolean'],
-      'include_top_spending' => ['nullable',
+      'include_top5' => ['nullable',
         'boolean'],
     ];
   }
