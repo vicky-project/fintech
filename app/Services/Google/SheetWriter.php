@@ -518,6 +518,7 @@ class SheetWriter
             'title' => 'Distribusi Pengeluaran (%)',
             'pieChart' => [
               'legendPosition' => 'RIGHT_LEGEND',
+              'threeDimensional' => true,
               'domain' => [
                 'sourceRange' => [
                   'sources' => [[
