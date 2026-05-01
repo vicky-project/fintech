@@ -250,7 +250,7 @@ class SheetWriter
     array $transactions,
     SheetCursor $cursor,
     array $summary
-  ): void {
+  ): array {
     // Bangun data ringkasan per bulan
     $grouped = [];
     foreach ($transactions as $row) {
@@ -291,6 +291,9 @@ class SheetWriter
       'Net'];
     $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
 
+    $firstDataRow = $cursor->row;
+    $firstDataCol = $cursor->col;
+
     // Data per bulan
     $values = [];
     foreach ($grouped as $item) {
@@ -309,6 +312,8 @@ class SheetWriter
       $totalIncome - $totalExpense
     ];
     $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
+
+    $lastDataRow = $firstDataRow + count($grouped) - 1;
 
     // Format mata uang untuk kolom B, C, D (indeks 1,2,3 dari startCol)
     $this->applyCurrencyFormat(
@@ -345,7 +350,6 @@ class SheetWriter
       $cursor->row - 2, $cursor->row - 2, $summary,
       $startCol + 2, 1
     );
-    // Rasio tidak perlu format mata uang, biarkan apa adanya
 
     // Warna hijau/merah untuk kolom angka
     $this->applySummaryColors(
@@ -361,6 +365,13 @@ class SheetWriter
       $cursor->row - 1, // baris terakhir statistik
       $startCol, 4, $headers
     );
+
+    return [
+      'dataStartRow' => $firstDataRow,
+      'dataEndRow' = $lastDataRow,
+      'dataStartCol' => $firstDataCol,
+      'endRow' => $cursor->row - 1
+    ];
   }
 
   // ======================== FOOTER ========================
@@ -418,7 +429,10 @@ class SheetWriter
     int $dataStartRow,
     int $dataEndRow,
     int $chartRow,
-    int $chartCol = 0
+    int $chartCol = 0,
+    int $domainCol = 0,
+    int $series1Col = 4,
+    int $series2Col = 5
   ): void {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName) ?? 0;
 
@@ -441,8 +455,8 @@ class SheetWriter
                       'sheetId' => $sheetId,
                       'startRowIndex' => $dataStartRow - 1,
                       'endRowIndex' => $dataEndRow,
-                      'startColumnIndex' => 0,
-                      'endColumnIndex' => 1,
+                      'startColumnIndex' => $domainCol,
+                      'endColumnIndex' => $domainCol + 1,
                     ]]
                   ]
                 ]
@@ -455,8 +469,8 @@ class SheetWriter
                         'sheetId' => $sheetId,
                         'startRowIndex' => $dataStartRow - 1,
                         'endRowIndex' => $dataEndRow,
-                        'startColumnIndex' => 4,
-                        'endColumnIndex' => 5,
+                        'startColumnIndex' => $series1Col,
+                        'endColumnIndex' => $series1Col + 1,
                       ]]
                     ]
                   ],
@@ -469,8 +483,8 @@ class SheetWriter
                         'sheetId' => $sheetId,
                         'startRowIndex' => $dataStartRow - 1,
                         'endRowIndex' => $dataEndRow,
-                        'startColumnIndex' => 5,
-                        'endColumnIndex' => 6,
+                        'startColumnIndex' => $series2Col,
+                        'endColumnIndex' => $series2Col + 1,
                       ]]
                     ]
                   ],

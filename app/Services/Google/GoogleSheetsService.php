@@ -90,10 +90,11 @@ class GoogleSheetsService
 
     // 6. Ringkasan Bulanan + Statistik (menggantikan subtotal, di kiri)
     $summaryEndRow = $dataEndRow; // fallback jika tidak ada ringkasan
+    $summaryInfo = [];
     if ($dataType === 'transactions' && $rawTransactions) {
       $cursor->advanceRow(); // jarak 1 baris setelah data utama
       $summaryStartRow = $cursor->row;
-      $this->writer->writeSummaryWithStats(
+      $summaryInfo = $this->writer->writeSummaryWithStats(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
       $summaryEndRow = $cursor->row - 1; // baris terakhir setelah ringkasan
@@ -135,9 +136,13 @@ class GoogleSheetsService
       $cursor->setCol($nextColIndex);
       $cursor->row = $tableStartRow;
       $chartRow = $cursor->row;
-      $this->writer->writeTransactionChart(
-        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow, $cursor->col
-      );
+      if (!empty($summaryInfo)) {
+        $this->writer->writeTransactionChart(
+          $spreadsheetId, $sheetName, $summaryInfo['dataStartRow'], $summaryInfo['dataEndRow'], $chartRow, $cursor->col, $summaryInfo['dataStartCol'], $summaryInfo['dataStartCol'] + 1, $summaryInfo['dataStartCol'] + 2
+        );
+      } else {
+        $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow, $cursor->col);
+      }
 
       if (!empty($categoryTableInfo)) {
         $pieChartRow = $chartRow + 25 + 2;
