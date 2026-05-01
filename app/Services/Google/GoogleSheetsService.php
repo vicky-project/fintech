@@ -106,7 +106,7 @@ class GoogleSheetsService
 
     $includeTop = $summary['include_top_spending'] ?? false;
     if ($dataType === 'transactions' && $rawTransactions && $includeTop) {
-      $this->writeTopSpendingToSheet(
+      $this->writer->writeTopSpendingToSheet(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
       $cursor->advanceRow();

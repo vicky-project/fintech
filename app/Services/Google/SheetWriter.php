@@ -244,7 +244,7 @@ class SheetWriter
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
   }
 
-  private function writeSummaryWithStats(
+  public function writeSummaryWithStats(
     string $spreadsheetId,
     string $sheetName,
     array $transactions,
@@ -502,7 +502,7 @@ class SheetWriter
   }
 
   // ======================= TOP SPENDING =======================
-  private function writeTopSpendingToSheet(
+  public function writeTopSpendingToSheet(
     string $spreadsheetId,
     string $sheetName,
     array $transactions,
