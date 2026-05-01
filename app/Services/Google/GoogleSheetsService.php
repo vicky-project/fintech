@@ -145,7 +145,7 @@ class GoogleSheetsService
       }
 
       if (!empty($categoryTableInfo)) {
-        $pieChartRow = $chartRow + 25 + 2;
+        $pieChartRow = $chartRow + 13 + 2;
         $this->writer->writeCategoryPieChart($spreadsheetId, $sheetName, $categoryTableInfo['dataStartRow'], $categoryTableInfo['dataEndRow'], $categoryTableInfo['startCol'], $categoryTableInfo['startCol'] + 1, $pieChartRow, $cursor->col);
         $chartEndRow = $pieChartRow + 15;
       } else {
