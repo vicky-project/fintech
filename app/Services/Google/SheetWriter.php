@@ -428,7 +428,7 @@ class SheetWriter
           'spec' => [
             'title' => 'Pemasukan vs Pengeluaran',
             'basicChart' => [
-              'chartType' => 'COLUMN',
+              'chartType' => 'BAR',
               'legendPosition' => 'BOTTOM_LEGEND',
               'threeDimensional' => true,
               'axis' => [
