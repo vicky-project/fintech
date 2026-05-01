@@ -367,7 +367,7 @@ class SheetWriter
     );
 
     return [
-      'dataStartRow' => $firstDataRow,
+      'dataStartRow' => $firstDataRow - 1,
       'dataEndRow' => $lastDataRow,
       'dataStartCol' => $firstDataCol,
       'endRow' => $cursor->row - 1
