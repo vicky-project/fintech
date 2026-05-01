@@ -3,9 +3,9 @@
 namespace Modules\FinTech\Services\Google;
 
 use Modules\FinTech\Exports\ChartDataProcessor;
-use Modules\FinTech\Services\GoogleSheetsClient;
-use Modules\FinTech\Services\SheetWriter;
-use Modules\FinTech\Services\SpreadsheetManager;
+use Modules\FinTech\Services\Google\GoogleSheetsClient;
+use Modules\FinTech\Services\Google\SheetWriter;
+use Modules\FinTech\Services\Google\SpreadsheetManager;
 
 class GoogleSheetsService
 {
