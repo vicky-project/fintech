@@ -170,6 +170,39 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
 </table>
 @endif
 
+@if(!empty($extra['categoryExpense']))
+<h4>Persentase Kategori Pengeluaran</h4>
+<table>
+  <thead>
+    <tr>
+      <th>Kategori</th>
+      <th>Total</th>
+      <th>Persentase</th>
+      <th>Rata‑rata</th>
+    </tr>
+  </thead>
+  <tbody>
+    @php
+    $symbol = $summary['symbol'] ?? 'Rp';
+    $precision = $summary['precision'] ?? 0;
+    $decimal = $summary['decimal_mark'] ?? ',';
+    $thousands = $summary['thousands_separator'] ?? '.';
+    $fmt = function($val) use ($symbol, $precision, $decimal, $thousands) {
+    return $symbol . ' ' . number_format((float)$val, $precision, $decimal, $thousands);
+    };
+    @endphp
+    @foreach($extra['categoryExpense'] as $item)
+    <tr>
+      <td>{{ $item['cat'] }}</td>
+      <td class="text-right text-expense">{{ $fmt($item['total']) }}</td>
+      <td class="text-right">{{ round($item['percentage'], 1) }}%</td>
+      <td class="text-right text-expense">{{ $fmt($item['average']) }}</td>
+    </tr>
+    @endforeach
+  </tbody>
+</table>
+@endif
+
 @if(!empty($chartBase64))
 <div style="text-align: center; margin-bottom: 20px; margin-top: 20px;">
   <img src="{{ $chartBase64 }}" alt="Chart Pemasukan vs Pengeluaran" style="max-width: 100%; height: auto;">
@@ -179,5 +212,11 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
 @if(!empty($trendChartBase64))
 <div style="text-align: center; margin: 20px 0;">
   <img src="{{ $trendChartBase64 }}" alt="Chart Tren Net" style="max-width: 100%; height: auto;">
+</div>
+@endif
+
+@if(!empty($extra['categoryPieChart']))
+<div style="text-align: center; margin: 20px 0;">
+  <img src="{{ $extra['categoryPieChart'] }}" alt="Pie Chart Kategori" style="max-width: 100%; height: auto;">
 </div>
 @endif

@@ -14,18 +14,21 @@ class PdfDataExport
     ini_set('memory_limit', '256M');
 
     $extra = [];
-    $chartBase64 = $trendChartBase64 = '';
+    $chartBase64 = $trendChartBase64 = $categoryChartBase64 = '';
 
     if ($type === 'transactions') {
       if (($summary['include_chart'] ?? false) && !empty($data)) {
         $chartFile = ChartDataProcessor::createBarChart($data);
         $trendFile = ChartDataProcessor::createTrendChart($data);
+        $pieFile = ChartDataProcessor::createCategoryPieChart($data);
 
         $chartBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($chartFile));
         $trendChartBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($trendFile));
+        $categoryChartBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($pieFile));
 
         @unlink($chartFile);
         @unlink($trendFile);
+        @unlink($pieFile);
       }
 
       if ($summary['include_monthly_summary'] ?? false) {
@@ -36,6 +39,8 @@ class PdfDataExport
         $extra['topSpending'] = self::buildTopSpending($data);
         $extra['topIncome'] = self::buildTopIncome($data);
       }
+
+      $extra['categoryExpense'] ÷ self::buildCategoryExpenseTable($data);
     }
 
     $html = view("fintech::exports.{$type}_pdf", [
@@ -45,6 +50,7 @@ class PdfDataExport
       'extra' => $extra,
       'chartBase64' => $chartBase64,
       'trendChartBase64' => $trendChartBase64,
+      'pieChartBase64' => $categoryChartBase64
     ])->render();
 
     $dompdf = new \Dompdf\Dompdf();
@@ -96,6 +102,39 @@ class PdfDataExport
       (float)($b['Pemasukan'] ?? 0) <=> (float)($a['Pemasukan'] ?? 0)
     );
     return array_slice($incomes, 0, 5);
+  }
+
+  private static function buildCategoryExpenseTable(array $transactions): array
+  {
+    $expenses = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
+    if (empty($expenses)) return [];
+
+    $catTotals = [];
+    $catCounts = [];
+    foreach ($expenses as $item) {
+      $cat = $item['Kategori'] ?? 'Lainnya';
+      $catTotals[$cat] = ($catTotals[$cat] ?? 0) + (float)($item['Pengeluaran'] ?? 0);
+      $catCounts[$cat] = ($catCounts[$cat] ?? 0) + 1;
+    }
+
+    $totalAll = array_sum($catTotals);
+    if ($totalAll <= 0) return [];
+
+    $sorted = [];
+    foreach ($catTotals as $cat => $total) {
+      $count = $catCounts[$cat] ?? 1;
+      $average = $total / $count;
+      $percentage = ($total / $totalAll) * 100;
+      $sorted[] = [
+        'cat' => $cat,
+        'total' => $total,
+        'average' => $average,
+        'percentage' => $percentage,
+      ];
+    }
+    usort($sorted, fn($a, $b) => $b['percentage'] <=> $a['percentage']);
+
+    return $sorted;
   }
 
   private static function getTitle(string $type): string
