@@ -328,7 +328,7 @@ class ExportService
         $txSummary = array_merge($all['transactions'][1], $formatRules, [
           'metadata' => $metaTx,
           'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
-          'include_top_spending' => $filters['include_top_spending'] ?? true,
+          'include_top5' => $filters['include_top5'] ?? true,
           'include_chart' => $filters['include_chart'] ?? true,
         ]);
 
@@ -349,7 +349,7 @@ class ExportService
 
         if ($type === 'transactions') {
           $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
-          $summary['include_top_spending'] = $filters['include_top_spending'] ?? false;
+          $summary['include_top5'] = $filters['include_top5'] ?? false;
           $summary['include_chart'] = $filters['include_chart'] ?? false;
           $rawTransactions = $data;
         }
