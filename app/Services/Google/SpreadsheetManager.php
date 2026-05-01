@@ -3,6 +3,8 @@
 namespace Modules\FinTech\Services\Google;
 
 use Google\Service\Sheets\Spreadsheet;
+use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
+use Google\Service\Sheets\Request as SheetsRequest;
 use Illuminate\Support\Facades\Log;
 use Modules\FinTech\Models\UserSetting;
 use Modules\FinTech\Services\Google\GoogleSheetsClient;
@@ -24,7 +26,7 @@ class SpreadsheetManager
   */
   public function getOrCreateSpreadsheet($user): string
   {
-    $setting = UserSetting::where('user_id', $user->id)->first();
+    $setting = UserSetting::where('user_id', $user->id);
     $spreadsheetId = $setting->google_spreadsheet_id ?? null;
 
     if ($spreadsheetId) {
@@ -49,7 +51,7 @@ class SpreadsheetManager
   */
   protected function createSpreadsheetForUser($user): string
   {
-    $title = "FinTech - " . ($user->name ?? "User {$user->id}");
+    $title = "FinTech - " . ($user->name ?? $user->first_name ?? "User {$user->id}");
 
     $spreadsheet = new Spreadsheet(['properties' => ['title' => $title]]);
     $spreadsheet = $this->client->getSheetsService()->spreadsheets->create($spreadsheet);
@@ -78,12 +80,36 @@ class SpreadsheetManager
     $existingNames = array_map(fn($s) => $s->getProperties()->getTitle(), $spreadsheet->getSheets());
 
     if (!in_array($sheetName, $existingNames)) {
-      $requests = [new \Google\Service\Sheets\Request([
+      $requests = [new SheetsRequest([
         'addSheet' => ['properties' => ['title' => $sheetName]]
       ])];
-      $batch = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
     }
+  }
+
+  /**
+  * Hapus sheet jika sudah ada, lalu buat sheet baru dengan nama yang sama.
+  * Ini memastikan sheet bersih dari data dan chart lama.
+  */
+  public function rebuildSheetIfExists(string $spreadsheetId, string $sheetName): void
+  {
+    $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
+    if ($sheetId !== null) {
+      // Hapus sheet yang ada
+      $requests = [
+        new SheetsRequest([
+          'deleteSheet' => [
+            'sheetId' => $sheetId,
+          ]
+        ])
+      ];
+      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+    }
+
+    // Buat sheet baru dengan nama yang sama
+    $this->addSheetIfNotExists($spreadsheetId, $sheetName);
   }
 
   /**
@@ -91,13 +117,13 @@ class SpreadsheetManager
   */
   public function renameSheet(string $spreadsheetId, int $sheetId, string $newName): void
   {
-    $requests = [new \Google\Service\Sheets\Request([
+    $requests = [new SheetsRequest([
       'updateSheetProperties' => [
         'properties' => ['sheetId' => $sheetId, 'title' => $newName],
         'fields' => 'title',
       ]
     ])];
-    $batch = new \Google\Service\Sheets\BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
   }
 
