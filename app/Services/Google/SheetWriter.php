@@ -545,9 +545,11 @@ class SheetWriter
       $spreadsheetId, $sheetName,
       $cursor->row - count($values) - 1, $values, $startCol
     );
+
     $this->applyBordersToRange(
       $spreadsheetId, $sheetName,
-      $cursor->row - count($values) - 1, $dataEndRow,
+      $cursor->row - count($values) - 2, // baris judul
+      $dataEndRow,
       $startCol, count($headers), $headers
     );
   }
@@ -592,7 +594,7 @@ class SheetWriter
     );
 
     // Warna hijau untuk pemasukan
-    $sheetId = $this->manager-->getSheetIdByName($spreadsheetId, $sheetName);
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     $requests = [];
     $green = ['red' => 40/255,
       'green' => 167/255,
@@ -610,7 +612,8 @@ class SheetWriter
 
     $this->applyBordersToRange(
       $spreadsheetId, $sheetName,
-      $cursor->row - count($values) - 1, $dataEndRow,
+      $cursor->row - count($values) - 2, // baris judul
+      $dataEndRow,
       $startCol, count($headers), $headers
     );
   }
