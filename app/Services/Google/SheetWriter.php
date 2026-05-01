@@ -512,6 +512,7 @@ class SheetWriter
     int $chartRow,
     int $startCol = 0
   ): void {
+    \Log::info('Chart position', ['startCol' => $startCol, 'chartRow' => $chartRow]);
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName) ?? 0;
     if ($chartRow <= $dataEndRow) {
       $chartRow = $dataEndRow + 2;
