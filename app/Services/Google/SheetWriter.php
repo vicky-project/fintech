@@ -291,68 +291,123 @@ class SheetWriter
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
   }
 
-  // ======================== SUBTOTAL ========================
-  public function writeSubtotal(string $spreadsheetId, string $sheetName, array $summary, ?string $dataType, SheetCursor $cursor, array $headers): void
-  {
-    $colCount = count($headers);
-    $emptyRow = array_fill(0, $colCount, '');
-    $fmt = fn($val) => ChartDataProcessor::formatCurrency($val, $summary);
-
-    if ($dataType === 'transactions') {
-      $labelRow = $emptyRow;
-      $labelRow[0] = 'SUBTOTAL';
-      $this->client->getSheetsService()->spreadsheets_values->update(
-        $spreadsheetId,
-        $sheetName . '!A' . $cursor->row,
-        new ValueRange(['values' => [$labelRow]]),
-        ['valueInputOption' => 'RAW']
-      );
-      $cursor->advanceRow();
-
-      $metrics = [
-        'Pemasukan: ' . $fmt($summary['total_income'] ?? 0),
-        'Pengeluaran: ' . $fmt($summary['total_expense'] ?? 0),
-        'Net: ' . $fmt($summary['net'] ?? 0),
-      ];
-      foreach ($metrics as $text) {
-        $detailRow = $emptyRow;
-        $detailRow[0] = $text;
-        $this->client->getSheetsService()->spreadsheets_values->update(
-          $spreadsheetId,
-          $sheetName . '!A' . $cursor->row,
-          new ValueRange(['values' => [$detailRow]]),
-          ['valueInputOption' => 'RAW']
-        );
-        $cursor->advanceRow();
+  private function writeSummaryWithStats(
+    string $spreadsheetId,
+    string $sheetName,
+    array $transactions,
+    SheetCursor $cursor,
+    array $summary
+  ): void {
+    // Bangun data ringkasan per bulan
+    $grouped = [];
+    foreach ($transactions as $row) {
+      $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+      if (!$date) continue;
+      $key = $date->format('Y-m');
+      if (!isset($grouped[$key])) {
+        $grouped[$key] = ['income' => 0,
+          'expense' => 0,
+          'label' => $date->format('M Y')];
       }
-    } elseif ($dataType === 'transfers') {
-      $row1 = $emptyRow; $row1[0] = 'SUBTOTAL';
-      $row2 = $emptyRow; $row2[3] = 'Total Transfer: ' . $fmt($summary['total'] ?? 0);
-      $rows = [$row1,
-        $row2];
-      $this->client->getSheetsService()->spreadsheets_values->update(
-        $spreadsheetId,
-        $sheetName . '!A' . $cursor->row,
-        new ValueRange(['values' => $rows]),
-        ['valueInputOption' => 'RAW']
-      );
-      $cursor->advanceRow(2);
-    } elseif ($dataType === 'budgets') {
-      $row1 = $emptyRow; $row1[0] = 'SUBTOTAL';
-      $row2 = $emptyRow;
-      $row2[3] = 'Total Limit: ' . $fmt($summary['total_limit'] ?? 0);
-      $row2[4] = 'Total Pengeluaran: ' . $fmt($summary['total_spent'] ?? 0);
-      $row2[6] = 'Sisa: ' . $fmt($summary['remaining'] ?? 0);
-      $rows = [$row1,
-        $row2];
-      $this->client->getSheetsService()->spreadsheets_values->update(
-        $spreadsheetId,
-        $sheetName . '!A' . $cursor->row,
-        new ValueRange(['values' => $rows]),
-        ['valueInputOption' => 'RAW']
-      );
-      $cursor->advanceRow(2);
+      $grouped[$key]['income'] += (float)($row['Pemasukan'] ?? 0);
+      $grouped[$key]['expense'] += (float)($row['Pengeluaran'] ?? 0);
     }
+    ksort($grouped);
+
+    if (empty($grouped)) return;
+
+    // Hitung total & rata‑rata
+    $totalIncome = array_sum(array_column($grouped, 'income'));
+    $totalExpense = array_sum(array_column($grouped, 'expense'));
+    $monthCount = count($grouped);
+    $avgIncome = $monthCount > 0 ? $totalIncome / $monthCount : 0;
+    $avgExpense = $monthCount > 0 ? $totalExpense / $monthCount : 0;
+    $ratio = $totalIncome > 0 ? ($totalExpense / $totalIncome) * 100 : 0;
+
+    $startCol = $cursor->col; // kolom saat ini (A = 0)
+
+    // Judul tabel
+    $this->writer->writeSimpleTitle(
+      $spreadsheetId, $sheetName, 'Ringkasan Bulanan & Statistik', $cursor
+    );
+
+    // Header tabel
+    $headers = ['Bulan',
+      'Pemasukan',
+      'Pengeluaran',
+      'Net'];
+    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
+
+    // Data per bulan
+    $values = [];
+    foreach ($grouped as $item) {
+      $values[] = [
+        $item['label'],
+        $item['income'],
+        $item['expense'],
+        $item['income'] - $item['expense']
+      ];
+    }
+    // Baris Total
+    $values[] = [
+      'Total',
+      $totalIncome,
+      $totalExpense,
+      $totalIncome - $totalExpense
+    ];
+    $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+
+    // Format mata uang untuk kolom B, C, D (indeks 1,2,3 dari startCol)
+    $this->writer->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values), $dataEndRow, $summary,
+      $startCol + 1, 3
+    );
+
+    // Tulis baris statistik tambahan (tanpa header)
+    $statsData = [
+      ['Rata‑rata Pemasukan/Bulan',
+        $avgIncome,
+        '',
+        ''],
+      ['Rata‑rata Pengeluaran/Bulan',
+        '',
+        $avgExpense,
+        ''],
+      ['Rasio Pengeluaran (%)',
+        '',
+        '',
+        round($ratio, 1) . '%'],
+    ];
+    $this->writer->writeData($spreadsheetId, $sheetName, $statsData, $cursor);
+
+    // Format mata uang untuk sel angka di baris statistik
+    $this->writer->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - 3, $cursor->row - 3, $summary,
+      $startCol + 1, 1
+    );
+    $this->writer->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - 2, $cursor->row - 2, $summary,
+      $startCol + 2, 1
+    );
+    // Rasio tidak perlu format mata uang, biarkan apa adanya
+
+    // Warna hijau/merah untuk kolom angka
+    $this->writer->applySummaryColors(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - count($statsData) - 1, // baris header tabel
+      $values, $startCol
+    );
+
+    // Border untuk seluruh area (judul s/d statistik)
+    $this->writer->applyBordersToRange(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - count($statsData) - 1, // baris judul
+      $cursor->row - 1, // baris terakhir statistik
+      $startCol, 4, $headers
+    );
   }
 
   // ======================== FOOTER ========================

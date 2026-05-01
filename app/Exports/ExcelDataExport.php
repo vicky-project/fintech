@@ -23,7 +23,6 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
   protected array $summary;
 
   private array $headerStyle;
-  private array $subtotalStyle;
   private array $footerStyle;
   private array $infoStyle;
   private array $metadataStyle;
@@ -42,14 +41,6 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         'startColor' => ['rgb' => '4F81BD']],
       'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER,
         'vertical' => Alignment::VERTICAL_CENTER],
-      'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-    ];
-
-    $this->subtotalStyle = [
-      'font' => ['bold' => true,
-        'size' => 11],
-      'fill' => ['fillType' => Fill::FILL_SOLID,
-        'startColor' => ['rgb' => 'D9E2F3']],
       'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
     ];
 
@@ -78,6 +69,8 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
     ];
   }
+
+  // -------- Interface methods ----------
 
   public function headings(): array
   {
@@ -120,6 +113,8 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
     public function styles(Worksheet $sheet) {}
 
+    // -------- Events ----------
+
     public function registerEvents(): array
     {
       return [
@@ -129,20 +124,17 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $metaCount = count($metadata);
           $highestCol = $this->getHighestColumn();
 
+          // 0. Judul
           $titleRow = $this->writeTitle($sheet, $this->title(), $highestCol);
 
+          // 1. Metadata
           $metaStart = $titleRow + 1;
           $this->writeMetadataSection($sheet, $metadata, $metaCount, $highestCol, $metaStart);
+          $metaEnd = $metaStart + ($metaCount > 0 ? $metaCount - 1 : 0);
 
-          $metaEnd = $metaStart + ($metaCount > 0 ? $metaCount : 0);
-          if ($metaCount === 0) {
-            $metaEnd = $metaStart;
-          } else {
-            $metaEnd = $metaStart + $metaCount - 1;
-          }
-
+          // 2. Header tabel (1 baris)
           $tableStart = $metaEnd + 2;
-          $headerRows = $this->headerRowCount();
+          $headerRows = 1;
           $dataStart = $tableStart + $headerRows;
           $lastData = $dataStart + count($this->data) - 1;
 
@@ -150,36 +142,56 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $this->writeData($sheet, $dataStart, $highestCol);
           $this->styleData($sheet, $dataStart, $lastData, $highestCol);
 
+          // 3. Ringkasan dalam tabel (insert)
           if ($this->summary['include_monthly_summary'] ?? false) {
             $this->insertMonthlySummaries($sheet, $dataStart, $lastData, $highestCol);
           }
 
+          // Auto-filter & auto-size
           $lastDataRow = max($lastData, $dataStart);
           $sheet->setAutoFilter('A' . $tableStart . ':' . $highestCol . $lastDataRow);
           foreach (range('A', $highestCol) as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
           }
 
-          $subStart = $lastData + 2;
-          $this->writeSubtotal($sheet, $subStart, $highestCol);
-          $subDetailRows = $this->subtotalDetailRows();
-          $subEnd = $subStart + $subDetailRows;
+          // 4. Tabel Ringkasan + Statistik (menggantikan subtotal)
+          $summaryEndRow = $lastData + 1; // fallback
+          if ($this->type === 'transactions') {
+            $summaryStartRow = $lastData + 2;
+            $summaryEndRow = $this->writeSummaryWithStats($sheet, $summaryStartRow, $highestCol);
+          }
 
-          $footerRow = $subEnd + 2;
-          $this->writeFooter($sheet, $footerRow, $highestCol);
-
+          // 5. Side blocks (Top Spending + Chart)
           $this->writeSideBlocks($sheet, $tableStart, $highestCol);
+
+          // 6. Footer
+          $footerRow = $summaryEndRow + 2;
+          $this->writeFooter($sheet, $footerRow, $highestCol);
         },
       ];
+    }
+
+    // -------- Title & Metadata ----------
+
+    private function writeTitle(Worksheet $sheet, string $title, string $highestCol): int
+    {
+      $row = 1;
+      $sheet->setCellValue('A' . $row, $title);
+      $sheet->mergeCells('A' . $row . ':' . $highestCol . $row);
+      $sheet->getStyle('A' . $row)->applyFromArray([
+        'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => '1F4E79']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+      ]);
+      return $row;
     }
 
     private function writeMetadataSection(Worksheet $sheet, array $metadata, int $metaCount, string $highestCol, int $startRow = 1): void
     {
       if ($metaCount === 0) return;
 
-      $sheet->setCellValue('A'. $startRow, 'INFORMASI EKSPOR');
-      $sheet->mergeCells('A'. $startRow .':' . $highestCol . $startRow);
-      $sheet->getStyle('A'. $startRow)->applyFromArray($this->infoStyle);
+      $sheet->setCellValue('A' . $startRow, 'INFORMASI EKSPOR');
+      $sheet->mergeCells('A' . $startRow . ':' . $highestCol . $startRow);
+      $sheet->getStyle('A' . $startRow)->applyFromArray($this->infoStyle);
 
       for ($i = 0; $i < $metaCount; $i++) {
         $r = $startRow + 1 + $i;
@@ -189,82 +201,17 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       }
     }
 
-    private function writeFooter(Worksheet $sheet, int $footerRow, string $highestCol): void
-    {
-      $sheet->setCellValue('A' . $footerRow,
-        'Generated by ' . config('app.name', 'Laravel') . ' App - ' . now()->setTimezone(config('app.timezone'))->format('d M Y H:i'));
-      $sheet->mergeCells('A' . $footerRow . ':' . $highestCol . $footerRow);
-      $sheet->getStyle('A' . $footerRow)->applyFromArray($this->footerStyle);
-    }
-
-    private function writeSideBlocks(Worksheet $sheet, int $tableStart, string $highestCol): void
-    {
-      $includeMonthly = $this->summary['include_monthly_summary'] ?? false;
-      $includeTopSpending = $this->summary['include_top_spending'] ?? false;
-      $includeChart = $this->summary['include_chart'] ?? false;
-
-      if ($this->type !== 'transactions' || count($this->data) === 0) return;
-      if (!$includeMonthly && !$includeTopSpending && !$includeChart) return;
-
-      $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
-      $blockColIndex = $dataEndColIndex + 2;
-      $nextColIndex = $blockColIndex;
-      $currentRow = $tableStart;
-
-      if ($includeMonthly) {
-        $startCol = Coordinate::stringFromColumnIndex($blockColIndex);
-        $currentRow = $this->writeMonthlySummaryTable($sheet, $currentRow, $this->data, $startCol);
-        $currentRow++;
-      }
-
-      if ($includeTopSpending) {
-        $startCol = Coordinate::stringFromColumnIndex($blockColIndex);
-        $currentRow = $this->writeTopSpendingTable($sheet, $currentRow, $this->data, $startCol);
-        $currentRow++;
-      }
-
-      if ($includeMonthly || $includeTopSpending) {
-        $nextColIndex = $blockColIndex + 5;
-      }
-
-      if ($includeChart) {
-        $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
-        $chartRow = $tableStart;
-        $this->addChartToSheet($sheet, $chartRow, $this->data, $chartStartCol);
-        $trendChartRow = $chartRow + 20 + 2;
-        $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
-      }
-    }
-
-    // --------------- Header & Data ---------------
+    // -------- Headers, Data, Style ----------
 
     private function writeHeaders(Worksheet $sheet, int $startRow, string $highestCol): void
     {
-      if ($this->type === 'transactions') {
-        $sheet->mergeCells('A' . $startRow . ':A' . ($startRow + 1));
-        $sheet->setCellValue('A' . $startRow, 'Tanggal');
-        $sheet->mergeCells('B' . $startRow . ':B' . ($startRow + 1));
-        $sheet->setCellValue('B' . $startRow, 'Tipe');
-        $sheet->mergeCells('C' . $startRow . ':C' . ($startRow + 1));
-        $sheet->setCellValue('C' . $startRow, 'Kategori');
-        $sheet->mergeCells('D' . $startRow . ':D' . ($startRow + 1));
-        $sheet->setCellValue('D' . $startRow, 'Dompet');
-        $sheet->mergeCells('E' . $startRow . ':F' . $startRow);
-        $sheet->setCellValue('E' . $startRow, 'Amount');
-        $sheet->mergeCells('G' . $startRow . ':G' . ($startRow + 1));
-        $sheet->setCellValue('G' . $startRow, 'Deskripsi');
-        $sheet->getStyle('A' . $startRow . ':G' . ($startRow + 1))->applyFromArray($this->headerStyle);
-        $sheet->setCellValue('E' . ($startRow + 1), 'Pemasukan');
-        $sheet->setCellValue('F' . ($startRow + 1), 'Pengeluaran');
-      } else {
-        $headings = $this->headings();
-        $col = 'A';
-        foreach ($headings as $h) {
-          $sheet->setCellValue($col . $startRow, $h);
-          $col++;
-        }
-        $sheet->getStyle('A' . $startRow . ':' . $highestCol . $startRow)->applyFromArray($this->headerStyle);
+      $headings = $this->headings();
+      $col = 'A';
+      foreach ($headings as $h) {
+        $sheet->setCellValue($col . $startRow, $h);
+        $col++;
       }
+      $sheet->getStyle('A' . $startRow . ':' . $highestCol . $startRow)->applyFromArray($this->headerStyle);
     }
 
     private function writeData(Worksheet $sheet, int $startRow, string $highestCol): void
@@ -312,7 +259,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       }
     }
 
-    // --------------- In‑table summaries ---------------
+    // ---------- In-table summaries ----------
 
     private function insertMonthlySummaries(Worksheet $sheet, int $dataStartRow, int &$lastDataRow, string $highestCol): void
     {
@@ -393,146 +340,146 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
         $sheet->getStyle('E' . $r)->getFont()->getColor()->setRGB('28A745');
         $sheet->getStyle('F' . $r)->getFont()->getColor()->setRGB('DC3545');
-        if ($diff >= 0) {
-          $sheet->getStyle('G' . $r)->getFont()->getColor()->setRGB('28A745');
-        } else {
-          $sheet->getStyle('G' . $r)->getFont()->getColor()->setRGB('DC3545');
-        }
+        $sheet->getStyle('G' . $r)->getFont()->getColor()->setRGB($diff >= 0 ? '28A745' : 'DC3545');
 
         $lastDataRow++;
       }
     }
 
-    private function writeSubtotal(Worksheet $sheet, int $startRow, string $highestCol): void
-    {
-      $f = $this->summary;
-      $fmt = fn($v) => ChartDataProcessor::formatCurrency($v, $f);
+    // -------- Summary + Stats (kiri) ----------
 
-      $sheet->setCellValue('A' . $startRow, 'SUBTOTAL');
-      $sheet->mergeCells('A' . $startRow . ':' . $highestCol . $startRow);
-      $sheet->getStyle('A' . $startRow . ':' . $highestCol . $startRow)->applyFromArray($this->subtotalStyle);
-
-      $d = $startRow + 1;
-      switch ($this->type) {
-      case 'transactions':
-        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Pemasukan: ' . $fmt($f['total_income']));
-        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Pengeluaran: ' . $fmt($f['total_expense']));
-        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Net: ' . $fmt($f['net']));
-        break;
-      case 'transfers':
-        $this->writeSubtotalRow($sheet, $d++, $highestCol, 'Total Transfer: ' . $fmt($f['total']));
-        break;
-      case 'budgets':
-        $sheet->setCellValue('D' . $d, 'Total Limit: ' . $fmt($f['total_limit']));
-        $sheet->setCellValue('E' . $d, 'Total Pengeluaran: ' . $fmt($f['total_spent']));
-        $sheet->getStyle('A' . $d . ':' . $highestCol . $d)->applyFromArray($this->subtotalStyle);
-        $sheet->getStyle('D' . $d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('E' . $d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $d++;
-        $sheet->setCellValue('D' . $d, 'Sisa: ' . $fmt($f['remaining']));
-        $sheet->getStyle('A' . $d . ':' . $highestCol . $d)->applyFromArray($this->subtotalStyle);
-        $sheet->getStyle('D' . $d)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        break;
-      }
-    }
-
-    private function writeSubtotalRow(Worksheet $sheet, int $row, string $highestCol, string $text): void
-    {
-      $sheet->setCellValue('A' . $row, $text);
-      $sheet->mergeCells('A' . $row . ':' . $highestCol . $row);
-      $sheet->getStyle('A' . $row . ':' . $highestCol . $row)->applyFromArray(
-        $this->subtotalStyle + ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]
-      );
-    }
-
-    // --------------- Side blocks ---------------
-
-    private function writeMonthlySummaryTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
+    private function writeSummaryWithStats(Worksheet $sheet, int $startRow, string $highestCol): int
     {
       $grouped = [];
-      foreach ($data as $row) {
+      foreach ($this->data as $row) {
         $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
         if (!$date) continue;
-        $monthKey = $date->format('Y-m');
-        if (!isset($grouped[$monthKey])) {
-          $grouped[$monthKey] = [
+        $key = $date->format('Y-m');
+        if (!isset($grouped[$key])) {
+          $grouped[$key] = [
             'income' => 0,
             'expense' => 0,
-            'label' => $date->format('M Y'),
+            'label' => $date->format('M Y')
           ];
         }
-        $grouped[$monthKey]['income'] += ChartDataProcessor::parseCurrency($row['Pemasukan'] ?? '0');
-        $grouped[$monthKey]['expense'] += ChartDataProcessor::parseCurrency($row['Pengeluaran'] ?? '0');
+        $grouped[$key]['income'] += (float)($row['Pemasukan'] ?? 0);
+        $grouped[$key]['expense'] += (float)($row['Pengeluaran'] ?? 0);
       }
       ksort($grouped);
+      if (empty($grouped)) return $startRow;
 
-      if (empty($grouped)) {
-        return $startRow;
-      }
-
-      $colIndex = Coordinate::columnIndexFromString($startCol);
-      $colA = $startCol;
-      $colB = Coordinate::stringFromColumnIndex($colIndex + 1);
-      $colC = Coordinate::stringFromColumnIndex($colIndex + 2);
-      $colD = Coordinate::stringFromColumnIndex($colIndex + 3);
-
-      $sheet->setCellValue($colA . $startRow, 'Ringkasan Bulanan');
-      $sheet->mergeCells($colA . $startRow . ':' . $colD . $startRow);
-      $sheet->getStyle($colA . $startRow)->applyFromArray($this->infoStyle);
-
-      $headerRow = $startRow + 1;
-      $sheet->setCellValue($colA . $headerRow, 'Bulan');
-      $sheet->setCellValue($colB . $headerRow, 'Pemasukan');
-      $sheet->setCellValue($colC . $headerRow, 'Pengeluaran');
-      $sheet->setCellValue($colD . $headerRow, 'Net');
-      $sheet->getStyle($colA . $headerRow . ':' . $colD . $headerRow)->applyFromArray($this->headerStyle);
-
-      $row = $headerRow + 1;
-      foreach ($grouped as $item) {
-        $net = $item['income'] - $item['expense'];
-        $sheet->setCellValue($colA . $row, $item['label']);
-        $sheet->setCellValue($colB . $row, ChartDataProcessor::formatCurrency($item['income'], $this->summary));
-        $sheet->setCellValue($colC . $row, ChartDataProcessor::formatCurrency($item['expense'], $this->summary));
-        $sheet->setCellValue($colD . $row, ChartDataProcessor::formatCurrency($net, $this->summary));
-
-        $sheet->getStyle($colB . $row)->getFont()->getColor()->setRGB('28A745');
-        $sheet->getStyle($colC . $row)->getFont()->getColor()->setRGB('DC3545');
-        $sheet->getStyle($colD . $row)->getFont()->getColor()->setRGB($net >= 0 ? '28A745' : 'DC3545');
-        $row++;
-      }
-
-      $totalRow = $row;
       $totalIncome = array_sum(array_column($grouped, 'income'));
       $totalExpense = array_sum(array_column($grouped, 'expense'));
-      $totalNet = $totalIncome - $totalExpense;
+      $monthCount = count($grouped);
+      $avgIncome = $monthCount > 0 ? $totalIncome / $monthCount : 0;
+      $avgExpense = $monthCount > 0 ? $totalExpense / $monthCount : 0;
+      $ratio = $totalIncome > 0 ? ($totalExpense / $totalIncome) * 100 : 0;
 
-      $sheet->setCellValue($colA . $totalRow, 'Total');
-      $sheet->setCellValue($colB . $totalRow, ChartDataProcessor::formatCurrency($totalIncome, $this->summary));
-      $sheet->setCellValue($colC . $totalRow, ChartDataProcessor::formatCurrency($totalExpense, $this->summary));
-      $sheet->setCellValue($colD . $totalRow, ChartDataProcessor::formatCurrency($totalNet, $this->summary));
+      // Judul
+      $sheet->setCellValue('A' . $startRow, 'Ringkasan Bulanan & Statistik');
+      $sheet->mergeCells('A' . $startRow . ':' . $highestCol . $startRow);
+      $sheet->getStyle('A' . $startRow)->applyFromArray($this->infoStyle);
+      $startRow++;
 
-      $sheet->getStyle($colA . $totalRow . ':' . $colD . $totalRow)->applyFromArray([
-        'font' => ['bold' => true, 'size' => 10],
-        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E2F3']],
+      // Header tabel
+      $sheet->setCellValue('A' . $startRow, 'Bulan');
+      $sheet->setCellValue('B' . $startRow, 'Pemasukan');
+      $sheet->setCellValue('C' . $startRow, 'Pengeluaran');
+      $sheet->setCellValue('D' . $startRow, 'Net');
+      $sheet->getStyle('A' . $startRow . ':D' . $startRow)->applyFromArray($this->headerStyle);
+      $startRow++;
+
+      // Data per bulan
+      foreach ($grouped as $item) {
+        $net = $item['income'] - $item['expense'];
+        $sheet->setCellValue('A' . $startRow, $item['label']);
+        $sheet->setCellValue('B' . $startRow, $item['income']);
+        $sheet->setCellValue('C' . $startRow, $item['expense']);
+        $sheet->setCellValue('D' . $startRow, $net);
+        $sheet->getStyle('B' . $startRow)->getFont()->getColor()->setRGB('28A745');
+        $sheet->getStyle('C' . $startRow)->getFont()->getColor()->setRGB('DC3545');
+        $sheet->getStyle('D' . $startRow)->getFont()->getColor()->setRGB($net >= 0 ? '28A745' : 'DC3545');
+        $startRow++;
+      }
+
+      // Total
+      $sheet->setCellValue('A' . $startRow, 'Total');
+      $sheet->setCellValue('B' . $startRow, $totalIncome);
+      $sheet->setCellValue('C' . $startRow, $totalExpense);
+      $sheet->setCellValue('D' . $startRow, $totalIncome - $totalExpense);
+      $sty = [
+        'font' => ['bold' => true,
+          'size' => 10],
+        'fill' => ['fillType' => Fill::FILL_SOLID,
+          'startColor' => ['rgb' => 'D9E2F3']],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+      ];
+      $sheet->getStyle('A' . $startRow . ':D' . $startRow)->applyFromArray($sty);
+      $sheet->getStyle('B' . $startRow)->getFont()->getColor()->setRGB('28A745');
+      $sheet->getStyle('C' . $startRow)->getFont()->getColor()->setRGB('DC3545');
+      $sheet->getStyle('D' . $startRow)->getFont()->getColor()->setRGB(($totalIncome - $totalExpense) >= 0 ? '28A745' : 'DC3545');
+      $startRow++;
+
+      // Statistik
+      $sheet->setCellValue('A' . $startRow, 'Rata‑rata Pemasukan/Bulan');
+      $sheet->setCellValue('B' . $startRow, $avgIncome);
+      $sheet->getStyle('B' . $startRow)->getFont()->getColor()->setRGB('28A745');
+      $startRow++;
+
+      $sheet->setCellValue('A' . $startRow, 'Rata‑rata Pengeluaran/Bulan');
+      $sheet->setCellValue('C' . $startRow, $avgExpense);
+      $sheet->getStyle('C' . $startRow)->getFont()->getColor()->setRGB('DC3545');
+      $startRow++;
+
+      $sheet->setCellValue('A' . $startRow, 'Rasio Pengeluaran (%)');
+      $sheet->setCellValue('D' . $startRow, round($ratio, 1) . '%');
+      $startRow++;
+
+      // Border keseluruhan
+      $firstRow = $startRow - 7 - count($grouped); // hitung mundur ke judul
+      $sheet->getStyle('A' . $firstRow . ':D' . ($startRow - 1))->applyFromArray([
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
       ]);
-      $sheet->getStyle($colB . $totalRow)->getFont()->getColor()->setRGB('28A745');
-      $sheet->getStyle($colC . $totalRow)->getFont()->getColor()->setRGB('DC3545');
-      $sheet->getStyle($colD . $totalRow)->getFont()->getColor()->setRGB($totalNet >= 0 ? '28A745' : 'DC3545');
 
-      $row++;
-      $lastRow = $row - 1;
-      $sheet->getStyle($colA . $headerRow . ':' . $colD . $lastRow)->applyFromArray([
-        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        'font' => ['size' => 10],
-      ]);
-
-      foreach ([$colA, $colB, $colC, $colD] as $c) {
+      // Auto‑size A..D
+      foreach (range('A', 'D') as $c) {
         $sheet->getColumnDimension($c)->setAutoSize(true);
       }
 
-      return $row;
+      return $startRow - 1; // baris terakhir yang tertulis
     }
+
+    // -------- Side blocks (kanan) ----------
+
+    private function writeSideBlocks(Worksheet $sheet, int $tableStart, string $highestCol): void
+    {
+      $includeTopSpending = $this->summary['include_top_spending'] ?? false;
+      $includeChart = $this->summary['include_chart'] ?? false;
+
+      if ($this->type !== 'transactions' || count($this->data) === 0) return;
+      if (!$includeTopSpending && !$includeChart) return;
+
+      $dataEndColIndex = Coordinate::columnIndexFromString($highestCol);
+      $blockColIndex = $dataEndColIndex + 2;
+      $nextColIndex = $blockColIndex;
+      $currentRow = $tableStart;
+
+      if ($includeTopSpending) {
+        $startCol = Coordinate::stringFromColumnIndex($blockColIndex);
+        $currentRow = $this->writeTopSpendingTable($sheet, $currentRow, $this->data, $startCol);
+        $nextColIndex = $blockColIndex + 5; // 4 kolom + 1 jarak
+      }
+
+      if ($includeChart) {
+        $chartStartCol = Coordinate::stringFromColumnIndex($nextColIndex);
+        $chartRow = $tableStart;
+        $this->addChartToSheet($sheet, $chartRow, $this->data, $chartStartCol);
+        $trendChartRow = $chartRow + 20 + 2;
+        $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
+      }
+    }
+
+    // -------- Top Spending Table ----------
 
     private function writeTopSpendingTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
     {
@@ -586,7 +533,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       return $row;
     }
 
-    // --------------- Charts ---------------
+    // -------- Charts ----------
 
     private function addChartToSheet(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
     {
@@ -620,7 +567,22 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       });
     }
 
-    // --------------- Misc ---------------
+    // -------- Footer ----------
+
+    private function writeFooter(Worksheet $sheet,
+      int $footerRow,
+      string $highestCol): void
+    {
+      $sheet->setCellValue(
+        'A' . $footerRow,
+        'Generated by ' . config('app.name', 'Laravel') . ' App - ' .
+        now()->setTimezone(config('app.timezone'))->format('d M Y H:i')
+      );
+      $sheet->mergeCells('A' . $footerRow . ':' . $highestCol . $footerRow);
+      $sheet->getStyle('A' . $footerRow)->applyFromArray($this->footerStyle);
+    }
+
+    // -------- Helpers ----------
 
     private function getHighestColumn(): string
     {
@@ -630,37 +592,5 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         'budgets' => 'G',
       default => 'E',
       };
-    }
-
-    private function headerRowCount(): int
-    {
-      return $this->type === 'transactions' ? 2 : 1;
-    }
-
-    private function subtotalDetailRows(): int
-    {
-      return match ($this->type) {
-        'transactions' => 3,
-        'transfers' => 1,
-        'budgets' => 2,
-      default => 1,
-      };
-    }
-
-    private function writeTitle(Worksheet $sheet,
-      string $title,
-      string $highestCol): int
-    {
-      $row = 1;
-      $sheet->setCellValue('A' . $row,
-        $title);
-      $sheet->mergeCells('A' . $row . ':' . $highestCol . $row);
-      $sheet->getStyle('A' . $row)->applyFromArray([
-        'font' => ['bold' => true,
-          'size' => 16,
-          'color' => ['rgb' => '1F4E79']],
-        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-      ]);
-      return $row;
     }
   }
