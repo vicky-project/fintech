@@ -131,13 +131,13 @@ class GoogleSheetsService
         $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow,
         $cursor->col
       );
+      $chartEndRow = $chartRow;
       // Trend chart di bawah chart pertama (kolom yang sama)
-      $trendChartRow = $chartRow + 20 + 2;
-      $this->writer->writeTrendChart(
-        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow,
-        $cursor->col
-      );
-      $chartEndRow = $trendChartRow + 20;
+      //$trendChartRow = $chartRow + 20 + 2;
+      //$this->writer->writeTrendChart(
+      //  $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow,$cursor->col
+      // );
+      // $chartEndRow = $trendChartRow + 20;
     }
 
     // 9. Footer
