@@ -99,43 +99,54 @@ class GoogleSheetsService
       $summaryEndRow = $cursor->row - 1; // baris terakhir setelah ringkasan
     }
 
-    // 7. Tabel Top Spending (tetap di kanan, sejajar header utama)
-    $rightColIndex = $colCount + 1; // 1 kolom kosong
+    // 7. Tabel Top (kanan atas)
+    $rightColIndex = $colCount + 1;
     $cursor->setCol($rightColIndex);
-    $cursor->row = $tableStartRow; // sejajar header
+    $cursor->row = $tableStartRow;
 
     $includeTop = $summary['include_top5'] ?? false;
+    $nextColIndex = $rightColIndex; // default: chart di kolom setelah tabel utama
     if ($dataType === 'transactions' && $rawTransactions && $includeTop) {
       $this->writer->writeTopSpendingToSheet(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
       $cursor->advanceRow();
-      $this->writer->writeTopIncomeToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
+      $this->writer->writeTopIncomeToSheet(
+        $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
+      );
       $cursor->advanceRow();
+      // Jika tabel Top ada, chart akan ditempatkan di kanan tabel Top
+      $nextColIndex = $rightColIndex + 5; // 4 kolom tabel + 1 jarak
     }
 
-    // 8. Chart (opsional, di kiri bawah ringkasan)
+    // 8. Chart (di kanan, posisi tergantung ada tidaknya tabel Top)
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     $chartEndRow = 0;
     if ($includeChart) {
-      // Letakkan chart 2 baris setelah baris terakhir ringkasan
-      $chartRow = $summaryEndRow + 2;
+      $cursor->setCol($nextColIndex);
+      $cursor->row = $tableStartRow; // sejajar header utama
+      $chartRow = $cursor->row;
       $this->writer->writeTransactionChart(
         $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow
       );
-      $chartEndRow = $chartRow + 20; // perkiraan tinggi chart 20 baris
+      // Trend chart di bawah chart pertama (kolom yang sama)
+      $trendChartRow = $chartRow + 20 + 2;
+      $this->writer->writeTransactionChart(
+        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow
+      );
+      $chartEndRow = $trendChartRow + 20;
     }
 
-    // 9. Footer (di paling bawah)
+    // 9. Footer
     $lastAddRow = ($dataType === 'transactions') ? $cursor->row : 0;
     $finalRow = max($summaryEndRow, $chartEndRow, $lastAddRow);
     $cursor->setCol(0);
-    $cursor->row = $finalRow + 2; // 1 baris kosong
+    $cursor->row = $finalRow + 2;
 
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
 
-    // 10. Auto-resize (semua kolom, termasuk kolom kanan)
-    $maxCol = max($colCount, $rightColIndex + 4); // +4 untuk tabel top spending
+    // 10. Auto-resize (mencakup semua kolom yang mungkin digunakan)
+    $maxCol = max($colCount, $nextColIndex + 5); // +5 untuk lebar chart
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxCol);
   }
 
