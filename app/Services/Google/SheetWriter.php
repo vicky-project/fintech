@@ -601,12 +601,18 @@ class SheetWriter
             'startColumnIndex' => $startCol,
             'endColumnIndex' => $startCol + $colCount,
           ],
-          'cell' => ['userEnteredFormat' => [
-            'backgroundColor' => ['red' => 79/255, 'green' => 129/255, 'blue' => 189/255],
-            'textFormat' => ['foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1], 'bold' => true, 'fontSize' => 11],
-            'horizontalAlignment' => 'CENTER',
-            'verticalAlignment' => 'MIDDLE',
-          ]],
+          'cell' => [
+            'userEnteredFormat' => [
+              'backgroundColor' => ['red' => 79/255, 'green' => 129/255, 'blue' => 189/255],
+              'textFormat' => [
+                'foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1],
+                'bold' => true,
+                'fontSize' => 11
+              ],
+              'horizontalAlignment' => 'CENTER',
+              'verticalAlignment' => 'MIDDLE',
+            ],
+          ],
           'fields' => 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
         ],
       ]),
