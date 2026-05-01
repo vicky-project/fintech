@@ -118,7 +118,7 @@ class SheetWriter
     $cursor->advanceRow();
   }
 
-  public function writeSimpleTitle(string $spreadsheetId, string $sheetName, string $title, SheetCursor $cursor, int $col = 4): void
+  public function writeSimpleTitle(string $spreadsheetId, string $sheetName, string $title, SheetCursor $cursor, int $colCount = 4): void
   {
     $range = $sheetName . '!' . $cursor->getColLetter() . $cursor->row . ':' .
     chr(65 + $cursor->col + $colCount - 1) . $cursor->row;
