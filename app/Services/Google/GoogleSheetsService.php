@@ -136,18 +136,16 @@ class GoogleSheetsService
       $cursor->row = $tableStartRow;
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart(
-        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow,
-        $cursor->col
+        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow, $cursor->col
       );
 
-      $pieChartRow = $chartRow + 20 + 2;
-      if ($categoryTableInfo) {} else {}
-      $chartEndRow = $chartRow;
-      // Trend chart di bawah chart pertama (kolom yang sama)
-      //$trendChartRow = $chartRow + 20 + 2;
-      //$this->writer->writeTrendChart(
-      //  $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow,$cursor->col
-      // );
+      if (!empty($categoryTableInfo)) {
+        $pieChartRow = $chartRow + 20 + 2;
+        $this->writer->writeCategoryPieChart($spreadsheetId, $sheetName, $categoryTableInfo['dataStartRow'], $categoryTableInfo['dataEndRow'], $categoryTableInfo['startCol'], $categoryTableInfo['startCol'] + 1, $pieChartRow, $cursor->col);
+        $chartEndRow = $pieChartRow + 15;
+      } else {
+        $chartEndRow = $chartRow + 20;
+      }
     }
 
     // 9. Footer

@@ -499,60 +499,47 @@ class SheetWriter
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
-  // Di SheetWriter, tambahkan method baru untuk tren
-  public function writeTrendChart(
+  public function writeCategoryPieChart(
     string $spreadsheetId,
     string $sheetName,
     int $dataStartRow,
     int $dataEndRow,
+    int $categoryCol,
+    int $totalCol,
     int $chartRow,
-    int $startCol = 0
+    int $chartCol = 0
   ): void {
-    \Log::info('Chart position', ['startCol' => $startCol, 'chartRow' => $chartRow]);
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName) ?? 0;
-    if ($chartRow <= $dataEndRow) {
-      $chartRow = $dataEndRow + 2;
-    }
 
-    $chartRequest = new SheetsRequest([
+    $pieRequest = new SheetsRequest([
       'addChart' => [
         'chart' => [
           'spec' => [
-            'title' => 'Tren Net (Pemasukan - Pengeluaran)',
-            'basicChart' => [
-              'chartType' => 'LINE',
-              'legendPosition' => 'BOTTOM_LEGEND',
-              'axis' => [
-                ['position' => 'BOTTOM_AXIS', 'title' => 'Tanggal'],
-                ['position' => 'LEFT_AXIS', 'title' => 'Selisih']
-              ],
-              'domains' => [[
-                'domain' => [
-                  'sourceRange' => [
-                    'sources' => [[
-                      'sheetId' => $sheetId,
-                      'startRowIndex' => $dataStartRow - 1,
-                      'endRowIndex' => $dataEndRow,
-                      'startColumnIndex' => 0,
-                      'endColumnIndex' => 1,
-                    ]]
-                  ]
+            'title' => 'Distribusi Pengeluaran (%)',
+            'pieChart' => [
+              'legendPosition' => 'RIGHT_LEGEND',
+              'domain' => [
+                'sourceRange' => [
+                  'sources' => [[
+                    'sheetId' => $sheetId,
+                    'startRowIndex' => $dataStartRow - 1,
+                    'endRowIndex' => $dataEndRow,
+                    'startColumnIndex' => $categoryCol,
+                    'endColumnIndex' => $categoryCol + 1,
+                  ]]
                 ]
-              ]],
-              'series' => [[
-                'series' => [
-                  'sourceRange' => [
-                    'sources' => [[
-                      'sheetId' => $sheetId,
-                      'startRowIndex' => $dataStartRow - 1,
-                      'endRowIndex' => $dataEndRow,
-                      'startColumnIndex' => 6, // kolom G (Net) atau hasil kalkulasi
-                      'endColumnIndex' => 7,
-                    ]]
-                  ]
-                ],
-                'targetAxis' => 'LEFT_AXIS'
-              ]],
+              ],
+              'series' => [
+                'sourceRange' => [
+                  'sources' => [[
+                    'sheetId' => $sheetId,
+                    'startRowIndex' => $dataStartRow - 1,
+                    'endRowIndex' => $dataEndRow,
+                    'startColumnIndex' => $totalCol,
+                    'endColumnIndex' => $totalCol + 1,
+                  ]]
+                ]
+              ],
               'headerCount' => 1
             ]
           ],
@@ -561,17 +548,17 @@ class SheetWriter
               'anchorCell' => [
                 'sheetId' => $sheetId,
                 'rowIndex' => $chartRow - 1,
-                'columnIndex' => $startCol,
+                'columnIndex' => $chartCol,
               ],
-              'widthPixels' => 600,
-              'heightPixels' => 300,
+              'widthPixels' => 450,
+              'heightPixels' => 350,
             ]
           ]
         ]
       ]
     ]);
 
-    $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => [$chartRequest]]);
+    $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => [$pieRequest]]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
   }
 
@@ -732,12 +719,32 @@ class SheetWriter
 
     $startCol = $cursor->col;
 
-    // Tentukan periode dari transaksi pertama dan terakhir
-    $firstDate = \DateTime::createFromFormat('d/m/Y', $expenses[0]['Tanggal'] ?? '');
-    $lastDate = \DateTime::createFromFormat('d/m/Y', $expenses[count($expenses) - 1]['Tanggal'] ?? '');
-    $period = $firstDate && $lastDate
-    ? $firstDate->format('d M Y') . ' - ' . $lastDate->format('d M Y')
-    : '';
+    // --- Ambil period dari metadata ---
+    $period = '';
+    $metadata = $summary['metadata'] ?? [];
+    foreach ($metadata as $line) {
+      if (str_starts_with($line, 'Rentang Tanggal:')) {
+        $period = trim(substr($line, strlen('Rentang Tanggal:')));
+        break;
+      }
+    }
+    // Jika tidak ada rentang tanggal, coba gunakan Periode Bulan
+    if (empty($period)) {
+      foreach ($metadata as $line) {
+        if (str_starts_with($line, 'Periode Bulan:')) {
+          $period = trim(substr($line, strlen('Periode Bulan:')));
+          break;
+        }
+      }
+    }
+    // Jika masih kosong, gunakan transaksi pertama & terakhir
+    if (empty($period) && count($expenses) >= 1) {
+      $firstDate = \DateTime::createFromFormat('d/m/Y', $expenses[0]['Tanggal'] ?? '');
+      $lastDate = \DateTime::createFromFormat('d/m/Y', $expenses[count($expenses) - 1]['Tanggal'] ?? '');
+      if ($firstDate && $lastDate) {
+        $period = $firstDate->format('d M Y') . ' - ' . $lastDate->format('d M Y');
+      }
+    }
 
     // Judul
     $title = 'Persentase Kategori Pengeluaran';
