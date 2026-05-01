@@ -428,9 +428,8 @@ class SheetWriter
           'spec' => [
             'title' => 'Pemasukan vs Pengeluaran',
             'basicChart' => [
-              'chartType' => 'BAR',
+              'chartType' => 'COLUMN',
               'legendPosition' => 'BOTTOM_LEGEND',
-              'threeDimensional' => true,
               'axis' => [
                 ['position' => 'BOTTOM_AXIS', 'title' => 'Tanggal'],
                 ['position' => 'LEFT_AXIS', 'title' => 'Jumlah']
@@ -518,7 +517,7 @@ class SheetWriter
           'spec' => [
             'title' => 'Distribusi Pengeluaran (%)',
             'pieChart' => [
-              'legendPosition' => 'RIGHT_LEGEND',
+              'legendPosition' => 'LABELED_LEGEND',
               'threeDimensional' => true,
               'domain' => [
                 'sourceRange' => [
