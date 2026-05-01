@@ -26,7 +26,7 @@ class SpreadsheetManager
   */
   public function getOrCreateSpreadsheet($user): string
   {
-    $setting = UserSetting::where('user_id', $user->id);
+    $setting = UserSetting::where('user_id', $user->id)->first();
     $spreadsheetId = $setting->google_spreadsheet_id ?? null;
 
     if ($spreadsheetId) {
