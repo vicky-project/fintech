@@ -69,7 +69,7 @@ class SheetWriter
       ['valueInputOption' => 'RAW']
     );
 
-    $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row? $colCount);
+    $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row, $colCount);
     // Style bold + center biasa
     $this->applyBoldCenter($spreadsheetId, $sheetId, $cursor->row, $colCount);
 
