@@ -89,19 +89,19 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
   <table>
     <tbody>
       <tr>
-        <th>Rata rata Pemasukan/Bulan</th>
+        <th style="max-width: 50px; text-align: left;">Rata rata Pemasukan/Bulan</th>
         <td>
           {{ $fmt($extra['stats']['avgIncome']) }}
         </td>
       </tr>
       <tr>
-        <th>Rata rata Pengeluaran/Bulan</th>
+        <th style="max-width: 50px; text-align: left;">Rata rata Pengeluaran/Bulan</th>
         <td>
           {{ $fmt($extra['stats']['avgExpense']) }}
         </td>
       </tr>
       <tr>
-        <th>Rasio Pengeluaran</th>
+        <th style="max-width: 50px; text-align: left;">Rasio Pengeluaran</th>
         <td>
           {{ round($extra['stats']['ratio'], 1) }}%
         </td>
