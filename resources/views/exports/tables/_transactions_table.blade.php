@@ -85,12 +85,12 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
 </table>
 
 @if(!empty($extra['stats']))
-<div style="margin-top: 15px;">
+<div style="margin-top: 15px;margin-bottom: 15px;">
   <p>
-    <strong>Rata‑rata Pemasukan/Bulan:</strong> {{ $fmt($extra['stats']['avgIncome']) }}
+    <strong>Rata rata Pemasukan/Bulan:</strong> {{ $fmt($extra['stats']['avgIncome']) }}
   </p>
   <p>
-    <strong>Rata‑rata Pengeluaran/Bulan:</strong> {{ $fmt($extra['stats']['avgExpense']) }}
+    <strong>Rata rata Pengeluaran/Bulan:</strong> {{ $fmt($extra['stats']['avgExpense']) }}
   </p>
   <p>
     <strong>Rasio Pengeluaran:</strong> {{ round($extra['stats']['ratio'], 1) }}%
