@@ -125,7 +125,7 @@ class GoogleSheetsService
     $chartEndRow = 0;
     if ($includeChart) {
       $cursor->setCol($nextColIndex);
-      $cursor->row = $tableStartRow; // ⬅️ selalu sejajar header utama
+      $cursor->row = $tableStartRow;
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart(
         $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow,
