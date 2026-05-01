@@ -65,7 +65,7 @@ class GoogleSheetsService
 
     // 2. Header tabel utama (satu baris, tanpa merge)
     $tableStartRow = $cursor->row;
-    $this->writer->writeHeaders($spreadsheetId, $sheetName, $headers, $cursor, $dataType);
+    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $headerEndRow = $cursor->row - 1; // 1 baris header
 
     // 3. Data utama (nilai float)
