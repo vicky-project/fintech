@@ -215,8 +215,8 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
 </div>
 @endif
 
-@if(!empty($pieChartBase64]))
+@if(!empty($pieChartBase64))
 <div style="text-align: center; margin: 20px 0;">
-  <img src="{{ $extra['categoryPieChart'] }}" alt="Pie Chart Kategori" style="max-width: 100%; height: auto;">
+  <img src="{{ $pieChartBase64 }}" alt="Pie Chart Kategori" style="max-width: 100%; height: auto;">
 </div>
 @endif
