@@ -69,9 +69,11 @@ class SheetWriter
       ['valueInputOption' => 'RAW']
     );
 
-    $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row, $colCount);
-    // Style bold + center biasa
-    $this->applyBoldCenter($spreadsheetId, $sheetId, $cursor->row, $colCount);
+    if ($dataType === 'transactions') {
+      $this->applyHeaderStyle($spreadsheetId, $sheetId, $cursor->row, $colCount);
+    } else {
+      $this->applyBoldCenter($spreadsheetId, $sheetId, $cursor->row, $colCount);
+    }
 
     $cursor->advanceRow(1);
   }
