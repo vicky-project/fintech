@@ -40,7 +40,7 @@ class PdfDataExport
         $extra['topIncome'] = self::buildTopIncome($data);
       }
 
-      $extra['categoryExpense'] ÷ self::buildCategoryExpenseTable($data);
+      $extra['categoryExpense'] = self::buildCategoryExpenseTable($data);
     }
 
     $html = view("fintech::exports.{$type}_pdf", [
