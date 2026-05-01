@@ -430,6 +430,7 @@ class SheetWriter
             'basicChart' => [
               'chartType' => 'COLUMN',
               'legendPosition' => 'BOTTOM_LEGEND',
+              'threeDimensional' => true,
               'axis' => [
                 ['position' => 'BOTTOM_AXIS', 'title' => 'Tanggal'],
                 ['position' => 'LEFT_AXIS', 'title' => 'Jumlah']
