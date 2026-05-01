@@ -1996,7 +1996,7 @@ function renderExportFilters(type) {
     </div>
     <div class="form-check">
     <input class="form-check-input" type="checkbox" id="include-top5">
-    <label class="form-check-label" for="include-top-spending">
+    <label class="form-check-label" for="include-top5">
     <i class="bi bi-trophy me-1"></i> Sertakan Top 5 Transaksi (Pemasukan/Pengeluaran)
     </label>
     </div>
@@ -2295,7 +2295,7 @@ async function performExport() {
       } else {
         payload.include_chart = false;
         payload.include_monthly_summary = false;
-        payload.include_top_spending = false;
+        payload.include_top5 = false;
       }
     } else if (type === 'transfers') {
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
