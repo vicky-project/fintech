@@ -144,4 +144,43 @@ class ChartDataProcessor
     $graph->Stroke($path);
     return $path;
   }
+
+  public static function createCategoryPieChart(array $transactions, ?string $savePath = null, &$width = null, &$height = null): string
+  {
+    MtJpGraph::load(['pie']);
+
+    // Filter pengeluaran & hitung total per kategori
+    $expenses = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
+    if (empty($expenses)) return '';
+
+    $catTotals = [];
+    foreach ($expenses as $item) {
+      $cat = $item['Kategori'] ?? 'Lainnya';
+      $catTotals[$cat] = ($catTotals[$cat] ?? 0) + (float)($item['Pengeluaran'] ?? 0);
+    }
+    arsort($catTotals);
+    $labels = array_keys($catTotals);
+    $values = array_values($catTotals);
+
+    $total = array_sum($values);
+    if ($total <= 0) return '';
+
+    $width = 450;
+    $height = 350;
+
+    $graph = new \PieGraph($width, $height);
+    $graph->title->Set('Distribusi Pengeluaran (%)');
+
+    $piePlot = new \PiePlot($values);
+    $piePlot->SetLabels($labels);
+    $piePlot->SetLabelType(PIE_VALUE_ABS);
+    $piePlot->value->SetFormat('%.1f%%');
+    $piePlot->SetLegends($labels);
+    $graph->Add($piePlot);
+    $graph->legend->SetPos(0.1, 0.5, 'right', 'center');
+
+    $path = $savePath ?? tempnam(sys_get_temp_dir(), 'chart_pie_') . '.png';
+    $graph->Stroke($path);
+    return $path;
+  }
 }

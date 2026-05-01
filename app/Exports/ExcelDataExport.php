@@ -470,6 +470,12 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $currentRow++;
         $currentRow = $this->writeTopIncomeTable($sheet, $currentRow, $this->data, $startCol);
         $currentRow++;
+      }
+
+      $currentRow = $this->writeCategoryExpenseTable($sheet, $currentRow, $this->data, Coordinate::stringFromColumnIndex($blockColIndex));
+      $currentRow++;
+
+      if ($includeTop5) {
         $nextColIndex = $blockColIndex + 5; // 4 kolom + 1 jarak
       }
 
@@ -479,6 +485,9 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $this->addChartToSheet($sheet, $chartRow, $this->data, $chartStartCol);
         $trendChartRow = $chartRow + 20 + 2;
         $this->addTrendChart($sheet, $trendChartRow, $this->data, $chartStartCol);
+
+        $pieChartRow = $trendChartRow + 20 + 2;
+        $this->writeCategoryPieChart($sheet, $pieChartRow, $this->data, $chartStartCol);
       }
     }
 
@@ -588,6 +597,123 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       return $row;
     }
 
+    private function writeCategoryExpenseTable(Worksheet $sheet, int $startRow, array $data, string $startCol = 'I'): int
+    {
+      // Filter hanya pengeluaran
+      $expenses = array_filter($data, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
+      if (empty($expenses)) return $startRow;
+
+      // Hitung total per kategori dan jumlah transaksi per kategori
+      $catTotals = [];
+      $catCounts = [];
+      foreach ($expenses as $item) {
+        $cat = $item['Kategori'] ?? 'Lainnya';
+        $catTotals[$cat] = ($catTotals[$cat] ?? 0) + (float)($item['Pengeluaran'] ?? 0);
+        $catCounts[$cat] = ($catCounts[$cat] ?? 0) + 1;
+      }
+
+      $totalAll = array_sum($catTotals);
+      if ($totalAll <= 0) return $startRow;
+
+      // Urutkan berdasarkan persentase tertinggi
+      $sorted = [];
+      foreach ($catTotals as $cat => $total) {
+        $count = $catCounts[$cat] ?? 1;
+        $average = $total / $count;
+        $percentage = ($total / $totalAll) * 100;
+        $sorted[] = [
+          'cat' => $cat,
+          'total' => $total,
+          'average' => $average,
+          'percentage' => $percentage,
+        ];
+      }
+      usort($sorted, fn($a, $b) => $b['percentage'] <=> $a['percentage']);
+
+      $colIdx = Coordinate::columnIndexFromString($startCol);
+      $colKategori = $startCol;
+      $colTotal = Coordinate::stringFromColumnIndex($colIdx + 1);
+      $colPersen = Coordinate::stringFromColumnIndex($colIdx + 2);
+      $colRata = Coordinate::stringFromColumnIndex($colIdx + 3);
+
+      // Period dari data
+      $period = '';
+      $metadata = $this->summary['metadata'] ?? [];
+      foreach ($metadata as $line) {
+        if (str_starts_with($line, 'Rentang Tanggal:')) {
+          $period = trim(substr($line, strlen('Rentang Tanggal:')));
+          break;
+        }
+      }
+      if (empty($period)) {
+        foreach ($metadata as $line) {
+          if (str_starts_with($line, 'Periode Bulan:')) {
+            $period = trim(substr($line, strlen('Periode Bulan:')));
+            break;
+          }
+        }
+      }
+      if (empty($period) && count($expenses) >= 1) {
+        $firstDate = \DateTime::createFromFormat('d/m/Y', $expenses[0]['Tanggal'] ?? '');
+        $lastDate = \DateTime::createFromFormat('d/m/Y', $expenses[count($expenses) - 1]['Tanggal'] ?? '');
+        if ($firstDate && $lastDate) {
+          $period = $firstDate->format('d M Y') . ' - ' . $lastDate->format('d M Y');
+        }
+      }
+
+      // Judul
+      $title = 'Persentase Kategori Pengeluaran';
+      if ($period) {
+        $title .= ' (' . $period . ')';
+      }
+      $sheet->setCellValue($colKategori . $startRow, $title);
+      $sheet->mergeCells($colKategori . $startRow . ':' . $colRata . $startRow);
+      $sheet->getStyle($colKategori . $startRow)->applyFromArray($this->infoStyle);
+
+      // Header
+      $hRow = $startRow + 1;
+      $sheet->setCellValue($colKategori . $hRow, 'Kategori');
+      $sheet->setCellValue($colTotal . $hRow, 'Total');
+      $sheet->setCellValue($colPersen . $hRow, 'Persentase');
+      $sheet->setCellValue($colRata . $hRow, 'Rata‑rata');
+      $sheet->getStyle($colKategori . $hRow . ':' . $colRata . $hRow)->applyFromArray($this->headerStyle);
+
+      // Data
+      $row = $hRow + 1;
+      foreach ($sorted as $item) {
+        $sheet->setCellValue($colKategori . $row, $item['cat']);
+        $sheet->setCellValue($colTotal . $row, ChartDataProcessor::formatCurrency($item['total'], $this->summary));
+        $sheet->setCellValue($colPersen . $row, round($item['percentage'], 1) . '%');
+        $sheet->setCellValue($colRata . $row, ChartDataProcessor::formatCurrency($item['average'], $this->summary));
+
+        // Warna
+        $sheet->getStyle($colTotal . $row)->getFont()->getColor()->setRGB('DC3545');
+        $sheet->getStyle($colRata . $row)->getFont()->getColor()->setRGB('DC3545');
+        $pct = $item['percentage'];
+        if ($pct >= 30) {
+          $color = 'DC3545';
+        } elseif ($pct >= 10) {
+          $color = 'FFC107';
+        } else {
+          $color = '28A745';
+        }
+        $sheet->getStyle($colPersen . $row)->getFont()->getColor()->setRGB($color);
+        $row++;
+      }
+
+      $lastRow = $row - 1;
+      $sheet->getStyle($colKategori . $hRow . ':' . $colRata . $lastRow)->applyFromArray([
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        'font' => ['size' => 10],
+      ]);
+
+      foreach ([$colKategori, $colTotal, $colPersen, $colRata] as $c) {
+        $sheet->getColumnDimension($c)->setAutoSize(true);
+      }
+
+      return $row;
+    }
+
     // -------- Charts ----------
 
     private function addChartToSheet(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
@@ -603,6 +729,15 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
     {
       $width = $height = 0;
       $path = ChartDataProcessor::createTrendChart($data, null, $width, $height);
+      if ($path) {
+        $this->embedImage($sheet, $path, $chartCol . $startRow, $width, $height);
+      }
+    }
+
+    private function writeCategoryPieChart(Worksheet $sheet, int $startRow, array $data, string $chartCol = 'B'): void
+    {
+      $width = $height = 0;
+      $path = ChartDataProcessor::createCategoryPieChart($data, null, $width, $height);
       if ($path) {
         $this->embedImage($sheet, $path, $chartCol . $startRow, $width, $height);
       }
