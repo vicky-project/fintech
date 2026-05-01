@@ -30,6 +30,7 @@ class PdfDataExport
 
       if ($summary['include_monthly_summary'] ?? false) {
         $extra['monthlySummary'] = self::buildMonthlySummary($data);
+        $extra['stats'] = self::buildStats($data);
       }
       if ($summary['include_top_spending'] ?? false) {
         $extra['topSpending'] = self::buildTopSpending($data);
@@ -95,5 +96,29 @@ class PdfDataExport
       'budgets' => 'Laporan Budget',
       default => 'Data'
       };
+    }
+
+    private static function buildStats(array $transactions): array
+    {
+      $grouped = [];
+      foreach ($transactions as $row) {
+        $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+        if (!$date) continue;
+        $key = $date->format('Y-m');
+        if (!isset($grouped[$key])) {
+          $grouped[$key] = ['income' => 0,
+            'expense' => 0];
+        }
+        $grouped[$key]['income'] += (float)($row['Pemasukan'] ?? 0);
+        $grouped[$key]['expense'] += (float)($row['Pengeluaran'] ?? 0);
+      }
+      $totalIncome = array_sum(array_column($grouped, 'income'));
+      $totalExpense = array_sum(array_column($grouped, 'expense'));
+      $monthCount = count($grouped);
+      return [
+        'avgIncome' => $monthCount > 0 ? $totalIncome / $monthCount : 0,
+        'avgExpense' => $monthCount > 0 ? $totalExpense / $monthCount : 0,
+        'ratio' => $totalIncome > 0 ? ($totalExpense / $totalIncome) * 100 : 0,
+      ];
     }
   }

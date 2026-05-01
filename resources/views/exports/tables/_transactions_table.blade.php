@@ -58,24 +58,45 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
     </tr>
   </thead>
   <tbody>
+    @php
+    $totalIncome = 0;
+    $totalExpense = 0;
+    @endphp
     @foreach($extra['monthlySummary'] as $item)
+    @php
+    $net = $item['income'] - $item['expense'];
+    $totalIncome += $item['income'];
+    $totalExpense += $item['expense'];
+    @endphp
     <tr>
       <td>{{ $item['label'] }}</td>
       <td class="text-right text-income">{{ $fmt($item['income']) }}</td>
       <td class="text-right text-expense">{{ $fmt($item['expense']) }}</td>
-      @php $net = $item['income'] - $item['expense']; @endphp
       <td class="text-right {{ $net >= 0 ? 'text-income' : 'text-expense' }}">{{ $fmt($net) }}</td>
     </tr>
     @endforeach
     <tr class="sub-row">
       <td><strong>Total</strong></td>
-      <td class="text-right"><strong>{{ $fmt(array_sum(array_column($extra['monthlySummary'], 'income'))) }}</strong></td>
-      <td class="text-right"><strong>{{ $fmt(array_sum(array_column($extra['monthlySummary'], 'expense'))) }}</strong></td>
-      @php $totalNet = array_sum(array_column($extra['monthlySummary'], 'income')) - array_sum(array_column($extra['monthlySummary'], 'expense')); @endphp
-      <td class="text-right"><strong>{{ $fmt($totalNet) }}</strong></td>
+      <td class="text-right">{{ $fmt($totalIncome) }}</td>
+      <td class="text-right">{{ $fmt($totalExpense) }}</td>
+      <td class="text-right">{{ $fmt($totalIncome - $totalExpense) }}</td>
     </tr>
   </tbody>
 </table>
+
+@if(!empty($extra['stats']))
+<div style="margin-top: 15px;">
+  <p>
+    <strong>Rata‑rata Pemasukan/Bulan:</strong> {{ $fmt($extra['stats']['avgIncome']) }}
+  </p>
+  <p>
+    <strong>Rata‑rata Pengeluaran/Bulan:</strong> {{ $fmt($extra['stats']['avgExpense']) }}
+  </p>
+  <p>
+    <strong>Rasio Pengeluaran:</strong> {{ round($extra['stats']['ratio'], 1) }}%
+  </p>
+</div>
+@endif
 @endif
 
 @if(!empty($extra['topSpending']))

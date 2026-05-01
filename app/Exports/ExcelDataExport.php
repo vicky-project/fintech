@@ -133,7 +133,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
           $metaEnd = $metaStart + ($metaCount > 0 ? $metaCount - 1 : 0);
 
           // 2. Header tabel (1 baris)
-          $tableStart = $metaEnd + 2;
+          $tableStart = $metaEnd + 3;
           $headerRows = 1;
           $dataStart = $tableStart + $headerRows;
           $lastData = $dataStart + count($this->data) - 1;
