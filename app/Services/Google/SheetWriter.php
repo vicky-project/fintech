@@ -715,10 +715,36 @@ class SheetWriter
     $totalAll = array_sum($catTotals);
     if ($totalAll <= 0) return [];
 
+    // Urutkan berdasarkan persentase tertinggi
+    $sorted = [];
+    foreach ($catTotals as $cat => $total) {
+      $count = $catCounts[$cat] ?? 1;
+      $average = $total / $count;
+      $percentage = ($total / $totalAll) * 100;
+      $sorted[] = [
+        'cat' => $cat,
+        'total' => $total,
+        'average' => $average,
+        'percentage' => $percentage,
+      ];
+    }
+    usort($sorted, fn($a, $b) => $b['percentage'] <=> $a['percentage']);
+
     $startCol = $cursor->col;
 
+    // Tentukan periode dari transaksi pertama dan terakhir
+    $firstDate = \DateTime::createFromFormat('d/m/Y', $expenses[0]['Tanggal'] ?? '');
+    $lastDate = \DateTime::createFromFormat('d/m/Y', $expenses[count($expenses) - 1]['Tanggal'] ?? '');
+    $period = $firstDate && $lastDate
+    ? $firstDate->format('d M Y') . ' - ' . $lastDate->format('d M Y')
+    : '';
+
     // Judul
-    $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Kategori Pengeluaran', $cursor);
+    $title = 'Persentase Kategori Pengeluaran';
+    if ($period) {
+      $title .= ' (' . $period . ')';
+    }
+    $this->writeSimpleTitle($spreadsheetId, $sheetName, $title, $cursor);
 
     // Header (4 kolom)
     $headers = ['Kategori',
@@ -729,18 +755,14 @@ class SheetWriter
 
     // Data
     $values = [];
-    foreach ($catTotals as $cat => $total) {
-      $count = $catCounts[$cat] ?? 1;
-      $average = $total / $count;
-      $percentage = ($total / $totalAll) * 100;
+    foreach ($sorted as $item) {
       $values[] = [
-        $cat,
-        $total,
-        round($percentage, 1) . '%',
-        $average
+        $item['cat'],
+        $item['total'],
+        round($item['percentage'], 1) . '%',
+        $item['average']
       ];
     }
-
     $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
     // Format mata uang untuk kolom Total (indeks 1) dan Rata‑rata (indeks 3)
@@ -754,6 +776,48 @@ class SheetWriter
       $cursor->row - count($values), $dataEndRow, $summary,
       $startCol + 3, 1
     );
+
+    // ---- Warna ----
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
+    if ($sheetId !== null) {
+      $requests = [];
+      $red = ['red' => 220/255,
+        'green' => 53/255,
+        'blue' => 69/255];
+      $orange = ['red' => 255/255,
+        'green' => 193/255,
+        'blue' => 7/255];
+      $green = ['red' => 40/255,
+        'green' => 167/255,
+        'blue' => 69/255];
+
+      $dataStartRow = $cursor->row - count($values); // baris pertama data
+
+      foreach ($sorted as $idx => $item) {
+        $rowNum = $dataStartRow + $idx;
+
+        // Total → merah
+        $this->setCellColor($sheetId, $rowNum, $startCol + 1, $red, true, $requests);
+        // Rata‑rata → merah
+        $this->setCellColor($sheetId, $rowNum, $startCol + 3, $red, true, $requests);
+
+        // Persentase → warna sesuai kelompok
+        $pct = $item['percentage'];
+        if ($pct >= 30) {
+          $color = $red;
+        } elseif ($pct >= 10) {
+          $color = $orange;
+        } else {
+          $color = $green;
+        }
+        $this->setCellColor($sheetId, $rowNum, $startCol + 2, $color, true, $requests);
+      }
+
+      if ($requests) {
+        $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+        $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+      }
+    }
 
     // Border
     $this->applyBordersToRange(
