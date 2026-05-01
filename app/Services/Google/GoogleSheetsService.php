@@ -100,12 +100,13 @@ class GoogleSheetsService
     }
 
     // 7. Tabel Top (kanan atas)
-    $rightColIndex = $colCount + 1;
+    $rightColIndex = $colCount + 1; // 1 kolom kosong setelah tabel utama
     $cursor->setCol($rightColIndex);
-    $cursor->row = $tableStartRow;
+    $cursor->row = $tableStartRow; // sejajar header utama
 
     $includeTop = $summary['include_top5'] ?? false;
     $nextColIndex = $rightColIndex; // default: chart di kolom setelah tabel utama
+
     if ($dataType === 'transactions' && $rawTransactions && $includeTop) {
       $this->writer->writeTopSpendingToSheet(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
@@ -119,20 +120,22 @@ class GoogleSheetsService
       $nextColIndex = $rightColIndex + 5; // 4 kolom tabel + 1 jarak
     }
 
-    // 8. Chart (di kanan, posisi tergantung ada tidaknya tabel Top)
+    // 8. Chart (di kanan, sejajar header utama)
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     $chartEndRow = 0;
     if ($includeChart) {
       $cursor->setCol($nextColIndex);
-      $cursor->row = $tableStartRow; // sejajar header utama
+      $cursor->row = $tableStartRow; // ⬅️ selalu sejajar header utama
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart(
-        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow, $cursor->col
+        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow,
+        $cursor->col
       );
       // Trend chart di bawah chart pertama (kolom yang sama)
       $trendChartRow = $chartRow + 20 + 2;
       $this->writer->writeTrendChart(
-        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow, $cursor->col
+        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow,
+        $cursor->col
       );
       $chartEndRow = $trendChartRow + 20;
     }
