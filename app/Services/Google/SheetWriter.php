@@ -280,7 +280,7 @@ class SheetWriter
     $startCol = $cursor->col; // kolom saat ini (A = 0)
 
     // Judul tabel
-    $this->writer->writeSimpleTitle(
+    $this->writeSimpleTitle(
       $spreadsheetId, $sheetName, 'Ringkasan Bulanan & Statistik', $cursor
     );
 
@@ -289,7 +289,7 @@ class SheetWriter
       'Pemasukan',
       'Pengeluaran',
       'Net'];
-    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
+    $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
 
     // Data per bulan
     $values = [];
@@ -308,10 +308,10 @@ class SheetWriter
       $totalExpense,
       $totalIncome - $totalExpense
     ];
-    $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
+    $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
     // Format mata uang untuk kolom B, C, D (indeks 1,2,3 dari startCol)
-    $this->writer->applyCurrencyFormat(
+    $this->applyCurrencyFormat(
       $spreadsheetId, $sheetName,
       $cursor->row - count($values), $dataEndRow, $summary,
       $startCol + 1, 3
@@ -332,15 +332,15 @@ class SheetWriter
         '',
         round($ratio, 1) . '%'],
     ];
-    $this->writer->writeData($spreadsheetId, $sheetName, $statsData, $cursor);
+    $this->writeData($spreadsheetId, $sheetName, $statsData, $cursor);
 
     // Format mata uang untuk sel angka di baris statistik
-    $this->writer->applyCurrencyFormat(
+    $this->applyCurrencyFormat(
       $spreadsheetId, $sheetName,
       $cursor->row - 3, $cursor->row - 3, $summary,
       $startCol + 1, 1
     );
-    $this->writer->applyCurrencyFormat(
+    $this->applyCurrencyFormat(
       $spreadsheetId, $sheetName,
       $cursor->row - 2, $cursor->row - 2, $summary,
       $startCol + 2, 1
@@ -348,14 +348,14 @@ class SheetWriter
     // Rasio tidak perlu format mata uang, biarkan apa adanya
 
     // Warna hijau/merah untuk kolom angka
-    $this->writer->applySummaryColors(
+    $this->applySummaryColors(
       $spreadsheetId, $sheetName,
       $cursor->row - count($values) - count($statsData) - 1, // baris header tabel
       $values, $startCol
     );
 
     // Border untuk seluruh area (judul s/d statistik)
-    $this->writer->applyBordersToRange(
+    $this->applyBordersToRange(
       $spreadsheetId, $sheetName,
       $cursor->row - count($values) - count($statsData) - 1, // baris judul
       $cursor->row - 1, // baris terakhir statistik
