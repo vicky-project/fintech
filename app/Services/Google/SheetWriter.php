@@ -563,23 +563,30 @@ class SheetWriter
     usort($expenses, fn($a, $b) => ((float)($b['Pengeluaran'] ?? 0)) <=> ((float)($a['Pengeluaran'] ?? 0)));
     $top5 = array_slice($expenses, 0, 5);
 
+    $includeDesc = ($summary['include_description'] ?? true);
+
     $startCol = $cursor->col;
     $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Top 5 Pengeluaran', $cursor);
 
-    $headers = ['Tanggal',
+    $headers = $includeDesc ? ['Tanggal',
       'Kategori',
       'Jumlah',
-      'Deskripsi'];
+      'Deskripsi'] : ['Tanggal',
+      'Kategori',
+      'Jumlah'];
     $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
 
     $values = [];
     foreach ($top5 as $item) {
-      $values[] = [
+      $row = [
         $item['Tanggal'] ?? '',
         $item['Kategori'] ?? '',
         (float)($item['Pengeluaran'] ?? 0),
-        $item['Deskripsi'] ?? '-',
       ];
+      if ($includeDesc) {
+        $row[] = $item['Deskripsi'] ?? '-';
+      }
+      $values[] = $row;
     }
     $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
@@ -598,23 +605,30 @@ class SheetWriter
     usort($incomes, fn($a, $b) => ((float)($b['Pemasukan'] ?? 0)) <=> ((float)($a['Pemasukan'] ?? 0)));
     $top5 = array_slice($incomes, 0, 5);
 
+    $includeDesc = ($this->summary['include_description'] ?? true);
+
     $startCol = $cursor->col;
     $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Top 5 Pemasukan', $cursor);
 
-    $headers = ['Tanggal',
+    $headers = $includeDesc ? ['Tanggal',
       'Kategori',
       'Jumlah',
-      'Deskripsi'];
+      'Deskripsi']:['Tanggal',
+      'Kategori',
+      'Jumlah'];
     $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
 
     $values = [];
     foreach ($top5 as $item) {
-      $values[] = [
+      $row = [
         $item['Tanggal'] ?? '',
         $item['Kategori'] ?? '',
         (float)($item['Pemasukan'] ?? 0),
-        $item['Deskripsi'] ?? '-',
       ];
+      if ($includeDesc) {
+        $row[] = $item['Deskripsi'] ?? '-';
+      }
+      $values[] = $row;
     }
     $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
 

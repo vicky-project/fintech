@@ -56,6 +56,13 @@ class GoogleSheetsService
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
+
+    $includeDescription = ($dataType === 'transactions' || $dataType === 'transfers') ? ($summary['include_description'] ?? true) : true;
+    if (!$includeDescription) {
+      $headers = array_values(array_diff($headers, ['Deskripsi']));
+      $values = array_map(fn($row) => array_slice($row, 0, -1), $values);
+    }
+
     $colCount = count($headers);
 
     $cursor = new SheetCursor();

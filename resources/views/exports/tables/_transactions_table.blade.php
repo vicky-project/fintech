@@ -4,6 +4,7 @@ $prec   = $summary['precision'] ?? 0;
 $dec    = $summary['decimal_mark'] ?? ',';
 $thou   = $summary['thousands_separator'] ?? '.';
 $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou);
+$showDesc = $summary['include_description'] ?? true;
 @endphp
 <table>
   <thead>
@@ -13,7 +14,9 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
       <th rowspan="2">Kategori</th>
       <th rowspan="2">Dompet</th>
       <th colspan="2">Amount</th>
+      @if($showDesc)
       <th rowspan="2">Deskripsi</th>
+      @endif
     </tr>
     <tr>
       <th>Pemasukan</th>
@@ -29,7 +32,9 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
       <td>{{ $row['Dompet'] }}</td>
       <td class="text-right text-income">{{ $row['Pemasukan'] === '-' ? '0' : $row['Pemasukan'] }}</td>
       <td class="text-right text-expense">{{ $row['Pengeluaran'] === '-' ? '0' : $row['Pengeluaran'] }}</td>
+      @if($showDesc)
       <td>{{ $row['Deskripsi'] }}</td>
+      @endif
     </tr>
     @empty
     <tr>
@@ -132,7 +137,9 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
       <th>Tanggal</th>
       <th>Kategori</th>
       <th>Jumlah</th>
+      @if($showDesc)
       <th>Deskripsi</th>
+      @endif
     </tr>
   </thead>
   <tbody>
@@ -144,7 +151,9 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
       <td>{{ $item['Tanggal'] }}</td>
       <td>{{ $item['Kategori'] }}</td>
       <td class="text-right text-expense">{{ $fmt($amount) }}</td>
+      @if($showDesc)
       <td>{{ $item['Deskripsi'] ?? '-' }}</td>
+      @endif
     </tr>
     @endforeach
   </tbody>
@@ -155,7 +164,12 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
 <h4>Top 5 Pemasukan</h4>
 <table>
   <thead>
-    <tr><th>Tanggal</th><th>Kategori</th><th>Jumlah</th><th>Deskripsi</th></tr>
+    <tr>
+      <th>Tanggal</th><th>Kategori</th><th>Jumlah</th>
+      @if($showDesc)
+      <th>Deskripsi</th>
+      @endif
+    </tr>
   </thead>
   <tbody>
     @foreach($extra['topIncome'] as $item)
@@ -163,7 +177,9 @@ $fmt    = fn($v) => $symbol . ' ' . number_format((float)$v, $prec, $dec, $thou)
       <td>{{ $item['Tanggal'] }}</td>
       <td>{{ $item['Kategori'] }}</td>
       <td class="text-right text-income">{{ $fmt((float) str_replace(['Rp','.',','], '', $item['Pemasukan'])) }}</td>
+      @if($showDesc)
       <td>{{ $item['Deskripsi'] ?? '-' }}</td>
+      @endif
     </tr>
     @endforeach
   </tbody>

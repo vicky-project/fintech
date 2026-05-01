@@ -74,10 +74,9 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
   public function headings(): array
   {
-    if (!empty($this->data) && is_array($this->data[0])) {
-      return array_keys($this->data[0]);
-    }
-    return match ($this->type) {
+    $base = !empty($this->data) && is_array($this->data[0])
+    ? array_keys($this->data[0])
+    : match ($this->type) {
       'transactions' => ['Tanggal',
         'Tipe',
         'Kategori',
@@ -99,6 +98,13 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         'Status'],
       default => [],
       };
+
+      // Jika include_description false, hapus 'Deskripsi' dari array
+      if (($this->type === 'transactions' || $this->type === 'transfers') && !($this->summary['include_description'] ?? true)) {
+        $base = array_values(array_diff($base, ['Deskripsi']));
+      }
+
+      return $base;
     }
 
     public function title(): string
@@ -223,10 +229,18 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         return;
       }
 
+      $includeDesc = ($this->type === 'transactions' || $this->type === 'transfers')
+      ? ($this->summary['include_description'] ?? true)
+      : true;
+
       $row = $startRow;
       foreach ($this->data as $line) {
         $col = 'A';
-        foreach ($line as $val) {
+        $vals = array_values($line);
+        if (!$includeDesc) {
+          array_pop($vals); // hapus elemen terakhir (Deskripsi)
+        }
+        foreach ($vals as $val) {
           $display = ($val === 0 || $val === null) ? '0' : $val;
           $sheet->setCellValue($col . $row, $display);
           $col++;
@@ -268,6 +282,14 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
       $totalIncome = 0;
       $totalExpense = 0;
       $dataCount = count($this->data);
+
+      $includeDesc = ($this->type === 'transactions')
+      ? ($this->summary['include_description'] ?? true)
+      : true;
+
+      // Kolom maksimal saat ini sudah disesuaikan oleh getHighestColumn()
+      // Jika includeDesc = false, $highestCol = 'F' (tidak ada kolom G)
+      $hasNetColumn = ($highestCol === 'G'); // kolom G hanya ada jika deskripsi disertakan
 
       for ($i = 0; $i < $dataCount; $i++) {
         $rowData = $this->data[$i];
@@ -317,13 +339,22 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $r = $ins['row'];
         $sheet->insertNewRowBefore($r, 1);
 
+        // Label bulan (merge A..D)
         $sheet->setCellValue('A' . $r, 'Jumlah ' . $ins['monthKey']);
         $sheet->mergeCells('A' . $r . ':D' . $r);
-        $sheet->setCellValue('E' . $r, ChartDataProcessor::formatCurrency($ins['income'] ?? 0, $this->summary));
-        $sheet->setCellValue('F' . $r, ChartDataProcessor::formatCurrency($ins['expense'] ?? 0, $this->summary));
-        $diff = ($ins['income'] ?? 0) - ($ins['expense'] ?? 0);
-        $sheet->setCellValue('G' . $r, ChartDataProcessor::formatCurrency($diff, $this->summary));
 
+        // Pemasukan (kolom E)
+        $sheet->setCellValue('E' . $r, ChartDataProcessor::formatCurrency($ins['income'] ?? 0, $this->summary));
+        // Pengeluaran (kolom F)
+        $sheet->setCellValue('F' . $r, ChartDataProcessor::formatCurrency($ins['expense'] ?? 0, $this->summary));
+
+        // Net hanya jika ada kolom G (deskripsi disertakan)
+        if ($hasNetColumn) {
+          $diff = ($ins['income'] ?? 0) - ($ins['expense'] ?? 0);
+          $sheet->setCellValue('G' . $r, ChartDataProcessor::formatCurrency($diff, $this->summary));
+        }
+
+        // Styling
         $sty = [
           'font' => ['bold' => true,
             'size' => 10],
@@ -336,11 +367,18 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->getStyle('A' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
         $sheet->getStyle('E' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $sheet->getStyle('F' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('G' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
+        if ($hasNetColumn) {
+          $sheet->getStyle('G' . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        }
+
+        // Warna
         $sheet->getStyle('E' . $r)->getFont()->getColor()->setRGB('28A745');
         $sheet->getStyle('F' . $r)->getFont()->getColor()->setRGB('DC3545');
-        $sheet->getStyle('G' . $r)->getFont()->getColor()->setRGB($diff >= 0 ? '28A745' : 'DC3545');
+        if ($hasNetColumn) {
+          $diff = ($ins['income'] ?? 0) - ($ins['expense'] ?? 0);
+          $sheet->getStyle('G' . $r)->getFont()->getColor()->setRGB($diff >= 0 ? '28A745' : 'DC3545');
+        }
 
         $lastDataRow++;
       }
@@ -507,23 +545,28 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         ChartDataProcessor::parseCurrency($a['Pengeluaran'] ?? '0')
       );
       $top5 = array_slice($expenses, 0, 5);
+      $includeDesc = ($this->summary['include_description'] ?? true);
 
       $colIdx = Coordinate::columnIndexFromString($startCol);
       $colTanggal = $startCol;
       $colKategori = Coordinate::stringFromColumnIndex($colIdx + 1);
       $colJumlah = Coordinate::stringFromColumnIndex($colIdx + 2);
-      $colDeskripsi = Coordinate::stringFromColumnIndex($colIdx + 3);
+      $colDeskripsi = $includeDesc ? Coordinate::stringFromColumnIndex($colIdx + 3) : null;
+      $mergeEndCol = $includeDesc ? $colDeskripsi : $colJumlah;
 
       $sheet->setCellValue($colTanggal . $startRow, 'Top 5 Pengeluaran');
-      $sheet->mergeCells($colTanggal . $startRow . ':' . $colDeskripsi . $startRow);
+      $sheet->mergeCells($colTanggal . $startRow . ':' . $mergeEndCol . $startRow);
       $sheet->getStyle($colTanggal . $startRow)->applyFromArray($this->infoStyle);
 
       $hRow = $startRow + 1;
       $sheet->setCellValue($colTanggal . $hRow, 'Tanggal');
       $sheet->setCellValue($colKategori . $hRow, 'Kategori');
       $sheet->setCellValue($colJumlah . $hRow, 'Jumlah');
-      $sheet->setCellValue($colDeskripsi . $hRow, 'Deskripsi');
-      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $hRow)->applyFromArray($this->headerStyle);
+      if ($includeDesc) {
+        $sheet->setCellValue($colDeskripsi . $hRow, 'Deskripsi');
+      }
+      $styleRange = $colTanggal . $hRow . ':'. $mergeEndCol . $hRow;
+      $sheet->getStyle($styleRange)->applyFromArray($this->headerStyle);
 
       $row = $hRow + 1;
       foreach ($top5 as $item) {
@@ -531,18 +574,25 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->setCellValue($colTanggal . $row, $item['Tanggal'] ?? '');
         $sheet->setCellValue($colKategori . $row, $item['Kategori'] ?? '');
         $sheet->setCellValue($colJumlah . $row, ChartDataProcessor::formatCurrency($amount, $this->summary));
-        $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
+        if ($includeDesc) {
+          $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
+        }
         $sheet->getStyle($colJumlah . $row)->getFont()->getColor()->setRGB('DC3545');
         $row++;
       }
 
       $lastRow = $row - 1;
-      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $lastRow)->applyFromArray([
+      $borderRange = $colTanggal . $hRow . ':'. $mergeEndCol . $lastRow;
+      $sheet->getStyle($borderRange)->applyFromArray([
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         'font' => ['size' => 10],
       ]);
 
-      foreach ([$colTanggal, $colKategori, $colJumlah, $colDeskripsi] as $c) {
+      $cols = [$colTanggal,
+        $colKategori,
+        $colJumlah];
+      if ($includeDesc) $cols[] = $colDeskripsi;
+      foreach ($cols as $c) {
         $sheet->getColumnDimension($c)->setAutoSize(true);
       }
 
@@ -559,23 +609,28 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         ChartDataProcessor::parseCurrency($a['Pemasukan'] ?? '0')
       );
       $top5 = array_slice($incomes, 0, 5);
+      $includeDesc = ($this->summary['include_description'] ?? true);
 
       $colIdx = Coordinate::columnIndexFromString($startCol);
       $colTanggal = $startCol;
       $colKategori = Coordinate::stringFromColumnIndex($colIdx + 1);
       $colJumlah = Coordinate::stringFromColumnIndex($colIdx + 2);
-      $colDeskripsi = Coordinate::stringFromColumnIndex($colIdx + 3);
+      $colDeskripsi = $includeDesc ? Coordinate::stringFromColumnIndex($colIdx + 3) : null;
+      $mergeEndCol = $includeDesc ? $colDeskripsi : $colJumlah;
 
       $sheet->setCellValue($colTanggal . $startRow, 'Top 5 Pemasukan');
-      $sheet->mergeCells($colTanggal . $startRow . ':' . $colDeskripsi . $startRow);
+      $sheet->mergeCells($colTanggal . $startRow . ':' . $mergeEndCol . $startRow);
       $sheet->getStyle($colTanggal . $startRow)->applyFromArray($this->infoStyle);
 
       $hRow = $startRow + 1;
       $sheet->setCellValue($colTanggal . $hRow, 'Tanggal');
       $sheet->setCellValue($colKategori . $hRow, 'Kategori');
       $sheet->setCellValue($colJumlah . $hRow, 'Jumlah');
-      $sheet->setCellValue($colDeskripsi . $hRow, 'Deskripsi');
-      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $hRow)->applyFromArray($this->headerStyle);
+      if ($includeDesc) {
+        $sheet->setCellValue($colDeskripsi . $hRow, 'Deskripsi');
+      }
+      $styleRange = $colTanggal . $hRow . ':'. $mergeEndCol . $hRow;
+      $sheet->getStyle($styleRange)->applyFromArray($this->headerStyle);
 
       $row = $hRow + 1;
       foreach ($top5 as $item) {
@@ -583,18 +638,25 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
         $sheet->setCellValue($colTanggal . $row, $item['Tanggal'] ?? '');
         $sheet->setCellValue($colKategori . $row, $item['Kategori'] ?? '');
         $sheet->setCellValue($colJumlah . $row, ChartDataProcessor::formatCurrency($amount, $this->summary));
-        $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
+        if ($includeDesc) {
+          $sheet->setCellValue($colDeskripsi . $row, $item['Deskripsi'] ?? '-');
+        }
         $sheet->getStyle($colJumlah . $row)->getFont()->getColor()->setRGB('28A745');
         $row++;
       }
 
       $lastRow = $row - 1;
-      $sheet->getStyle($colTanggal . $hRow . ':' . $colDeskripsi . $lastRow)->applyFromArray([
+      $borderRange = $colTanggal . $hRow . ':'. $mergeEndCol . $lastRow;
+      $sheet->getStyle($borderRange)->applyFromArray([
         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         'font' => ['size' => 10],
       ]);
 
-      foreach ([$colTanggal, $colKategori, $colJumlah, $colDeskripsi] as $c) {
+      $cols = [$colTanggal,
+        $colKategori,
+        $colJumlah];
+      if ($includeDesc) $cols[] = $colDeskripsi;
+      foreach ($cols as $c) {
         $sheet->getColumnDimension($c)->setAutoSize(true);
       }
 
@@ -780,11 +842,18 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
     private function getHighestColumn(): string
     {
-      return match ($this->type) {
+      $base = match ($this->type) {
         'transactions' => 'G',
         'transfers' => 'E',
         'budgets' => 'G',
       default => 'E',
       };
+
+      if (($this->type === 'transactions' || $this->type === 'transfers') && !($this->summary['include_description'] ?? true)) {
+        // Mundur satu kolom
+        $base = chr(ord($base) - 1);
+      }
+
+      return $base;
     }
   }

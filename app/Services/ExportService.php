@@ -66,6 +66,10 @@ class ExportService
           $summaryArr['include_top5'] = $includeTop5;
           $summaryArr['include_category_expense'] = $includeCategoryExpense;
         }
+
+        if ($subType === 'transactions' || $subType === 'transfers') {
+          $summaryArr['include_description'] = $filters['include_description'] ?? true;
+        }
         $result[$subType][1] = $summaryArr;
       }
       return $this->storeXlsx(new AllExcelDataExport($result));
@@ -81,6 +85,7 @@ class ExportService
     }
 
     $metadata = $this->buildMetadata($type, $filters, $wallet->name);
+    $summary['include_description'] = $filters['include_description'] ?? false;
     $summary['include_chart'] = $filters['include_chart'] ?? false;
     $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
     $summary['include_top5'] = $filters['include_top5'] ?? false;
@@ -330,6 +335,7 @@ class ExportService
 
         $txSummary = array_merge($all['transactions'][1], $formatRules, [
           'metadata' => $metaTx,
+          'include_description' => $filters['include_description'] ?? true,
           'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
           'include_top5' => $filters['include_top5'] ?? true,
           'include_chart' => $filters['include_chart'] ?? true,
@@ -357,6 +363,10 @@ class ExportService
           $summary['include_chart'] = $filters['include_chart'] ?? false;
           $summary['include_category_expense'] = $filters['include_category_expense'] ?? false;
           $rawTransactions = $data;
+        }
+
+        if ($type === 'transactions' || $type === 'transfers') {
+          $summary['include_description'] = $filters['include_description'] ?? true;
         }
 
         $summary = array_merge($summary, $formatRules);
