@@ -120,6 +120,14 @@ class GoogleSheetsService
       $nextColIndex = $rightColIndex + 5; // 4 kolom tabel + 1 jarak
     }
 
+    $categoryTableInfo = null;
+    if ($dataType === 'transactions' && $rawTransactions) {
+      $categoryTableInfo = $this->writer->writeCategoryExpenseTable($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
+      if ($categoryTableInfo) {
+        $cursor->advanceRow();
+      }
+    }
+
     // 8. Chart (di kanan, sejajar header utama)
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     $chartEndRow = 0;
@@ -131,13 +139,15 @@ class GoogleSheetsService
         $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow,
         $cursor->col
       );
+
+      $pieChartRow = $chartRow + 20 + 2;
+      if ($categoryTableInfo) {} else {}
       $chartEndRow = $chartRow;
       // Trend chart di bawah chart pertama (kolom yang sama)
       //$trendChartRow = $chartRow + 20 + 2;
       //$this->writer->writeTrendChart(
       //  $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow,$cursor->col
       // );
-      // $chartEndRow = $trendChartRow + 20;
     }
 
     // 9. Footer

@@ -692,6 +692,84 @@ class SheetWriter
     );
   }
 
+  public function writeCategoryExpenseTable(
+    string $spreadsheetId,
+    string $sheetName,
+    array $transactions,
+    SheetCursor $cursor,
+    array $summary
+  ): array {
+    $expenses = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
+    if (empty($expenses)) return [];
+
+    // Hitung total per kategori dan jumlah transaksi per kategori
+    $catTotals = [];
+    $catCounts = [];
+    foreach ($expenses as $item) {
+      $cat = $item['Kategori'] ?? 'Lainnya';
+      $catTotals[$cat] = ($catTotals[$cat] ?? 0) + (float)($item['Pengeluaran'] ?? 0);
+      $catCounts[$cat] = ($catCounts[$cat] ?? 0) + 1;
+    }
+
+    // Total keseluruhan
+    $totalAll = array_sum($catTotals);
+    if ($totalAll <= 0) return [];
+
+    $startCol = $cursor->col;
+
+    // Judul
+    $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Kategori Pengeluaran', $cursor);
+
+    // Header (4 kolom)
+    $headers = ['Kategori',
+      'Total',
+      'Persentase',
+      'Rata‑rata'];
+    $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
+
+    // Data
+    $values = [];
+    foreach ($catTotals as $cat => $total) {
+      $count = $catCounts[$cat] ?? 1;
+      $average = $total / $count;
+      $percentage = ($total / $totalAll) * 100;
+      $values[] = [
+        $cat,
+        $total,
+        round($percentage, 1) . '%',
+        $average
+      ];
+    }
+
+    $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
+
+    // Format mata uang untuk kolom Total (indeks 1) dan Rata‑rata (indeks 3)
+    $this->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values), $dataEndRow, $summary,
+      $startCol + 1, 1
+    );
+    $this->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values), $dataEndRow, $summary,
+      $startCol + 3, 1
+    );
+
+    // Border
+    $this->applyBordersToRange(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - 1, $dataEndRow,
+      $startCol, count($headers), $headers
+    );
+
+    return [
+      'headerRow' => $cursor->row - count($values) - 1,
+      'dataStartRow' => $cursor->row - count($values),
+      'dataEndRow' => $dataEndRow,
+      'startCol' => $startCol,
+    ];
+  }
+
   // ======================== BORDER ========================
   public function applyBordersToRange(
     string $spreadsheetId,
