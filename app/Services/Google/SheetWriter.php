@@ -592,7 +592,7 @@ class SheetWriter
     );
 
     // Warna hijau untuk pemasukan
-    $sheetId = $this->spreadsheetManager->getSheetIdByName($spreadsheetId, $sheetName);
+    $sheetId = $this->manager-->getSheetIdByName($spreadsheetId, $sheetName);
     $requests = [];
     $green = ['red' => 40/255,
       'green' => 167/255,
