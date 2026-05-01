@@ -3,6 +3,9 @@
 namespace Modules\FinTech\Services\Google;
 
 use Modules\FinTech\Exports\ChartDataProcessor;
+use Modules\FinTech\Services\GoogleSheetsClient;
+use Modules\FinTech\Services\SheetWriter;
+use Modules\FinTech\Services\SpreadsheetManager;
 
 class GoogleSheetsService
 {
@@ -42,11 +45,14 @@ class GoogleSheetsService
   ): void {
     if (empty($data)) return;
 
-    $this->spreadsheetManager->addSheetIfNotExists($spreadsheetId, $sheetName);
-
+    // 1. Bersihkan sheet
+    $this->spreadsheetManager->rebuildSheetIfExists($spreadsheetId, $sheetName);
     if ($clear) {
       $this->writer->clearSheet($spreadsheetId, $sheetName);
     }
+
+    // 2. Mulai batch
+    $this->writer->beginBatch($spreadsheetId, $sheetName);
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
@@ -54,115 +60,124 @@ class GoogleSheetsService
 
     $cursor = new SheetCursor();
 
-    // 0. Judul halaman
+    // --- Judul & Metadata ---
     $title = $this->getTitle($dataType);
     $this->writer->writeTitle($spreadsheetId, $sheetName, $title, $cursor, $colCount);
-
-    // 1. Metadata
     if ($metadata) {
       $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
     }
 
-    // 2. Header tabel utama (satu baris, tanpa merge)
+    // --- Tabel Utama ---
     $tableStartRow = $cursor->row;
     $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
-    $headerEndRow = $cursor->row - 1; // 1 baris header
-
-    // 3. Data utama (nilai float)
+    $headerEndRow = $cursor->row - 1;
     $dataStartRow = $cursor->row;
     $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
-    // 4. Format mata uang & warna (khusus transaksi)
     if ($dataType === 'transactions') {
       $this->writer->applyCurrencyFormat($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $summary);
-      $this->writer->applyTransactionColors(
-        $spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow
-      );
+      $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
     }
 
-    // 5. Border & filter
-    $this->writer->applyBordersToRange(
-      $spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers
-    );
-    $this->writer->applyBasicFilter(
-      $spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount
-    );
+    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers);
+    $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount);
 
-    // 6. Ringkasan Bulanan + Statistik (menggantikan subtotal, di kiri)
-    $summaryEndRow = $dataEndRow; // fallback jika tidak ada ringkasan
+    // --- Ringkasan ---
+    $summaryEndRow = $dataEndRow;
     $summaryInfo = [];
     if ($dataType === 'transactions' && $rawTransactions) {
-      $cursor->advanceRow(); // jarak 1 baris setelah data utama
-      $summaryStartRow = $cursor->row;
+      $cursor->advanceRow();
       $summaryInfo = $this->writer->writeSummaryWithStats(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
-      $summaryEndRow = $cursor->row - 1; // baris terakhir setelah ringkasan
+      $summaryEndRow = $summaryInfo ? $summaryInfo['endRow'] : $dataEndRow;
     }
 
-    // 7. Tabel Top (kanan atas)
-    $rightColIndex = $colCount + 1; // 1 kolom kosong setelah tabel utama
+    // --- Blok Kanan (Top Tabel, Kategori) ---
+    $rightColIndex = $colCount + 1;
     $cursor->setCol($rightColIndex);
-    $cursor->row = $tableStartRow; // sejajar header utama
+    $cursor->row = $tableStartRow;
 
     $includeTop = $summary['include_top5'] ?? false;
-    $nextColIndex = $rightColIndex; // default: chart di kolom setelah tabel utama
+    $nextColIndex = $rightColIndex;
 
     if ($dataType === 'transactions' && $rawTransactions && $includeTop) {
-      $this->writer->writeTopSpendingToSheet(
-        $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
-      );
+      $this->writer->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
       $cursor->advanceRow();
-      $this->writer->writeTopIncomeToSheet(
-        $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
-      );
+      $this->writer->writeTopIncomeToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
       $cursor->advanceRow();
-      // Jika tabel Top ada, chart akan ditempatkan di kanan tabel Top
-      $nextColIndex = $rightColIndex + 5; // 4 kolom tabel + 1 jarak
+      $nextColIndex = $rightColIndex + 5;
     }
 
     $categoryTableInfo = null;
     if ($dataType === 'transactions' && $rawTransactions) {
-      $categoryTableInfo = $this->writer->writeCategoryExpenseTable($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
+      $categoryTableInfo = $this->writer->writeCategoryExpenseTable(
+        $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
+      );
       if ($categoryTableInfo) {
         $cursor->advanceRow();
       }
     }
 
-    // 8. Chart (di kanan, sejajar header utama)
+    // --- Kirim semua batch (styling, border, warna, filter) ---
+    $this->writer->commit($spreadsheetId);
+
+    // --- Chart (langsung) ---
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     $chartEndRow = 0;
     if ($includeChart) {
       $cursor->setCol($nextColIndex);
       $cursor->row = $tableStartRow;
       $chartRow = $cursor->row;
+
       if (!empty($summaryInfo)) {
         $this->writer->writeTransactionChart(
-          $spreadsheetId, $sheetName, $summaryInfo['dataStartRow'], $summaryInfo['dataEndRow'], $chartRow, $cursor->col, $summaryInfo['dataStartCol'], $summaryInfo['dataStartCol'] + 1, $summaryInfo['dataStartCol'] + 2
+          $spreadsheetId, $sheetName,
+          $summaryInfo['dataStartRow'],
+          $summaryInfo['dataEndRow'],
+          $chartRow,
+          $cursor->col,
+          $summaryInfo['dataStartCol'],
+          $summaryInfo['dataStartCol'] + 1,
+          $summaryInfo['dataStartCol'] + 2
         );
       } else {
-        $this->writer->writeTransactionChart($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow, $cursor->col);
+        $this->writer->writeTransactionChart(
+          $spreadsheetId, $sheetName,
+          $dataStartRow, $dataEndRow,
+          $chartRow, $cursor->col
+        );
       }
 
       if (!empty($categoryTableInfo)) {
         $pieChartRow = $chartRow + 13 + 2;
-        $this->writer->writeCategoryPieChart($spreadsheetId, $sheetName, $categoryTableInfo['dataStartRow'], $categoryTableInfo['dataEndRow'], $categoryTableInfo['startCol'], $categoryTableInfo['startCol'] + 1, $pieChartRow, $cursor->col);
+        $this->writer->writeCategoryPieChart(
+          $spreadsheetId, $sheetName,
+          $categoryTableInfo['dataStartRow'],
+          $categoryTableInfo['dataEndRow'],
+          $categoryTableInfo['startCol'],
+          $categoryTableInfo['startCol'] + 1,
+          $pieChartRow,
+          $cursor->col
+        );
         $chartEndRow = $pieChartRow + 15;
       } else {
         $chartEndRow = $chartRow + 20;
       }
     }
 
-    // 9. Footer
+    // --- Footer ---
     $lastAddRow = ($dataType === 'transactions') ? $cursor->row : 0;
     $finalRow = max($summaryEndRow, $chartEndRow, $lastAddRow);
     $cursor->setCol(0);
     $cursor->row = $finalRow + 2;
 
+    $this->writer->beginBatch($spreadsheetId, $sheetName); // batch untuk footer
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
+    $this->writer->commit($spreadsheetId);
 
-    // 10. Auto-resize (mencakup semua kolom yang mungkin digunakan)
-    $maxCol = max($colCount, $nextColIndex + 5); // +5 untuk lebar chart
+    // --- Auto‑resize ---
+    $maxCol = max($colCount, $nextColIndex + 5);
     $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxCol);
   }
 
