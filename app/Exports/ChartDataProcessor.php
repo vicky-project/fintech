@@ -149,7 +149,6 @@ class ChartDataProcessor
   {
     MtJpGraph::load(['pie']);
 
-    // Filter pengeluaran & hitung total per kategori
     $expenses = array_filter($transactions, fn($r) => ($r['Tipe'] ?? '') === 'Pengeluaran');
     if (empty($expenses)) return '';
 
@@ -165,19 +164,26 @@ class ChartDataProcessor
     $total = array_sum($values);
     if ($total <= 0) return '';
 
-    $width = 450;
-    $height = 350;
+    $width = 500;
+    $height = 400;
 
     $graph = new \PieGraph($width, $height);
     $graph->title->Set('Distribusi Pengeluaran (%)');
+    $graph->title->SetFont(FF_DEFAULT, FS_BOLD, 12);
 
     $piePlot = new \PiePlot($values);
     $piePlot->SetLabels($labels);
     $piePlot->SetLabelType(PIE_VALUE_ABS);
     $piePlot->value->SetFormat('%.1f%%');
+    $piePlot->value->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+    $piePlot->SetLabelPos(0.6);
+    $piePlot->SetGuideLines(true, true, 1.5);
+    $piePlot->SetSize(0.35);
     $piePlot->SetLegends($labels);
+    $graph->legend->SetFont(FF_DEFAULT, FS_NORMAL, 8);
+    $graph->legend->SetPos(0.02, 0.02, 'right', 'top');
+
     $graph->Add($piePlot);
-    $graph->legend->SetPos(0.1, 0.5, 'right', 'center');
 
     $path = $savePath ?? tempnam(sys_get_temp_dir(), 'chart_pie_') . '.png';
     $graph->Stroke($path);
