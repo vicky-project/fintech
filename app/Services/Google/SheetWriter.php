@@ -417,7 +417,8 @@ class SheetWriter
     string $sheetName,
     int $dataStartRow,
     int $dataEndRow,
-    int $chartRow
+    int $chartRow,
+    int $chartCol = 0
   ): void {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName) ?? 0;
     if ($chartRow <= $dataEndRow) {
@@ -487,10 +488,85 @@ class SheetWriter
               'anchorCell' => [
                 'sheetId' => $sheetId,
                 'rowIndex' => $chartRow - 1,
-                'columnIndex' => 0,
+                'columnIndex' => $chartCol,
               ],
               'widthPixels' => 1200,
               'heightPixels' => 500,
+            ]
+          ]
+        ]
+      ]
+    ]);
+
+    $batchUpdate = new BatchUpdateSpreadsheetRequest(['requests' => [$chartRequest]]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batchUpdate);
+  }
+
+  // Di SheetWriter, tambahkan method baru untuk tren
+  public function writeTrendChart(
+    string $spreadsheetId,
+    string $sheetName,
+    int $dataStartRow,
+    int $dataEndRow,
+    int $chartRow,
+    int $startCol = 0
+  ): void {
+    $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName) ?? 0;
+    if ($chartRow <= $dataEndRow) {
+      $chartRow = $dataEndRow + 2;
+    }
+
+    $chartRequest = new SheetsRequest([
+      'addChart' => [
+        'chart' => [
+          'spec' => [
+            'title' => 'Tren Net (Pemasukan - Pengeluaran)',
+            'basicChart' => [
+              'chartType' => 'LINE',
+              'legendPosition' => 'BOTTOM_LEGEND',
+              'axis' => [
+                ['position' => 'BOTTOM_AXIS', 'title' => 'Tanggal'],
+                ['position' => 'LEFT_AXIS', 'title' => 'Selisih']
+              ],
+              'domains' => [[
+                'domain' => [
+                  'sourceRange' => [
+                    'sources' => [[
+                      'sheetId' => $sheetId,
+                      'startRowIndex' => $dataStartRow - 1,
+                      'endRowIndex' => $dataEndRow,
+                      'startColumnIndex' => 0,
+                      'endColumnIndex' => 1,
+                    ]]
+                  ]
+                ]
+              ]],
+              'series' => [[
+                'series' => [
+                  'sourceRange' => [
+                    'sources' => [[
+                      'sheetId' => $sheetId,
+                      'startRowIndex' => $dataStartRow - 1,
+                      'endRowIndex' => $dataEndRow,
+                      'startColumnIndex' => 6, // kolom G (Net) atau hasil kalkulasi
+                      'endColumnIndex' => 7,
+                    ]]
+                  ]
+                ],
+                'targetAxis' => 'LEFT_AXIS'
+              ]],
+              'headerCount' => 1
+            ]
+          ],
+          'position' => [
+            'overlayPosition' => [
+              'anchorCell' => [
+                'sheetId' => $sheetId,
+                'rowIndex' => $chartRow - 1,
+                'columnIndex' => $startCol,
+              ],
+              'widthPixels' => 600,
+              'heightPixels' => 300,
             ]
           ]
         ]

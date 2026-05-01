@@ -127,12 +127,12 @@ class GoogleSheetsService
       $cursor->row = $tableStartRow; // sejajar header utama
       $chartRow = $cursor->row;
       $this->writer->writeTransactionChart(
-        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow
+        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $chartRow, $cursor->col
       );
       // Trend chart di bawah chart pertama (kolom yang sama)
       $trendChartRow = $chartRow + 20 + 2;
-      $this->writer->writeTransactionChart(
-        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow
+      $this->writer->writeTrendChart(
+        $spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $trendChartRow, $cursor->col
       );
       $chartEndRow = $trendChartRow + 20;
     }
