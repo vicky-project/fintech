@@ -552,7 +552,7 @@ class SheetWriter
     );
   }
 
-  private function writeTopIncomeToSheet(
+  public function writeTopIncomeToSheet(
     string $spreadsheetId,
     string $sheetName,
     array $transactions,

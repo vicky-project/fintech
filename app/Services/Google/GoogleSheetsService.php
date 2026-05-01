@@ -110,7 +110,7 @@ class GoogleSheetsService
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
       $cursor->advanceRow();
-      $this->write->writeTopIncomeToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
+      $this->writer->writeTopIncomeToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
       $cursor->advanceRow();
     }
 
