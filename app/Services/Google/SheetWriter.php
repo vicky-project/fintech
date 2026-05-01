@@ -118,9 +118,8 @@ class SheetWriter
     $cursor->advanceRow();
   }
 
-  public function writeSimpleTitle(string $spreadsheetId, string $sheetName, string $title, SheetCursor $cursor): void
+  public function writeSimpleTitle(string $spreadsheetId, string $sheetName, string $title, SheetCursor $cursor, int $col = 4): void
   {
-    $colCount = 4;
     $range = $sheetName . '!' . $cursor->getColLetter() . $cursor->row . ':' .
     chr(65 + $cursor->col + $colCount - 1) . $cursor->row;
 
@@ -564,14 +563,17 @@ class SheetWriter
     $top5 = array_slice($expenses, 0, 5);
 
     $includeDesc = ($summary['include_description'] ?? true);
+    $colCount = $includeDesc ? 4 : 3;
 
     $startCol = $cursor->col;
-    $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Top 5 Pengeluaran', $cursor);
+    $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Top 5 Pengeluaran', $cursor, $colCount);
 
-    $headers = $includeDesc ? ['Tanggal',
+    $headers = $includeDesc
+    ? ['Tanggal',
       'Kategori',
       'Jumlah',
-      'Deskripsi'] : ['Tanggal',
+      'Deskripsi']
+    : ['Tanggal',
       'Kategori',
       'Jumlah'];
     $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
@@ -590,9 +592,20 @@ class SheetWriter
     }
     $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
-    $this->applyCurrencyFormat($spreadsheetId, $sheetName, $cursor->row - count($values), $dataEndRow, $summary, $startCol + 2, 1);
-    $this->applyTopSpendingColors($spreadsheetId, $sheetName, $cursor->row - count($values) - 1, $values, $startCol);
-    $this->applyBordersToRange($spreadsheetId, $sheetName, $cursor->row - count($values) - 2, $dataEndRow, $startCol, count($headers), $headers);
+    $this->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values), $dataEndRow, $summary,
+      $startCol + 2, 1
+    );
+    $this->applyTopSpendingColors(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - 1, $values, $startCol
+    );
+    $this->applyBordersToRange(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - 2, $dataEndRow,
+      $startCol, count($headers), $headers
+    );
   }
 
   public function writeTopIncomeToSheet(
@@ -605,15 +618,18 @@ class SheetWriter
     usort($incomes, fn($a, $b) => ((float)($b['Pemasukan'] ?? 0)) <=> ((float)($a['Pemasukan'] ?? 0)));
     $top5 = array_slice($incomes, 0, 5);
 
-    $includeDesc = ($this->summary['include_description'] ?? true);
+    $includeDesc = ($summary['include_description'] ?? true);
+    $colCount = $includeDesc ? 4 : 3;
 
     $startCol = $cursor->col;
-    $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Top 5 Pemasukan', $cursor);
+    $this->writeSimpleTitle($spreadsheetId, $sheetName, 'Top 5 Pemasukan', $cursor, $colCount);
 
-    $headers = $includeDesc ? ['Tanggal',
+    $headers = $includeDesc
+    ? ['Tanggal',
       'Kategori',
       'Jumlah',
-      'Deskripsi']:['Tanggal',
+      'Deskripsi']
+    : ['Tanggal',
       'Kategori',
       'Jumlah'];
     $this->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
@@ -632,11 +648,14 @@ class SheetWriter
     }
     $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
-    $this->applyCurrencyFormat($spreadsheetId, $sheetName, $cursor->row - count($values), $dataEndRow, $summary, $startCol + 2, 1);
+    $this->applyCurrencyFormat(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values), $dataEndRow, $summary,
+      $startCol + 2, 1
+    );
 
     // Warna hijau untuk pemasukan
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    $requests = [];
     $green = ['red' => 40/255,
       'green' => 167/255,
       'blue' => 69/255];
@@ -644,15 +663,14 @@ class SheetWriter
     $dataStartRow = $cursor->row - count($values);
     foreach ($values as $idx => $row) {
       $rowNum = $dataStartRow + $idx;
-      $this->setCellColor($sheetId, $rowNum, $colJumlah, $green, true, $requests);
-    }
-    if ($requests) {
-      foreach ($requests as $r) {
-        $this->addRequest($r);
-      }
+      $this->setCellColor($sheetId, $rowNum, $colJumlah, $green, true, $this->batchRequests);
     }
 
-    $this->applyBordersToRange($spreadsheetId, $sheetName, $cursor->row - count($values) - 2, $dataEndRow, $startCol, count($headers), $headers);
+    $this->applyBordersToRange(
+      $spreadsheetId, $sheetName,
+      $cursor->row - count($values) - 2, $dataEndRow,
+      $startCol, count($headers), $headers
+    );
   }
 
   public function writeCategoryExpenseTable(
