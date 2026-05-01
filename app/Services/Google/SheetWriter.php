@@ -540,7 +540,6 @@ class SheetWriter
                   ]]
                 ]
               ],
-              'headerCount' => 1
             ]
           ],
           'position' => [
