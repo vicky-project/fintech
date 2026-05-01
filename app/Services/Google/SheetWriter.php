@@ -267,7 +267,7 @@ class SheetWriter
     }
     ksort($grouped);
 
-    if (empty($grouped)) return;
+    if (empty($grouped)) return [];
 
     // Hitung total & rata‑rata
     $totalIncome = array_sum(array_column($grouped, 'income'));
