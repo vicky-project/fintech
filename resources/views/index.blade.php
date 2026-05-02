@@ -484,12 +484,6 @@
     box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--tg-theme-button-color) 25%, transparent) !important;
     }
 
-    /* Checkbox dan radio khusus */
-    .form-check-input:checked {
-    background-color: var(--tg-theme-button-color);
-    border-color: var(--tg-theme-button-color);
-    }
-
     /* Efek hover pada input */
     .form-select:hover,
     .form-control:hover {
