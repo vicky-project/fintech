@@ -47,31 +47,30 @@ class GoogleSheetsService
   ): void {
     if (empty($data)) return;
 
-    // 1. Bersihkan sheet (gunakan batch update untuk clear, bukan API clear terpisah)
+    // 1. Hapus & buat ulang sheet dengan grid besar (1 batch: delete + add)
     $this->spreadsheetManager->rebuildSheetIfExists($spreadsheetId, $sheetName);
 
-    // 2. Mulai batch
+    // 2. Mulai batch styling & value queue
     $this->writer->beginBatch($spreadsheetId, $sheetName);
 
-    // 3. Clear sheet dalam batch
-    if ($clear) {
-      $this->writer->clearSheetBatch($spreadsheetId, $sheetName);
-    }
+    // 3. Clear tidak diperlukan karena sheet sudah baru; jika tetap ingin clear, gunakan clearSheetBatch (masuk batch)
+    // $this->writer->clearSheetBatch($spreadsheetId, $sheetName);
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
 
-    $includeDescription = ($dataType === 'transactions' || $dataType === 'transfers') ? ($summary['include_description'] ?? true) : true;
+    $includeDescription = ($dataType === 'transactions' || $dataType === 'transfers')
+    ? ($summary['include_description'] ?? true)
+    : true;
     if (!$includeDescription) {
       $headers = array_values(array_diff($headers, ['Deskripsi']));
       $values = array_map(fn($row) => array_slice($row, 0, -1), $values);
     }
 
     $colCount = count($headers);
-
     $cursor = new SheetCursor();
 
-    // --- Judul & Metadata ---
+    // --- Judul & Metadata (masuk value queue & batch) ---
     $title = $this->getTitle($dataType);
     $this->writer->writeTitle($spreadsheetId, $sheetName, $title, $cursor, $colCount);
     if ($metadata) {
@@ -108,11 +107,9 @@ class GoogleSheetsService
     $rightColIndex = $colCount + 1;
     $cursor->setCol($rightColIndex);
     $cursor->row = $tableStartRow;
-
-    $includeTop = $summary['include_top5'] ?? false;
     $nextColIndex = $rightColIndex;
 
-    if ($dataType === 'transactions' && $rawTransactions && $includeTop) {
+    if ($dataType === 'transactions' && $rawTransactions && ($summary['include_top5'] ?? false)) {
       $this->writer->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
       $cursor->advanceRow();
       $this->writer->writeTopIncomeToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
@@ -120,9 +117,7 @@ class GoogleSheetsService
       $nextColIndex = $rightColIndex + 5;
     }
 
-    $includeCategoryExpense = $summary['include_category_expense'] ?? false;
-    $categoryTableInfo = null;
-    if ($dataType === 'transactions' && $rawTransactions && $includeCategoryExpense) {
+    if ($dataType === 'transactions' && $rawTransactions && ($summary['include_category_expense'] ?? false)) {
       $categoryTableInfo = $this->writer->writeCategoryExpenseTable(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
@@ -131,10 +126,10 @@ class GoogleSheetsService
       }
     }
 
-    // --- Kirim semua batch (styling, border, warna, filter) ---
+    // --- Kirim semua value + styling dalam dua batch (1 values, 1 styling) ---
     $this->writer->commit($spreadsheetId);
 
-    // --- Chart (di luar batch) ---
+    // --- Chart (di luar batch, 1 request per chart) ---
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     $chartEndRow = 0;
     if ($includeChart) {
@@ -145,10 +140,8 @@ class GoogleSheetsService
       if (!empty($summaryInfo)) {
         $this->writer->writeTransactionChart(
           $spreadsheetId, $sheetName,
-          $summaryInfo['dataStartRow'],
-          $summaryInfo['dataEndRow'],
-          $chartRow,
-          $cursor->col,
+          $summaryInfo['dataStartRow'], $summaryInfo['dataEndRow'],
+          $chartRow, $cursor->col,
           $summaryInfo['dataStartCol'],
           $summaryInfo['dataStartCol'] + 1,
           $summaryInfo['dataStartCol'] + 2
@@ -162,15 +155,12 @@ class GoogleSheetsService
       }
 
       if (!empty($categoryTableInfo)) {
-        $pieChartRow = $chartRow + 15; // perkiraan tinggi chart
+        $pieChartRow = $chartRow + 15;
         $this->writer->writeCategoryPieChart(
           $spreadsheetId, $sheetName,
-          $categoryTableInfo['dataStartRow'],
-          $categoryTableInfo['dataEndRow'],
-          $categoryTableInfo['startCol'],
-          $categoryTableInfo['startCol'] + 1,
-          $pieChartRow,
-          $cursor->col
+          $categoryTableInfo['dataStartRow'], $categoryTableInfo['dataEndRow'],
+          $categoryTableInfo['startCol'], $categoryTableInfo['startCol'] + 1,
+          $pieChartRow, $cursor->col
         );
         $chartEndRow = $pieChartRow + 16;
       } else {
@@ -178,7 +168,7 @@ class GoogleSheetsService
       }
     }
 
-    // --- Footer ---
+    // --- Footer (batch baru) ---
     $lastAddRow = ($dataType === 'transactions') ? $cursor->row : 0;
     $finalRow = max($summaryEndRow, $chartEndRow, $lastAddRow);
     $cursor->setCol(0);

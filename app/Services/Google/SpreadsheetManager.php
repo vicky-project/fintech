@@ -120,18 +120,28 @@ class SpreadsheetManager
   public function rebuildSheetIfExists(string $spreadsheetId, string $sheetName): void
   {
     $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
+    $requests = [];
+
     if ($sheetId !== null) {
-      $requests = [
-        new SheetsRequest([
-          'deleteSheet' => ['sheetId' => $sheetId],
-        ]),
-      ];
-      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
-      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+      $requests[] = new SheetsRequest([
+        'deleteSheet' => ['sheetId' => $sheetId],
+      ]);
     }
 
-    // Buat ulang dengan grid besar
-    $this->addSheetIfNotExists($spreadsheetId, $sheetName);
+    $requests[] = new SheetsRequest([
+      'addSheet' => [
+        'properties' => [
+          'title' => $sheetName,
+          'gridProperties' => [
+            'rowCount' => 100000,
+            'columnCount' => 21,
+          ],
+        ],
+      ],
+    ]);
+
+    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
   }
 
   /**

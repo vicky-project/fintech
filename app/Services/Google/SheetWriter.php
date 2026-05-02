@@ -5,14 +5,15 @@ namespace Modules\FinTech\Services\Google;
 use Google\Service\Sheets\ValueRange;
 use Google\Service\Sheets\ClearValuesRequest;
 use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
+use Google\Service\Sheets\BatchUpdateValuesRequest;
 use Google\Service\Sheets\Request as SheetsRequest;
-use Modules\FinTech\Exports\ChartDataProcessor;
 
 class SheetWriter
 {
   protected GoogleSheetsClient $client;
   protected SpreadsheetManager $manager;
   protected array $batchRequests = [];
+  protected array $valueQueue = []; // antrian value updates
   protected ?int $sheetId = null;
 
   public function __construct(GoogleSheetsClient $client, SpreadsheetManager $manager) {
@@ -25,11 +26,19 @@ class SheetWriter
   public function beginBatch(string $spreadsheetId, string $sheetName): void
   {
     $this->batchRequests = [];
+    $this->valueQueue = [];
     $this->sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
   }
 
+  /**
+  * Kirim value updates dulu, lalu batch styling.
+  */
   public function commit(string $spreadsheetId): void
   {
+    // 1. Kirim semua value (judul, data, footer, dll) dalam satu batchUpdateValues
+    $this->commitValues($spreadsheetId);
+
+    // 2. Kirim batch styling (format, merge, border, filter, chart)
     if (!empty($this->batchRequests)) {
       $batch = new BatchUpdateSpreadsheetRequest(['requests' => $this->batchRequests]);
       $this->client->executeWithBackoff(function () use ($spreadsheetId, $batch) {
@@ -44,11 +53,38 @@ class SheetWriter
     $this->batchRequests[] = $request;
   }
 
-  // ─── CLEAR SHEET (dalam batch) ─────────────────
+  // ─── VALUE QUEUE (untuk digabungkan dalam batchUpdateValues) ────
+
+  private function queueValueUpdate(string $range, array $values): void
+  {
+    $this->valueQueue[] = [
+      'range' => $range,
+      'values' => $values,
+      'majorDimension' => 'ROWS',
+    ];
+  }
 
   /**
-  * Hapus semua isi sheet menggunakan updateCells (jadi bagian batch).
+  * Kirim semua value updates sekaligus.
   */
+  public function commitValues(string $spreadsheetId): void
+  {
+    if (empty($this->valueQueue)) return;
+
+    $body = new BatchUpdateValuesRequest([
+      'valueInputOption' => 'RAW',
+      'data' => $this->valueQueue,
+    ]);
+
+    $this->client->executeWithBackoff(function () use ($spreadsheetId, $body) {
+      return $this->client->getSheetsService()->spreadsheets_values->batchUpdate($spreadsheetId, $body);
+    });
+
+    $this->valueQueue = [];
+  }
+
+  // ─── CLEAR SHEET (dalam batch, bukan API clear) ────
+
   public function clearSheetBatch(string $spreadsheetId, string $sheetName): void
   {
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
@@ -71,12 +107,8 @@ class SheetWriter
     if (empty($metadata)) return;
 
     $rows = array_map(fn($line) => [$line], $metadata);
-    $this->client->getSheetsService()->spreadsheets_values->update(
-      $spreadsheetId,
-      $sheetName . '!A' . $cursor->row,
-      new ValueRange(['values' => $rows]),
-      ['valueInputOption' => 'RAW']
-    );
+    $range = $sheetName . '!A' . $cursor->row;
+    $this->queueValueUpdate($range, $rows);
 
     foreach (range(0, count($metadata) - 1) as $i) {
       $this->addRequest(new SheetsRequest([
@@ -100,11 +132,7 @@ class SheetWriter
   public function writeTitle(string $spreadsheetId, string $sheetName, string $title, SheetCursor $cursor, int $colCount): void
   {
     $range = $sheetName . '!A' . $cursor->row . ':' . chr(64 + $colCount) . $cursor->row;
-    $this->client->getSheetsService()->spreadsheets_values->update(
-      $spreadsheetId, $range,
-      new ValueRange(['values' => [[$title]]]),
-      ['valueInputOption' => 'RAW']
-    );
+    $this->queueValueUpdate($range, [[$title]]);
 
     $this->addRequest(new SheetsRequest([
       'mergeCells' => [
@@ -127,12 +155,10 @@ class SheetWriter
           'startColumnIndex' => 0,
           'endColumnIndex' => $colCount,
         ],
-        'cell' => [
-          'userEnteredFormat' => [
-            'textFormat' => ['bold' => true, 'fontSize' => 14],
-            'horizontalAlignment' => 'CENTER',
-          ],
-        ],
+        'cell' => ['userEnteredFormat' => [
+          'textFormat' => ['bold' => true, 'fontSize' => 14],
+          'horizontalAlignment' => 'CENTER',
+        ]],
         'fields' => 'userEnteredFormat(textFormat,horizontalAlignment)',
       ],
     ]));
@@ -143,12 +169,7 @@ class SheetWriter
   {
     $range = $sheetName . '!' . $cursor->getColLetter() . $cursor->row . ':' .
     chr(65 + $cursor->col + $colCount - 1) . $cursor->row;
-
-    $this->client->getSheetsService()->spreadsheets_values->update(
-      $spreadsheetId, $range,
-      new ValueRange(['values' => [[$title]]]),
-      ['valueInputOption' => 'RAW']
-    );
+    $this->queueValueUpdate($range, [[$title]]);
 
     $this->addRequest(new SheetsRequest([
       'mergeCells' => [
@@ -171,12 +192,10 @@ class SheetWriter
           'startColumnIndex' => $cursor->col,
           'endColumnIndex' => $cursor->col + $colCount,
         ],
-        'cell' => [
-          'userEnteredFormat' => [
-            'textFormat' => ['bold' => true, 'fontSize' => 11],
-            'horizontalAlignment' => 'CENTER',
-          ],
-        ],
+        'cell' => ['userEnteredFormat' => [
+          'textFormat' => ['bold' => true, 'fontSize' => 11],
+          'horizontalAlignment' => 'CENTER',
+        ]],
         'fields' => 'userEnteredFormat(textFormat,horizontalAlignment)',
       ],
     ]));
@@ -188,12 +207,7 @@ class SheetWriter
     $colCount = count($headers);
     $range = $sheetName . '!' . $cursor->getColLetter() . $cursor->row . ':' .
     chr(65 + $cursor->col + $colCount - 1) . $cursor->row;
-
-    $this->client->getSheetsService()->spreadsheets_values->update(
-      $spreadsheetId, $range,
-      new ValueRange(['values' => [$headers]]),
-      ['valueInputOption' => 'RAW']
-    );
+    $this->queueValueUpdate($range, [$headers]);
 
     $this->addRequest(new SheetsRequest([
       'repeatCell' => [
@@ -204,18 +218,16 @@ class SheetWriter
           'startColumnIndex' => $cursor->col,
           'endColumnIndex' => $cursor->col + $colCount,
         ],
-        'cell' => [
-          'userEnteredFormat' => [
-            'backgroundColor' => ['red' => 79 / 255, 'green' => 129 / 255, 'blue' => 189 / 255],
-            'textFormat' => [
-              'foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1],
-              'bold' => true,
-              'fontSize' => 11,
-            ],
-            'horizontalAlignment' => 'CENTER',
-            'verticalAlignment' => 'MIDDLE',
+        'cell' => ['userEnteredFormat' => [
+          'backgroundColor' => ['red' => 79/255, 'green' => 129/255, 'blue' => 189/255],
+          'textFormat' => [
+            'foregroundColor' => ['red' => 1, 'green' => 1, 'blue' => 1],
+            'bold' => true,
+            'fontSize' => 11,
           ],
-        ],
+          'horizontalAlignment' => 'CENTER',
+          'verticalAlignment' => 'MIDDLE',
+        ]],
         'fields' => 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
       ],
     ]));
@@ -229,12 +241,8 @@ class SheetWriter
     if (empty($values)) return 0;
 
     $startColLetter = $cursor->getColLetter();
-    $this->client->getSheetsService()->spreadsheets_values->update(
-      $spreadsheetId,
-      $sheetName . '!' . $startColLetter . $cursor->row,
-      new ValueRange(['values' => $values]),
-      ['valueInputOption' => 'RAW']
-    );
+    $range = $sheetName . '!' . $startColLetter . $cursor->row;
+    $this->queueValueUpdate($range, $values);
 
     $endRow = $cursor->row + count($values) - 1;
     $cursor->row = $endRow + 1;
@@ -269,14 +277,12 @@ class SheetWriter
           'startColumnIndex' => $startCol,
           'endColumnIndex' => $startCol + $colCount,
         ],
-        'cell' => [
-          'userEnteredFormat' => [
-            'numberFormat' => [
-              'type' => 'CURRENCY',
-              'pattern' => $pattern,
-            ],
+        'cell' => ['userEnteredFormat' => [
+          'numberFormat' => [
+            'type' => 'CURRENCY',
+            'pattern' => $pattern,
           ],
-        ],
+        ]],
         'fields' => 'userEnteredFormat.numberFormat',
       ],
     ]));
@@ -328,12 +334,10 @@ class SheetWriter
 
     $values = [];
     foreach ($grouped as $item) {
-      $values[] = [
-        $item['label'],
+      $values[] = [$item['label'],
         $item['income'],
         $item['expense'],
-        $item['income'] - $item['expense']
-      ];
+        $item['income'] - $item['expense']];
     }
     $values[] = ['Total',
       $totalIncome,
@@ -342,10 +346,8 @@ class SheetWriter
     $dataEndRow = $this->writeData($spreadsheetId, $sheetName, $values, $cursor);
     $lastDataRow = $firstDataRow + count($grouped) - 1;
 
-    // Currency format (kolom B, C, D)
     $this->applyCurrencyFormat($spreadsheetId, $sheetName, $cursor->row - count($values), $dataEndRow, $summary, $startCol + 1, 3);
 
-    // Statistik
     $statsData = [
       ['Rata‑rata Pemasukan/Bulan',
         $avgIncome,
@@ -362,14 +364,10 @@ class SheetWriter
     ];
     $this->writeData($spreadsheetId, $sheetName, $statsData, $cursor);
 
-    // Currency untuk sel statistik
     $this->applyCurrencyFormat($spreadsheetId, $sheetName, $cursor->row - 3, $cursor->row - 3, $summary, $startCol + 1, 1);
     $this->applyCurrencyFormat($spreadsheetId, $sheetName, $cursor->row - 2, $cursor->row - 2, $summary, $startCol + 2, 1);
 
-    // Warna
     $this->applySummaryColors($spreadsheetId, $sheetName, $cursor->row - count($values) - count($statsData) - 1, $values, $startCol);
-
-    // Border
     $this->applyBordersToRange($spreadsheetId, $sheetName, $cursor->row - count($values) - count($statsData) - 1, $cursor->row - 1, $startCol, 4, $headers);
 
     return [
@@ -380,7 +378,7 @@ class SheetWriter
     ];
   }
 
-  // ─── FOOTER ──────────────────────────────────────
+  // ─── FOOTER ─────────────────────────────────────
 
   public function writeFooter(string $spreadsheetId, string $sheetName, SheetCursor $cursor, array $headers): void
   {
@@ -388,12 +386,8 @@ class SheetWriter
     $emptyRow = array_fill(0, count($headers), '');
     $emptyRow[0] = $text;
 
-    $this->client->getSheetsService()->spreadsheets_values->update(
-      $spreadsheetId,
-      $sheetName . '!A' . $cursor->row,
-      new ValueRange(['values' => [$emptyRow]]),
-      ['valueInputOption' => 'RAW']
-    );
+    $range = $sheetName . '!A' . $cursor->row;
+    $this->queueValueUpdate($range, [$emptyRow]);
 
     $this->addRequest(new SheetsRequest([
       'mergeCells' => [
@@ -416,12 +410,10 @@ class SheetWriter
           'startColumnIndex' => 0,
           'endColumnIndex' => count($headers),
         ],
-        'cell' => [
-          'userEnteredFormat' => [
-            'textFormat' => ['italic' => true, 'foregroundColor' => ['red' => 136 / 255, 'green' => 136 / 255, 'blue' => 136 / 255], 'fontSize' => 10],
-            'horizontalAlignment' => 'CENTER',
-          ],
-        ],
+        'cell' => ['userEnteredFormat' => [
+          'textFormat' => ['italic' => true, 'foregroundColor' => ['red' => 136/255, 'green' => 136/255, 'blue' => 136/255], 'fontSize' => 10],
+          'horizontalAlignment' => 'CENTER',
+        ]],
         'fields' => 'userEnteredFormat(textFormat,horizontalAlignment)',
       ],
     ]));
@@ -681,11 +673,10 @@ class SheetWriter
       $startCol + 2, 1
     );
 
-    // Warna hijau untuk pemasukan
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
-    $green = ['red' => 40 / 255,
-      'green' => 167 / 255,
-      'blue' => 69 / 255];
+    $green = ['red' => 40/255,
+      'green' => 167/255,
+      'blue' => 69/255];
     $colJumlah = $startCol + 2;
     $dataStartRow = $cursor->row - count($values);
     foreach ($values as $idx => $row) {
@@ -723,18 +714,13 @@ class SheetWriter
       $count = $catCounts[$cat] ?? 1;
       $average = $total / $count;
       $percentage = ($total / $totalAll) * 100;
-      $sorted[] = [
-        'cat' => $cat,
-        'total' => $total,
-        'average' => $average,
-        'percentage' => $percentage,
-      ];
+      $sorted[] = compact('cat', 'total', 'average', 'percentage');
     }
     usort($sorted, fn($a, $b) => $b['percentage'] <=> $a['percentage']);
 
     $startCol = $cursor->col;
 
-    // Period dari metadata
+    // Ambil periode dari metadata
     $period = '';
     $metadata = $summary['metadata'] ?? [];
     foreach ($metadata as $line) {
@@ -753,16 +739,14 @@ class SheetWriter
     }
     if (empty($period) && count($expenses) >= 1) {
       $firstDate = \DateTime::createFromFormat('d/m/Y', $expenses[0]['Tanggal'] ?? '');
-      $lastDate = \DateTime::createFromFormat('d/m/Y', $expenses[count($expenses) - 1]['Tanggal'] ?? '');
+      $lastDate = \DateTime::createFromFormat('d/m/Y', $expenses[count($expenses)-1]['Tanggal'] ?? '');
       if ($firstDate && $lastDate) {
         $period = $firstDate->format('d M Y') . ' - ' . $lastDate->format('d M Y');
       }
     }
 
     $title = 'Persentase Kategori Pengeluaran';
-    if ($period) {
-      $title .= ' (' . $period . ')';
-    }
+    if ($period) $title .= ' (' . $period . ')';
     $this->writeSimpleTitle($spreadsheetId, $sheetName, $title, $cursor);
 
     $headers = ['Kategori',
@@ -785,18 +769,17 @@ class SheetWriter
     $this->applyCurrencyFormat($spreadsheetId, $sheetName, $cursor->row - count($values), $dataEndRow, $summary, $startCol + 1, 1);
     $this->applyCurrencyFormat($spreadsheetId, $sheetName, $cursor->row - count($values), $dataEndRow, $summary, $startCol + 3, 1);
 
-    // Warna
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     if ($sheetId !== null) {
-      $red = ['red' => 220 / 255,
-        'green' => 53 / 255,
-        'blue' => 69 / 255];
-      $orange = ['red' => 255 / 255,
-        'green' => 193 / 255,
-        'blue' => 7 / 255];
-      $green = ['red' => 40 / 255,
-        'green' => 167 / 255,
-        'blue' => 69 / 255];
+      $red = ['red' => 220/255,
+        'green' => 53/255,
+        'blue' => 69/255];
+      $orange = ['red' => 255/255,
+        'green' => 193/255,
+        'blue' => 7/255];
+      $green = ['red' => 40/255,
+        'green' => 167/255,
+        'blue' => 69/255];
 
       $dataStartRow = $cursor->row - count($values);
       foreach ($sorted as $idx => $item) {
@@ -879,7 +862,6 @@ class SheetWriter
   }
 
   // ─── COLOR HELPERS ─────────────────────────────
-
   private function setCellColor(int $sheetId, int $row, int $col, array $color, bool $bold, array &$requests): void
   {
     $requests[] = new SheetsRequest([
@@ -891,14 +873,12 @@ class SheetWriter
           'startColumnIndex' => $col,
           'endColumnIndex' => $col + 1,
         ],
-        'cell' => [
-          'userEnteredFormat' => [
-            'textFormat' => [
-              'foregroundColor' => $color,
-              'bold' => $bold,
-            ],
+        'cell' => ['userEnteredFormat' => [
+          'textFormat' => [
+            'foregroundColor' => $color,
+            'bold' => $bold,
           ],
-        ],
+        ]],
         'fields' => 'userEnteredFormat(textFormat)',
       ],
     ]);
@@ -913,12 +893,12 @@ class SheetWriter
 
     $colIncome = 4;
     $colExpense = 5;
-    $green = ['red' => 40 / 255,
-      'green' => 167 / 255,
-      'blue' => 69 / 255];
-    $red = ['red' => 220 / 255,
-      'green' => 53 / 255,
-      'blue' => 69 / 255];
+    $green = ['red' => 40/255,
+      'green' => 167/255,
+      'blue' => 69/255];
+    $red = ['red' => 220/255,
+      'green' => 53/255,
+      'blue' => 69/255];
     $black = ['red' => 0,
       'green' => 0,
       'blue' => 0];
@@ -948,12 +928,12 @@ class SheetWriter
     $colNet = $startCol + 3;
     $dataStartRow = $headerRow + 1;
 
-    $green = ['red' => 40 / 255,
-      'green' => 167 / 255,
-      'blue' => 69 / 255];
-    $red = ['red' => 220 / 255,
-      'green' => 53 / 255,
-      'blue' => 69 / 255];
+    $green = ['red' => 40/255,
+      'green' => 167/255,
+      'blue' => 69/255];
+    $red = ['red' => 220/255,
+      'green' => 53/255,
+      'blue' => 69/255];
 
     foreach ($values as $idx => $row) {
       $rowNum = $dataStartRow + $idx;
@@ -972,9 +952,9 @@ class SheetWriter
     $sheetId = $this->manager->getSheetIdByName($spreadsheetId, $sheetName);
     if ($sheetId === null || empty($values)) return;
 
-    $red = ['red' => 220 / 255,
-      'green' => 53 / 255,
-      'blue' => 69 / 255];
+    $red = ['red' => 220/255,
+      'green' => 53/255,
+      'blue' => 69/255];
     $colJumlah = $startCol + 2;
     $dataStartRow = $headerRow + 1;
 
@@ -985,18 +965,6 @@ class SheetWriter
   }
 
   // ─── MISC ───────────────────────────────────────
-
-  /**
-  * Clear sheet menggunakan API clear (bukan batch) – hanya digunakan jika tidak dalam batch.
-  */
-  public function clearSheet(string $spreadsheetId, string $sheetName): void
-  {
-    $this->client->getSheetsService()->spreadsheets_values->clear(
-      $spreadsheetId,
-      $sheetName,
-      new ClearValuesRequest()
-    );
-  }
 
   public function autoResizeColumns(string $spreadsheetId, string $sheetName, int $columnCount): void
   {
@@ -1034,5 +1002,17 @@ class SheetWriter
     ])];
     $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
     $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+  }
+
+  /**
+  * Clear seluruh isi sheet menggunakan API clear terpisah.
+  */
+  public function clearSheet(string $spreadsheetId, string $sheetName): void
+  {
+    $this->client->getSheetsService()->spreadsheets_values->clear(
+      $spreadsheetId,
+      $sheetName,
+      new ClearValuesRequest()
+    );
   }
 }
