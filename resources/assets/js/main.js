@@ -94,6 +94,52 @@ async function handleGlobalClick(e) {
       } finally {
         tgApp.hideLoading();
       }
+    },
+    'restore-modal': () => {
+      new bootstrap.Modal(document.getElementById('restoreModal')).show();
+    },
+    'restore-data': async (el) => {
+      const inputFile = document.getElementById('restore-file-input');
+      const file = inputFile.files[0];
+      if (!file) return;
+      const token = tgApp.getToken();
+      if (!token) {
+        tgApp.showToast("Token tidak ditemukan. Silakan refresh aplikasi.", 'danger');
+        return;
+      }
+
+      const originalText = el.innerHTML;
+      el.disabled = true;
+      el.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
+
+      try {
+        const formData = new FormData();
+        formData.append('backup_file', file);
+
+        const response = await fetch(BASE_URL + '/api/fintech/backup/restore', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          },
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+          tgApp.showToast(result.message || 'Data berhasil dipulihkan.', 'success');
+          // Tutup modal
+          bootstrap.Modal.getInstance(document.getElementById('restoreModal'))?.hide();
+        } else {
+          tgApp.showToast(result.message || 'Gagal memulihkan data.', 'danger');
+        }
+      } catch(error) {
+        tgApp.showToast(error.message || 'Jaringan bermasalah. Coba lagi', 'danger');
+      } finally {
+        el.disabled = false;
+        el.innerHTML = originalText;
+        inputFile.value = '';
+      }
     }
     // tambahkan aksi lain sesuai kebutuhan
   };
@@ -163,6 +209,23 @@ function handleGlobalChange(e) {
         toggleExportOptions();
       }
     },
+    'restore-input-change': (el) => {
+      const file = target.files[0];
+      const btnUpload = document.getElementById('btn-upload-restore');
+
+      if (file) {
+        if (!file.name.endsWith('.json.gz') && !file.name.endsWith('.json')) {
+          alert('Format file tidak didukung. Pilih file .json.gz atau .json');
+          el.value = "";
+          btnUpload.disabled = true;
+          return;
+        }
+        btnUpload.disabled = false;
+        btnUpload.innerHTML = '<i class="bi bi-upload me-1"></i> Upload & Pulihkan';
+      } else {
+        btnUpload.disabled = true;
+      }
+    }
     // Tambahkan aksi lain sesuai kebutuhan
   };
 

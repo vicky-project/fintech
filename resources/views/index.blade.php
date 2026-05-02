@@ -219,6 +219,34 @@
     </div>
   </div>
 
+  <!-- Modal Restore -->
+  <div class="modal fade" id="restoreModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h6 class="modal-title"><i class="bi bi-cloud-upload me-2"></i>Pulihkan Data</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center py-3">
+          <i class="bi bi-file-earmark-zip text-warning mb-3" style="font-size: 3rem;"></i>
+          <p class="text-muted">
+            Pilih file backup (.json.gz) yang sebelumnya Anda unduh untuk mengembalikan semua data keuangan.
+          </p>
+          <div class="mb-3">
+            <input class="form-control" type="file" id="restore-file-input" accept=".json.gz,.json" data-action="restore-input-change">
+            <small class="text-muted mt-1 d-block">File harus merupakan backup dari akun Telegram Anda.</small>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-warning btn-sm" id="btn-upload-restore" data-action="restore-data" disabled>
+            <i class="bi bi-upload me-1"></i> Upload & Pulihkan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {{-- Modal Verifikasi PIN --}}
   <div class="modal fade" id="pinModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-sm modal-dialog-centered">

@@ -987,7 +987,7 @@ async function renderSettingsPage() {
   <small class="text-muted">Pulihkan data dari file backup yang telah diunduh sebelumnya.</small>
   </div>
   <div>
-  <button type="button" class="btn btn-warning btn-sm" data-action="restore-data" id="btn-restore">
+  <button type="button" class="btn btn-warning btn-sm" data-action="restore-modal" id="btn-restore">
   <i class="bi bi-upload me-1"></i> Pulihkan
   </button>
   </div>
