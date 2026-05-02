@@ -98,7 +98,7 @@ async function handleGlobalClick(e) {
     'restore-modal': () => {
       new bootstrap.Modal(document.getElementById('restoreModal')).show();
     },
-    'restore-data': async (el) => {
+    'restore-data': async () => {
       const form = document.getElementById('formRestore');
       const formData = new FormData(form);
 
@@ -113,9 +113,9 @@ async function handleGlobalClick(e) {
         return;
       }
 
-      const originalText = el.innerHTML;
-      el.disabled = true;
-      el.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
+      const originalText = target.innerHTML;
+      target.disabled = true;
+      target.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
 
       try {
         const response = await fetch(BASE_URL + '/api/fintech/backup/restore', {
@@ -138,9 +138,9 @@ async function handleGlobalClick(e) {
       } catch(error) {
         tgApp.showToast(error.message || 'Jaringan bermasalah. Coba lagi', 'danger');
       } finally {
-        el.disabled = false;
-        el.innerHTML = originalText;
-        inputFile.value = '';
+        target.disabled = false;
+        target.innerHTML = originalText;
+        fileInput.value = '';
       }
     }
     // tambahkan aksi lain sesuai kebutuhan
