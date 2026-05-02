@@ -1,9 +1,8 @@
 <?php
-
 namespace Modules\FinTech\Services;
 
-use Modules\Telegram\Entities\TelegramUser;
-use Modules\FinTech\Entities\ {
+use Modules\Telegram\Models\TelegramUser;
+use Modules\FinTech\Models\ {
   Wallet,
   Transaction,
   Category,
@@ -79,13 +78,13 @@ class BackupService
       $catMap = $this->restoreCategories($backup['data']['categories']);
 
       // 3. Wallets
-      $walletMap = $this->bulkInsertByUuid('fintech_wallets', $backup['data']['wallets'], fn(&$row) use ($user) {
+      $walletMap = $this->bulkInsertByUuid('fintech_wallets', $backup['data']['wallets'], function(&$row) use ($user) {
         unset($row['id']);
         $row['user_id'] = $user->id;
       });
 
       // 4. User Settings
-      $this->bulkInsert('fintech_user_settings', $backup['data']['user_settings'], fn(&$row) use ($user, $walletMap) {
+      $this->bulkInsert('fintech_user_settings', $backup['data']['user_settings'], function(&$row) use ($user, $walletMap) {
         unset($row['id']);
         $row['user_id'] = $user->id;
         $row['default_wallet_id'] = $row['default_wallet_id'] ? ($walletMap[$row['default_wallet_id']] ?? null) : null;
@@ -98,7 +97,7 @@ class BackupService
       // 5. Transactions
       $trxMap = $this->bulkInsertByUuid('fintech_transactions',
         $backup['data']['transactions'],
-        fn(&$row) use ($walletMap, $catMap) {
+        function(&$row) use ($walletMap, $catMap) {
           unset($row['id']);
           $row['wallet_id'] = $walletMap[$row['wallet_id']];
           $row['category_id'] = $catMap[$row['category_id']] ?? null;
@@ -111,7 +110,7 @@ class BackupService
       // 6. Budgets
       $this->bulkInsert('fintech_budgets',
         $backup['data']['budgets'],
-        fn(&$row) use ($user, $catMap, $walletMap) {
+        function(&$row) use ($user, $catMap, $walletMap) {
           unset($row['id']);
           $row['user_id'] = $user->id;
           $row['category_id'] = $catMap[$row['category_id']] ?? null;
@@ -121,7 +120,7 @@ class BackupService
       // 7. Bank Statements
       $stmtMap = $this->bulkInsertByUuid('fintech_bank_statements',
         $backup['data']['bank_statements'],
-        fn(&$row) use ($user, $walletMap) {
+        function(&$row) use ($user, $walletMap) {
           unset($row['id']);
           $row['user_id'] = $user->id;
           $row['wallet_id'] = $row['wallet_id'] ? ($walletMap[$row['wallet_id']] ?? null) : null;
@@ -133,7 +132,7 @@ class BackupService
       // 8. Transfers
       $this->bulkInsert('fintech_transfers',
         $backup['data']['transfers'],
-        fn(&$row) use ($walletMap) {
+        function(&$row) use ($walletMap) {
           unset($row['id']);
           $row['from_wallet_id'] = $walletMap[$row['from_wallet_id']];
           $row['to_wallet_id'] = $walletMap[$row['to_wallet_id']];
@@ -142,7 +141,7 @@ class BackupService
       // 9. Statement Transactions
       $this->bulkInsert('fintech_statement_transactions',
         $backup['data']['statement_transactions'],
-        fn(&$row) use ($stmtMap, $catMap) {
+        function(&$row) use ($stmtMap, $catMap) {
           unset($row['id']);
           $row['statement_id'] = $stmtMap[$row['statement_id']];
           $row['category_id'] = $row['category_id'] ? ($catMap[$row['category_id']] ?? null) : null;
@@ -154,7 +153,7 @@ class BackupService
       // 10. Notifications
       $this->bulkInsert('fintech_notifications',
         $backup['data']['notifications'],
-        fn(&$row) use ($user, $trxMap) {
+        function(&$row) use ($user, $trxMap) {
           unset($row['id']);
           $row['user_id'] = $user->id;
           if (isset($row['data']['transaction_id'])) {
