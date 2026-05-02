@@ -957,18 +957,18 @@ async function renderSettingsPage() {
   <hr>
   <h6>Backup &amp; Restore</h6>
   <div class="d-flex justify-content-between align-items-center mb-3">
-  <button type="button" class="btn btn-outline-primary btn-sm me-auto" id="btn-backup" data-action="backup-data">
+  <button type="button" class="btn btn-outline-primary btn-sm" id="btn-backup" data-action="backup-data">
   <i class="bi bi-download"></i>
   </button>
-  <div>
+  <div class="ms-auto">
   <small class="text-muted">Cadangkan semua data keuangan Anda ke file terkompresi.</small>
   </div>
   </div>
   <div class="d-flex justify-content-between align-items-center mb-3">
-  <button type="button" class="btn btn-outline-warning btn-sm me-auto" id="btn-restore" data-action="restore-data">
+  <button type="button" class="btn btn-outline-warning btn-sm" id="btn-restore" data-action="restore-data">
   <i class="bi bi-upload"></i>
   </button>
-  <div>
+  <div class="ms-auto">
   <small class="text-muted">Pulihkan data dari file backup yang telah diunduh.</small>
   </div>
   </div>
