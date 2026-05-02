@@ -234,7 +234,7 @@
           </p>
           <div class="mb-3">
             <form id="formRestore">
-              <input class="form-control" type="file" id="restore-file-input" data-action="restore-input-change">
+              <input class="form-control" type="file" name="backup_file" id="restore-file-input" data-action="restore-input-change">
               <small class="text-muted mt-1 d-block">File harus merupakan backup dari akun Telegram Anda.</small>
             </form>
           </div>
