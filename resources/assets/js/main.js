@@ -101,7 +101,10 @@ async function handleGlobalClick(e) {
     'restore-data': async (el) => {
       const inputFile = document.getElementById('restore-file-input');
       const file = inputFile.files[0];
-      if (!file) return;
+      if (!file) {
+        tgApp.showToast('Input file wajib diisi', 'danger');
+        return;
+      }
       const token = tgApp.getToken();
       if (!token) {
         tgApp.showToast("Token tidak ditemukan. Silakan refresh aplikasi.", 'danger');
