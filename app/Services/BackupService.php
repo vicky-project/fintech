@@ -15,6 +15,7 @@ use Modules\FinTech\Models\ {
   UserSetting
 };
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class BackupService
 {
@@ -24,46 +25,61 @@ class BackupService
   public function export(TelegramUser $user): string
   {
     $catIds = $this->getUsedCategoryIds($user);
-    $categories = Category::whereIn('id', $catIds)->get()->toArray();
 
-    // Wallets: ambil balance sebagai integer mentah
-    $wallets = Wallet::where('user_id', $user->id)
-    ->without('currencyDetails')
-    ->get()
-    ->map(function ($w) {
-      $data = $w->toArray();
-      $data['balance'] = $w->getRawOriginal('balance');
-      unset($data['currency_details']);
-      return $data;
-    })->toArray();
+    // Kategori: export mentah semua kolom
+    $categories = $this->exportTable(
+      'fintech_categories',
+      Category::whereIn('id', $catIds)
+    );
 
-    // Transactions: ambil amount sebagai integer mentah
-    $transactions = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
-    ->get()
-    ->map(function ($t) {
-      $data = $t->toArray();
-      $data['amount'] = $t->getRawOriginal('amount');
-      return $data;
-    })->toArray();
+    // Wallet: export mentah, tanpa eager load currencyDetails
+    $wallets = $this->exportTable(
+      'fintech_wallets',
+      Wallet::where('user_id', $user->id)->without('currencyDetails')
+    );
 
-    // Transfers: ambil amount mentah
-    $transfers = Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
-    ->orWhereHas('toWallet', fn($q) => $q->where('user_id', $user->id))
-    ->get()
-    ->map(function ($t) {
-      $data = $t->toArray();
-      $data['amount'] = $t->getRawOriginal('amount');
-      return $data;
-    })->toArray();
+    // Transactions: export mentah
+    $transactions = $this->exportTable(
+      'fintech_transactions',
+      Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
+    );
 
-    // Budgets: ambil amount mentah
-    $budgets = Budget::where('user_id', $user->id)
-    ->get()
-    ->map(function ($b) {
-      $data = $b->toArray();
-      $data['amount'] = $b->getRawOriginal('amount');
-      return $data;
-    })->toArray();
+    // Transfers: export mentah
+    $transfers = $this->exportTable(
+      'fintech_transfers',
+      Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
+      ->orWhereHas('toWallet', fn($q) => $q->where('user_id', $user->id))
+    );
+
+    // Budgets: export mentah
+    $budgets = $this->exportTable(
+      'fintech_budgets',
+      Budget::where('user_id', $user->id)
+    );
+
+    // Bank Statements
+    $bankStatements = $this->exportTable(
+      'fintech_bank_statements',
+      BankStatement::where('user_id', $user->id)
+    );
+
+    // Statement Transactions
+    $statementTransactions = $this->exportTable(
+      'fintech_statement_transactions',
+      StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id', $user->id))
+    );
+
+    // Notifications
+    $notifications = $this->exportTable(
+      'fintech_notifications',
+      Notification::where('user_id', $user->id)
+    );
+
+    // User Settings
+    $userSettings = $this->exportTable(
+      'fintech_user_settings',
+      UserSetting::where('user_id', $user->id)
+    );
 
     $data = [
       'version' => '1.1',
@@ -72,13 +88,13 @@ class BackupService
       'data' => [
         'categories' => $categories,
         'wallets' => $wallets,
-        'user_settings' => UserSetting::where('user_id', $user->id)->get()->toArray(),
+        'user_settings' => $userSettings,
         'transactions' => $transactions,
         'budgets' => $budgets,
         'transfers' => $transfers,
-        'bank_statements' => BankStatement::where('user_id', $user->id)->get()->toArray(),
-        'statement_transactions' => StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id', $user->id))->get()->toArray(),
-        'notifications' => Notification::where('user_id', $user->id)->get()->toArray(),
+        'bank_statements' => $bankStatements,
+        'statement_transactions' => $statementTransactions,
+        'notifications' => $notifications,
       ]
     ];
 
@@ -109,100 +125,79 @@ class BackupService
       DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
       $catMap = $this->restoreCategories($backup['data']['categories']);
-
-      // Wallets – balance sudah integer
       $walletMap = $this->bulkInsertByUuid('fintech_wallets', $backup['data']['wallets'], function(&$row) use ($user) {
         unset($row['id']);
         $row['user_id'] = $user->id;
       });
 
-      // User Settings
       $this->bulkInsert('fintech_user_settings', $backup['data']['user_settings'], function(&$row) use ($user, $walletMap) {
         unset($row['id']);
         $row['user_id'] = $user->id;
         $row['default_wallet_id'] = $row['default_wallet_id'] ? ($walletMap[$row['default_wallet_id']] ?? null) : null;
-        if (isset($row['preferences']) && is_array($row['preferences'])) {
-          $row['preferences'] = json_encode($row['preferences']);
-        }
       });
 
-      // Transactions – amount integer
-      $trxMap = $this->bulkInsertByUuid('fintech_transactions',
-        $backup['data']['transactions'],
-        function(&$row) use ($walletMap, $catMap) {
-          unset($row['id']);
-          $row['wallet_id'] = $walletMap[$row['wallet_id']];
-          $row['category_id'] = $catMap[$row['category_id']] ?? null;
-          if (isset($row['metadata']) && is_array($row['metadata'])) {
-            $row['metadata'] = json_encode($row['metadata']);
-          }
-        });
+      $trxMap = $this->bulkInsertByUuid('fintech_transactions', $backup['data']['transactions'], function(&$row) use ($walletMap, $catMap) {
+        unset($row['id']);
+        $row['wallet_id'] = $walletMap[$row['wallet_id']];
+        $row['category_id'] = $catMap[$row['category_id']] ?? null;
+      });
 
-      // Budgets – amount integer
-      $this->bulkInsert('fintech_budgets',
-        $backup['data']['budgets'],
-        function(&$row) use ($user, $catMap, $walletMap) {
-          unset($row['id']);
-          $row['user_id'] = $user->id;
-          $row['category_id'] = $catMap[$row['category_id']] ?? null;
-          $row['wallet_id'] = $row['wallet_id'] ? ($walletMap[$row['wallet_id']] ?? null) : null;
-        });
+      $this->bulkInsert('fintech_budgets', $backup['data']['budgets'], function(&$row) use ($user, $catMap, $walletMap) {
+        unset($row['id']);
+        $row['user_id'] = $user->id;
+        $row['category_id'] = $catMap[$row['category_id']] ?? null;
+        $row['wallet_id'] = $row['wallet_id'] ? ($walletMap[$row['wallet_id']] ?? null) : null;
+      });
 
-      // Bank Statements
-      $stmtMap = $this->bulkInsertByUuid('fintech_bank_statements',
-        $backup['data']['bank_statements'],
-        function(&$row) use ($user, $walletMap) {
-          unset($row['id']);
-          $row['user_id'] = $user->id;
-          $row['wallet_id'] = $row['wallet_id'] ? ($walletMap[$row['wallet_id']] ?? null) : null;
-          if (isset($row['meta_data']) && is_array($row['meta_data'])) {
-            $row['meta_data'] = json_encode($row['meta_data']);
-          }
-        });
+      $stmtMap = $this->bulkInsertByUuid('fintech_bank_statements', $backup['data']['bank_statements'], function(&$row) use ($user, $walletMap) {
+        unset($row['id']);
+        $row['user_id'] = $user->id;
+        $row['wallet_id'] = $row['wallet_id'] ? ($walletMap[$row['wallet_id']] ?? null) : null;
+      });
 
-      // Transfers – amount integer
-      $this->bulkInsert('fintech_transfers',
-        $backup['data']['transfers'],
-        function(&$row) use ($walletMap) {
-          unset($row['id']);
-          $row['from_wallet_id'] = $walletMap[$row['from_wallet_id']];
-          $row['to_wallet_id'] = $walletMap[$row['to_wallet_id']];
-        });
+      $this->bulkInsert('fintech_transfers', $backup['data']['transfers'], function(&$row) use ($walletMap) {
+        unset($row['id']);
+        $row['from_wallet_id'] = $walletMap[$row['from_wallet_id']];
+        $row['to_wallet_id'] = $walletMap[$row['to_wallet_id']];
+      });
 
-      // Statement Transactions
-      $this->bulkInsert('fintech_statement_transactions',
-        $backup['data']['statement_transactions'],
-        function(&$row) use ($stmtMap, $catMap) {
-          unset($row['id']);
-          $row['statement_id'] = $stmtMap[$row['statement_id']];
-          $row['category_id'] = $row['category_id'] ? ($catMap[$row['category_id']] ?? null) : null;
-          if (isset($row['raw_data']) && is_array($row['raw_data'])) {
-            $row['raw_data'] = json_encode($row['raw_data']);
-          }
-        });
+      $this->bulkInsert('fintech_statement_transactions', $backup['data']['statement_transactions'], function(&$row) use ($stmtMap, $catMap) {
+        unset($row['id']);
+        $row['statement_id'] = $stmtMap[$row['statement_id']];
+        $row['category_id'] = $row['category_id'] ? ($catMap[$row['category_id']] ?? null) : null;
+      });
 
-      // Notifications
-      $this->bulkInsert('fintech_notifications',
-        $backup['data']['notifications'],
-        function(&$row) use ($user, $trxMap) {
-          unset($row['id']);
-          $row['user_id'] = $user->id;
-          if (isset($row['data']['transaction_id'])) {
-            $newTrxId = $trxMap[$row['data']['transaction_id']] ?? null;
-            if ($newTrxId) {
-              $row['data']['transaction_id'] = $newTrxId;
-            }
+      $this->bulkInsert('fintech_notifications', $backup['data']['notifications'], function(&$row) use ($user, $trxMap) {
+        unset($row['id']);
+        $row['user_id'] = $user->id;
+        if (isset($row['data']['transaction_id'])) {
+          $newTrxId = $trxMap[$row['data']['transaction_id']] ?? null;
+          if ($newTrxId) {
+            $row['data']['transaction_id'] = $newTrxId;
           }
-          if (isset($row['data']) && is_array($row['data'])) {
-            $row['data'] = json_encode($row['data']);
-          }
-        });
+        }
+      });
 
       DB::statement('SET FOREIGN_KEY_CHECKS=1');
     });
   }
 
   // ─── Helper Methods ────────────────────────────────────────
+
+  /**
+  * Ekspor tabel dengan nilai mentah (raw) untuk semua kolom, tanpa casting.
+  */
+  private function exportTable(string $table, $query): array
+  {
+    $columns = Schema::getColumnListing($table);
+    return $query->get()->map(function ($model) use ($columns) {
+      $data = [];
+      foreach ($columns as $col) {
+        $data[$col] = $model->getRawOriginal($col);
+      }
+      return $data;
+    })->toArray();
+  }
 
   private function getUsedCategoryIds(TelegramUser $user): array
   {
@@ -252,11 +247,11 @@ class BackupService
           'color' => $cat['color'],
           'type' => $cat['type'],
           'uuid' => $cat['uuid'],
-          'parent_id' => null,
+          'parent_id' => null, // diperbaiki nanti
           'is_system' => $cat['is_system'] ?? false,
           'is_active' => $cat['is_active'] ?? true,
-          'metadata' => is_array($cat['metadata'] ?? null) ? json_encode($cat['metadata']) : $cat['metadata'],
-          'keywords' => is_array($cat['keywords'] ?? null) ? json_encode($cat['keywords']) : $cat['keywords'],
+          'metadata' => $cat['metadata'],
+          'keywords' => $cat['keywords'],
           'created_at' => $cat['created_at'],
           'updated_at' => $cat['updated_at'],
         ]);
@@ -264,6 +259,7 @@ class BackupService
       }
     }
 
+    // Perbaiki parent_id
     foreach ($categories as $cat) {
       if (!empty($cat['parent_id'])) {
         $newParent = $map[$cat['parent_id']] ?? null;
