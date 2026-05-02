@@ -28,9 +28,10 @@ async function renderListPage(config) {
 
 // ==================== HOME ====================
 async function renderHomePage() {
-  if (!Core.state.homeSummary) {
-    await Core.loadHomeSummary();
+  if (Core.state.wallets.length > 0) {
+    await Core.loadHomeSummary().catch(() => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
   }
+
   const summary = Core.state.homeSummary;
   if (!summary) {
     document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';

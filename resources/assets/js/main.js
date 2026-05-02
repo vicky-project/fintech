@@ -275,11 +275,7 @@ async function initializeApp() {
       Core.loadCurrencies().catch(() => tgApp.showToast('Gagal memuat mata uang', 'warning'))
     ]);
 
-    // 4. Jika ada dompet, load ringkasan & notifikasi
-    if (Core.state.wallets.length > 0) {
-      await Core.loadHomeSummary().catch(() => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
-      Core.loadUnreadNotificationCount(); // fire & forget
-    }
+    Core.loadUnreadNotificationCount(); // fire & forget
 
     // 5. Navigasi ke halaman home
     Core.navigateTo('home');
