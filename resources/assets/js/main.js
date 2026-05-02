@@ -153,6 +153,7 @@ async function handleGlobalClick(e) {
     e.preventDefault();
     actions[action](e);
   }
+  console.log(actions[action])
 }
 
 // ---------- EVENT DELEGATION: CHANGE ----------
