@@ -7,6 +7,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
@@ -178,6 +179,7 @@ class StatementService
         }
 
         $insertData[] = [
+          'uuid' => (string) Str::orderedUuid(),
           'statement_id' => $statement->id,
           'transaction_date' => Carbon::create($trx['date'])->format('Y-m-d'),
           'description' => $desc,
