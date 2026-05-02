@@ -23,6 +23,8 @@ class ExportService
   protected int $maxExcelRecords = 5000;
   protected int $maxPdfRecords = 500;
 
+  public function __construct(protected SpreadsheetManager $spreadsheetManager) {}
+
   /**
   * Generate export – mengembalikan path file atau URL (untuk gsheet).
   */
