@@ -42,7 +42,7 @@ async function handleGlobalClick(e) {
     'save-settings': window.saveSettings,
     'show-report-filter': window.showReportFilterModal,
     'switch-category-type': (e) => window.switchCategoryType(target.dataset.catType),
-    'perform-search': () => performSearch(),
+    'perform-search': performSearch,
     'filter-search-results': () => window.filterSearchResults(target.dataset.filter),
     'show-search-detail': () => window.showSearchDetail(target.dataset.type, id),
     'mark-notification-read': () => window.markNotificationRead(id),
