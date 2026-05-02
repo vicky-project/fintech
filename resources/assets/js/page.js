@@ -1510,8 +1510,7 @@ async function renderSearchPage() {
   <div class="container py-3">
   <div class="input-group mb-3" id="search-input-group">
   <span class="input-group-text"><i class="bi bi-search"></i></span>
-  <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer..."
-  onkeydown="if(event.key==='Enter') performSearch()">
+  <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer...">
   <button class="btn btn-primary"
   onclick="performSearch()">Cari</button>
   </div>
@@ -1539,6 +1538,7 @@ async function renderSearchPage() {
 }
 async function performSearch() {
   const q = document.getElementById('search-input').value.trim();
+  console.log('Mulai mencari')
   if (q.length < 2) {
     tgApp.showToast('Minimal 2 karakter', 'warning');
     return;
