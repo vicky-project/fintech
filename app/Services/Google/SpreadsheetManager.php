@@ -81,7 +81,16 @@ class SpreadsheetManager
 
     if (!in_array($sheetName, $existingNames)) {
       $requests = [new SheetsRequest([
-        'addSheet' => ['properties' => ['title' => $sheetName]]
+        'addSheet' => [
+          'properties' => [
+            'title' => $sheetName,
+            'gridProperties' => [
+              'rowCount' => 5000,
+              'columnCount' => 26
+            ]
+          ],
+          'fields' => 'title,gridProperties(rowCount,columnCount)'
+        ]
       ])];
       $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
