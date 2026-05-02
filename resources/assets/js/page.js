@@ -1537,7 +1537,6 @@ async function renderSearchPage() {
 }
 async function performSearch() {
   const q = document.getElementById('search-input').value.trim();
-  console.log('Mulai mencari')
   if (q.length < 2) {
     tgApp.showToast('Minimal 2 karakter', 'warning');
     return;
