@@ -17,8 +17,7 @@ class Wallet extends Model
 
   protected $table = 'fintech_wallets';
 
-  protected $with = ['currencyDetails',
-    'transactions'];
+  protected $with = ['currencyDetails'];
 
   protected $fillable = [
     'user_id',
