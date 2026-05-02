@@ -117,20 +117,20 @@ async function renderTransactionsPage() {
     <div class="row g-2 mb-3" id="transaction-stats"></div>
     <div class="row g-2 mb-3">
     <div class="col-4">
-    <select class="form-select form-select-sm" id="filter-wallet" data-action="apply-transaction-filter">
+    <select class="form-select form-select-sm" id="filter-wallet" data-action="change-transaction-filter">
     <option value="">Semua Dompet</option>
     ${Core.state.wallets.map(w => `<option value="${w.id}" ${w.id == Core.state.filters.wallet_id ? 'selected': ''}>${w.name}</option>`).join('')}
     </select>
     </div>
     <div class="col-4">
-    <select class="form-select form-select-sm" id="filter-type" data-action="apply-transaction-filter">
+    <select class="form-select form-select-sm" id="filter-type" data-action="change-transaction-filter">
     <option value="">Semua Tipe</option>
     <option value="income" ${Core.state.filters?.type === 'income' ? 'selected': ''}>Pemasukan</option>
     <option value="expense" ${Core.state.filters?.type === 'expense' ? 'selected': ''}>Pengeluaran</option>
     </select>
     </div>
     <div class="col-4">
-    <input type="month" class="form-control form-control-sm" id="filter-month" value="${Core.state.filters.month || currentMonth}" data-action="apply-transaction-filter">
+    <input type="month" class="form-control form-control-sm" id="filter-month" value="${Core.state.filters.month || currentMonth}" data-action="change-transaction-filter">
     </div>
     </div>
     <div class="mb-3">

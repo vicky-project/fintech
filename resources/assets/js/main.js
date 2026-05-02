@@ -185,7 +185,7 @@ function handleGlobalChange(e) {
         console.warn('renderPeriodDetailInputs tidak ditemukan');
       }
     },
-    'apply-transaction-filter': () => {
+    'change-transaction-filter': () => {
       if (typeof applyTransactionFilter === 'function') {
         applyTransactionFilter();
       }
