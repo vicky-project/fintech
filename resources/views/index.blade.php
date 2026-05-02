@@ -467,7 +467,6 @@
     /* ----------------------------- */
     .form-select,
     .form-control,
-    .form-check-input,
     .modal-content {
     background-color: var(--tg-theme-bg-color) !important;
     color: var(--tg-theme-text-color) !important;
