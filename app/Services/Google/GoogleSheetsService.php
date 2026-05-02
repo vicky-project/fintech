@@ -2,7 +2,6 @@
 
 namespace Modules\FinTech\Services\Google;
 
-use Modules\FinTech\Exports\ChartDataProcessor;
 use Modules\FinTech\Services\Google\GoogleSheetsClient;
 use Modules\FinTech\Services\Google\SheetWriter;
 use Modules\FinTech\Services\Google\SpreadsheetManager;
@@ -33,6 +32,9 @@ class GoogleSheetsService
     return $this->spreadsheetManager->getOrCreateSpreadsheet($user);
   }
 
+  /**
+  * Ekspor data ke sheet tertentu. Data sudah difilter per tahun (atau semua).
+  */
   public function exportDataToSheet(
     string $spreadsheetId,
     string $sheetName,
@@ -45,14 +47,16 @@ class GoogleSheetsService
   ): void {
     if (empty($data)) return;
 
-    // 1. Bersihkan sheet
+    // 1. Bersihkan sheet (gunakan batch update untuk clear, bukan API clear terpisah)
     $this->spreadsheetManager->rebuildSheetIfExists($spreadsheetId, $sheetName);
-    if ($clear) {
-      $this->writer->clearSheet($spreadsheetId, $sheetName);
-    }
 
     // 2. Mulai batch
     $this->writer->beginBatch($spreadsheetId, $sheetName);
+
+    // 3. Clear sheet dalam batch
+    if ($clear) {
+      $this->writer->clearSheetBatch($spreadsheetId, $sheetName);
+    }
 
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
@@ -92,7 +96,7 @@ class GoogleSheetsService
     // --- Ringkasan ---
     $summaryEndRow = $dataEndRow;
     $summaryInfo = [];
-    if ($dataType === 'transactions' && $rawTransactions) {
+    if ($dataType === 'transactions' && $rawTransactions && ($summary['include_monthly_summary'] ?? false)) {
       $cursor->advanceRow();
       $summaryInfo = $this->writer->writeSummaryWithStats(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
@@ -116,9 +120,9 @@ class GoogleSheetsService
       $nextColIndex = $rightColIndex + 5;
     }
 
-    $inclueCategoryExpense = $summary['include_category_expense'] ?? false;
+    $includeCategoryExpense = $summary['include_category_expense'] ?? false;
     $categoryTableInfo = null;
-    if ($dataType === 'transactions' && $rawTransactions && $inclueCategoryExpense) {
+    if ($dataType === 'transactions' && $rawTransactions && $includeCategoryExpense) {
       $categoryTableInfo = $this->writer->writeCategoryExpenseTable(
         $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
       );
@@ -130,7 +134,7 @@ class GoogleSheetsService
     // --- Kirim semua batch (styling, border, warna, filter) ---
     $this->writer->commit($spreadsheetId);
 
-    // --- Chart (langsung) ---
+    // --- Chart (di luar batch) ---
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     $chartEndRow = 0;
     if ($includeChart) {
@@ -158,7 +162,7 @@ class GoogleSheetsService
       }
 
       if (!empty($categoryTableInfo)) {
-        $pieChartRow = $chartRow + 13 + 2;
+        $pieChartRow = $chartRow + 15; // perkiraan tinggi chart
         $this->writer->writeCategoryPieChart(
           $spreadsheetId, $sheetName,
           $categoryTableInfo['dataStartRow'],
@@ -168,7 +172,7 @@ class GoogleSheetsService
           $pieChartRow,
           $cursor->col
         );
-        $chartEndRow = $pieChartRow + 15;
+        $chartEndRow = $pieChartRow + 16;
       } else {
         $chartEndRow = $chartRow + 20;
       }
@@ -180,13 +184,10 @@ class GoogleSheetsService
     $cursor->setCol(0);
     $cursor->row = $finalRow + 2;
 
-    $this->writer->beginBatch($spreadsheetId, $sheetName); // batch untuk footer
+    $this->writer->beginBatch($spreadsheetId, $sheetName);
     $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, max($colCount, $nextColIndex + 5));
     $this->writer->commit($spreadsheetId);
-
-    // --- Auto‑resize ---
-    $maxCol = max($colCount, $nextColIndex + 5);
-    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, $maxCol);
   }
 
   public function getSpreadsheetUrl(string $spreadsheetId): string

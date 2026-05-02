@@ -7,7 +7,6 @@ use Google\Service\Sheets\BatchUpdateSpreadsheetRequest;
 use Google\Service\Sheets\Request as SheetsRequest;
 use Illuminate\Support\Facades\Log;
 use Modules\FinTech\Models\UserSetting;
-use Modules\FinTech\Services\Google\GoogleSheetsClient;
 
 class SpreadsheetManager
 {
@@ -47,23 +46,20 @@ class SpreadsheetManager
   }
 
   /**
-  * Buat spreadsheet baru dengan 3 sheet default.
+  * Buat spreadsheet baru dengan 3 sheet default dan grid besar.
   */
   protected function createSpreadsheetForUser($user): string
   {
     $title = "FinTech - " . ($user->name ?? $user->first_name ?? "User {$user->id}");
 
-    // Buat spreadsheet baru
     $spreadsheet = new Spreadsheet(['properties' => ['title' => $title]]);
     $spreadsheet = $this->client->getSheetsService()->spreadsheets->create($spreadsheet);
     $spreadsheetId = $spreadsheet->spreadsheetId;
 
-    // Ambil sheet pertama (default "Sheet1")
+    // Rename sheet pertama dan perbesar grid
     $sheets = $spreadsheet->getSheets();
     if (count($sheets) > 0) {
       $sheetId = $sheets[0]->getProperties()->getSheetId();
-
-      // Rename + perbesar grid
       $requests = [
         new SheetsRequest([
           'updateSheetProperties' => [
@@ -71,8 +67,8 @@ class SpreadsheetManager
               'sheetId' => $sheetId,
               'title' => self::SHEET_TRANSACTIONS,
               'gridProperties' => [
-                'rowCount' => 100000, // Kapasitas 100rb baris
-                'columnCount' => 21, // A - U
+                'rowCount' => 100000,
+                'columnCount' => 21,
               ],
             ],
             'fields' => 'title,gridProperties(rowCount,columnCount)',
@@ -83,7 +79,7 @@ class SpreadsheetManager
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
     }
 
-    // Tambah sheet Transfer & Budget dengan grid besar (via addSheetIfNotExists)
+    // Tambah sheet Transfer & Budget dengan grid besar
     $this->addSheetIfNotExists($spreadsheetId, self::SHEET_TRANSFERS);
     $this->addSheetIfNotExists($spreadsheetId, self::SHEET_BUDGETS);
 
@@ -92,7 +88,7 @@ class SpreadsheetManager
   }
 
   /**
-  * Tambahkan sheet jika belum ada.
+  * Tambahkan sheet jika belum ada, dengan grid besar.
   */
   public function addSheetIfNotExists(string $spreadsheetId, string $sheetName): void
   {
@@ -100,77 +96,42 @@ class SpreadsheetManager
     $existingNames = array_map(fn($s) => $s->getProperties()->getTitle(), $spreadsheet->getSheets());
 
     if (!in_array($sheetName, $existingNames)) {
-      $requests = [new SheetsRequest([
-        'addSheet' => [
-          'properties' => [
-            'title' => $sheetName,
-            'gridProperties' => [
-              'rowCount' => 100000,
-              'columnCount' => 21
-            ]
+      $requests = [
+        new SheetsRequest([
+          'addSheet' => [
+            'properties' => [
+              'title' => $sheetName,
+              'gridProperties' => [
+                'rowCount' => 100000,
+                'columnCount' => 21,
+              ],
+            ],
           ],
-        ]
-      ])];
+        ]),
+      ];
       $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
     }
   }
 
   /**
-  * Hapus sheet jika sudah ada, lalu buat sheet baru dengan nama yang sama.
-  * Ini memastikan sheet bersih dari data dan chart lama.
+  * Hapus sheet jika ada, lalu buat ulang dengan grid besar.
   */
   public function rebuildSheetIfExists(string $spreadsheetId, string $sheetName): void
   {
     $sheetId = $this->getSheetIdByName($spreadsheetId, $sheetName);
     if ($sheetId !== null) {
-      // Hapus sheet yang ada
       $requests = [
         new SheetsRequest([
-          'deleteSheet' => [
-            'sheetId' => $sheetId,
-          ]
-        ])
+          'deleteSheet' => ['sheetId' => $sheetId],
+        ]),
       ];
       $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
       $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
     }
 
-    // Buat sheet baru dengan nama yang sama
+    // Buat ulang dengan grid besar
     $this->addSheetIfNotExists($spreadsheetId, $sheetName);
-  }
-
-  /**
-  * Rename sheet berdasarkan ID.
-  */
-  public function renameSheet(string $spreadsheetId, int $sheetId, string $newName): void
-  {
-    $requests = [new SheetsRequest([
-      'updateSheetProperties' => [
-        'properties' => ['sheetId' => $sheetId, 'title' => $newName],
-        'fields' => 'title',
-      ]
-    ])];
-    $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
-    $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
-  }
-
-  public function removeSheetsByPrefix(string $spreadsheetId, string $prefix): void
-  {
-    $spreadsheet = $this->client->getSheetsService()->spreadsheets->get($spreadsheetId);
-    $requests = [];
-    foreach ($spreadsheet->getSheets() as $sheet) {
-      $title = $sheet->getProperties()->getTitle();
-      if (str_starts_with($title, $prefix)) {
-        $requests[] = new SheetsRequest([
-          'deleteSheet' => ['sheetId' => $sheet->getProperties()->getSheetId()]
-        ]);
-      }
-    }
-    if (!empty($requests)) {
-      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
-      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
-    }
   }
 
   /**
@@ -185,6 +146,29 @@ class SpreadsheetManager
       }
     }
     return null;
+  }
+
+  /**
+  * Hapus semua sheet yang namanya diawali dengan prefix tertentu.
+  */
+  public function removeSheetsByPrefix(string $spreadsheetId, string $prefix): void
+  {
+    $spreadsheet = $this->client->getSheetsService()->spreadsheets->get($spreadsheetId);
+    $requests = [];
+    foreach ($spreadsheet->getSheets() as $sheet) {
+      $title = $sheet->getProperties()->getTitle();
+      if (str_starts_with($title, $prefix)) {
+        $requests[] = new SheetsRequest([
+          'deleteSheet' => [
+            'sheetId' => $sheet->getProperties()->getSheetId(),
+          ],
+        ]);
+      }
+    }
+    if (!empty($requests)) {
+      $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
+      $this->client->getSheetsService()->spreadsheets->batchUpdate($spreadsheetId, $batch);
+    }
   }
 
   /**

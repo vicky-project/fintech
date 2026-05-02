@@ -5,7 +5,9 @@ namespace Modules\FinTech\Services\Google;
 use Google\Client as GoogleClient;
 use Google\Service\Sheets as GoogleSheets;
 use Google\Service\Drive as GoogleDrive;
+use Google\Service\Exception as GoogleException;
 use Modules\FinTech\Models\UserSetting;
+use Illuminate\Support\Facades\Log;
 
 class GoogleSheetsClient
 {
@@ -67,6 +69,32 @@ class GoogleSheetsClient
   public function getClient(): GoogleClient
   {
     return $this->client;
+  }
+
+  /**
+  * Jalankan callable dengan exponential backoff untuk menangani rate limit (429).
+  */
+  public function executeWithBackoff(callable $callable, int $maxRetries = 5) {
+    $retries = 0;
+    $maxBackoff = 64; // detik
+
+    while (true) {
+      try {
+        return $callable();
+      } catch (GoogleException $e) {
+        $statusCode = $e->getCode();
+        if (($statusCode === 429 || $statusCode === 500 || $statusCode === 503) && $retries < $maxRetries) {
+          $wait = min(pow(2, $retries) + mt_rand(0, 1000) / 1000, $maxBackoff);
+          Log::warning("Google API rate limited, retrying in {$wait}s (attempt {$retries})", [
+            'error' => $e->getMessage(),
+          ]);
+          sleep((int) ceil($wait));
+          $retries++;
+        } else {
+          throw $e;
+        }
+      }
+    }
   }
 
   protected function saveToken(UserSetting $setting, array $token): void
