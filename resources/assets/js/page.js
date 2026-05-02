@@ -1392,7 +1392,7 @@ async function renderNotificationsPage() {
   <div class="container py-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0">Notifikasi</h5>
-  <button class="btn btn-sm btn-outline-primary" data-action="mark-all-notifications-read" id="btn-mark-all-read" disabled>
+  <button class="btn btn-sm btn-outline-primary disabled" data-action="mark-all-notifications-read" id="btn-mark-all-read" disabled>
   <i class="bi bi-check-all me-1"></i>Tandai Semua Dibaca
   </button>
   </div>
@@ -1501,6 +1501,7 @@ function updateMarkAllButton() {
   // Aktifkan tombol jika ada notifikasi yang belum dibaca
   const hasUnread = Core.state.notifications.some(n => !n.is_read);
   btn.disabled = !hasUnread;
+  btn.classList.remove('disabled');
 }
 
 // Search Pages
