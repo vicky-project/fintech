@@ -954,20 +954,26 @@ async function renderSettingsPage() {
   </div>
   </div>
   </div>
+  // ... setelah bagian Google Sheets
   <hr>
-  <h6>Backup & Restore</h6>
-  <div class="mb-3">
-  <button type="button" class="btn btn-outline-primary w-100" id="btn-backup" data-action="backup-data">
-  <i class="bi bi-download me-2"></i> Backup Data
-  </button>
-  <small class="text-muted d-block mt-1">Unduh semua data keuangan Anda dalam file terkompresi.</small>
+  <h6>Backup &amp; Restore</h6>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+  <small class="text-muted">Cadangkan semua data keuangan Anda ke file terkompresi.</small>
   </div>
-  <div class="mb-3">
-  <button type="button" class="btn btn-outline-warning w-100" id="btn-restore" data-action="restore-data">
-  <i class="bi bi-upload me-2"></i> Pulihkan Data
+  <button type="button" class="btn btn-outline-primary btn-sm" id="btn-backup" data-action="backup-data">
+  <i class="bi bi-download me-1"></i> Backup
   </button>
-  <small class="text-muted d-block mt-1">Unggah file backup untuk mengembalikan data Anda.</small>
   </div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+  <small class="text-muted">Pulihkan data dari file backup yang telah diunduh.</small>
+  </div>
+  <button type="button" class="btn btn-outline-warning btn-sm" id="btn-restore" data-action="restore-data">
+  <i class="bi bi-upload me-1"></i> Pulihkan
+  </button>
+  </div>
+  <input type="file" id="restore-file-input" accept=".json.gz,.json" style="display: none;">
   </div>`;
   document.getElementById('main-content').innerHTML = html;
   Core.populateSelectWithCurrencies(document.getElementById('setting-currency'),
