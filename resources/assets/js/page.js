@@ -962,7 +962,7 @@ async function renderSettingsPage() {
   <small class="text-muted">Cadangkan semua data keuangan Anda ke file terkompresi.</small>
   </div>
   <button type="button" class="btn btn-outline-primary btn-sm" id="btn-backup" data-action="backup-data">
-  <i class="bi bi-download me-1"></i> Backup
+  <i class="bi bi-download ms-auto"></i>
   </button>
   </div>
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -970,7 +970,7 @@ async function renderSettingsPage() {
   <small class="text-muted">Pulihkan data dari file backup yang telah diunduh.</small>
   </div>
   <button type="button" class="btn btn-outline-warning btn-sm" id="btn-restore" data-action="restore-data">
-  <i class="bi bi-upload me-1"></i> Pulihkan
+  <i class="bi bi-upload ms-auto"></i>
   </button>
   </div>
   <input type="file" id="restore-file-input" accept=".json.gz,.json" style="display: none;">
