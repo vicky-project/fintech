@@ -34,7 +34,7 @@ class BackupController extends Controller
     if ($this->shouldUseQueue($user)) {
       CreateBackupJob::dispatch($user);
       return response()->json([
-        'status' => 'success',
+        'success' => true,
         'message' => 'Permintaan backup diterima. File akan dikirim ke chat Anda.',
       ]);
     }
@@ -75,12 +75,12 @@ class BackupController extends Controller
 
       if ($sent) {
         return response()->json([
-          'status' => 'success',
+          'success' => true,
           'message' => 'Backup telah dikirim ke Telegram Anda.',
         ]);
       } else {
         return response()->json([
-          'status' => 'error',
+          'success' => false,
           'message' => 'Gagal mengirim file backup ke Telegram.',
         ], 500);
       }
@@ -90,7 +90,7 @@ class BackupController extends Controller
         unlink($tempPath);
       }
       return response()->json([
-        'status' => 'error',
+        'success' => false,
         'message' => 'Backup gagal: ' . $e->getMessage(),
       ], 500);
     }

@@ -84,6 +84,17 @@ async function handleGlobalClick(e) {
         }
       }
     },
+    'backup-data': async () => {
+      tgApp.showLoading('Memproses permintaan...');
+      try {
+        const res = await Core.api.post('/api/fintech/backup/send');
+        tgApp.showToast(res.message, res.success ? 'success': 'warning');
+      } catch(error) {
+        tgApp.showToast(error.message || 'Server error', 'danger');
+      } finally {
+        tgApp.hideLoading();
+      }
+    }
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {
