@@ -230,7 +230,7 @@ function renderTransactionList() {
     </div>
     <div class="d-flex align-items-center flex-shrink-0">
     <span class="${amountClass} fw-bold me-2" title="${trx.formatted_amount}">${sign}${Core.formatNumberShort(trx.amount)}</span>
-    <div class="dropdown" onclick="event.stopPropagation()">
+    <div class="dropdown">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
     <ul class="dropdown-menu dropdown-menu-end">
     <li><button class="dropdown-item" data-action="edit-transaction" data-id="${trx.id}"><i class="bi bi-pencil me-2"></i>Edit</button></li>
