@@ -8,9 +8,12 @@ use Modules\FinTech\Enums\StatementType;
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
 use Brick\Money\Money;
+use Modules\FinTech\Traits\HasUuid;
 
 class StatementTransaction extends Model
 {
+  use HasUuid;
+
   protected $table = 'fintech_statement_transactions';
 
   protected $fillable = [

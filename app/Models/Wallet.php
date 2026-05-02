@@ -9,9 +9,12 @@ use Elegantly\Money\MoneyCast;
 use Brick\Money\Money;
 use Modules\Telegram\Models\TelegramUser;
 use Nnjeim\World\Models\Currency;
+use Modules\FinTech\Traits\HasUuid;
 
 class Wallet extends Model
 {
+  use HasUuid;
+
   protected $table = 'fintech_wallets';
 
   protected $with = ['currencyDetails',

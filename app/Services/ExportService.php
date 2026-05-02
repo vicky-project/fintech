@@ -95,7 +95,7 @@ class ExportService
     return match ($format) {
       'pdf' => PdfDataExport::generate($type, $data, $summary),
       'xlsx' => $this->storeXlsx(new ExcelDataExport($type, $data, $summary)),
-      'csv' => $this->storeExport(new CsvDataExport($data), 'csv'),
+      'csv' => $this->generateCsv($type, $data, $filters),
     };
   }
 
@@ -376,6 +376,24 @@ class ExportService
       }
 
       return $googleService->getSpreadsheetUrl($spreadsheetId);
+    }
+
+    // Generate CSV
+    protected function generateCsv(string $type, array $data, array $filters): string
+    {
+      $includeDesc = ($type === 'transactions' || $type === 'transfers')
+      ? ($filters['include_description'] ?? true)
+      : true;
+
+      if (!$includeDesc) {
+        // Hapus kolom 'Deskripsi' dari setiap baris
+        $data = array_map(function ($row) {
+          unset($row['Deskripsi']);
+          return $row;
+        }, $data);
+      }
+
+      return $this->storeExport(new CsvDataExport($data), 'csv');
     }
 
     // ----------------------------------------------------------------

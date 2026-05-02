@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
 use Modules\FinTech\Traits\HasCurrencyFormatting;
+use Modules\FinTech\Traits\HasUuid;
 
 class Transfer extends Model
 {
   use SoftDeletes,
-  HasCurrencyFormatting;
+  HasCurrencyFormatting,
+  HasUuid;
 
   protected $table = 'fintech_transfers';
 

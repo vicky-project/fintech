@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\FinTech\Enums\PeriodType;
 use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
 use Modules\FinTech\Traits\HasCurrencyFormatting;
+use Modules\FinTech\Traits\HasUuid;
 
 class Budget extends Model
 {
-  use HasCurrencyFormatting;
+  use HasCurrencyFormatting,
+  HasUuid;
 
   protected $table = 'fintech_budgets';
 

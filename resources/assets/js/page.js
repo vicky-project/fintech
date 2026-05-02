@@ -2095,23 +2095,6 @@ function renderExportFilters(type) {
     <label class="form-label">Kategori</label>
     <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
     <select class="d-none" id="filter-category-hidden" multiple></select>
-    </div>
-    <div class="accordion mb-3" id="advancedAccordion">
-    <div class="accordion-item">
-    <h2 class="accordion-header" id="headingAdvanced">
-    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced" aria-expanded="false" aria-controls="collapseAdvanced">
-    <i class="bi bi-sliders me-2"></i> Lanjutan
-    </button>
-    </h2>
-    <div id="collapseAdvanced" class="accordion-collapse collapse" aria-labelledby="headingAdvanced" data-bs-parent="#advancedAccordion">
-    <div class="accordion-body">
-    <div class="form-check mb-0">
-    <input class="form-check-input" type="checkbox" id="include-description" checked>
-    <label for="include-description" class="form-check-label">Sertakan Deskripsi</label>
-    </div>
-    </div>
-    </div>
-    </div>
     </div>`;
     container.innerHTML = html;
     renderBudgetPeriodInput();

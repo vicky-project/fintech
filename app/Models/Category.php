@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\FinTech\Enums\CategoryType;
+use Modules\FinTech\Traits\HasUuid;
 
 class Category extends Model
 {
+  use HasUuid;
+
   protected $table = 'fintech_categories';
 
   protected $fillable = [

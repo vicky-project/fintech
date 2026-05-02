@@ -5,9 +5,12 @@ namespace Modules\FinTech\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Hash;
+use Modules\FinTech\Traits\HasUuid;
 
 class UserSetting extends Model
 {
+  use HasUuid;
+
   protected $table = 'fintech_user_settings';
 
   protected $fillable = [

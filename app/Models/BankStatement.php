@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Telegram\Models\TelegramUser;
 use Modules\FinTech\Enums\StatementStatus;
+use Modules\FinTech\Traits\HasUuid;
 
 class BankStatement extends Model
 {
+  use HasUuid;
+
   protected $table = 'fintech_bank_statements';
 
   protected $fillable = [

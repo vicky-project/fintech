@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\FinTech\Casts\MoneyCastWithoutCurrency;
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Traits\HasCurrencyFormatting;
+use Modules\FinTech\Traits\HasUuid;
 
 class Transaction extends Model
 {
   use SoftDeletes,
-  HasCurrencyFormatting;
+  HasCurrencyFormatting,
+  HasUuid;
 
   protected $table = 'fintech_transactions';
 

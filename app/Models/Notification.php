@@ -4,9 +4,12 @@ namespace Modules\FinTech\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Modules\FinTech\Enums\NotificationType;
+use Modules\FinTech\Traits\HasUuid;
 
 class Notification extends Model
 {
+  use HasUuid;
+
   protected $table = 'fintech_notifications';
 
   protected $fillable = [
