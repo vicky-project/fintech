@@ -18,6 +18,7 @@ class StatementTransaction extends Model
 
   protected $fillable = [
     'statement_id',
+    'uuid',
     'transaction_date',
     'description',
     'amount',

@@ -17,6 +17,7 @@ class BankStatement extends Model
 
   protected $fillable = [
     'user_id',
+    'uuid',
     'wallet_id',
     'original_filename',
     'file_path',

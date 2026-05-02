@@ -15,6 +15,7 @@ class UserSetting extends Model
 
   protected $fillable = [
     'user_id',
+    'uuid',
     'default_currency',
     'default_wallet_id',
     'preferences',

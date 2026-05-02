@@ -18,6 +18,7 @@ class Transfer extends Model
   protected $table = 'fintech_transfers';
 
   protected $fillable = [
+    'uuid',
     'from_wallet_id',
     'to_wallet_id',
     'amount',

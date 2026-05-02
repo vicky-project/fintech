@@ -1031,45 +1031,45 @@ class CategorySeeder extends Seeder
   */
   protected function seedCategories(): void
   {
-    // 1. Seed semua parent terlebih dahulu
-    $parents = [];
+    // Process parents
     foreach ($this->categories as $cat) {
       $children = $cat['children'] ?? [];
       unset($cat['children']);
-      $cat['metadata'] = json_encode($cat['metadata'] ?? []);
-      $cat['keywords'] = json_encode($cat['keywords'] ?? []);
-      $parents[] = $cat;
-    }
 
-    // Upsert parents
-    foreach (array_chunk($parents, 50) as $chunk) {
-      Category::upsert($chunk, ['name', 'type'], ['icon', 'color', 'metadata', 'keywords']);
-    }
+      // Update or create parent
+      $parent = Category::updateOrCreate(
+        ['name' => $cat['name'], 'type' => $cat['type']],
+        [
+          'icon' => $cat['icon'],
+          'color' => $cat['color'],
+          'is_system' => true,
+          'is_active' => $cat['is_active'] ?? true,
+          'metadata' => $cat['metadata'] ?? [],
+          'keywords' => $cat['keywords'] ?? [],
+          // uuid tidak diisi manual, akan diisi oleh trait HasUuid saat creating
+        ]
+      );
 
-    // 2. Seed children dengan parent_id
-    $childrenData = [];
-    foreach ($this->categories as $cat) {
-      if (empty($cat['children'])) continue;
-
-      $parent = Category::where('name', $cat['name'])
-      ->where('type', $cat['type'])
-      ->first();
-
-      if (!$parent) continue;
-
-      foreach ($cat['children'] as $child) {
-        $child['parent_id'] = $parent->id;
-        $child['type'] = $cat['type'];
-        $child['is_system'] = true;
-        $child['metadata'] = json_encode($child['metadata'] ?? []);
-        $child['keywords'] = json_encode($child['keywords'] ?? []);
-        $childrenData[] = $child;
+      // Process children
+      if (!empty($children)) {
+        foreach ($children as $child) {
+          Category::updateOrCreate(
+            [
+              'name' => $child['name'],
+              'type' => $cat['type'],
+              'parent_id' => $parent->id,
+            ],
+            [
+              'icon' => $child['icon'],
+              'color' => $child['color'],
+              'is_system' => true,
+              'is_active' => $child['is_active'] ?? true,
+              'metadata' => $child['metadata'] ?? [],
+              'keywords' => $child['keywords'] ?? [],
+            ]
+          );
+        }
       }
-    }
-
-    // Upsert children
-    foreach (array_chunk($childrenData, 50) as $chunk) {
-      Category::upsert($chunk, ['name', 'type', 'parent_id'], ['icon', 'color', 'metadata', 'keywords']);
     }
   }
 }
