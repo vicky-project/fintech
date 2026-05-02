@@ -1511,8 +1511,7 @@ async function renderSearchPage() {
   <div class="input-group mb-3" id="search-input-group">
   <span class="input-group-text"><i class="bi bi-search"></i></span>
   <input type="search" id="search-input" class="form-control" placeholder="Cari transaksi, transfer...">
-  <button class="btn btn-primary"
-  onclick="performSearch()">Cari</button>
+  <button class="btn btn-primary" data-action="perform-search">Cari</button>
   </div>
   <div id="search-filters" class="btn-group btn-group-sm w-100 mb-3 d-none" role="group">
   <button class="btn btn-outline-primary search-filter-btn active" data-filter="all" data-action="filter-search-results">
