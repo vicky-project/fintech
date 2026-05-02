@@ -143,12 +143,12 @@ class BackupController extends Controller
       $this->backupService->import($user,
         $content);
       return response()->json([
-        'status' => 'success',
+        'success' => true,
         'message' => '✅ Data berhasil dipulihkan. Semua data keuangan Anda telah dikembalikan.',
       ]);
     } catch (\Exception $e) {
       return response()->json([
-        'status' => 'error',
+        'success' => false,
         'message' => '❌ Gagal memulihkan data: ' . $e->getMessage(),
       ],
         422);
