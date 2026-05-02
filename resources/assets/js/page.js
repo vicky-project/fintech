@@ -954,6 +954,20 @@ async function renderSettingsPage() {
   </div>
   </div>
   </div>
+  <hr>
+  <h6>Backup & Restore</h6>
+  <div class="mb-3">
+  <button type="button" class="btn btn-outline-primary w-100" id="btn-backup" data-action="backup-data">
+  <i class="bi bi-download me-2"></i> Backup Data
+  </button>
+  <small class="text-muted d-block mt-1">Unduh semua data keuangan Anda dalam file terkompresi.</small>
+  </div>
+  <div class="mb-3">
+  <button type="button" class="btn btn-outline-warning w-100" id="btn-restore" data-action="restore-data">
+  <i class="bi bi-upload me-2"></i> Pulihkan Data
+  </button>
+  <small class="text-muted d-block mt-1">Unggah file backup untuk mengembalikan data Anda.</small>
+  </div>
   </div>`;
   document.getElementById('main-content').innerHTML = html;
   Core.populateSelectWithCurrencies(document.getElementById('setting-currency'),

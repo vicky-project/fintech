@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\FinTech\Http\Controllers\Api\ {
+  BackupController,
   BudgetController,
   CategoryController,
   CategorySuggestionController,
@@ -34,6 +35,8 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
 
   // ==================== CURRENCIES ====================
   Route::get('currencies', [CurrencyController::class, 'index'])->name('currencies.index');
+
+  Route::post('backup/send', [BackupController::class, 'send']);
 
   // ==================== TRANSACTIONS ====================
   Route::get('transactions/trashed', [TransactionController::class, 'trashed'])->name('transactions.trashed');
