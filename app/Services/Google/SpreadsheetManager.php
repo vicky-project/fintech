@@ -67,11 +67,10 @@ class SpreadsheetManager
               'sheetId' => $sheetId,
               'title' => self::SHEET_TRANSACTIONS,
               'gridProperties' => [
-                'rowCount' => 100000,
                 'columnCount' => 21,
               ],
             ],
-            'fields' => 'title,gridProperties(rowCount,columnCount)',
+            'fields' => 'title,gridProperties(columnCount)',
           ],
         ]),
       ];
@@ -102,7 +101,6 @@ class SpreadsheetManager
             'properties' => [
               'title' => $sheetName,
               'gridProperties' => [
-                'rowCount' => 100000,
                 'columnCount' => 21,
               ],
             ],
@@ -133,7 +131,6 @@ class SpreadsheetManager
         'properties' => [
           'title' => $sheetName,
           'gridProperties' => [
-            'rowCount' => 100000,
             'columnCount' => 21,
           ],
         ],
