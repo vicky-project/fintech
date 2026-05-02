@@ -238,8 +238,8 @@
           </div>
         </div>
         <div class="modal-footer border-0 pt-0">
-          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
-          <button type="button" class="btn btn-warning btn-sm" id="btn-upload-restore" data-action="restore-data" disabled>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-warning" id="btn-upload-restore" data-action="restore-data" disabled>
             <i class="bi bi-upload me-1"></i> Upload & Pulihkan
           </button>
         </div>
