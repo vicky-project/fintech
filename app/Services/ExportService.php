@@ -319,64 +319,66 @@ class ExportService
       $spreadsheetId = $googleService->getOrCreateSpreadsheet($user);
       $limit = $this->maxExcelRecords;
 
-      $metadata = $this->buildMetadata($type, $filters, $wallet->name);
-      $formatRules = $this->getCurrencyFormat($wallet);
+      // Hapus semua sheet lama agar tidak menumpuk
+      $this->spreadsheetManager->removeSheetsByPrefix($spreadsheetId, 'Transaksi ');
+      $this->spreadsheetManager->removeSheetsByPrefix($spreadsheetId, 'Transfer ');
+      // Budget tidak dihapus karena hanya satu sheet
+      $this->spreadsheetManager->removeSheetsByPrefix($spreadsheetId, 'Budget'); // opsional
 
-      // Data mentah transaksi untuk tabel tambahan
-      $rawTransactions = [];
+      $formatRules = $this->getCurrencyFormat($wallet);
 
       if ($type === 'all') {
         $all = $this->fetchData('all', $user, $filters, $limit);
-        $rawTransactions = $all['transactions'][0] ?? [];
 
-        $metaTx = $this->buildMetadata('transactions', $filters, $wallet->name);
-        $metaTf = $this->buildMetadata('transfers', $filters, $wallet->name);
-        $metaBg = $this->buildMetadata('budgets', $filters, $wallet->name);
+        // 1. Transaksi per tahun
+        if (!empty($all['transactions'][0])) {
+          $this->exportTransactionsPerYear(
+            $googleService, $spreadsheetId, $all['transactions'][0], $filters, $wallet, $formatRules
+          );
+        }
 
-        $txSummary = array_merge($all['transactions'][1], $formatRules, [
-          'metadata' => $metaTx,
-          'include_description' => $filters['include_description'] ?? true,
-          'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
-          'include_top5' => $filters['include_top5'] ?? true,
-          'include_chart' => $filters['include_chart'] ?? true,
-          'include_category_expense' => $filters['include_category_expense'] ?? true,
-        ]);
+        // 2. Transfer per tahun
+        if (!empty($all['transfers'][0])) {
+          $this->exportTransfersPerYear(
+            $googleService, $spreadsheetId, $all['transfers'][0], $filters, $wallet, $formatRules
+          );
+        }
 
-        $googleService->exportDataToSheet(
-          $spreadsheetId, SpreadsheetManager::SHEET_TRANSACTIONS,
-          $all['transactions'][0], true, $metaTx, $txSummary, 'transactions', $rawTransactions
+        // 3. Budget (satu sheet)
+        $this->exportBudgets(
+          $googleService, $spreadsheetId, $all['budgets'][0], $filters, $wallet, $formatRules
         );
-        $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_TRANSFERS, $all['transfers'][0], true, $metaTf, $all['transfers'][1], 'transfers');
-        $googleService->exportDataToSheet($spreadsheetId, SpreadsheetManager::SHEET_BUDGETS, $all['budgets'][0], true, $metaBg, $all['budgets'][1], 'budgets');
+
       } else {
         [$data,
           $summary] = $this->fetchData($type, $user, $filters, $limit);
-        $sheetName = match ($type) {
-          'transactions' => SpreadsheetManager::SHEET_TRANSACTIONS,
-          'transfers' => SpreadsheetManager::SHEET_TRANSFERS,
-          'budgets' => SpreadsheetManager::SHEET_BUDGETS,
-        };
 
-        if ($type === 'transactions') {
-          $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
-          $summary['include_top5'] = $filters['include_top5'] ?? false;
-          $summary['include_chart'] = $filters['include_chart'] ?? false;
-          $summary['include_category_expense'] = $filters['include_category_expense'] ?? false;
-          $rawTransactions = $data;
+        switch ($type) {
+        case 'transactions':
+          if (!empty($data)) {
+            $this->exportTransactionsPerYear(
+              $googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules
+            );
+          }
+          break;
+        case 'transfers':
+          if (!empty($data)) {
+            $this->exportTransfersPerYear(
+              $googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules
+            );
+          }
+          break;
+        case 'budgets':
+          $this->exportBudgets(
+            $googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules
+          );
+          break;
         }
-
-        if ($type === 'transactions' || $type === 'transfers') {
-          $summary['include_description'] = $filters['include_description'] ?? true;
-        }
-
-        $summary = array_merge($summary, $formatRules);
-        $googleService->exportDataToSheet(
-          $spreadsheetId, $sheetName, $data, true, $metadata, $summary, $type, $rawTransactions
-        );
       }
 
       return $googleService->getSpreadsheetUrl($spreadsheetId);
     }
+
 
     // Generate CSV
     protected function generateCsv(string $type, array $data, array $filters): string
@@ -471,5 +473,146 @@ class ExportService
         'transfers' => 'Laporan Transfer',
         'budgets' => 'Laporan Budget',
       };
+    }
+
+    // ─── Helper untuk export per tahun. Untuk Googlesheet ─────────────────────────────
+
+    /**
+    * Ekspor transaksi dikelompokkan per tahun.
+    */
+    private function exportTransactionsPerYear(
+      GoogleSheetsService $googleService,
+      string $spreadsheetId,
+      array $transactions,
+      array $filters,
+      Wallet $wallet,
+      array $formatRules
+    ): void {
+      // Kelompokkan berdasarkan tahun
+      $grouped = [];
+      foreach ($transactions as $row) {
+        $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+        if (!$date) continue;
+        $year = $date->format('Y');
+        $grouped[$year][] = $row;
+      }
+
+      foreach ($grouped as $year => $yearData) {
+        $sheetName = SpreadsheetManager::SHEET_TRANSACTIONS . ' ' . $year;
+
+        // Hitung ulang summary untuk tahun ini
+        $totalIncome = 0;
+        $totalExpense = 0;
+        foreach ($yearData as $r) {
+          $totalIncome += (float)($r['Pemasukan'] ?? 0);
+          $totalExpense += (float)($r['Pengeluaran'] ?? 0);
+        }
+        $yearSummary = [
+          'total_income' => $totalIncome,
+          'total_expense' => $totalExpense,
+          'net' => $totalIncome - $totalExpense,
+        ];
+
+        $metadata = $this->buildMetadata('transactions', $filters, $wallet->name);
+        $metadata[] = 'Tahun: ' . $year;
+
+        $summary = array_merge($yearSummary, $formatRules, [
+          'metadata' => $metadata,
+          'include_description' => $filters['include_description'] ?? true,
+          'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
+          'include_top5' => $filters['include_top5'] ?? true,
+          'include_chart' => $filters['include_chart'] ?? true,
+          'include_category_expense' => $filters['include_category_expense'] ?? true,
+        ]);
+
+        $googleService->exportDataToSheet(
+          $spreadsheetId, $sheetName, $yearData, true, $metadata, $summary, 'transactions', $yearData
+        );
+      }
+    }
+
+    /**
+    * Ekspor transfer dikelompokkan per tahun.
+    */
+    private function exportTransfersPerYear(
+      GoogleSheetsService $googleService,
+      string $spreadsheetId,
+      array $transfers,
+      array $filters,
+      Wallet $wallet,
+      array $formatRules
+    ): void {
+      $grouped = [];
+      foreach ($transfers as $row) {
+        $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+        if (!$date) continue;
+        $year = $date->format('Y');
+        $grouped[$year][] = $row;
+      }
+
+      foreach ($grouped as $year => $yearData) {
+        $sheetName = SpreadsheetManager::SHEET_TRANSFERS . ' ' . $year;
+
+        // Total transfer untuk tahun ini
+        $total = 0;
+        foreach ($yearData as $r) {
+          $total += (float)($r['Jumlah'] ?? 0);
+        }
+
+        $metadata = $this->buildMetadata('transfers', $filters, $wallet->name);
+        $metadata[] = 'Tahun: ' . $year;
+
+        $summary = [
+          'total' => $total,
+          'metadata' => $metadata,
+          'include_description' => $filters['include_description'] ?? true,
+        ];
+        $summary = array_merge($summary, $formatRules);
+
+        $googleService->exportDataToSheet(
+          $spreadsheetId, $sheetName, $yearData, true, $metadata, $summary, 'transfers'
+        );
+      }
+    }
+
+    /**
+    * Ekspor budget (satu sheet).
+    */
+    private function exportBudgets(
+      GoogleSheetsService $googleService,
+      string $spreadsheetId,
+      array $budgets,
+      array $filters,
+      Wallet $wallet,
+      array $formatRules
+    ): void {
+      $sheetName = SpreadsheetManager::SHEET_BUDGETS;
+      $metadata = $this->buildMetadata('budgets', $filters, $wallet->name);
+
+      $summary = [
+        'total_limit' => 0,
+        'total_spent' => 0,
+        'remaining' => 0,
+      ];
+      if (!empty($budgets)) {
+        // Hitung summary dari data budget yang sudah di-fetch
+        $totalLimit = 0;
+        $totalSpent = 0;
+        foreach ($budgets as $b) {
+          $totalLimit += (float)($b['Limit'] ?? 0);
+          $totalSpent += (float)($b['Pengeluaran'] ?? 0);
+        }
+        $summary = [
+          'total_limit' => $totalLimit,
+          'total_spent' => $totalSpent,
+          'remaining' => $totalLimit - $totalSpent,
+        ];
+      }
+
+      $summary = array_merge($summary, $formatRules, ['metadata' => $metadata]);
+
+      $googleService->exportDataToSheet(
+        $spreadsheetId, $sheetName, $budgets, true, $metadata, $summary, 'budgets'
+      );
     }
   }
