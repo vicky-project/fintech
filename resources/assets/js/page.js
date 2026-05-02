@@ -954,24 +954,47 @@ async function renderSettingsPage() {
   </div>
   </div>
   </div>
+  <!-- setelah bagian Google Sheets, sebelum penutup container -->
   <hr>
-  <h6>Backup &amp; Restore</h6>
-  <div class="d-flex justify-content-between align-items-center mb-3">
-  <button type="button" class="btn btn-outline-primary btn-sm" id="btn-backup" data-action="backup-data">
-  <i class="bi bi-download"></i>
-  </button>
-  <div class="ms-auto">
+  <h6 class="mb-3">Backup &amp; Restore</h6>
+
+  <!-- Backup Card -->
+  <div class="card border-primary mb-3">
+  <div class="card-body d-flex align-items-center py-3">
+  <div class="me-3 text-primary">
+  <i class="bi bi-cloud-download" style="font-size: 1.8rem;"></i>
+  </div>
+  <div class="flex-grow-1">
+  <div class="fw-semibold">Backup Data</div>
   <small class="text-muted">Cadangkan semua data keuangan Anda ke file terkompresi.</small>
   </div>
-  </div>
-  <div class="d-flex justify-content-between align-items-center mb-3">
-  <button type="button" class="btn btn-outline-warning btn-sm" id="btn-restore" data-action="restore-data">
-  <i class="bi bi-upload"></i>
+  <div>
+  <button type="button" class="btn btn-primary btn-sm" data-action="backup-data" id="btn-backup">
+  <i class="bi bi-download me-1"></i> Backup
   </button>
-  <div class="ms-auto">
-  <small class="text-muted">Pulihkan data dari file backup yang telah diunduh.</small>
   </div>
   </div>
+  </div>
+
+  <!-- Restore Card -->
+  <div class="card border-warning mb-3">
+  <div class="card-body d-flex align-items-center py-3">
+  <div class="me-3 text-warning">
+  <i class="bi bi-cloud-upload" style="font-size: 1.8rem;"></i>
+  </div>
+  <div class="flex-grow-1">
+  <div class="fw-semibold">Pulihkan Data</div>
+  <small class="text-muted">Pulihkan data dari file backup yang telah diunduh sebelumnya.</small>
+  </div>
+  <div>
+  <button type="button" class="btn btn-warning btn-sm" data-action="restore-data" id="btn-restore">
+  <i class="bi bi-upload me-1"></i> Pulihkan
+  </button>
+  </div>
+  </div>
+  </div>
+
+  <!-- Input file tersembunyi untuk restore -->
   <input type="file" id="restore-file-input" accept=".json.gz,.json" style="display: none;">
   </div>`;
   document.getElementById('main-content').innerHTML = html;
