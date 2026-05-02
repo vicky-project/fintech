@@ -954,24 +954,23 @@ async function renderSettingsPage() {
   </div>
   </div>
   </div>
-  // ... setelah bagian Google Sheets
   <hr>
   <h6>Backup &amp; Restore</h6>
   <div class="d-flex justify-content-between align-items-center mb-3">
+  <button type="button" class="btn btn-outline-primary btn-sm me-auto" id="btn-backup" data-action="backup-data">
+  <i class="bi bi-download"></i>
+  </button>
   <div>
   <small class="text-muted">Cadangkan semua data keuangan Anda ke file terkompresi.</small>
   </div>
-  <button type="button" class="btn btn-outline-primary btn-sm" id="btn-backup" data-action="backup-data">
-  <i class="bi bi-download ms-auto"></i>
-  </button>
   </div>
   <div class="d-flex justify-content-between align-items-center mb-3">
+  <button type="button" class="btn btn-outline-warning btn-sm me-auto" id="btn-restore" data-action="restore-data">
+  <i class="bi bi-upload"></i>
+  </button>
   <div>
   <small class="text-muted">Pulihkan data dari file backup yang telah diunduh.</small>
   </div>
-  <button type="button" class="btn btn-outline-warning btn-sm" id="btn-restore" data-action="restore-data">
-  <i class="bi bi-upload ms-auto"></i>
-  </button>
   </div>
   <input type="file" id="restore-file-input" accept=".json.gz,.json" style="display: none;">
   </div>`;
