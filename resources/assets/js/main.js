@@ -1,8 +1,5 @@
 // ==================== MAIN.JS ====================
 // Entry point aplikasi, inisialisasi, event delegation, dan fungsi global
-window.performSearch = () => {
-  if (typeof performSearch === 'function') performSearch();
-};
 window.toggleQuickActions = () => {
   const overlay = document.getElementById('quick-actions-overlay');
   const icon = document.getElementById('fab-icon');
