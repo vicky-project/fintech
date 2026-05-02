@@ -65,7 +65,7 @@ class SpreadsheetManager
           'updateSheetProperties' => [
             'properties' => [
               'sheetId' => $sheetId,
-              'title' => self::SHEET_TRANSACTIONS,
+              'title' => self::SHEET_TRANSFERS,
               'gridProperties' => [
                 'columnCount' => 21,
               ],
