@@ -148,6 +148,7 @@
   };
 
   window.editTransaction = function(id) {
+    console.log("edit transaction")
     const trx = Core.state.transactions.find(t => t.id === id);
     if (!trx) {
       tgApp.showToast('Transaksi tidak ditemukan', 'danger');

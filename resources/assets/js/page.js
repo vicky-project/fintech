@@ -178,7 +178,6 @@ async function refreshTransactionList(page) {
     type: Core.state.filters.type,
     month: Core.state.filters.month
   };
-  console.log(filters);
   await Core.loadTransactionsPage(page, filters);
   updateTransactionStats();
   renderTransactionList();
