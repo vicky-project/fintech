@@ -89,7 +89,6 @@ class SpreadsheetManager
               'columnCount' => 26
             ]
           ],
-          'fields' => 'title,gridProperties(rowCount,columnCount)'
         ]
       ])];
       $batch = new BatchUpdateSpreadsheetRequest(['requests' => $requests]);
