@@ -233,8 +233,8 @@ function renderTransactionList() {
     <div class="dropdown" onclick="event.stopPropagation()">
     <button class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
     <ul class="dropdown-menu dropdown-menu-end">
-    <li><a class="dropdown-item" href="#" data-action="edit-transaction" data-id="${trx.id}"><i class="bi bi-pencil me-2"></i>Edit</a></li>
-    <li><a class="dropdown-item text-danger" href="#" data-action="delete-transaction" data-id="${trx.id}"><i class="bi bi-trash me-2"></i>Hapus</a></li>
+    <li><button class="dropdown-item" data-action="edit-transaction" data-id="${trx.id}"><i class="bi bi-pencil me-2"></i>Edit</button></li>
+    <li><button class="dropdown-item text-danger" data-action="delete-transaction" data-id="${trx.id}"><i class="bi bi-trash me-2"></i>Hapus</button></li>
     </ul>
     </div>
     </div>
