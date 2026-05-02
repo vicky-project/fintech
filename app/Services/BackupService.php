@@ -1,8 +1,9 @@
 <?php
+
 namespace Modules\FinTech\Services;
 
-use Modules\Telegram\Models\TelegramUser;
-use Modules\FinTech\Models\ {
+use Modules\Telegram\Entities\TelegramUser;
+use Modules\FinTech\Entities\ {
   Wallet,
   Transaction,
   Category,
@@ -25,21 +26,56 @@ class BackupService
     $catIds = $this->getUsedCategoryIds($user);
     $categories = Category::whereIn('id', $catIds)->get()->toArray();
 
+    // Wallets: ambil balance sebagai integer mentah
+    $wallets = Wallet::where('user_id', $user->id)
+    ->without('currencyDetails')
+    ->get()
+    ->map(function ($w) {
+      $data = $w->toArray();
+      $data['balance'] = $w->getRawOriginal('balance');
+      unset($data['currency_details']);
+      return $data;
+    })->toArray();
+
+    // Transactions: ambil amount sebagai integer mentah
+    $transactions = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
+    ->get()
+    ->map(function ($t) {
+      $data = $t->toArray();
+      $data['amount'] = $t->getRawOriginal('amount');
+      return $data;
+    })->toArray();
+
+    // Transfers: ambil amount mentah
+    $transfers = Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
+    ->orWhereHas('toWallet', fn($q) => $q->where('user_id', $user->id))
+    ->get()
+    ->map(function ($t) {
+      $data = $t->toArray();
+      $data['amount'] = $t->getRawOriginal('amount');
+      return $data;
+    })->toArray();
+
+    // Budgets: ambil amount mentah
+    $budgets = Budget::where('user_id', $user->id)
+    ->get()
+    ->map(function ($b) {
+      $data = $b->toArray();
+      $data['amount'] = $b->getRawOriginal('amount');
+      return $data;
+    })->toArray();
+
     $data = [
       'version' => '1.1',
       'user_telegram_id' => $user->telegram_id,
       'created_at' => now()->toIso8601String(),
       'data' => [
         'categories' => $categories,
-        'wallets' => Wallet::where('user_id', $user->id)->get()->toArray(),
+        'wallets' => $wallets,
         'user_settings' => UserSetting::where('user_id', $user->id)->get()->toArray(),
-        'transactions' => $this->chunkedExport(
-          Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
-        ),
-        'budgets' => Budget::where('user_id', $user->id)->get()->toArray(),
-        'transfers' => Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
-        ->orWhereHas('toWallet', fn($q) => $q->where('user_id', $user->id))
-        ->get()->toArray(),
+        'transactions' => $transactions,
+        'budgets' => $budgets,
+        'transfers' => $transfers,
         'bank_statements' => BankStatement::where('user_id', $user->id)->get()->toArray(),
         'statement_transactions' => StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id', $user->id))->get()->toArray(),
         'notifications' => Notification::where('user_id', $user->id)->get()->toArray(),
@@ -69,58 +105,53 @@ class BackupService
     }
 
     DB::transaction(function () use ($user, $backup) {
-      // 1. Hapus semua data user saat ini
       $this->clearUserData($user);
-
       DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
-      // 2. Restore categories (global dengan pengecekan UUID)
       $catMap = $this->restoreCategories($backup['data']['categories']);
 
-      // 3. Wallets
-      $walletMap = $this->bulkInsertByUuid('fintech_wallets', $backup['data']['wallets'], function(&$row) use ($user) {
+      // Wallets – balance sudah integer
+      $walletMap = $this->bulkInsertByUuid('fintech_wallets', $backup['data']['wallets'], fn(&$row) use ($user) {
         unset($row['id']);
         $row['user_id'] = $user->id;
       });
 
-      // 4. User Settings
-      $this->bulkInsert('fintech_user_settings', $backup['data']['user_settings'], function(&$row) use ($user, $walletMap) {
+      // User Settings
+      $this->bulkInsert('fintech_user_settings', $backup['data']['user_settings'], fn(&$row) use ($user, $walletMap) {
         unset($row['id']);
         $row['user_id'] = $user->id;
         $row['default_wallet_id'] = $row['default_wallet_id'] ? ($walletMap[$row['default_wallet_id']] ?? null) : null;
-        // Encode JSON field jika ada
         if (isset($row['preferences']) && is_array($row['preferences'])) {
           $row['preferences'] = json_encode($row['preferences']);
         }
       });
 
-      // 5. Transactions
+      // Transactions – amount integer
       $trxMap = $this->bulkInsertByUuid('fintech_transactions',
         $backup['data']['transactions'],
-        function(&$row) use ($walletMap, $catMap) {
+        fn(&$row) use ($walletMap, $catMap) {
           unset($row['id']);
           $row['wallet_id'] = $walletMap[$row['wallet_id']];
           $row['category_id'] = $catMap[$row['category_id']] ?? null;
-          // Encode metadata jika array
           if (isset($row['metadata']) && is_array($row['metadata'])) {
             $row['metadata'] = json_encode($row['metadata']);
           }
         });
 
-      // 6. Budgets
+      // Budgets – amount integer
       $this->bulkInsert('fintech_budgets',
         $backup['data']['budgets'],
-        function(&$row) use ($user, $catMap, $walletMap) {
+        fn(&$row) use ($user, $catMap, $walletMap) {
           unset($row['id']);
           $row['user_id'] = $user->id;
           $row['category_id'] = $catMap[$row['category_id']] ?? null;
           $row['wallet_id'] = $row['wallet_id'] ? ($walletMap[$row['wallet_id']] ?? null) : null;
         });
 
-      // 7. Bank Statements
+      // Bank Statements
       $stmtMap = $this->bulkInsertByUuid('fintech_bank_statements',
         $backup['data']['bank_statements'],
-        function(&$row) use ($user, $walletMap) {
+        fn(&$row) use ($user, $walletMap) {
           unset($row['id']);
           $row['user_id'] = $user->id;
           $row['wallet_id'] = $row['wallet_id'] ? ($walletMap[$row['wallet_id']] ?? null) : null;
@@ -129,19 +160,19 @@ class BackupService
           }
         });
 
-      // 8. Transfers
+      // Transfers – amount integer
       $this->bulkInsert('fintech_transfers',
         $backup['data']['transfers'],
-        function(&$row) use ($walletMap) {
+        fn(&$row) use ($walletMap) {
           unset($row['id']);
           $row['from_wallet_id'] = $walletMap[$row['from_wallet_id']];
           $row['to_wallet_id'] = $walletMap[$row['to_wallet_id']];
         });
 
-      // 9. Statement Transactions
+      // Statement Transactions
       $this->bulkInsert('fintech_statement_transactions',
         $backup['data']['statement_transactions'],
-        function(&$row) use ($stmtMap, $catMap) {
+        fn(&$row) use ($stmtMap, $catMap) {
           unset($row['id']);
           $row['statement_id'] = $stmtMap[$row['statement_id']];
           $row['category_id'] = $row['category_id'] ? ($catMap[$row['category_id']] ?? null) : null;
@@ -150,10 +181,10 @@ class BackupService
           }
         });
 
-      // 10. Notifications
+      // Notifications
       $this->bulkInsert('fintech_notifications',
         $backup['data']['notifications'],
-        function(&$row) use ($user, $trxMap) {
+        fn(&$row) use ($user, $trxMap) {
           unset($row['id']);
           $row['user_id'] = $user->id;
           if (isset($row['data']['transaction_id'])) {
@@ -188,13 +219,6 @@ class BackupService
     ->toArray();
   }
 
-  private function chunkedExport($query): array
-  {
-    $results = [];
-    $query->lazyById(1000)->each(fn($record) => $results[] = $record->toArray());
-    return $results;
-  }
-
   private function clearUserData(TelegramUser $user): void
   {
     Notification::where('user_id', $user->id)->delete();
@@ -212,10 +236,6 @@ class BackupService
     Wallet::where('user_id', $user->id)->delete();
   }
 
-  /**
-  * Restore kategori global. Jika UUID sudah ada di database, gunakan ID-nya.
-  * Jika belum, buat baru. Mengembalikan peta old_id => new_id.
-  */
   private function restoreCategories(array $categories): array
   {
     $map = [];
@@ -224,17 +244,15 @@ class BackupService
 
     foreach ($categories as $cat) {
       if (isset($existing[$cat['uuid']])) {
-        // Kategori sudah ada, gunakan ID yang ada
         $map[$cat['id']] = $existing[$cat['uuid']]->id;
       } else {
-        // Buat baru dengan UUID yang sama
         $newId = DB::table('fintech_categories')->insertGetId([
           'name' => $cat['name'],
           'icon' => $cat['icon'],
           'color' => $cat['color'],
           'type' => $cat['type'],
           'uuid' => $cat['uuid'],
-          'parent_id' => null, // akan diperbaiki setelahnya
+          'parent_id' => null,
           'is_system' => $cat['is_system'] ?? false,
           'is_active' => $cat['is_active'] ?? true,
           'metadata' => is_array($cat['metadata'] ?? null) ? json_encode($cat['metadata']) : $cat['metadata'],
@@ -246,7 +264,6 @@ class BackupService
       }
     }
 
-    // Perbaiki parent_id menggunakan mapping yang sudah terbentuk
     foreach ($categories as $cat) {
       if (!empty($cat['parent_id'])) {
         $newParent = $map[$cat['parent_id']] ?? null;
@@ -261,9 +278,6 @@ class BackupService
     return $map;
   }
 
-  /**
-  * Bulk insert ke tabel, menghasilkan peta old_id => new_id berdasarkan UUID.
-  */
   private function bulkInsertByUuid(string $table, array $rows, callable $callback): array
   {
     $inserts = [];
@@ -276,7 +290,6 @@ class BackupService
       DB::table($table)->insert($chunk);
     }
 
-    // Ambil ID baru berdasarkan UUID
     $uuids = array_column($rows, 'uuid');
     $newRecords = DB::table($table)->whereIn('uuid', $uuids)->get();
     $mapByUuid = [];
@@ -292,9 +305,6 @@ class BackupService
     return $idMap;
   }
 
-  /**
-  * Bulk insert tanpa perlu mengembalikan mapping ID (untuk tabel yang tidak dirujuk balik).
-  */
   private function bulkInsert(string $table, array $rows, callable $callback): void
   {
     $inserts = [];
