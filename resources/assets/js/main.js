@@ -210,7 +210,7 @@ function handleGlobalChange(e) {
       }
     },
     'restore-input-change': (el) => {
-      const file = target.files[0];
+      const file = el.files[0];
       const btnUpload = document.getElementById('btn-upload-restore');
 
       if (file) {
