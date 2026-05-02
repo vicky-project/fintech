@@ -53,6 +53,26 @@ class BackupService
     return gzencode($json, 9);
   }
 
+  public function import(TelegramUser $user, string $content): void
+  {
+    $decoded = @gzdecode($content); // coba decode gzip
+    if ($decoded === false) {
+      $decoded = $content; // bukan gzip, gunakan apa adanya
+    }
+
+    $backup = json_decode($decoded, true);
+    if (!$backup) {
+      throw new \Exception('File backup tidak valid (format JSON rusak).');
+    }
+    if (($backup['user_telegram_id'] ?? null) != $user->telegram_id) {
+      throw new \Exception('File ini bukan backup milik akun Telegram Anda.');
+    }
+
+    DB::transaction(function () use ($user, $backup) {
+      // ... sisa kode restore seperti sebelumnya
+    });
+  }
+
   /**
   * Kumpulkan ID kategori yang benar-benar digunakan user.
   */

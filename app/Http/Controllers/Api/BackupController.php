@@ -105,4 +105,53 @@ class BackupController extends Controller
     $count = \Modules\FinTech\Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))->count();
     return $count > 50000;
   }
+
+  /**
+  * Upload file backup dan pulihkan data user.
+  */
+  public function upload(Request $request) {
+    /** @var TelegramUser $user */
+    $user = $request->user();
+    if (!$user instanceof TelegramUser) {
+      abort(401, 'Unauthorized');
+    }
+
+    // Validasi file
+    $request->validate([
+      'backup_file' => [
+        'required',
+        'file',
+        'max:20480', // max 20 MB
+        function ($attribute, $value, $fail) {
+          $mime = $value->getMimeType();
+          $ext = $value->getClientOriginalExtension();
+          if (!in_array($mime, ['application/gzip', 'application/json', 'application/octet-stream']) &&
+            !in_array($ext, ['gz', 'json'])) {
+            $fail('Format file tidak didukung. Gunakan .json atau .json.gz');
+          }
+        }]
+    ],
+      [
+        'backup_file.required' => 'File backup wajib diunggah.',
+        'backup_file.max' => 'Ukuran file maksimal 20 MB.',
+      ]);
+
+    $file = $request->file('backup_file');
+    $content = file_get_contents($file->getRealPath());
+
+    try {
+      $this->backupService->import($user,
+        $content);
+      return response()->json([
+        'status' => 'success',
+        'message' => '✅ Data berhasil dipulihkan. Semua data keuangan Anda telah dikembalikan.',
+      ]);
+    } catch (\Exception $e) {
+      return response()->json([
+        'status' => 'error',
+        'message' => '❌ Gagal memulihkan data: ' . $e->getMessage(),
+      ],
+        422);
+    }
+  }
 }
