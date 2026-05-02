@@ -85,6 +85,8 @@ async function handleGlobalClick(e) {
       }
     },
     'backup-data': async () => {
+      if (!confirm('Backup data sekarang ?')) return;
+
       tgApp.showLoading('Memproses permintaan...');
       try {
         const res = await Core.api.post('/api/fintech/backup/send');
@@ -112,6 +114,8 @@ async function handleGlobalClick(e) {
         tgApp.showToast("Token tidak ditemukan. Silakan refresh aplikasi.", 'danger');
         return;
       }
+
+      if (!confirm('Tindakan ini akan mengganti semua data lama anda. Pastikan data lama anda sudah di backup.')) return;
 
       const originalText = target.innerHTML;
       target.disabled = true;
