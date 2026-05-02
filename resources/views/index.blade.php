@@ -233,8 +233,10 @@
             Pilih file backup (.json.gz) yang sebelumnya Anda unduh untuk mengembalikan semua data keuangan.
           </p>
           <div class="mb-3">
-            <input class="form-control" type="file" id="restore-file-input" data-action="restore-input-change">
-            <small class="text-muted mt-1 d-block">File harus merupakan backup dari akun Telegram Anda.</small>
+            <form id="formRestore">
+              <input class="form-control" type="file" id="restore-file-input" data-action="restore-input-change">
+              <small class="text-muted mt-1 d-block">File harus merupakan backup dari akun Telegram Anda.</small>
+            </form>
           </div>
         </div>
         <div class="modal-footer border-0 pt-0">

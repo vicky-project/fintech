@@ -99,10 +99,12 @@ async function handleGlobalClick(e) {
       new bootstrap.Modal(document.getElementById('restoreModal')).show();
     },
     'restore-data': async (el) => {
-      const inputFile = document.getElementById('restore-file-input');
-      const file = inputFile.files[0];
-      if (!file) {
-        tgApp.showToast('Input file wajib diisi', 'danger');
+      const form = document.getElementById('formRestore');
+      const formData = new FormData(form);
+
+      const fileInput = form.querySelector('input[type="file"]');
+      if (!fileInput.files.length) {
+        tgApp.showToast('Pilih file terlebih dahulu', 'danger');
         return;
       }
       const token = tgApp.getToken();
@@ -116,9 +118,6 @@ async function handleGlobalClick(e) {
       el.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
 
       try {
-        const formData = new FormData();
-        formData.append('backup_file', file);
-
         const response = await fetch(BASE_URL + '/api/fintech/backup/restore', {
           headers: {
             'Authorization': `Bearer ${token}`,
