@@ -1055,8 +1055,8 @@ async function renderSettingsPage() {
   <label class="form-check-label" for="pin-enabled">Aktifkan PIN</label>
   </div>
   <div id="pin-field-group" style="display: ${settings.pin_enabled ? 'block': 'none'};">
-  <label class="form-label">PIN (4-8 digit)</label>
-  <input type="password" class="form-control" name="pin" id="pin-field" inputmode="numeric" pattern="[0-9]*" maxlength="8" minlength="4" placeholder="Masukkan PIN baru">
+  <label class="form-label">PIN (4-6 digit)</label>
+  <input type="password" class="form-control" name="pin" id="pin-field" inputmode="numeric" pattern="[0-9]*" maxlength="6" minlength="4" placeholder="Masukkan PIN baru">
   <small class="text-muted">Kosongkan jika tidak ingin mengubah PIN.</small>
   </div>
 
