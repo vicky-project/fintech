@@ -158,7 +158,7 @@ async function handleGlobalClick(e) {
 
         tgApp.showLoading('Membuat backup...');
         try {
-          const res = await Core.api.post('/api/backup/send', {
+          const res = await Core.api.post('/api/fintech/backup/send', {
             password
           });
           tgApp.showToast(res.message, 'success');
