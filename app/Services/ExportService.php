@@ -2,15 +2,9 @@
 
 namespace Modules\FinTech\Services;
 
-use Modules\FinTech\Models\Transaction;
-use Modules\FinTech\Models\Transfer;
-use Modules\FinTech\Models\Budget;
-use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Models;
 use Modules\FinTech\Enums\TransactionType;
-use Modules\FinTech\Exports\AllExcelDataExport;
-use Modules\FinTech\Exports\CsvDataExport;
-use Modules\FinTech\Exports\ExcelDataExport;
-use Modules\FinTech\Exports\PdfDataExport;
+use Modules\FinTech\Exports;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Illuminate\Support\Facades\Storage;
@@ -25,80 +19,196 @@ class ExportService
 
   public function __construct(protected SpreadsheetManager $spreadsheetManager) {}
 
-  /**
-  * Generate export – mengembalikan path file atau URL (untuk gsheet).
-  */
+  // ----------------------------------------------------------------
+  // MAIN ENTRY POINT
+  // ----------------------------------------------------------------
+
   public function generate(array $filters): string
   {
+    $this->validateFilters($filters);
+
     $type = $filters['type'];
     $format = $filters['format'];
-    $wallet = Wallet::with('currencyDetails')->findOrFail($filters['wallet_id']);
+    $wallet = Models\Wallet::with('currencyDetails')->findOrFail($filters['wallet_id']);
     $user = request()->user();
 
-    // Validasi format ilegal untuk all
-    if ($type === 'all' && in_array($format, ['pdf', 'csv'])) {
-      throw new \Exception("Format {$format} tidak tersedia untuk semua data. Gunakan Excel atau Google Sheets.");
-    }
-
-    // Google Sheets menggunakan jalur sendiri karena tidak menghasilkan file lokal
+    // Google Sheets punya jalur sendiri
     if ($format === 'gsheet') {
       return $this->generateGoogleSheets($type, $filters, $user, $wallet);
     }
 
-    // Data + summary
-    $limit = $format === 'pdf' ? $this->maxPdfRecords : $this->maxExcelRecords;
-    $result = $this->fetchData($type, $user, $filters, $limit);
     $formatRules = $this->getCurrencyFormat($wallet);
+    $limit = $format === 'pdf' ? $this->maxPdfRecords : $this->maxExcelRecords;
+    $rawResult = $this->fetchData($type, $user, $filters, $limit);
 
+    // Tipe "all" -> multi‑sheet workbook (hanya xlsx)
     if ($type === 'all') {
-      $includeChart = $filters['include_chart'] ?? true;
-      $includeMonthly = $filters['include_monthly_summary'] ?? true;
-      $includeTop5 = $filters['include_top5'] ?? true;
-      $includeCategoryExpense = $filters['include_category_expense'] ?? true;
-
-      foreach (['transactions', 'transfers', 'budgets'] as $subType) {
-        $summaryArr = array_merge(
-          $result[$subType][1],
-          $formatRules,
-          ['metadata' => $this->buildMetadata($subType, $filters, $wallet->name)]
-        );
-        if ($subType === 'transactions') {
-          $summaryArr['include_chart'] = $includeChart;
-          $summaryArr['include_monthly_summary'] = $includeMonthly;
-          $summaryArr['include_top5'] = $includeTop5;
-          $summaryArr['include_category_expense'] = $includeCategoryExpense;
-        }
-
-        if ($subType === 'transactions' || $subType === 'transfers') {
-          $summaryArr['include_description'] = $filters['include_description'] ?? true;
-        }
-        $result[$subType][1] = $summaryArr;
-      }
-      return $this->storeXlsx(new AllExcelDataExport($result));
+      return $this->generateAllSheetsExcel($rawResult, $filters, $formatRules, $wallet);
     }
 
     // Tipe tunggal
     [$data,
-      $summary] = $result;
-    if ($format === 'pdf' && count($data) > $this->maxPdfRecords) {
-      throw new \Exception(
-        "Jumlah data (" . count($data) . ") melebihi batas PDF ({$this->maxPdfRecords}). Silakan gunakan Excel atau persempit filter."
-      );
+      $summary] = $rawResult;
+    $this->validatePdfLimit($format, $data);
+
+    // Gabungkan summary, metadata, format rules, dan opsi checkbox
+    $summary = $this->buildSummary($type, $data, $summary, $filters, $formatRules, $wallet);
+
+    // Transaksi XLSX dengan multi‑tahun?
+    if ($type === 'transactions' && $format === 'xlsx') {
+      return $this->generateTransactionMultiYearExcel($data, $summary, $formatRules, $filters, $wallet);
     }
 
+    // Single sheet biasa
+    return $this->generateSingleSheet($type, $format, $data, $summary, $filters);
+  }
+
+  // ----------------------------------------------------------------
+  // VALIDATION
+  // ----------------------------------------------------------------
+
+  private function validateFilters(array $filters): void
+  {
+    if (($filters['type'] ?? '') === 'all' && in_array($filters['format'] ?? '', ['pdf', 'csv'])) {
+      throw new \Exception("Format {$filters['format']} tidak tersedia untuk semua data. Gunakan Excel atau Google Sheets.");
+    }
+  }
+
+  private function validatePdfLimit(string $format, array $data): void
+  {
+    if ($format === 'pdf' && count($data) > $this->maxPdfRecords) {
+      throw new \Exception(
+        "Jumlah data (" . count($data) . ") melebihi batas PDF ({$this->maxPdfRecords}). " .
+        "Silakan gunakan Excel atau persempit filter."
+      );
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // SUMMARY BUILDER
+  // ----------------------------------------------------------------
+
+  private function buildSummary(string $type, array $data, array $summary, array $filters, array $formatRules, Models\Wallet $wallet): array
+  {
     $metadata = $this->buildMetadata($type, $filters, $wallet->name);
+    $summary = array_merge($summary, $formatRules, compact('metadata'));
     $summary['include_description'] = $filters['include_description'] ?? false;
     $summary['include_chart'] = $filters['include_chart'] ?? false;
     $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? false;
     $summary['include_top5'] = $filters['include_top5'] ?? false;
     $summary['include_category_expense'] = $filters['include_category_expense'] ?? false;
-    $summary = array_merge($summary, $formatRules, compact('metadata'));
 
+    return $summary;
+  }
+
+  // ----------------------------------------------------------------
+  // SINGLE SHEET / GENERIC EXPORT
+  // ----------------------------------------------------------------
+
+  private function generateSingleSheet(string $type, string $format, array $data, array $summary, array $filters): string
+  {
     return match ($format) {
-      'pdf' => PdfDataExport::generate($type, $data, $summary),
-      'xlsx' => $this->storeXlsx(new ExcelDataExport($type, $data, $summary)),
+      'pdf' => Exports\PdfDataExport::generate($type, $data, $summary),
+      'xlsx' => $this->storeXlsx(new Exports\ExcelDataExport($type, $data, $summary)),
       'csv' => $this->generateCsv($type, $data, $filters),
     };
+  }
+
+  // ----------------------------------------------------------------
+  // ALL-DATA EXCEL (multi‑sheet workbook)
+  // ----------------------------------------------------------------
+
+  private function generateAllSheetsExcel(array $rawResult, array $filters, array $formatRules, Models\Wallet $wallet): string
+  {
+    $subTypes = ['transactions',
+      'transfers',
+      'budgets'];
+
+    foreach ($subTypes as $subType) {
+      $metadata = $this->buildMetadata($subType, $filters, $wallet->name);
+      $summary = array_merge($rawResult[$subType][1], $formatRules, ['metadata' => $metadata]);
+
+      if ($subType === 'transactions') {
+        $summary['include_chart'] = $filters['include_chart'] ?? true;
+        $summary['include_monthly_summary'] = $filters['include_monthly_summary'] ?? true;
+        $summary['include_top5'] = $filters['include_top5'] ?? true;
+        $summary['include_category_expense'] = $filters['include_category_expense'] ?? true;
+      }
+
+      if (in_array($subType, ['transactions', 'transfers'])) {
+        $summary['include_description'] = $filters['include_description'] ?? true;
+      }
+
+      $rawResult[$subType][1] = $summary;
+    }
+
+    return $this->storeXlsx(new Exports\AllExcelDataExport($rawResult));
+  }
+
+  // ----------------------------------------------------------------
+  // TRANSACTION MULTI‑YEAR EXCEL
+  // ----------------------------------------------------------------
+
+  private function generateTransactionMultiYearExcel(
+    array $data,
+    array $summary,
+    array $formatRules,
+    array $filters,
+    Models\Wallet $wallet
+  ): string {
+    $grouped = $this->groupDataByYear($data);
+
+    // Jika hanya satu tahun (atau grouping gagal), export seperti biasa
+    if (count($grouped) <= 1) {
+      return $this->storeXlsx(new Exports\ExcelDataExport('transactions', $data, $summary));
+    }
+
+    $sheetsData = [];
+    foreach ($grouped as $year => $yearData) {
+      $yearMetadata = $this->buildMetadata('transactions', $filters, $wallet->name);
+      $yearMetadata[] = 'Tahun: ' . $year;
+
+      $yearIncome = array_sum(array_map(fn($r) => (float)($r['Pemasukan'] ?? 0), $yearData));
+      $yearExpense = array_sum(array_map(fn($r) => (float)($r['Pengeluaran'] ?? 0), $yearData));
+
+      $yearSummary = array_merge([
+        'total_income' => $yearIncome,
+        'total_expense' => $yearExpense,
+        'net' => $yearIncome - $yearExpense,
+        'metadata' => $yearMetadata,
+      ], $formatRules, $this->pickSummaryOptions($summary));
+
+      $sheetsData['Transaksi ' . $year] = [
+        'type' => 'transactions',
+        'data' => $yearData,
+        'summary' => $yearSummary,
+      ];
+    }
+
+    return $this->storeXlsx(new Exports\AllExcelDataExport($sheetsData));
+  }
+
+  private function pickSummaryOptions(array $summary): array
+  {
+    $keys = [
+      'include_description',
+      'include_chart',
+      'include_monthly_summary',
+      'include_top5',
+      'include_category_expense',
+    ];
+    return array_intersect_key($summary, array_flip($keys));
+  }
+
+  private function groupDataByYear(array $data): array
+  {
+    $grouped = [];
+    foreach ($data as $row) {
+      $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
+      if (!$date) continue;
+      $grouped[$date->format('Y')][] = $row;
+    }
+    return $grouped;
   }
 
   // ----------------------------------------------------------------
@@ -128,7 +238,7 @@ class ExportService
 
   protected function getTransactionsData($user, array $filters, int $limit): array
   {
-    $query = Transaction::with(['wallet', 'category'])
+    $query = Models\Transaction::with(['wallet', 'category'])
     ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id));
 
     $this->applyTransactionFilters($query, $filters);
@@ -158,9 +268,7 @@ class ExportService
         'Kategori' => $trx->category->name,
         'Dompet' => $trx->wallet->name,
         'Pemasukan' => $income,
-        // float
         'Pengeluaran' => $expense,
-        // float
         'Deskripsi' => $trx->description ?? '-',
       ];
     })->toArray();
@@ -179,7 +287,7 @@ class ExportService
     array $filters,
     int $limit): array
   {
-    $query = Transfer::with(['fromWallet',
+    $query = Models\Transfer::with(['fromWallet',
       'toWallet'])
     ->whereHas('fromWallet',
       fn($q) => $q->where('user_id', $user->id));
@@ -201,7 +309,6 @@ class ExportService
         'Dari' => $t->fromWallet->name,
         'Ke' => $t->toWallet->name,
         'Jumlah' => $amount,
-        // float
         'Deskripsi' => $t->description ?? '-',
       ];
     })->toArray();
@@ -213,7 +320,7 @@ class ExportService
     array $filters,
     int $limit): array
   {
-    $query = Budget::where('user_id',
+    $query = Models\Budget::where('user_id',
       $user->id)
     ->with(['category',
       'wallet']);
@@ -252,9 +359,7 @@ class ExportService
           'Dompet' => $b->wallet?->name ?? '-',
           'Periode' => $b->period_type->label(),
           'Limit' => $limit,
-          // float
           'Pengeluaran' => $spent,
-          // float
           'Persentase' => $b->getPercentage() . '%',
           'Status' => $b->isOverspent() ? 'Terlampaui' : ($b->isNearLimit() ? 'Mendekati' : 'Aman'),
         ];
@@ -271,7 +376,7 @@ class ExportService
     }
 
     // ----------------------------------------------------------------
-    // FILTER HELPERS
+    // FILTER METHODS (dengan whereYear baru)
     // ----------------------------------------------------------------
 
     protected function applyTransactionFilters($query,
@@ -283,13 +388,18 @@ class ExportService
       if (!empty($filters['transaction_type'])) {
         $query->where('type', $filters['transaction_type']);
       }
-      if (!empty($filters['month'])) {
+
+      // Filter tahun ---> abaikan month jika ada
+      if (!empty($filters['year'])) {
+        $query->whereYear('transaction_date', $filters['year']);
+      } elseif (!empty($filters['month'])) {
         $query->whereYear('transaction_date', substr($filters['month'], 0, 4))
         ->whereMonth('transaction_date', substr($filters['month'], 5, 2));
       } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
         $query->when(!empty($filters['date_from']), fn($q) => $q->where('transaction_date', '>=', $filters['date_from']))
         ->when(!empty($filters['date_to']), fn($q) => $q->where('transaction_date', '<=', $filters['date_to']));
       }
+
       if (!empty($filters['category_ids'])) {
         $query->whereIn('category_id', $filters['category_ids']);
       }
@@ -301,7 +411,10 @@ class ExportService
         $wid = $filters['wallet_id'];
         $query->where(fn($q) => $q->where('from_wallet_id', $wid)->orWhere('to_wallet_id', $wid));
       }
-      if (!empty($filters['month'])) {
+
+      if (!empty($filters['year'])) {
+        $query->whereYear('transfer_date', $filters['year']);
+      } elseif (!empty($filters['month'])) {
         $query->whereYear('transfer_date', substr($filters['month'], 0, 4))
         ->whereMonth('transfer_date', substr($filters['month'], 5, 2));
       } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
@@ -314,7 +427,7 @@ class ExportService
     // GOOGLE SHEETS
     // ----------------------------------------------------------------
 
-    protected function generateGoogleSheets(string $type, array $filters, $user, Wallet $wallet): string
+    protected function generateGoogleSheets(string $type, array $filters, $user, Models\Wallet $wallet): string
     {
       $googleService = app(GoogleSheetsService::class);
       $googleService->setupForUser($user);
@@ -324,32 +437,20 @@ class ExportService
       // Hapus semua sheet lama agar tidak menumpuk
       $this->spreadsheetManager->removeSheetsByPrefix($spreadsheetId, 'Transaksi ');
       $this->spreadsheetManager->removeSheetsByPrefix($spreadsheetId, 'Transfer ');
-      // Budget tidak dihapus karena hanya satu sheet
-      $this->spreadsheetManager->removeSheetsByPrefix($spreadsheetId, 'Budget'); // opsional
+      $this->spreadsheetManager->removeSheetsByPrefix($spreadsheetId, 'Budget');
 
       $formatRules = $this->getCurrencyFormat($wallet);
 
       if ($type === 'all') {
         $all = $this->fetchData('all', $user, $filters, $limit);
 
-        // 1. Transaksi per tahun
         if (!empty($all['transactions'][0])) {
-          $this->exportTransactionsPerYear(
-            $googleService, $spreadsheetId, $all['transactions'][0], $filters, $wallet, $formatRules
-          );
+          $this->exportTransactionsPerYear($googleService, $spreadsheetId, $all['transactions'][0], $filters, $wallet, $formatRules);
         }
-
-        // 2. Transfer per tahun
         if (!empty($all['transfers'][0])) {
-          $this->exportTransfersPerYear(
-            $googleService, $spreadsheetId, $all['transfers'][0], $filters, $wallet, $formatRules
-          );
+          $this->exportTransfersPerYear($googleService, $spreadsheetId, $all['transfers'][0], $filters, $wallet, $formatRules);
         }
-
-        // 3. Budget (satu sheet)
-        $this->exportBudgets(
-          $googleService, $spreadsheetId, $all['budgets'][0], $filters, $wallet, $formatRules
-        );
+        $this->exportBudgets($googleService, $spreadsheetId, $all['budgets'][0], $filters, $wallet, $formatRules);
 
       } else {
         [$data,
@@ -358,22 +459,16 @@ class ExportService
         switch ($type) {
         case 'transactions':
           if (!empty($data)) {
-            $this->exportTransactionsPerYear(
-              $googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules
-            );
+            $this->exportTransactionsPerYear($googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules);
           }
           break;
         case 'transfers':
           if (!empty($data)) {
-            $this->exportTransfersPerYear(
-              $googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules
-            );
+            $this->exportTransfersPerYear($googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules);
           }
           break;
         case 'budgets':
-          $this->exportBudgets(
-            $googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules
-          );
+          $this->exportBudgets($googleService, $spreadsheetId, $data, $filters, $wallet, $formatRules);
           break;
         }
       }
@@ -381,8 +476,10 @@ class ExportService
       return $googleService->getSpreadsheetUrl($spreadsheetId);
     }
 
+    // ----------------------------------------------------------------
+    // CSV
+    // ----------------------------------------------------------------
 
-    // Generate CSV
     protected function generateCsv(string $type, array $data, array $filters): string
     {
       $includeDesc = ($type === 'transactions' || $type === 'transfers')
@@ -390,14 +487,13 @@ class ExportService
       : true;
 
       if (!$includeDesc) {
-        // Hapus kolom 'Deskripsi' dari setiap baris
         $data = array_map(function ($row) {
           unset($row['Deskripsi']);
           return $row;
         }, $data);
       }
 
-      return $this->storeExport(new CsvDataExport($data), 'csv');
+      return $this->storeExport(new Exports\CsvDataExport($data), 'csv');
     }
 
     // ----------------------------------------------------------------
@@ -422,7 +518,7 @@ class ExportService
     // HELPERS
     // ----------------------------------------------------------------
 
-    protected function getCurrencyFormat(Wallet $wallet): array
+    protected function getCurrencyFormat(Models\Wallet $wallet): array
     {
       $default = [
         'precision' => 0,
@@ -453,7 +549,9 @@ class ExportService
         'Tanggal Ekspor: ' . now()->setTimezone(config('app.timezone'))->format('d M Y H:i'),
       ];
 
-      if (!empty($filters['month'])) {
+      if (!empty($filters['year'])) {
+        $meta[] = 'Tahun: ' . $filters['year'];
+      } elseif (!empty($filters['month'])) {
         $meta[] = 'Periode Bulan: ' . date('F Y', strtotime($filters['month'] . '-01'));
       } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
         $from = $filters['date_from'] ?? 'Awal';
@@ -474,23 +572,20 @@ class ExportService
         'transactions' => 'Laporan Transaksi',
         'transfers' => 'Laporan Transfer',
         'budgets' => 'Laporan Budget',
+      default => 'Laporan',
       };
     }
 
-    // ─── Helper untuk export per tahun. Untuk Googlesheet ─────────────────────────────
+    // ─── Helper untuk export per tahun (Google Sheets) ─────────────────────
 
-    /**
-    * Ekspor transaksi dikelompokkan per tahun.
-    */
     private function exportTransactionsPerYear(
       GoogleSheetsService $googleService,
       string $spreadsheetId,
       array $transactions,
       array $filters,
-      Wallet $wallet,
+      Models\Wallet $wallet,
       array $formatRules
     ): void {
-      // Kelompokkan berdasarkan tahun
       $grouped = [];
       foreach ($transactions as $row) {
         $date = \DateTime::createFromFormat('d/m/Y', $row['Tanggal'] ?? '');
@@ -502,28 +597,28 @@ class ExportService
       foreach ($grouped as $year => $yearData) {
         $sheetName = SpreadsheetManager::SHEET_TRANSACTIONS . ' ' . $year;
 
-        // Hitung ulang summary untuk tahun ini
         $totalIncome = 0;
         $totalExpense = 0;
         foreach ($yearData as $r) {
           $totalIncome += (float)($r['Pemasukan'] ?? 0);
           $totalExpense += (float)($r['Pengeluaran'] ?? 0);
         }
-        $yearSummary = [
+
+        $metadata = $this->buildMetadata('transactions', $filters, $wallet->name);
+        // Karena metadata utama mungkin sudah berisi "Tahun: ..." jika filter tahun ada,
+        // kita bisa mengganti atau menambahkan. Untuk amannya tambahkan di akhir.
+        $metadata[] = 'Tahun: ' . $year;
+
+        $summary = array_merge([
           'total_income' => $totalIncome,
           'total_expense' => $totalExpense,
           'net' => $totalIncome - $totalExpense,
-        ];
-
-        $metadata = $this->buildMetadata('transactions', $filters, $wallet->name);
-        $metadata[] = 'Tahun: ' . $year;
-
-        $summary = array_merge($yearSummary, $formatRules, [
           'metadata' => $metadata,
+        ], $formatRules, [
           'include_description' => $filters['include_description'] ?? true,
+          'include_chart' => $filters['include_chart'] ?? true,
           'include_monthly_summary' => $filters['include_monthly_summary'] ?? true,
           'include_top5' => $filters['include_top5'] ?? true,
-          'include_chart' => $filters['include_chart'] ?? true,
           'include_category_expense' => $filters['include_category_expense'] ?? true,
         ]);
 
@@ -533,15 +628,12 @@ class ExportService
       }
     }
 
-    /**
-    * Ekspor transfer dikelompokkan per tahun.
-    */
     private function exportTransfersPerYear(
       GoogleSheetsService $googleService,
       string $spreadsheetId,
       array $transfers,
       array $filters,
-      Wallet $wallet,
+      Models\Wallet $wallet,
       array $formatRules
     ): void {
       $grouped = [];
@@ -555,7 +647,6 @@ class ExportService
       foreach ($grouped as $year => $yearData) {
         $sheetName = SpreadsheetManager::SHEET_TRANSFERS . ' ' . $year;
 
-        // Total transfer untuk tahun ini
         $total = 0;
         foreach ($yearData as $r) {
           $total += (float)($r['Jumlah'] ?? 0);
@@ -564,12 +655,12 @@ class ExportService
         $metadata = $this->buildMetadata('transfers', $filters, $wallet->name);
         $metadata[] = 'Tahun: ' . $year;
 
-        $summary = [
+        $summary = array_merge([
           'total' => $total,
           'metadata' => $metadata,
+        ], $formatRules, [
           'include_description' => $filters['include_description'] ?? true,
-        ];
-        $summary = array_merge($summary, $formatRules);
+        ]);
 
         $googleService->exportDataToSheet(
           $spreadsheetId, $sheetName, $yearData, true, $metadata, $summary, 'transfers'
@@ -577,41 +668,32 @@ class ExportService
       }
     }
 
-    /**
-    * Ekspor budget (satu sheet).
-    */
     private function exportBudgets(
       GoogleSheetsService $googleService,
       string $spreadsheetId,
       array $budgets,
       array $filters,
-      Wallet $wallet,
+      Models\Wallet $wallet,
       array $formatRules
     ): void {
       $sheetName = SpreadsheetManager::SHEET_BUDGETS;
       $metadata = $this->buildMetadata('budgets', $filters, $wallet->name);
 
-      $summary = [
-        'total_limit' => 0,
-        'total_spent' => 0,
-        'remaining' => 0,
-      ];
+      $totalLimit = 0;
+      $totalSpent = 0;
       if (!empty($budgets)) {
-        // Hitung summary dari data budget yang sudah di-fetch
-        $totalLimit = 0;
-        $totalSpent = 0;
         foreach ($budgets as $b) {
           $totalLimit += (float)($b['Limit'] ?? 0);
           $totalSpent += (float)($b['Pengeluaran'] ?? 0);
         }
-        $summary = [
-          'total_limit' => $totalLimit,
-          'total_spent' => $totalSpent,
-          'remaining' => $totalLimit - $totalSpent,
-        ];
       }
 
-      $summary = array_merge($summary, $formatRules, ['metadata' => $metadata]);
+      $summary = array_merge([
+        'total_limit' => $totalLimit,
+        'total_spent' => $totalSpent,
+        'remaining' => $totalLimit - $totalSpent,
+        'metadata' => $metadata,
+      ], $formatRules);
 
       $googleService->exportDataToSheet(
         $spreadsheetId, $sheetName, $budgets, true, $metadata, $summary, 'budgets'

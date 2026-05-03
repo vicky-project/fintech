@@ -21,6 +21,7 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
   protected string $type;
   protected array $data;
   protected array $summary;
+  protected ?string $customTitle = null;
 
   private array $headerStyle;
   private array $footerStyle;
@@ -28,10 +29,11 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
   private array $metadataStyle;
   private array $emptyStyle;
 
-  public function __construct(string $type, array $data, array $summary) {
+  public function __construct(string $type, array $data, array $summary, ?string $customTitle = null) {
     $this->type = $type;
     $this->data = $data;
     $this->summary = $summary;
+    $this->customTitle = $customTitle;
 
     $this->headerStyle = [
       'font' => ['bold' => true,
@@ -109,6 +111,10 @@ class ExcelDataExport implements WithHeadings, WithStyles, ShouldAutoSize, WithE
 
     public function title(): string
     {
+      if ($this->customTitle) {
+        return $this->customTitle;
+      }
+
       return match ($this->type) {
         'transactions' => 'Riwayat Transaksi',
         'transfers' => 'Riwayat Transfer',
