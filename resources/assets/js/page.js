@@ -2121,10 +2121,10 @@ function renderExportFilters(type) {
     <div id="filter-date-block" style="display:none;">
     <label class="form-label fw-semibold">Rentang Tanggal</label>
     <div class="row">
-    <div class="col">
+    <div class="col mb-2">
     <input type="date" class="form-control" id="filter-date-from">
     </div>
-    <div class="col">
+    <div class="col mb-2">
     <input type="date" class="form-control" id="filter-date-to">
     </div>
     </div>
