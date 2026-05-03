@@ -45,6 +45,7 @@ const Core = (() => {
     currentFilter: 'all',
     pendingAction: null,
     currentFilteredCategories: [],
+    googlePollInterval: null,
   };
 
   // ========== PRIVATE HELPERS ==========
@@ -382,6 +383,10 @@ const Core = (() => {
 
   function navigateTo(page) {
     state.currentPage = page;
+    if (state.googlePollInterval) {
+      clearInterval(state.googlePollInterval);
+      state.googlePollInterval = null;
+    }
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.page === page);
     });

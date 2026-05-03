@@ -72,35 +72,58 @@ async function handleGlobalClick(e) {
       modal.show();
     },
     'connect-google': async () => {
-      const res = await Core.api.get('/api/fintech/oauth/google/redirect');
-      if (!res.url) {
-        tgApp.showToast('Gagal mendapatkan URL otorisasi', 'danger');
-        return;
-      }
+      const btn = document.getElementById('btn-connect-google');
+      if (!btn) return;
 
-      // Buka popup kecil untuk proses auth
-      const width = 500,
-      height = 600;
-      const left = (screen.width - width) / 2;
-      const top = (screen.height - height) / 2;
-      const popup = window.open(res.url, 'google-oauth',
-        `width=${width},height=${height},left=${left},top=${top}`);
+      // Simpan teks asli tombol
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghubungkan...';
 
-      if (!popup) {
-        tgApp.showToast('Harap izinkan popup untuk menghubungkan akun Google', 'warning');
-        return;
-      }
-
-      // Polling: setelah popup tertutup, cek status koneksi
-      const pollInterval = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(pollInterval);
-          // Perbarui status di UI
-          checkGoogleConnection();
-          tgApp.showToast('Google berhasil terhubung!', 'success');
+      try {
+        // Dapatkan URL otorisasi
+        const res = await Core.api.get('/api/fintech/oauth/google/redirect');
+        if (!res.url) {
+          throw new Error('Gagal mendapatkan URL otorisasi');
         }
-      },
-        500);
+
+        // Buka URL menggunakan mekanisme Telegram jika tersedia
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(res.url);
+        } else {
+          // Fallback untuk browser biasa
+          window.open(res.url, '_blank');
+        }
+
+        // Mulai polling untuk mengecek status koneksi
+        let attempts = 0;
+        const maxAttempts = 15; // 15 kali × 2 detik = 30 detik timeout
+
+        const pollInterval = setInterval(async () => {
+          attempts++;
+          const connected = await checkGoogleConnection(); // perbarui UI jika sukses
+
+          if (connected) {
+            clearInterval(pollInterval);
+            tgApp.showToast('Akun Google berhasil terhubung!', 'success');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            // Pastikan badge "Terhubung" muncul (sudah di‑handle oleh checkGoogleConnection)
+          } else if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            tgApp.showToast('Proses menghubungkan gagal atau dibatalkan.', 'warning');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        },
+          2000);
+        Core.state.googlePollInterval = pollInterval;
+      } catch (error) {
+        tgApp.showToast(error.message || 'Gagal menghubungkan Google',
+          'danger');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
     },
     'backup-data': async () => {
       if (!confirm('Backup data sekarang ?')) return;

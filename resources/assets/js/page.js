@@ -2573,6 +2573,7 @@ async function checkGoogleConnection() {
     const res = await Core.api.get('/api/fintech/oauth/google/status');
     const btn = document.getElementById('btn-connect-google');
     const badge = document.getElementById('google-connected-badge');
+
     if (btn && badge) {
       if (res.connected) {
         btn.classList.add('d-none');

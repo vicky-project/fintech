@@ -39,6 +39,8 @@ class GoogleOAuthController extends Controller
   /**
   * Callback dari Google.
   */
+  // Modules/FinTech/Http/Controllers/Api/GoogleOAuthController.php
+
   public function callback(Request $request) {
     if (!$request->has('code') || !$request->has('state')) {
       return response('Parameter tidak lengkap.', 400);
@@ -86,27 +88,36 @@ class GoogleOAuthController extends Controller
       Log::warning('Gagal kirim notif Telegram: ' . $e->getMessage());
     }
 
-    // Tampilkan halaman yang otomatis tertutup
+    // Tampilkan halaman sukses yang dapat menutup sendiri setelah beberapa detik
     return response(<<<HTML
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <title>Google Terhubung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 60px; }
-        .success { font-size: 48px; }
-        .message { color: #4CAF50; font-size: 18px; margin-top: 16px; }
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .checkmark {
+            font-size: 64px;
+            color: #4CAF50;
+        }
     </style>
 </head>
 <body>
-    <div class="success">✅</div>
-    <div class="message">Akun Google berhasil terhubung!</div>
+    <div class="checkmark">✅</div>
+    <h2>Akun Google Berhasil Terhubung!</h2>
+    <p>Anda dapat menutup halaman ini.</p>
+    <button onclick="window.close()">Tutup Halaman</button>
     <script>
-        // Tutup halaman ini setelah 1.5 detik
+        // Tutup otomatis setelah 3 detik
         setTimeout(() => {
             window.close();
-        }, 1500);
+        }, 3000);
     </script>
 </body>
 </html>
