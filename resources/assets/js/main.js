@@ -176,6 +176,7 @@ async function handleGlobalClick(e) {
       const form = document.getElementById('formRestore');
       const formData = new FormData(form);
       const fileInput = form.querySelector('input[type="file"]');
+      const password = document.getElementById('restore-password').value || ''
 
       if (!fileInput.files.length) {
         tgApp.showToast('Pilih file terlebih dahulu', 'danger');
@@ -184,7 +185,7 @@ async function handleGlobalClick(e) {
 
       if (!confirm('Tindakan ini akan mengganti semua data lama Anda…')) return;
 
-      formData.append('password', document.getElementById('restore-password').value || '');
+      formData.append('password', password);
 
       const btn = document.getElementById('btn-upload-restore');
       const originalText = btn.innerHTML;
@@ -208,6 +209,7 @@ async function handleGlobalClick(e) {
         btn.disabled = false;
         btn.innerHTML = originalText;
         fileInput.value = '';
+        password.value = '';
       }
     },
     'switch-date-filter': switchDateFilter(target.dataset.filter),
