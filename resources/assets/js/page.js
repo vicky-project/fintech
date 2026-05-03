@@ -1116,6 +1116,7 @@ async function renderSettingsPage() {
   </div>
   <small class="text-muted">Ekspor data ke spreadsheet pribadi Anda.</small>
   </div>
+  </div>
 
   <!-- Panduan Keamanan Singkat -->
   <div class="card border-0 shadow-sm mb-4">
@@ -1134,7 +1135,6 @@ async function renderSettingsPage() {
   <i class="bi bi-chat-dots text-secondary me-2"></i> Laporkan masalah ke <strong>@${BOT_USERNAME}</strong>.
   </li>
   </ul>
-  </div>
   </div>
   </div>
 
