@@ -193,7 +193,6 @@ async function handleGlobalClick(e) {
 
       try {
         const result = await Core.upload('/api/fintech/backup/restore', formData);
-        tgApp.showToast(result.message || 'Data berhasil dipulihkan.', 'success');
         await Promise.all([
           Core.loadWallets(),
           Core.loadCategories(),
@@ -201,6 +200,7 @@ async function handleGlobalClick(e) {
         ]);
         Core.navigateTo('home');
 
+        tgApp.showToast(result.message || 'Data berhasil dipulihkan.', 'success');
         bootstrap.Modal.getInstance(document.getElementById('restoreModal'))?.hide();
       } catch (error) {
         tgApp.showToast(error.message || 'Gagal memulihkan data.', 'danger');
