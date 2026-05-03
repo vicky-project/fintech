@@ -41,49 +41,6 @@ class GoogleOAuthController extends Controller
   */
   public function callback(Request $request) {
     if (!$request->has('code') || !$request->has('state')) {
-      return response()->json(['error' => 'Parameter tidak lengkap.'], 400);
-    }
-
-    // Verifikasi state
-    $stateData = $this->decodeState($request->state);
-    if (!$stateData || !isset($stateData['telegram_id'])) {
-      return response()->json(['error' => 'State tidak valid.'], 400);
-    }
-
-    $telegramId = $stateData['telegram_id'];
-
-    // Cari user berdasarkan telegram_id
-    $user = TelegramUser::where('telegram_id', $telegramId)->first();
-    if (!$user) {
-      return response()->json(['error' => 'Pengguna tidak ditemukan.'], 404);
-    }
-
-    $client = $this->createClient();
-    $token = $client->fetchAccessTokenWithAuthCode($request->code);
-
-    if (isset($token['error'])) {
-      Log::error('Google OAuth gagal', $token);
-      return response()->json(['error' => 'Gagal mendapatkan token: ' . $token['error']], 500);
-    }
-
-    // Simpan token ke user_settings
-    $setting = UserSetting::firstOrNew(['user_id' => $user->id]);
-    $setting->google_access_token = $token['access_token'];
-    $setting->google_refresh_token = $token['refresh_token'] ?? null;
-    if (isset($token['expires_in'])) {
-      $setting->google_token_expires_at = now()->addSeconds($token['expires_in']);
-    }
-    $setting->save();
-
-    Log::info("Google OAuth berhasil untuk user {$user->id}");
-
-
-
-    return response()->json(['message' => 'Akun Google berhasil terhubung.']);
-  }
-
-  public function callback(Request $request) {
-    if (!$request->has('code') || !$request->has('state')) {
       return response('Parameter tidak lengkap.', 400);
     }
 
