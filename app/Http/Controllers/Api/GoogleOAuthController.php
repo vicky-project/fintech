@@ -112,7 +112,7 @@ class GoogleOAuthController extends Controller
       $telegramApi = app(TelegramApi::class);
       $telegramApi->sendMessage(
         chatId: $user->telegram_id,
-        text: "❌️ Akun Google Anda berhasil diputuskan!\nHubungkan kembali jika akan mengekspor ke Google Sheets."
+        text: "❌️ Akun Google Anda berhasil diputuskan!\nHubungkan kembali untuk mengekspor ke Google Sheets."
       );
     } catch (\Exception $e) {
       Log::warning('Gagal kirim notif Telegram: ' . $e->getMessage());
