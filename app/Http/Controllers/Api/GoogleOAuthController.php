@@ -111,7 +111,7 @@ class GoogleOAuthController extends Controller
     try {
       $telegramApi = app(TelegramApi::class);
       $telegramApi->sendMessage(
-        chatId: $telegramId,
+        chatId: $user->telegram_id,
         text: "❌️ Akun Google Anda berhasil diputuskan!\nHubungkan kembali jika akan mengekspor ke Google Sheets."
       );
     } catch (\Exception $e) {
