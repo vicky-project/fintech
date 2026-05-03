@@ -202,12 +202,6 @@ function handleGlobalChange(e) {
     },
     'change-budget-period': () => renderBudgetPeriodInput(),
     'change-transaction-type': () => updateTransactionCategoryFilter(),
-    'change-start-date': () => {
-      const endEl = document.getElementById('filter-date-to');
-      if (endEl && !endEl.value) {
-        endEl.value = new Date().toISOString().slice(0, 10);
-      }
-    },
     'change-export-format': () => {
       if (typeof toggleExportOptions === 'function') {
         toggleExportOptions();

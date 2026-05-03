@@ -2015,7 +2015,7 @@ function renderExportFilters(type) {
     <label class="form-label fw-semibold">Rentang Tanggal</label>
     <div class="row">
     <div class="col">
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
+    <input type="date" class="form-control" id="filter-date-from">
     </div>
     <div class="col">
     <input type="date" class="form-control" id="filter-date-to">
@@ -2090,6 +2090,10 @@ function renderExportFilters(type) {
     </div>`;
 
     container.innerHTML = html;
+    const dateTo = document.getElementById('filter-date-to');
+    if (dateTo) {
+      dateTo.value = new Date().toISOString().slice(0, 10);
+    }
     updateTransactionCategoryFilter();
     toggleExportOptions();
     updateExportFormatAvailability();
@@ -2119,6 +2123,10 @@ function renderExportFilters(type) {
     </div>`;
 
     container.innerHTML = html;
+    const dateTo = document.getElementById('filter-date-to');
+    if (dateTo) {
+      dateTo.value = new Date().toISOString().slice(0, 10);
+    }
     updateExportFormatAvailability();
     return;
   }
