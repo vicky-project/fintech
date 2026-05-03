@@ -77,6 +77,47 @@ class GoogleOAuthController extends Controller
 
     Log::info("Google OAuth berhasil untuk user {$user->id}");
 
+
+
+    return response()->json(['message' => 'Akun Google berhasil terhubung.']);
+  }
+
+  public function callback(Request $request) {
+    if (!$request->has('code') || !$request->has('state')) {
+      return response('Parameter tidak lengkap.', 400);
+    }
+
+    $stateData = $this->decodeState($request->state);
+    if (!$stateData || !isset($stateData['telegram_id'])) {
+      return response('State tidak valid.', 400);
+    }
+
+    $telegramId = $stateData['telegram_id'];
+    $user = TelegramUser::where('telegram_id', $telegramId)->first();
+
+    if (!$user) {
+      return response('Pengguna tidak ditemukan.', 404);
+    }
+
+    $client = $this->createClient();
+    $token = $client->fetchAccessTokenWithAuthCode($request->code);
+
+    if (isset($token['error'])) {
+      Log::error('Google OAuth gagal', $token);
+      return response('Gagal mendapatkan token: ' . $token['error'], 500);
+    }
+
+    // Simpan token
+    $setting = UserSetting::firstOrNew(['user_id' => $user->id]);
+    $setting->google_access_token = $token['access_token'];
+    $setting->google_refresh_token = $token['refresh_token'] ?? null;
+    if (isset($token['expires_in'])) {
+      $setting->google_token_expires_at = now()->addSeconds($token['expires_in']);
+    }
+    $setting->save();
+
+    Log::info("Google OAuth berhasil untuk user {$user->id}");
+
     // Kirim pesan sukses via Telegram
     try {
       $telegramApi = app(TelegramApi::class);
@@ -88,8 +129,32 @@ class GoogleOAuthController extends Controller
       Log::warning('Gagal kirim notif Telegram: ' . $e->getMessage());
     }
 
-    return response()->json(['message' => 'Akun Google berhasil terhubung.']);
-  }
+    // Tampilkan halaman yang otomatis tertutup
+    return response(<<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Google Terhubung</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 60px; }
+        .success { font-size: 48px; }
+        .message { color: #4CAF50; font-size: 18px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="success">✅</div>
+    <div class="message">Akun Google berhasil terhubung!</div>
+    <script>
+        // Tutup halaman ini setelah 1.5 detik
+        setTimeout(() => {
+            window.close();
+        }, 1500);
+    </script>
+</body>
+</html>
+HTML);
+}
 
   /**
   * Cek status koneksi Google user.

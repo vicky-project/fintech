@@ -73,13 +73,34 @@ async function handleGlobalClick(e) {
     },
     'connect-google': async () => {
       const res = await Core.api.get('/api/fintech/oauth/google/redirect');
-      if (res.url) {
-        if (window.Telegram?.WebApp?.openLink) {
-          window.Telegram.WebApp.openLink(res.url);
-        } else {
-          window.open(res.url, '_blank');
-        }
+      if (!res.url) {
+        tgApp.showToast('Gagal mendapatkan URL otorisasi', 'danger');
+        return;
       }
+
+      // Buka popup kecil untuk proses auth
+      const width = 500,
+      height = 600;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+      const popup = window.open(res.url, 'google-oauth',
+        `width=${width},height=${height},left=${left},top=${top}`);
+
+      if (!popup) {
+        tgApp.showToast('Harap izinkan popup untuk menghubungkan akun Google', 'warning');
+        return;
+      }
+
+      // Polling: setelah popup tertutup, cek status koneksi
+      const pollInterval = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollInterval);
+          // Perbarui status di UI
+          checkGoogleConnection();
+          tgApp.showToast('Google berhasil terhubung!', 'success');
+        }
+      },
+        500);
     },
     'backup-data': async () => {
       if (!confirm('Backup data sekarang ?')) return;
