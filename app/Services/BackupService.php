@@ -117,8 +117,10 @@ class BackupService
 
       $chipertext = base64_decode($decoded['data']);
       $content = $this->decrypt($chipertext, $password);
-    } else {
-      $content = @gzdecode($content) ?: $content;
+    }
+    $decompressed = @gzdecode($content);
+    if ($decompressed !== false) {
+      $content = $decompressed;
     }
 
     $backup = json_decode($content, true);
