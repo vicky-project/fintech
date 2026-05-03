@@ -199,6 +199,47 @@ async function handleGlobalClick(e) {
       }
     },
     'switch-date-filter': switchDateFilter(target.dataset.filter),
+    'show-info': () => {
+      const infoType = target.dataset.info;
+      let title = '',
+      body = '';
+
+      switch (infoType) {
+        case 'pin':
+          title = 'Keamanan PIN';
+          body = `
+          <p>PIN melindungi transaksi sensitif seperti restore data.</p>
+          <p class="mb-0">Tanpa PIN, siapa pun yang memiliki akses ke token login dapat memulihkan data Anda.</p>
+          `;
+          break;
+        case 'backup':
+          title = 'File Backup';
+          body = `
+          <p>File backup berisi <strong>seluruh data keuangan Anda</strong>.</p>
+          <p>Simpan di tempat aman, jangan bagikan ke siapa pun.</p>
+          <p class="mb-0">Restore akan menghapus data saat ini.</p>
+          `;
+          break;
+        case 'token':
+          title = 'Lindungi Token';
+          body = `
+          <p>Token adalah kunci akses akun Anda.</p>
+          <p class="mb-0">Jangan bagikan token atau screenshot yang memuat token.</p>
+          `;
+          break;
+        case 'backup_security':
+          title = 'Keamanan Backup';
+          body = `
+          <p>Simpan file backup di penyimpanan cloud pribadi dengan autentikasi dua faktor.</p>
+          <p class="mb-0">Hindari mengirim file backup melalui chat publik.</p>
+          `;
+          break;
+      }
+
+      document.getElementById('infoModalTitle').textContent = title;
+      document.getElementById('infoModalBody').innerHTML = body;
+      new bootstrap.Modal(document.getElementById('infoModal')).show();
+    },
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {
