@@ -1983,6 +1983,11 @@ function renderExportFilters(type) {
     <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
     <input type="date" class="form-control" id="filter-date-to">
     </div>
+    <div class="col">
+    <label for="filter-year" class="form-label">Tahun</label>
+    <input type="year" class="form-control" id="filter-year"
+    min="2000" max="${new Date().getFullYear()}" step="1">
+    </div>
     </div>`;
     container.innerHTML = html;
     updateExportFormatAvailability();
@@ -2005,6 +2010,11 @@ function renderExportFilters(type) {
     <div class="mb-3">
     <label for="filter-month" class="form-label">Atau Bulan (abaikan rentang tanggal)</label>
     <input type="month" class="form-control" id="filter-month">
+    </div>
+    <div class="mb-3">
+    <label for="filter-year" class="form-label">Atau Tahun (abaikan bulan)</label>
+    <input type="year" class="form-control" id="filter-year"
+    min="2000" max="${new Date().getFullYear()}" step="1">
     </div>
     <div class="mb-3">
     <label for="filter-type" class="form-label">Tipe Transaksi</label>
@@ -2099,6 +2109,11 @@ function renderExportFilters(type) {
     <div class="col">
     <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
     <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    <div class="col">
+    <label for="filter-year" class="form-label">Tahun</label>
+    <input type="year" class="form-control" id="filter-year"
+    min="2000" max="${new Date().getFullYear()}" step="1">
     </div>
     </div>
     <div class="accordion mb-3" id="advancedAccordion">
@@ -2333,11 +2348,12 @@ async function performExport() {
     if (type === 'all') {
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
       payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
-      // backend default include_chart, include_monthly_summary, include_description = true
+      payload.year = document.getElementById('filter-year')?.value || undefined;
     } else if (type === 'transactions') {
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
       payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
       payload.month = document.getElementById('filter-month')?.value || undefined;
+      payload.year = document.getElementById('filter-year')?.value || undefined;
       payload.transaction_type = document.getElementById('filter-type')?.value || undefined;
       payload.include_description = document.getElementById('include-description')?.checked ?? true;
       const hiddenSelect = document.getElementById('filter-category-hidden');
@@ -2359,6 +2375,7 @@ async function performExport() {
     } else if (type === 'transfers') {
       payload.date_from = document.getElementById('filter-date-from')?.value || undefined;
       payload.date_to = document.getElementById('filter-date-to')?.value || undefined;
+      payload.year = document.getElementById('filter-year')?.value || undefined;
       payload.include_description = document.getElementById('include-description')?.checked ?? true;
     } else if (type === 'budgets') {
       const periodTypeEl = document.getElementById('filter-period-type');

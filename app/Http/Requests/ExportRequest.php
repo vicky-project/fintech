@@ -41,6 +41,8 @@ class ExportRequest extends FormRequest
         'after_or_equal:date_from'],
       'month' => ['nullable',
         'date_format:Y-m'],
+      'year' => ['nullable',
+        'date_format:Y'],
 
       // Transactions
       'transaction_type' => ['nullable',
