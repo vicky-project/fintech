@@ -7,14 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use Modules\FinTech\Models\UserSetting;
+use Modules\FinTech\Models;
 use Modules\FinTech\Http\Requests\UserSettingsRequest;
 
 class SettingController extends Controller
 {
   public function show(Request $request): JsonResponse
   {
-    $settings = UserSetting::firstOrCreate(
+    $settings = Models\UserSetting::firstOrCreate(
       ['user_id' => $request->user()->id],
       [
         'default_currency' => config('fintech.default_currency', 'IDR'),
@@ -30,7 +30,7 @@ class SettingController extends Controller
 
   public function update(UserSettingsRequest $request): JsonResponse
   {
-    $settings = UserSetting::updateOrCreate(
+    $settings = Models\UserSetting::updateOrCreate(
       ['user_id' => $request->user()->id],
       $request->validatedSettings()
     );
@@ -49,7 +49,7 @@ class SettingController extends Controller
 
     try {
       $user = $request->user();
-      $settings = UserSetting::firstOrCreate(
+      $settings = Models\UserSetting::firstOrCreate(
         ['user_id' => $user->id],
         [
           'default_currency' => config('fintech.default_currency', 'IDR')
@@ -110,5 +110,38 @@ class SettingController extends Controller
         'message' => 'Internal Server Error'
       ], 500);
     }
+  }
+
+  public function destroy(): JsonResponse
+  {
+    $user = request()->user();
+
+    if (!$user instanceof TelegramUser) {
+      abort(401, 'Unauthorized');
+    }
+
+    DB::transaction(function () use ($user) {
+      // 1. Hapus dari tabel child ke parent
+      Models\Notification::where('user_id', $user->id)->delete();
+      Models\StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id', $user->id))->delete();
+      Models\BankStatement::where('user_id', $user->id)->delete();
+      Models\Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))->delete();
+      Models\Transfer::whereHas('toWallet', fn($q) => $q->where('user_id', $user->id))->delete();
+      Models\Budget::where('user_id', $user->id)->delete();
+      Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))->delete();
+      Models\UserSetting::where('user_id', $user->id)->delete();
+      Models\Wallet::where('user_id', $user->id)->delete();
+
+      // 2. Hapus token Sanctum
+      $user->tokens()->delete();
+
+      // 3. Hapus user
+      $user->delete();
+    });
+
+    return response()->json([
+      'success' => true,
+      'message' => 'Akun dan seluruh data Anda telah dihapus permanen.',
+    ]);
   }
 }

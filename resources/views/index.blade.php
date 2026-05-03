@@ -304,6 +304,34 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal Konfirmasi Hapus Akun -->
+  <div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Konfirmasi Penghapusan</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Anda akan menghapus <strong>semua data keuangan Anda</strong> secara permanen.
+          </p>
+          <p>
+            Ketik <strong>HAPUS</strong> di bawah untuk melanjutkan:
+          </p>
+          <input type="text" class="form-control" id="delete-confirm-input" placeholder="Ketik HAPUS">
+          <small class="text-muted">Pastikan Anda sudah membackup data jika diperlukan.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger" id="btn-delete-account-confirm" disabled>
+            <i class="bi bi-trash me-1"></i> Hapus Permanen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {{-- Modals --}}

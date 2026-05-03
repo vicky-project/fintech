@@ -251,6 +251,12 @@ async function handleGlobalClick(e) {
       document.getElementById('infoModalBody').innerHTML = body;
       new bootstrap.Modal(document.getElementById('infoModal')).show();
     },
+    'delete-account': () => {
+      const modal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
+      modal.show();
+      document.getElementById('delete-confirm-input').value = '';
+      document.getElementById('btn-delete-account-confirm').disabled = true;
+    },
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {

@@ -53,6 +53,8 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
 
   Route::get('insights/full', [InsightController::class, 'fullAnalysis']);
 
+  Route::delete('setting/account/delete', [SettingController::class 'destroy']);
+
   // ==================== WALLETS ====================
   Route::apiResource('wallets', WalletController::class)->names('wallets');
 

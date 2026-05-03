@@ -1138,6 +1138,21 @@ async function renderSettingsPage() {
   </div>
   </div>
 
+  <!-- Hapus Akun -->
+  <div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 pt-3 px-3">
+  <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-exclamation-octagon me-2"></i>Hapus Akun</h6>
+  </div>
+  <div class="card-body px-3 pt-0">
+  <p class="small text-muted">
+  Menghapus akun akan menghapus <strong>seluruh data Anda secara permanen</strong>. Tindakan ini tidak dapat dibatalkan.
+  </p>
+  <button class="btn btn-outline-danger w-100" data-action="delete-account">
+  <i class="bi bi-trash me-1"></i> Hapus Akun Saya
+  </button>
+  </div>
+  </div>
+
   <!-- Modal Informasi -->
   <div class="modal fade" id="infoModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
