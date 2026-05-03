@@ -1,4 +1,5 @@
 <?php
+
 namespace Modules\FinTech\Jobs;
 
 use Illuminate\Bus\Queueable;
@@ -13,12 +14,15 @@ class CreateBackupJob implements ShouldQueue
   use Dispatchable,
   Queueable;
 
-  public function __construct(protected TelegramUser $user) {}
+  public function __construct(
+    protected TelegramUser $user,
+    protected ?string $password = null
+  ) {}
 
   public function handle(BackupService $backupService, TelegramApi $telegramApi): void
   {
-    // 1. Generate backup
-    $backupGzip = $backupService->export($this->user);
+    // 1. Generate backup (bisa terenkripsi)
+    $backupGzip = $backupService->export($this->user, $this->password);
 
     // 2. Simpan ke file temp
     $filename = sprintf('backup_%s_%s.json.gz', $this->user->telegram_id, now()->format('YmdHis'));
@@ -31,10 +35,15 @@ class CreateBackupJob implements ShouldQueue
     file_put_contents($tempPath, $backupGzip);
 
     // 3. Kirim via TelegramApi
+    $caption = '✅ Backup data keuangan Anda berhasil dibuat.';
+    if ($this->password) {
+      $caption .= "\n\n🔒 File ini dienkripsi dengan password. Simpan password Anda dengan aman.";
+    }
+
     $telegramApi->sendDocument(
       chatId: $this->user->telegram_id,
       filePath: $tempPath,
-      caption: '✅ Backup data keuangan Anda berhasil dibuat.',
+      caption: $caption,
     );
 
     // 4. Hapus file temp

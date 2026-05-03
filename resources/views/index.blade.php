@@ -219,6 +219,29 @@
     </div>
   </div>
 
+  <!-- Modal Backup -->
+  <div class="modal fade" id="backupPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title">🔒 Enkripsi Backup (opsional)</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small">
+            Lindungi file backup dengan password. Anda harus mengingat password ini untuk restore.
+          </p>
+          <input type="password" class="form-control" id="backup-password" placeholder="Password (min. 4 karakter)" minlength="4">
+          <small class="text-muted">Kosongkan jika tidak ingin mengenkripsi.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary" id="btn-backup-confirm">Backup Sekarang</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Restore -->
   <div class="modal fade" id="restoreModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -232,12 +255,19 @@
           <p class="text-muted">
             Pilih file backup (.json.gz) yang sebelumnya Anda unduh untuk mengembalikan semua data keuangan.
           </p>
-          <div class="mb-3">
-            <form id="formRestore">
+          <form id="formRestore">
+            <div class="mb-3">
               <input class="form-control" type="file" name="backup_file" id="restore-file-input" data-action="restore-input-change">
               <small class="text-muted mt-1 d-block">File harus merupakan backup dari akun Telegram Anda.</small>
-            </form>
-          </div>
+            </div>
+            <div class="mb-3">
+              <input class="form-control" type="file" id="restore-file-input" accept=".json.gz,.json">
+            </div>
+            <div class="mb-3">
+              <input type="password" class="form-control" id="restore-password" placeholder="Password (jika file terenkripsi)" minlength="4">
+              <span class="small text-muted mb-0">Kosongkan jika tidak dilindungi password</span>
+            </div>
+          </form>
         </div>
         <div class="modal-footer border-0 pt-0">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>

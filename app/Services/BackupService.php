@@ -3,17 +3,7 @@
 namespace Modules\FinTech\Services;
 
 use Modules\Telegram\Models\TelegramUser;
-use Modules\FinTech\Models\ {
-  Wallet,
-  Transaction,
-  Category,
-  Budget,
-  Transfer,
-  BankStatement,
-  StatementTransaction,
-  Notification,
-  UserSetting
-};
+use Modules\FinTech\Models;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -22,63 +12,63 @@ class BackupService
   /**
   * Ekspor seluruh data user menjadi string JSON terkompresi (gzip).
   */
-  public function export(TelegramUser $user): string
+  public function export(TelegramUser $user, ?string $password = null): string
   {
     $catIds = $this->getUsedCategoryIds($user);
 
     // Kategori: export mentah semua kolom
     $categories = $this->exportTable(
       'fintech_categories',
-      Category::whereIn('id', $catIds)
+      Models\Category::whereIn('id', $catIds)
     );
 
     // Wallet: export mentah, tanpa eager load currencyDetails
     $wallets = $this->exportTable(
       'fintech_wallets',
-      Wallet::where('user_id', $user->id)->without('currencyDetails')
+      Models\Wallet::where('user_id', $user->id)->without('currencyDetails')
     );
 
     // Transactions: export mentah
     $transactions = $this->exportTable(
       'fintech_transactions',
-      Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
+      Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
     );
 
     // Transfers: export mentah
     $transfers = $this->exportTable(
       'fintech_transfers',
-      Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
+      Models\Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
       ->orWhereHas('toWallet', fn($q) => $q->where('user_id', $user->id))
     );
 
     // Budgets: export mentah
     $budgets = $this->exportTable(
       'fintech_budgets',
-      Budget::where('user_id', $user->id)
+      Models\Budget::where('user_id', $user->id)
     );
 
     // Bank Statements
     $bankStatements = $this->exportTable(
       'fintech_bank_statements',
-      BankStatement::where('user_id', $user->id)
+      Models\BankStatement::where('user_id', $user->id)
     );
 
     // Statement Transactions
     $statementTransactions = $this->exportTable(
       'fintech_statement_transactions',
-      StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id', $user->id))
+      Models\StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id', $user->id))
     );
 
     // Notifications
     $notifications = $this->exportTable(
       'fintech_notifications',
-      Notification::where('user_id', $user->id)
+      Models\Notification::where('user_id', $user->id)
     );
 
     // User Settings
     $userSettings = $this->exportTable(
       'fintech_user_settings',
-      UserSetting::where('user_id', $user->id)
+      Models\UserSetting::where('user_id', $user->id)
     );
 
     $data = [
@@ -99,20 +89,39 @@ class BackupService
     ];
 
     $json = json_encode($data, JSON_PRETTY_PRINT);
-    return gzencode($json, 9);
+    $compressed = gzencode($json, 9);
+
+    if ($password) {
+      $encrypted = $this->encrypt($compressed, $password);
+      return json_encode([
+        'version' => '2.0',
+        'encrypted' => true,
+        'data' => base64_encode($encrypted)
+      ]);
+    }
+
+    return $compressed;
   }
 
   /**
   * Impor data dari file backup ke database user.
   */
-  public function import(TelegramUser $user, string $content): void
+  public function import(TelegramUser $user, string $content, ?string $password = null): void
   {
-    $decoded = @gzdecode($content);
-    if ($decoded === false) {
-      $decoded = $content;
+    $decoded = json_decode($content, true);
+
+    if (is_array($decoded) && isset($decoded['encrypted']) && $decoded['encrypted'] === true) {
+      if (!$password) {
+        throw new \Exception('File backup ini terenkripsi. Mohon masukan password untuk membukanya.');
+      }
+
+      $chipertext = base64_decode($decoded['data']);
+      $content = $this->decrypt($chipertext, $password);
+    } else {
+      $content = @gzdecode($content) ?: $content;
     }
 
-    $backup = json_decode($decoded, true);
+    $backup = json_decode($content, true);
     if (!$backup) {
       throw new \Exception('File backup tidak valid (format JSON rusak).');
     }
@@ -201,12 +210,12 @@ class BackupService
 
   private function getUsedCategoryIds(TelegramUser $user): array
   {
-    return Transaction::whereHas('wallet', fn($q) => $q->where('user_id',
+    return Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id',
       $user->id))
     ->pluck('category_id')
-    ->merge(Budget::where('user_id',
+    ->merge(Models\Budget::where('user_id',
       $user->id)->pluck('category_id'))
-    ->merge(StatementTransaction::whereHas('statement',
+    ->merge(Models\StatementTransaction::whereHas('statement',
       fn($q) => $q->where('user_id', $user->id))->pluck('category_id'))
     ->unique()
     ->filter()
@@ -216,19 +225,19 @@ class BackupService
 
   private function clearUserData(TelegramUser $user): void
   {
-    Notification::where('user_id', $user->id)->delete();
-    StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id',
+    Models\Notification::where('user_id', $user->id)->delete();
+    Models\StatementTransaction::whereHas('statement', fn($q) => $q->where('user_id',
       $user->id))->delete();
-    BankStatement::where('user_id', $user->id)->delete();
-    Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id',
+    Models\BankStatement::where('user_id', $user->id)->delete();
+    Models\Transfer::whereHas('fromWallet', fn($q) => $q->where('user_id',
       $user->id))->delete();
-    Transfer::whereHas('toWallet', fn($q) => $q->where('user_id',
+    Models\Transfer::whereHas('toWallet', fn($q) => $q->where('user_id',
       $user->id))->delete();
-    Budget::where('user_id', $user->id)->delete();
-    Transaction::whereHas('wallet', fn($q) => $q->where('user_id',
+    Models\Budget::where('user_id', $user->id)->delete();
+    Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id',
       $user->id))->delete();
-    UserSetting::where('user_id', $user->id)->delete();
-    Wallet::where('user_id', $user->id)->delete();
+    Models\UserSetting::where('user_id', $user->id)->delete();
+    Models\Wallet::where('user_id', $user->id)->delete();
   }
 
   private function restoreCategories(array $categories): array
@@ -312,5 +321,34 @@ class BackupService
     foreach (array_chunk($inserts, 1000) as $chunk) {
       DB::table($table)->insert($chunk);
     }
+  }
+
+  /**
+  * Enkripsi data dengan AES‑256‑CBC menggunakan password.
+  * @return string iv + ciphertext (16 byte pertama adalah IV)
+  */
+  private function encrypt(string $data, string $password): string
+  {
+    $iv = random_bytes(16);
+    $key = hash('sha256', $password, true);
+    $encrypted = openssl_encrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+    return $iv . $encrypted;
+  }
+
+  /**
+  * Dekripsi data yang dihasilkan oleh encrypt().
+  * @throws \Exception jika password salah atau data rusak
+  */
+  private function decrypt(string $data, string $password): string
+  {
+    $iv = substr($data, 0, 16);
+    $ciphertext = substr($data, 16);
+    $key = hash('sha256', $password, true);
+    $plain = openssl_decrypt($ciphertext, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+
+    if ($plain === false) {
+      throw new \Exception('Password salah atau file backup rusak.');
+    }
+    return $plain;
   }
 }

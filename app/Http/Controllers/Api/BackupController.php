@@ -30,26 +30,33 @@ class BackupController extends Controller
       abort(401, 'Unauthorized');
     }
 
+    $password = $request->input('password');
+    if ($password !== null) {
+      $request->validate([
+        'password' => 'string|min:4|max:100'
+      ]);
+    }
+
     // Jika data besar, gunakan queue agar respons cepat
     if ($this->shouldUseQueue($user)) {
-      CreateBackupJob::dispatch($user);
+      CreateBackupJob::dispatch($user, $password);
       return response()->json([
         'success' => true,
         'message' => 'Permintaan backup diterima. File akan dikirim ke chat Anda.',
       ]);
     }
 
-    return $this->processBackup($user);
+    return $this->processBackup($user, $password);
   }
 
   /**
   * Proses backup sebenarnya: generate file, simpan, kirim, hapus.
   */
-  protected function processBackup(TelegramUser $user): \Illuminate\Http\JsonResponse
+  protected function processBackup(TelegramUser $user, ?string $password = null): \Illuminate\Http\JsonResponse
   {
     try {
-      // 1. Hasilkan konten backup (gzip)
-      $backupGzip = $this->backupService->export($user);
+      // 1. Hasilkan konten backup (gzip, bisa terenkripsi jika ada password)
+      $backupGzip = $this->backupService->export($user, $password);
 
       // 2. Simpan ke file sementara
       $filename = sprintf('backup_%s_%s.json.gz', $user->telegram_id, now()->format('YmdHis'));
@@ -62,13 +69,18 @@ class BackupController extends Controller
       file_put_contents($tempPath, $backupGzip);
 
       // 3. Kirim via TelegramApi
+      $caption = '✅ Backup data keuangan Anda berhasil dibuat.';
+      if ($password) {
+        $caption .= "\n\n🔒 File ini dienkripsi dengan password. Simpan password Anda dengan aman.";
+      }
+
       $sent = $this->telegramApi->sendDocument(
         chatId: $user->telegram_id,
         filePath: $tempPath,
-        caption: '✅ Backup data keuangan Anda berhasil dibuat.',
+        caption: $caption,
       );
 
-      // 4. Hapus file lokal (selesai dikirim)
+      // 4. Hapus file lokal
       if (file_exists($tempPath)) {
         unlink($tempPath);
       }
@@ -85,7 +97,6 @@ class BackupController extends Controller
         ], 500);
       }
     } catch (\Exception $e) {
-      // Optional: hapus file jika masih ada
       if (isset($tempPath) && file_exists($tempPath)) {
         unlink($tempPath);
       }
@@ -129,7 +140,9 @@ class BackupController extends Controller
             !in_array($ext, ['gz', 'json'])) {
             $fail('Format file tidak didukung. Gunakan .json atau .json.gz');
           }
-        }]
+        },
+        'password' => 'nullable|string|min:4|max:100'
+      ]
     ],
       [
         'backup_file.required' => 'File backup wajib diunggah.',
@@ -138,10 +151,14 @@ class BackupController extends Controller
 
     $file = $request->file('backup_file');
     $content = file_get_contents($file->getRealPath());
+    $password = $request->input('password');
 
     try {
-      $this->backupService->import($user,
-        $content);
+      $this->backupService->import(
+        $user,
+        $content,
+        $password
+      );
       return response()->json([
         'success' => true,
         'message' => '✅ Data berhasil dipulihkan. Semua data keuangan Anda telah dikembalikan.',

@@ -147,17 +147,27 @@ async function handleGlobalClick(e) {
       }
     },
     'backup-data': async () => {
-      if (!confirm('Backup data sekarang ?')) return;
+      // Tampilkan modal password opsional
+      const modal = new bootstrap.Modal(document.getElementById('backupPasswordModal'));
+      modal.show();
 
-      tgApp.showLoading('Memproses permintaan...');
-      try {
-        const res = await Core.api.post('/api/fintech/backup/send');
-        tgApp.showToast(res.message, res.success ? 'success': 'warning');
-      } catch(error) {
-        tgApp.showToast(error.message || 'Server error', 'danger');
-      } finally {
-        tgApp.hideLoading();
-      }
+      // Ketika tombol "Backup Sekarang" ditekan
+      document.getElementById('btn-backup-confirm').onclick = async () => {
+        const password = document.getElementById('backup-password').value || null;
+        modal.hide();
+
+        tgApp.showLoading('Membuat backup...');
+        try {
+          const res = await Core.api.post('/api/backup/send', {
+            password
+          });
+          tgApp.showToast(res.message, 'success');
+        } catch (error) {
+          tgApp.showToast(error.message || 'Gagal', 'danger');
+        } finally {
+          tgApp.hideLoading();
+        }
+      };
     },
     'restore-modal': () => {
       new bootstrap.Modal(document.getElementById('restoreModal')).show();
@@ -173,6 +183,8 @@ async function handleGlobalClick(e) {
       }
 
       if (!confirm('Tindakan ini akan mengganti semua data lama Anda…')) return;
+
+      formData.append('password', document.getElementById('restore-password').value || '');
 
       const btn = document.getElementById('btn-upload-restore');
       const originalText = btn.innerHTML;
