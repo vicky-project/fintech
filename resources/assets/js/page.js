@@ -1046,7 +1046,7 @@ async function renderSettingsPage() {
   <i class="bi bi-shield-lock-fill text-primary me-2 mt-1 fs-5"></i>
   <div>
   <strong>Lindungi data Anda</strong><br>
-  <small>PIN mencegah restore data tanpa izin. Aktifkan untuk keamanan lebih.</small>
+  <small>PIN mencegah akses aplikasi dan restore data tanpa izin. Aktifkan untuk keamanan lebih.</small>
   </div>
   </div>
 

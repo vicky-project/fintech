@@ -209,8 +209,8 @@ async function handleGlobalClick(e) {
           title = 'Mengapa PIN Penting?';
           body = `
           <p>Restore data akan <strong>menghapus seluruh data Anda saat ini</strong> dan menggantinya dengan data dari file backup.</p>
-          <p>Tanpa PIN, siapa pun yang memegang token login Anda dapat melakukan restore. Aktifkan PIN untuk mencegah hal ini.</p>
-          <p class="mb-0">Anda akan diminta PIN setiap kali melakukan restore data.</p>
+          <p>Tanpa PIN, siapa pun yang memegang perangkat login Anda dapat melakukan perubahan data, penghapusan data, dan restore data. Aktifkan PIN untuk mencegah hal ini.</p>
+          <p class="mb-0">Anda akan diminta PIN setiap kali mengakses aplikasi atau melakukan restore data.</p>
           `;
           break;
         case 'pin_guide':
@@ -227,7 +227,8 @@ async function handleGlobalClick(e) {
           <p>File backup berisi <strong>seluruh data keuangan Anda</strong> (dompet, transaksi, budget, dll).</p>
           <p>Simpan di tempat aman dan jangan bagikan ke siapa pun.</p>
           <p>Restore hanya bisa dilakukan ke akun Telegram yang sama.</p>
-          <p class="mb-0">Restore akan <strong>menghapus data saat ini</strong>. Pastikan Anda sudah backup terlebih dahulu.</p>
+          <p>Restore akan <strong>menghapus data saat ini</strong>. Pastikan Anda sudah backup terlebih dahulu.</p>
+          <p class="mb-0">Aktifkan PIN untuk mencegah restore data tanpa izin.</p>
           `;
           break;
       }
