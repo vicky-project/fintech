@@ -33,7 +33,7 @@ class WalletRequest extends FormRequest
       ],
       'initial_balance' => [
         $wallet ? 'prohibited' : 'sometimes',
-        'numeric',
+        'integer',
         'min:0'
       ],
       'description' => 'nullable|string|max:255',

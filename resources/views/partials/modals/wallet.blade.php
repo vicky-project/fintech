@@ -21,7 +21,10 @@
           </div>
           <div class="mb-3" id="initial-balance-group">
             <label class="form-label">Saldo Awal</label>
-            <input type="number" class="form-control" name="initial_balance" step="0.01" min="0" value="0">
+            <input type="number" class="form-control" name="initial_balance"
+            step="1" min="0" value="0"
+            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+            title="Masukkan angka tanpa desimal">
           </div>
           <div class="mb-3">
             <label class="form-label">Deskripsi</label>
@@ -89,6 +92,13 @@
     const form = document.getElementById('walletForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    if (!data.id && data.initial_balance !== undefined) {
+      if (!/^\d+$/.test(data.initial_balance)) {
+        tgApp.showToast("Saldo awal harus berupa angka tanpa desimal", 'warning');
+        return;
+      }
+      data.initial_balance = parseInt(data.initial_balance, 10);
+    }
     const id = data.id;
     const isEdit = !!id;
 
