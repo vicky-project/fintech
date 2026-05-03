@@ -317,10 +317,7 @@ async function initializeApp() {
     overlay.innerHTML = `<div class="text-center"><div class="spinner-border text-primary mb-3"></div><p class="text-muted">Memuat data keuangan...</p></div>`;
 
     // 1. Load pengaturan user
-    await Core.loadUserSettings().catch(() => {
-      tgApp.showToast('Gagal memuat pengaturan, menggunakan default',
-        'warning');
-    });
+    await Core.loadUserSettings();
 
     // 2. Cek PIN jika diperlukan
     const pinOk = await Core.checkPinRequired();
