@@ -1050,13 +1050,13 @@ async function renderSettingsPage() {
   <small class="text-muted d-block">Hubungkan akun Google untuk ekspor langsung ke Sheets.</small>
   </div>
   <div class="d-flex align-items-center gap-2">
-  <button id="btn-connect-google" class="btn btn-outline-danger btn-sm d-none" data-action="connect-google">
+  <button id="btn-connect-google" class="btn btn-outline-success btn-sm d-none" data-action="connect-google">
   <i class="bi bi-link-45deg"></i> Hubungkan
   </button>
   <span id="google-connected-badge" class="badge bg-success d-none">
   <i class="bi bi-check-circle"></i> Terhubung
   </span>
-  <button id="btn-disconnect-google" class="btn btn-outline-secondary btn-sm d-none" data-action="disconnect-google">
+  <button id="btn-disconnect-google" class="btn btn-outline-danger btn-sm d-none" data-action="disconnect-google">
   <i class="bi bi-unlink"></i> Putuskan
   </button>
   </div>
