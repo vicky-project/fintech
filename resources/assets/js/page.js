@@ -1049,12 +1049,16 @@ async function renderSettingsPage() {
   <i class="bi bi-google me-2"></i> Google Sheets
   <small class="text-muted d-block">Hubungkan akun Google untuk ekspor langsung ke Sheets.</small>
   </div>
+  <div class="d-flex align-items-center gap-2">
   <button id="btn-connect-google" class="btn btn-outline-danger btn-sm d-none" data-action="connect-google">
   <i class="bi bi-link-45deg"></i> Hubungkan
   </button>
   <span id="google-connected-badge" class="badge bg-success d-none">
   <i class="bi bi-check-circle"></i> Terhubung
   </span>
+  <button id="btn-disconnect-google" class="btn btn-outline-secondary btn-sm d-none" data-action="disconnect-google">
+  <i class="bi bi-unlink"></i> Putuskan
+  </button>
   </div>
   </div>
   </div>
@@ -2571,16 +2575,19 @@ async function performExport() {
 async function checkGoogleConnection() {
   try {
     const res = await Core.api.get('/api/fintech/oauth/google/status');
-    const btn = document.getElementById('btn-connect-google');
+    const btnConnect = document.getElementById('btn-connect-google');
     const badge = document.getElementById('google-connected-badge');
+    const btnDisconnect = document.getElementById('btn-disconnect-google');
 
-    if (btn && badge) {
+    if (btnConnect && badge && btnDisconnect) {
       if (res.connected) {
-        btn.classList.add('d-none');
+        btnConnect.classList.add('d-none');
         badge.classList.remove('d-none');
+        btnDisconnect.classList.remove('d-none'); // ← tampilkan tombol putus
       } else {
-        btn.classList.remove('d-none');
+        btnConnect.classList.remove('d-none');
         badge.classList.add('d-none');
+        btnDisconnect.classList.add('d-none'); // ← sembunyikan tombol putus
       }
     }
     return res.connected;

@@ -125,6 +125,27 @@ async function handleGlobalClick(e) {
         btn.innerHTML = originalText;
       }
     },
+    'disconnect-google': async () => {
+      const btn = document.getElementById('btn-disconnect-google');
+      if (!btn) return;
+
+      if (!confirm('Putuskan koneksi Google? Anda harus menghubungkan ulang untuk mengekspor ke Google Sheets.')) return;
+
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memutuskan...';
+
+      try {
+        await Core.api.delete('/api/fintech/oauth/google/disconnect');
+        tgApp.showToast('Koneksi Google telah diputus.', 'success');
+        await checkGoogleConnection(); // perbarui tampilan tombol
+      } catch (error) {
+        tgApp.showToast(error.message || 'Gagal memutus koneksi', 'danger');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    },
     'backup-data': async () => {
       if (!confirm('Backup data sekarang ?')) return;
 

@@ -93,6 +93,24 @@ class GoogleOAuthController extends Controller
   }
 
   /**
+  * Putuskan koneksi Google dengan menghapus token yang tersimpan.
+  */
+  public function disconnect(Request $request) {
+    $user = $request->user();
+    $setting = UserSetting::where('user_id', $user->id)->first();
+
+    if ($setting) {
+      $setting->google_access_token = null;
+      $setting->google_refresh_token = null;
+      $setting->google_token_expires_at = null;
+      $setting->google_spreadsheet_id = null; // opsional, hapus juga ID sheet
+      $setting->save();
+    }
+
+    return response()->json(['message' => 'Koneksi Google telah diputus.']);
+  }
+
+  /**
   * Callback dari Google.
   */
   public function callback(Request $request) {
@@ -165,7 +183,7 @@ class GoogleOAuthController extends Controller
 <body>
     <div class="checkmark">✅</div>
     <h2>Akun Google Berhasil Terhubung!</h2>
-    <p>Anda dapat menutup halaman ini.</p>
+    <p>Silakan tutup halaman ini dan kembali ke aplikasi.</p>
 </body>
 </html>
 HTML);
