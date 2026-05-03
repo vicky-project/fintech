@@ -37,10 +37,64 @@ class GoogleOAuthController extends Controller
   }
 
   /**
+  * Cek status koneksi Google user.
+  */
+  public function status(Request $request) {
+    $user = $request->user();
+    $setting = UserSetting::where('user_id', $user->id)->first();
+
+    $connected = $setting && $setting->google_access_token;
+
+    return response()->json(['connected' => (bool) $connected]);
+  }
+
+  /**
+  * Buat Google Client dengan konfigurasi OAuth.
+  */
+  protected function createClient(): GoogleClient
+  {
+    $client = new GoogleClient();
+    $client->setClientId(config('fintech.google.oauth_client_id'));
+    $client->setClientSecret(config('fintech.google.oauth_client_secret'));
+    $client->setRedirectUri(config('fintech.google.oauth_redirect_uri'));
+    $client->addScope(Sheets::SPREADSHEETS);
+    $client->setAccessType('offline');
+    $client->setPrompt('consent');
+
+    return $client;
+  }
+
+  /**
+  * Encode state dengan hash untuk verifikasi.
+  */
+  protected function encodeState(array $data): string
+  {
+    $json = json_encode($data);
+    $hash = hash_hmac('sha256', $json, config('app.key'));
+    return base64_encode($json . '::' . $hash);
+  }
+
+  /**
+  * Decode state dan verifikasi hash.
+  */
+  protected function decodeState(string $state): ?array
+  {
+    $decoded = base64_decode($state);
+    $parts = explode('::', $decoded);
+    if (count($parts) !== 2) return null;
+
+    [$json,
+      $hash] = $parts;
+    $expectedHash = hash_hmac('sha256', $json, config('app.key'));
+
+    if (!hash_equals($expectedHash, $hash)) return null;
+
+    return json_decode($json, true);
+  }
+
+  /**
   * Callback dari Google.
   */
-  // Modules/FinTech/Http/Controllers/Api/GoogleOAuthController.php
-
   public function callback(Request $request) {
     if (!$request->has('code') || !$request->has('state')) {
       return response('Parameter tidak lengkap.', 400);
@@ -112,71 +166,8 @@ class GoogleOAuthController extends Controller
     <div class="checkmark">✅</div>
     <h2>Akun Google Berhasil Terhubung!</h2>
     <p>Anda dapat menutup halaman ini.</p>
-    <button onclick="window.close()">Tutup Halaman</button>
-    <script>
-        // Tutup otomatis setelah 3 detik
-        setTimeout(() => {
-            window.close();
-        }, 3000);
-    </script>
 </body>
 </html>
 HTML);
 }
-
-  /**
-  * Cek status koneksi Google user.
-  */
-  public function status(Request $request) {
-    $user = $request->user();
-    $setting = UserSetting::where('user_id', $user->id)->first();
-
-    $connected = $setting && $setting->google_access_token;
-
-    return response()->json(['connected' => (bool) $connected]);
-  }
-
-  /**
-  * Buat Google Client dengan konfigurasi OAuth.
-  */
-  protected function createClient(): GoogleClient
-  {
-    $client = new GoogleClient();
-    $client->setClientId(config('fintech.google.oauth_client_id'));
-    $client->setClientSecret(config('fintech.google.oauth_client_secret'));
-    $client->setRedirectUri(config('fintech.google.oauth_redirect_uri'));
-    $client->addScope(Sheets::SPREADSHEETS);
-    $client->setAccessType('offline');
-    $client->setPrompt('consent');
-
-    return $client;
-  }
-
-  /**
-  * Encode state dengan hash untuk verifikasi.
-  */
-  protected function encodeState(array $data): string
-  {
-    $json = json_encode($data);
-    $hash = hash_hmac('sha256', $json, config('app.key'));
-    return base64_encode($json . '::' . $hash);
-  }
-
-  /**
-  * Decode state dan verifikasi hash.
-  */
-  protected function decodeState(string $state): ?array
-  {
-    $decoded = base64_decode($state);
-    $parts = explode('::', $decoded);
-    if (count($parts) !== 2) return null;
-
-    [$json,
-      $hash] = $parts;
-    $expectedHash = hash_hmac('sha256', $json, config('app.key'));
-
-    if (!hash_equals($expectedHash, $hash)) return null;
-
-    return json_decode($json, true);
-  }
 }
