@@ -15,6 +15,7 @@ use Modules\FinTech\Services\Parsers\MandiriCsvParser;
 use Modules\FinTech\Services\Parsers\BniPdfParser;
 use Modules\FinTech\Services\Parsers\BriPdfParser;
 use Modules\FinTech\Services\Google\GoogleSheetsClient;
+use Modules\FinTech\Services\Google\Writers;
 
 class FinTechServiceProvider extends ServiceProvider
 {
@@ -50,6 +51,22 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(GoogleSheetsClient::class, function($app) {
       return new GoogleSheetsClient();
     });
+
+    $this->app->singleton(Writers\ValueWriter::class);
+    $this->app->singleton(Writers\BorderApplier::class);
+    $this->app->singleton(Writers\ChartWriter::class);
+    $this->app->singleton(Writers\ClearWriter::class);
+    $this->app->singleton(Writers\ColorApplier::class);
+    $this->app->singleton(Writers\CurrencyFormatter::class);
+    $this->app->singleton(Writers\DataWriter::class);
+    $this->app->singleton(Writers\FilterApplier::class);
+    $this->app->singleton(Writers\FooterWriter::class);
+    $this->app->singleton(Writers\HeaderWriter::class);
+    $this->app->singleton(Writers\MetadataWriter::class);
+    $this->app->singleton(Writers\SheetResizer::class);
+    $this->app->singleton(Writers\StyleBuilder::class);
+    $this->app->singleton(Writers\SummaryWriter::class);
+    $this->app->singleton(Writers\TitleWriter::class);
 
     $this->app->make("config")->set("world.migrations.countries.table_name", "world_countries");
     $this->app->make("config")->set("world.migrations.states.table_name", "world_states");
