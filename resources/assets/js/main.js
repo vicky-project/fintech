@@ -268,7 +268,8 @@ async function initializeApp() {
     await Promise.all([
       Core.loadWallets().catch(() => tgApp.showToast('Gagal memuat dompet', 'warning')),
       Core.loadCategories().catch(() => tgApp.showToast('Gagal memuat kategori', 'warning')),
-      Core.loadCurrencies().catch(() => tgApp.showToast('Gagal memuat mata uang', 'warning'))
+      Core.loadCurrencies().catch(() => tgApp.showToast('Gagal memuat mata uang', 'warning')),
+      Core.loadHomeSummary().catch(() => tgApp.showToast('Gagal memuat ringkasan', 'warning'))
     ]);
 
     Core.loadUnreadNotificationCount(); // fire & forget

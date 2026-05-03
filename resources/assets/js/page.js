@@ -27,20 +27,34 @@ async function renderListPage(config) {
 }
 
 // ==================== HOME ====================
+// ==================== HOME PAGE ====================
 async function renderHomePage() {
-  if (Core.state.wallets.length > 0) {
-    await Core.loadHomeSummary().catch(() => tgApp.showToast('Gagal memuat ringkasan', 'warning'));
+  // Data homeSummary sudah tersedia di state
+  const summary = Core.state.homeSummary;
+  const container = document.getElementById('main-content');
+
+  // 1. Skeleton loader jika data belum tersedia (mungkin gagal/terlambat)
+  if (!summary) {
+    container.innerHTML = renderHomeSkeleton();
+    return;
   }
 
-  const summary = Core.state.homeSummary;
-  if (!summary) {
-    document.getElementById('main-content').innerHTML = '<p class="text-center py-5">Memuat ringkasan...</p>';
+  // 2. User belum punya dompet
+  if (!summary.has_wallets) {
+    container.innerHTML = renderEmptyWalletState();
     return;
   }
 
   const symbol = Core.getCurrencySymbol(summary.currency);
-  const html = `
+  const trend = summary.trend;
+  const trendHtml = trend ? `
+  <small class="${trend.change_percentage > 0 ? 'text-danger': 'text-success'}">
+  ${trend.change_percentage > 0 ? '↑': '↓'} ${Math.abs(trend.change_percentage)}% dari bulan lalu
+  </small>`: '';
+
+  container.innerHTML = `
   <div class="container py-3">
+  <!-- Saldo -->
   <div class="card bg-gradient-primary text-white mb-3" style="background: linear-gradient(135deg, #667eea, #764ba2);">
   <div class="card-body">
   <h6>Total Saldo</h6>
@@ -48,63 +62,152 @@ async function renderHomePage() {
   <small>${Core.state.wallets.length} dompet aktif</small>
   </div>
   </div>
+
+  <!-- Income / Expense -->
   <div class="row g-2 mb-3">
   <div class="col-6">
-  <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-down-circle text-success fs-4"></i><h6 class="mb-0">${Core.formatNumberShort(summary.total_income)}</h6><small>Pemasukan</small></div></div>
+  <div class="card"><div class="card-body p-3 text-center">
+  <i class="bi bi-arrow-down-circle text-success fs-4"></i>
+  <h6 class="mb-0">${Core.formatNumberShort(summary.total_income)}</h6>
+  <small>Pemasukan</small>
+  </div></div>
   </div>
   <div class="col-6">
-  <div class="card"><div class="card-body p-3 text-center"><i class="bi bi-arrow-up-circle text-danger fs-4"></i><h6 class="mb-0">${Core.formatNumberShort(summary.total_expense)}</h6><small>Pengeluaran</small></div></div>
+  <div class="card"><div class="card-body p-3 text-center">
+  <i class="bi bi-arrow-up-circle text-danger fs-4"></i>
+  <h6 class="mb-0">${Core.formatNumberShort(summary.total_expense)}</h6>
+  <small>Pengeluaran</small>
+  ${trendHtml}
+  </div></div>
   </div>
   </div>
+
+  <!-- Budget Warnings -->
+  ${summary.budget_warnings?.length ? `
+  <div class="card mb-3 border-0 shadow-sm">
+  <div class="card-body py-2">
+  <h6 class="mb-2"><i class="bi bi-exclamation-triangle text-warning me-1"></i> Budget Perlu Perhatian</h6>
+  ${summary.budget_warnings.map(b => `
+    <div class="d-flex align-items-center mb-2">
+    <i class="${b.category.icon} me-2" style="color:${b.category.color}"></i>
+    <span class="flex-grow-1">${b.category.name}</span>
+    <span class="small ${b.is_overspent ? 'text-danger': 'text-warning'}">${b.percentage}%</span>
+    <div class="progress ms-2" style="width: 60px; height: 6px;">
+    <div class="progress-bar ${b.is_overspent ? 'bg-danger': 'bg-warning'}" style="width: ${Math.min(b.percentage, 100)}%"></div>
+    </div>
+    </div>
+    `).join('')}
+  </div>
+  </div>`: ''}
+
+  <!-- Quick Actions -->
+  <div class="d-flex gap-2 mb-3">
+  <button class="btn btn-primary" data-action="add-transaction">
+  <i class="bi bi-plus-circle"></i> Transaksi
+  </button>
+  <button class="btn btn-outline-primary" data-action="add-transfer">
+  <i class="bi bi-arrow-left-right"></i> Transfer
+  </button>
+  <button class="btn btn-outline-secondary" data-action="backup-data">
+  <i class="bi bi-cloud-upload"></i> Backup
+  </button>
+  </div>
+
+  <!-- Weekly Expense Chart -->
   <div class="card mb-3">
   <div class="card-body">
   <h6>Pengeluaran Mingguan</h6>
-  <div style="height: 180px;"><canvas id="homeChart"></canvas></div>
+  ${summary.weekly_expense.length ?
+  '<div style="height: 180px;"><canvas id="homeChart"></canvas></div>':
+  '<p class="text-muted text-center">Belum ada pengeluaran minggu ini</p>'}
   </div>
   </div>
+
+  <!-- Recent Transactions -->
   <h6>Transaksi Terbaru</h6>
-  <div id="recent-transactions"></div>
+  <div id="recent-transactions">
+  ${summary.has_transactions ?
+  renderRecentTransactionsFromSummary(summary.recent_transactions):
+  '<p class="text-muted text-center">Belum ada transaksi</p>'}
+  </div>
   </div>`;
-  document.getElementById('main-content').innerHTML = html;
-  setTimeout(() => {
-    loadHomeChartFromSummary();
-    renderRecentTransactionsFromSummary();
-  }, 50);
-}
 
-function loadHomeChartFromSummary() {
-  const ctx = document.getElementById('homeChart')?.getContext('2d');
-  if (!ctx) return;
-  const data = Core.state.homeSummary.weekly_expense;
-  if (Core.state.chartInstances.home) Core.state.chartInstances.home.destroy();
-  if (!data || data.length === 0) return;
-  Core.state.chartInstances.home = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: data.map(d => d.label),
-      datasets: [{
-        data: data.map(d => d.value),
-        backgroundColor: data.map(d => d.color)
-      }]
-    }
-  });
-}
-
-function renderRecentTransactionsFromSummary() {
-  const container = document.getElementById('recent-transactions');
-  const transactions = Core.state.homeSummary.recent_transactions;
-  if (!transactions.length) {
-    container.innerHTML = '<p class="text-muted text-center">Belum ada transaksi</p>';
-    return;
+  // Inisialisasi chart jika data tersedia
+  if (summary.weekly_expense.length) {
+    requestAnimationFrame(() => loadHomeChartFromSummary(summary.weekly_expense));
   }
-  container.innerHTML = transactions.map(trx => {
+}
+
+// ========== HELPERS ==========
+function renderHomeSkeleton() {
+  return `
+  <div class="container py-3">
+  <div class="card mb-3" style="height:150px; background: linear-gradient(90deg, #eee 25%, #ddd 50%, #eee 75%); background-size:200% 100%; animation:shimmer 1.5s infinite;"></div>
+  <div class="row g-2 mb-3">
+  <div class="col-6"><div class="card" style="height:80px; background:#eee;"></div></div>
+  <div class="col-6"><div class="card" style="height:80px; background:#eee;"></div></div>
+  </div>
+  <div class="card" style="height:200px; background:#eee;"></div>
+  </div>`;
+}
+
+function renderEmptyWalletState() {
+  return `
+  <div class="container py-4 text-center">
+  <i class="bi bi-wallet2 display-1 text-primary"></i>
+  <h4 class="mt-3">Belum Ada Dompet</h4>
+  <p>Buat dompet pertama untuk mulai mencatat keuangan.</p>
+  <button class="btn btn-primary" data-action="add-wallet">
+  <i class="bi bi-plus-circle"></i> Buat Dompet
+  </button>
+  </div>`;
+}
+
+function renderRecentTransactionsFromSummary(transactions) {
+  return transactions.map(trx => {
     const amountClass = trx.type === 'income' ? 'text-success': 'text-danger';
     const sign = trx.type === 'income' ? '': '-';
-    return `<div class="d-flex justify-content-between align-items-center border-bottom py-2">
-    <div><i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>${trx.category.name}</div>
+    return `
+    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+    <div>
+    <i class="${trx.category.icon} me-2" style="color:${trx.category.color}"></i>
+    ${trx.category.name}
+    <small class="text-muted d-block">${trx.wallet.name} · ${Core.formatDate(trx.transaction_date)}</small>
+    </div>
     <span class="${amountClass}" title="${trx.formatted_amount}">${sign}${Core.formatNumberShort(trx.amount)}</span>
     </div>`;
   }).join('');
+}
+
+function loadHomeChartFromSummary(weeklyExpense) {
+  const canvas = document.getElementById('homeChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  if (Core.state.chartInstances.home) {
+    Core.state.chartInstances.home.destroy();
+  }
+
+  Core.state.chartInstances.home = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: weeklyExpense.map(d => d.label),
+      datasets: [{
+        data: weeklyExpense.map(d => d.value),
+        backgroundColor: weeklyExpense.map(d => d.color),
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
 }
 
 // ==================== TRANSACTIONS ====================

@@ -20,8 +20,8 @@ return new class extends Migration
       $table->timestamps();
       $table->softDeletes();
 
-      $table->index(['wallet_id', 'transaction_date']);
-      $table->index(['category_id', 'transaction_date']);
+      $table->index(['wallet_id', 'transaction_date', 'type'], 'idx_wallet_date_type');
+      $table->index(['transaction_date'], 'idx_transaction_date');
     });
   }
 
