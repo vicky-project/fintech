@@ -47,10 +47,15 @@ class GoogleSheetsService
   ): void {
     if (empty($data)) return;
 
-    // 1. Rebuild sheet
+    // 1. Hapus & buat ulang sheet dengan grid besar (1 batch: delete + add)
     $this->spreadsheetManager->rebuildSheetIfExists($spreadsheetId, $sheetName);
 
-    // 2. Persiapkan header & values
+    // 2. Mulai batch styling & value queue
+    $this->writer->beginBatch($spreadsheetId, $sheetName);
+
+    // 3. Clear tidak diperlukan karena sheet sudah baru; jika tetap ingin clear, gunakan clearSheetBatch (masuk batch)
+    // $this->writer->clearSheetBatch($spreadsheetId, $sheetName);
+
     $headers = array_keys($data[0]);
     $values = array_map(fn($row) => array_values($row), $data);
 
@@ -65,65 +70,66 @@ class GoogleSheetsService
     $colCount = count($headers);
     $cursor = new SheetCursor();
 
-    // 3. Mulai batch
-    $this->writer->beginBatch($spreadsheetId, $sheetName);
-
-    // Title & Metadata
+    // --- Judul & Metadata (masuk value queue & batch) ---
     $title = $this->getTitle($dataType);
-    $this->writer->writeTitle($title, $cursor, $colCount);
+    $this->writer->writeTitle($spreadsheetId, $sheetName, $title, $cursor, $colCount);
     if ($metadata) {
-      $this->writer->writeMetadata($metadata, $cursor, $colCount);
+      $this->writer->writeMetadata($spreadsheetId, $sheetName, $metadata, $cursor, $colCount);
     }
 
-    // Header & Data Utama
+    // --- Tabel Utama ---
     $tableStartRow = $cursor->row;
-    $this->writer->writeSimpleHeader($headers, $cursor);
+    $this->writer->writeSimpleHeader($spreadsheetId, $sheetName, $headers, $cursor);
     $headerEndRow = $cursor->row - 1;
     $dataStartRow = $cursor->row;
-    $dataEndRow = $this->writer->writeData($values, $cursor);
+    $dataEndRow = $this->writer->writeData($spreadsheetId, $sheetName, $values, $cursor);
 
     if ($dataType === 'transactions') {
-      $this->writer->applyCurrencyFormat($dataStartRow, $dataEndRow, $summary);
-      $this->writer->applyTransactionColors($values, $dataStartRow, $dataEndRow);
+      $this->writer->applyCurrencyFormat($spreadsheetId, $sheetName, $dataStartRow, $dataEndRow, $summary);
+      $this->writer->applyTransactionColors($spreadsheetId, $sheetName, $values, $dataStartRow, $dataEndRow);
     }
-    $this->writer->applyBordersToRange($tableStartRow, $dataEndRow, 0, $colCount, $headers);
-    $this->writer->applyBasicFilter($tableStartRow, $headerEndRow, 0, $colCount);
 
-    // Ringkasan
+    $this->writer->applyBordersToRange($spreadsheetId, $sheetName, $tableStartRow, $dataEndRow, 0, $colCount, $headers);
+    $this->writer->applyBasicFilter($spreadsheetId, $sheetName, $tableStartRow, $headerEndRow, 0, $colCount);
+
+    // --- Ringkasan ---
     $summaryEndRow = $dataEndRow;
     $summaryInfo = [];
     if ($dataType === 'transactions' && $rawTransactions && ($summary['include_monthly_summary'] ?? false)) {
       $cursor->advanceRow();
-      $summaryInfo = $this->writer->writeSummaryWithStats($rawTransactions, $cursor, $summary);
+      $summaryInfo = $this->writer->writeSummaryWithStats(
+        $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
+      );
       $summaryEndRow = $summaryInfo ? $summaryInfo['endRow'] : $dataEndRow;
     }
 
-    // Blok Kanan (Top 5, Kategori)
+    // --- Blok Kanan (Top Tabel, Kategori) ---
     $rightColIndex = $colCount + 1;
     $cursor->setCol($rightColIndex);
     $cursor->row = $tableStartRow;
     $nextColIndex = $rightColIndex;
 
     if ($dataType === 'transactions' && $rawTransactions && ($summary['include_top5'] ?? false)) {
-      $this->writer->writeTopSpendingToSheet($rawTransactions, $cursor, $summary);
+      $this->writer->writeTopSpendingToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
       $cursor->advanceRow();
-      $this->writer->writeTopIncomeToSheet($rawTransactions, $cursor, $summary);
+      $this->writer->writeTopIncomeToSheet($spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary);
       $cursor->advanceRow();
       $nextColIndex = $rightColIndex + 5;
     }
 
-    $categoryTableInfo = null;
     if ($dataType === 'transactions' && $rawTransactions && ($summary['include_category_expense'] ?? false)) {
-      $categoryTableInfo = $this->writer->writeCategoryExpenseTable($rawTransactions, $cursor, $summary);
+      $categoryTableInfo = $this->writer->writeCategoryExpenseTable(
+        $spreadsheetId, $sheetName, $rawTransactions, $cursor, $summary
+      );
       if ($categoryTableInfo) {
         $cursor->advanceRow();
       }
     }
 
-    // Kirim semua nilai (1 request)
-    $this->writer->commitValues();
+    // --- Kirim semua value + styling dalam dua batch (1 values, 1 styling) ---
+    $this->writer->commit($spreadsheetId);
 
-    // Chart, Footer, Auto‑resize → masuk batch styling
+    // --- Chart (di luar batch, 1 request per chart) ---
     $includeChart = ($dataType === 'transactions' && ($summary['include_chart'] ?? false) && !empty($rawTransactions));
     $chartEndRow = 0;
     if ($includeChart) {
@@ -132,7 +138,8 @@ class GoogleSheetsService
       $chartRow = $cursor->row;
 
       if (!empty($summaryInfo)) {
-        $this->writer->addTransactionChartRequest(
+        $this->writer->writeTransactionChart(
+          $spreadsheetId, $sheetName,
           $summaryInfo['dataStartRow'], $summaryInfo['dataEndRow'],
           $chartRow, $cursor->col,
           $summaryInfo['dataStartCol'],
@@ -140,7 +147,8 @@ class GoogleSheetsService
           $summaryInfo['dataStartCol'] + 2
         );
       } else {
-        $this->writer->addTransactionChartRequest(
+        $this->writer->writeTransactionChart(
+          $spreadsheetId, $sheetName,
           $dataStartRow, $dataEndRow,
           $chartRow, $cursor->col
         );
@@ -148,7 +156,8 @@ class GoogleSheetsService
 
       if (!empty($categoryTableInfo)) {
         $pieChartRow = $chartRow + 15;
-        $this->writer->addCategoryPieChartRequest(
+        $this->writer->writeCategoryPieChart(
+          $spreadsheetId, $sheetName,
           $categoryTableInfo['dataStartRow'], $categoryTableInfo['dataEndRow'],
           $categoryTableInfo['startCol'], $categoryTableInfo['startCol'] + 1,
           $pieChartRow, $cursor->col
@@ -159,17 +168,16 @@ class GoogleSheetsService
       }
     }
 
-    // Footer + Auto‑resize
+    // --- Footer (batch baru) ---
     $lastAddRow = ($dataType === 'transactions') ? $cursor->row : 0;
     $finalRow = max($summaryEndRow, $chartEndRow, $lastAddRow);
     $cursor->setCol(0);
     $cursor->row = $finalRow + 2;
 
-    $this->writer->writeFooter($cursor, $headers);
-    $this->writer->autoResizeColumns(max($colCount, $nextColIndex + 5));
-
-    // Kirim batch styling (1 request)
-    $this->writer->commit();
+    $this->writer->beginBatch($spreadsheetId, $sheetName);
+    $this->writer->writeFooter($spreadsheetId, $sheetName, $cursor, $headers);
+    $this->writer->autoResizeColumns($spreadsheetId, $sheetName, max($colCount, $nextColIndex + 5));
+    $this->writer->commit($spreadsheetId);
   }
 
   public function getSpreadsheetUrl(string $spreadsheetId): string
