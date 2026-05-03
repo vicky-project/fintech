@@ -1122,13 +1122,13 @@ async function renderSettingsPage() {
   <i class="bi bi-google me-2"></i> Google Sheets
   </div>
   <div class="d-flex align-items-center gap-2">
-  <button id="btn-connect-google" class="btn btn-outline-danger btn-sm d-none" data-action="connect-google">
+  <button id="btn-connect-google" class="btn btn-outline-success btn-sm d-none" data-action="connect-google">
   Hubungkan
   </button>
   <span id="google-connected-badge" class="badge bg-success d-none">
   <i class="bi bi-check-circle"></i> Terhubung
   </span>
-  <button id="btn-disconnect-google" class="btn btn-outline-secondary btn-sm d-none" data-action="disconnect-google">
+  <button id="btn-disconnect-google" class="btn btn-outline-danger btn-sm d-none" data-action="disconnect-google">
   Putuskan
   </button>
   </div>
