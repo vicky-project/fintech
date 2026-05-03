@@ -996,8 +996,6 @@ function renderCategoryTable(data) {
 }
 
 // ==================== SETTINGS, INSIGHTS, STATEMENTS, BUDGETS, NOTIFICATIONS, SEARCH, TRASH ====================
-// Semua definisi selanjutnya tetap disertakan (kode asli Anda). Karena terlalu panjang, saya lampirkan secara ringkas.
-
 // Settings
 async function renderSettingsPage() {
   const settings = Core.state.userSettings || {
@@ -1005,112 +1003,213 @@ async function renderSettingsPage() {
     default_wallet_id: '',
     pin_enabled: false
   };
+
   const html = `
   <div class="container py-3">
-  <div class="d-flex align-items-center mb-3">
-  <i class="bi bi-gear me-2"></i>
-  <h5 class="mb-0">Pengaturan</h5>
+
+  <!-- ========== HEADER ========== -->
+  <div class="d-flex align-items-center mb-4">
+  <i class="bi bi-sliders2 fs-4 me-2"></i>
+  <h5 class="mb-0 fw-bold">Pengaturan & Keamanan</h5>
   </div>
+
+  <!-- ========== KARTU PREFERENSI UMUM ========== -->
+  <div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 pt-3 px-3">
+  <h6 class="mb-0 fw-bold"><i class="bi bi-gear me-2"></i>Preferensi Umum</h6>
+  </div>
+  <div class="card-body px-3 pt-0">
   <form id="settingsForm">
+  <!-- Mata Uang Default -->
   <div class="mb-3">
-  <label class="form-label">Mata Uang Default</label>
+  <label class="form-label fw-semibold">Mata Uang Default</label>
   <select class="form-select" name="default_currency" id="setting-currency">
   <option value="">Pilih Mata Uang</option>
   </select>
+  <small class="text-muted">Digunakan untuk dompet baru dan tampilan laporan.</small>
   </div>
-  <div class="mb-3">
-  <label class="form-label">Dompet Default</label>
+
+  <!-- Dompet Default -->
+  <div class="mb-4">
+  <label class="form-label fw-semibold">Dompet Default</label>
   <select class="form-select" name="default_wallet_id" id="setting-wallet">
   <option value="">Tidak Ada</option>
-  ${Core.state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+  ${Core.state.wallets.map(w => `<option value="${w.id}">${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
   </select>
+  <small class="text-muted">Dompet yang otomatis terpilih saat membuka aplikasi.</small>
   </div>
+
   <hr>
-  <h6>Keamanan</h6>
-  <div class="mb-3">
-  <div class="form-check form-switch">
+
+  <!-- Keamanan PIN -->
+  <h6 class="fw-bold mb-3"><i class="bi bi-shield-check me-2"></i>Keamanan PIN</h6>
+
+  <div class="alert alert-info d-flex align-items-start mb-3" role="alert">
+  <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+  <div>
+  <strong>Mengapa Perlu PIN?</strong><br>
+  <small>PIN melindungi transaksi sensitif seperti restore data dan mencegah akses tidak sah jika token login bocor.</small>
+  </div>
+  </div>
+
+  <div class="form-check form-switch mb-2">
   <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled" value="1" ${settings.pin_enabled ? 'checked': ''} data-action="toggle-pin">
-  <label class="form-check-label" for="pin-enabled">Aktifkan PIN</label>
+  <label class="form-check-label fw-semibold" for="pin-enabled">Aktifkan PIN</label>
   </div>
-  </div>
+
   <div class="mb-3" id="pin-field-group" style="display: ${settings.pin_enabled ? 'block': 'none'};">
-  <label class="form-label">PIN (4-6 digit)</label>
-  <input type="password" class="form-control" name="pin" id="pin-field" inputmode="numeric" pattern="[0-9]*" maxlength="6" minlength="4" placeholder="Masukkan PIN baru">
-  <small class="text-muted">Kosongkan jika tidak ingin mengubah PIN.</small>
+  <label class="form-label">PIN (4-8 digit)</label>
+  <input type="password" class="form-control" name="pin" id="pin-field" inputmode="numeric" pattern="[0-9]*" maxlength="8" minlength="4" placeholder="Masukkan PIN baru untuk mengubah">
+  <small class="text-muted">Kosongkan jika tidak ingin mengubah PIN yang sudah ada.</small>
   </div>
-  <button type="button" class="btn btn-primary w-100" data-action="save-settings">Simpan Pengaturan</button>
+
+  <button type="button" class="btn btn-primary w-100" data-action="save-settings">
+  <i class="bi bi-check2-circle me-1"></i> Simpan Pengaturan
+  </button>
   </form>
-  <hr>
-  <h6>Integrasi</h6>
-  <div class="mb-3">
+  </div>
+  </div>
+
+  <!-- ========== KARTU BACKUP & RESTORE ========== -->
+  <div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 pt-3 px-3">
+  <h6 class="mb-0 fw-bold"><i class="bi bi-life-preserver me-2"></i>Backup & Restore</h6>
+  </div>
+  <div class="card-body px-3 pt-0">
+  <div class="alert alert-warning d-flex align-items-start mb-3" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+  <div>
+  <strong>Penting!</strong><br>
+  <small>Backup adalah tanggung jawab Anda. File backup berisi SEMUA data keuangan Anda. Jangan bagikan kepada siapapun.</small>
+  </div>
+  </div>
+
+  <button type="button" class="btn btn-outline-primary w-100 mb-3" data-action="backup-data">
+  <i class="bi bi-cloud-download me-2"></i> Backup Data
+  </button>
+  <small class="text-muted d-block mb-3">Unduh semua data keuangan Anda dalam file terenkripsi (opsional).</small>
+
+  <button type="button" class="btn btn-outline-warning w-100" data-action="restore-modal">
+  <i class="bi bi-cloud-upload me-2"></i> Pulihkan Data
+  </button>
+  <small class="text-muted d-block">Pulihkan data dari file backup. Tindakan ini akan <strong class="text-danger">menghapus semua data Anda saat ini</strong>.</small>
+  </div>
+  </div>
+
+  <!-- ========== KARTU EDUKASI KEAMANAN ========== -->
+  <div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 pt-3 px-3">
+  <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2"></i>Panduan Keamanan</h6>
+  </div>
+  <div class="card-body px-3 pt-0">
+  <div class="accordion" id="securityGuide">
+  <!-- 1. Lindungi Token -->
+  <div class="accordion-item border-0 mb-2">
+  <h2 class="accordion-header">
+  <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#panels1">
+  <i class="bi bi-key me-2"></i> Lindungi Token Login
+  </button>
+  </h2>
+  <div id="panels1" class="accordion-collapse collapse" data-bs-parent="#securityGuide">
+  <div class="accordion-body">
+  <small>Token adalah kunci akses akun Anda. Jangan pernah membagikan token atau menyimpannya di tempat yang tidak aman. Aplikasi ini menyimpan token secara lokal di perangkat Anda. Jika token bocor, penyerang dapat mengakses dan memanipulasi data keuangan Anda.</small>
+  </div>
+  </div>
+  </div>
+  <!-- 2. Backup Aman -->
+  <div class="accordion-item border-0 mb-2">
+  <h2 class="accordion-header">
+  <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#panels2">
+  <i class="bi bi-file-earmark-lock me-2"></i> Keamanan File Backup
+  </button>
+  </h2>
+  <div id="panels2" class="accordion-collapse collapse" data-bs-parent="#securityGuide">
+  <div class="accordion-body">
+  <small>File backup berisi seluruh data keuangan Anda. Simpan di tempat yang aman, seperti penyimpanan cloud pribadi dengan autentikasi dua faktor. Jangan bagikan file backup melalui saluran publik (WhatsApp group, Telegram channel publik).</small>
+  </div>
+  </div>
+  </div>
+  <!-- 3. Risiko Restore -->
+  <div class="accordion-item border-0 mb-2">
+  <h2 class="accordion-header">
+  <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#panels3">
+  <i class="bi bi-exclamation-octagon me-2"></i> Risiko & Batasan
+  </button>
+  </h2>
+  <div id="panels3" class="accordion-collapse collapse" data-bs-parent="#securityGuide">
+  <div class="accordion-body">
+  <small>
+  <ul class="mb-0">
+  <li><strong>Restore menghapus data saat ini.</strong> Data yang belum di-backup akan hilang permanen.</li>
+  <li>Backup hanya bisa dipulihkan ke akun Telegram yang sama.</li>
+  <li>File backup tidak boleh diedit secara manual untuk menghindari korupsi data.</li>
+  <li>Gunakan PIN untuk menambah lapisan keamanan saat melakukan restore.</li>
+  </ul>
+  </small>
+  </div>
+  </div>
+  </div>
+  <!-- 4. Laporkan Masalah -->
+  <div class="accordion-item border-0">
+  <h2 class="accordion-header">
+  <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#panels4">
+  <i class="bi bi-shield-exclamation me-2"></i> Laporkan Masalah Keamanan
+  </button>
+  </h2>
+  <div id="panels4" class="accordion-collapse collapse" data-bs-parent="#securityGuide">
+  <div class="accordion-body">
+  <small>Jika Anda mencurigai adanya akses tidak sah atau menemukan celah keamanan, segera hubungi kami melalui email <strong>security@fintechapp.id</strong> atau melalui Telegram resmi kami.</small>
+  </div>
+  </div>
+  </div>
+  </div>
+  </div>
+  </div>
+
+  <!-- ========== KONEKSI GOOGLE (Opsional) ========== -->
+  <div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 pt-3 px-3">
+  <h6 class="mb-0 fw-bold"><i class="bi bi-google me-2"></i>Integrasi Google</h6>
+  </div>
+  <div class="card-body px-3 pt-0">
   <div id="google-connect-area">
   <div class="d-flex justify-content-between align-items-center">
   <div>
   <i class="bi bi-google me-2"></i> Google Sheets
-  <small class="text-muted d-block">Hubungkan akun Google untuk ekspor langsung ke Sheets.</small>
+  <small class="text-muted d-block">Ekspor data langsung ke spreadsheet pribadi Anda.</small>
   </div>
   <div class="d-flex align-items-center gap-2">
-  <button id="btn-connect-google" class="btn btn-outline-success btn-sm d-none" data-action="connect-google">
-  <i class="bi bi-link-45deg"></i> Hubungkan
+  <button id="btn-connect-google" class="btn btn-outline-danger btn-sm d-none" data-action="connect-google">
+  Hubungkan
   </button>
   <span id="google-connected-badge" class="badge bg-success d-none">
   <i class="bi bi-check-circle"></i> Terhubung
   </span>
-  <button id="btn-disconnect-google" class="btn btn-outline-danger btn-sm d-none" data-action="disconnect-google">
-  <i class="bi bi-unlink"></i> Putuskan
+  <button id="btn-disconnect-google" class="btn btn-outline-secondary btn-sm d-none" data-action="disconnect-google">
+  Putuskan
   </button>
   </div>
   </div>
   </div>
-  <!-- setelah bagian Google Sheets, sebelum penutup container -->
-  <hr>
-  <h6 class="mb-3">Backup &amp; Restore</h6>
-
-  <!-- Backup Card -->
-  <div class="card border-primary mb-3">
-  <div class="card-body d-flex align-items-center py-3">
-  <div class="me-3 text-primary">
-  <i class="bi bi-cloud-download" style="font-size: 1.8rem;"></i>
-  </div>
-  <div class="flex-grow-1">
-  <div class="fw-semibold">Backup Data</div>
-  <small class="text-muted">Cadangkan semua data keuangan Anda ke file terkompresi.</small>
-  </div>
-  <div>
-  <button type="button" class="btn btn-primary btn-sm" data-action="backup-data" id="btn-backup">
-  <i class="bi bi-download me-1"></i> Backup
-  </button>
-  </div>
+  <small class="text-muted">Dengan menghubungkan Google, Anda menyetujui bahwa data diekspor ke akun Google Anda. Kami tidak menyimpan file Anda di server kami secara permanen.</small>
   </div>
   </div>
 
-  <!-- Restore Card -->
-  <div class="card border-warning mb-3">
-  <div class="card-body d-flex align-items-center py-3">
-  <div class="me-3 text-warning">
-  <i class="bi bi-cloud-upload" style="font-size: 1.8rem;"></i>
-  </div>
-  <div class="flex-grow-1">
-  <div class="fw-semibold">Pulihkan Data</div>
-  <small class="text-muted">Pulihkan data dari file backup yang telah diunduh sebelumnya.</small>
-  </div>
-  <div>
-  <button type="button" class="btn btn-warning btn-sm" data-action="restore-modal" id="btn-restore">
-  <i class="bi bi-upload me-1"></i> Pulihkan
-  </button>
-  </div>
-  </div>
+  <!-- ========== FOOTER INFORMATIF ========== -->
+  <div class="text-center text-muted small mt-4">
+  <i class="bi bi-shield-lock me-1"></i> Aplikasi Keuangan v1.0 · Keamanan Anda Prioritas Kami
   </div>
 
-  <!-- Input file tersembunyi untuk restore -->
-  <input type="file" id="restore-file-input" accept=".json.gz,.json" style="display: none;">
   </div>`;
+
   document.getElementById('main-content').innerHTML = html;
-  Core.populateSelectWithCurrencies(document.getElementById('setting-currency'),
-    settings.default_currency);
+
+  // Inisialisasi nilai form
+  Core.populateSelectWithCurrencies(document.getElementById('setting-currency'), settings.default_currency);
   if (settings.default_wallet_id) document.getElementById('setting-wallet').value = settings.default_wallet_id;
 
-  setTimeout(() => checkGoogleConnection(), 0);
+  // Cek koneksi Google
+  setTimeout(() => checkGoogleConnection(), 100);
 }
 
 function togglePinInput() {
