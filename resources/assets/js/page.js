@@ -2090,10 +2090,6 @@ function renderExportFilters(type) {
     </div>`;
 
     container.innerHTML = html;
-    const dateTo = document.getElementById('filter-date-to');
-    if (dateTo) {
-      dateTo.value = new Date().toISOString().slice(0, 10);
-    }
     updateTransactionCategoryFilter();
     toggleExportOptions();
     updateExportFormatAvailability();
@@ -2123,10 +2119,6 @@ function renderExportFilters(type) {
     </div>`;
 
     container.innerHTML = html;
-    const dateTo = document.getElementById('filter-date-to');
-    if (dateTo) {
-      dateTo.value = new Date().toISOString().slice(0, 10);
-    }
     updateExportFormatAvailability();
     return;
   }
@@ -2304,8 +2296,13 @@ function switchDateFilter(target) {
 
   // Perbarui navigasi tombol
   const nav = document.getElementById('date-filter-nav');
+  const dateTo = document.getElementById('filter-date-to');
   if (nav) {
     nav.innerHTML = renderDateFilterNavigation(target);
+  }
+
+  if (dateTo) {
+    dateTo.value = new Date().toISOString().slice(0, 10);
   }
 }
 
