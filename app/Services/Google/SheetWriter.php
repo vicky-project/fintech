@@ -2,7 +2,7 @@
 
 namespace Modules\FinTech\Services\Google;
 
-use Modules\FinTech\Services\Google\Writers\;
+use Modules\FinTech\Services\Google\Writers;
 
 class SheetWriter
 {
