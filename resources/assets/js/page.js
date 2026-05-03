@@ -1991,11 +1991,13 @@ function renderExportFilters(type) {
     </div>
     </div>
     <div class="row mb-3">
+    <div class="col">
     <label for="filter-year" class="form-label">Tahun</label>
     <select class="form-select" id="filter-year"
     style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
     ${yearOptions}
     </select>
+    </div>
     </div>`;
     container.innerHTML = html;
     updateExportFormatAvailability();
@@ -2122,11 +2124,13 @@ function renderExportFilters(type) {
     </div>
     </div>
     <div class="row mb-3">
+    <div class="col">
     <label for="filter-year" class="form-label">Tahun</label>
     <select class="form-select" id="filter-year"
     style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
     ${yearOptions}
     </select>
+    </div>
     </div>
     <div class="accordion mb-3" id="advancedAccordion">
     <div class="accordion-item">
