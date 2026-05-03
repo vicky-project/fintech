@@ -1956,6 +1956,12 @@ function renderExportFilters(type) {
   const container = document.getElementById('export-filter-container');
   if (!container) return;
 
+  const currentYear = new Date().getFullYear();
+  let yearOptions = '<option value="">Semua Tahun</option>';
+  for (let year = currentYear; y >= currentYear - 10, y--) {
+    yearOptions += `<option value="${y}">${y}</option>`;
+  }
+
   let html = '';
 
   // Wallet (required)
@@ -1985,8 +1991,10 @@ function renderExportFilters(type) {
     </div>
     <div class="col">
     <label for="filter-year" class="form-label">Tahun</label>
-    <input type="year" class="form-control" id="filter-year"
-    min="2000" max="${new Date().getFullYear()}" step="1">
+    <select class="form-select" id="filter-year"
+    style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
+    ${yearOptions}
+    </select>
     </div>
     </div>`;
     container.innerHTML = html;
@@ -2012,9 +2020,11 @@ function renderExportFilters(type) {
     <input type="month" class="form-control" id="filter-month">
     </div>
     <div class="mb-3">
-    <label for="filter-year" class="form-label">Atau Tahun (abaikan bulan)</label>
-    <input type="year" class="form-control" id="filter-year"
-    min="2000" max="${new Date().getFullYear()}" step="1">
+    <label for="filter-year" class="form-label">Tahun</label>
+    <select class="form-select" id="filter-year"
+    style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
+    ${yearOptions}
+    </select>
     </div>
     <div class="mb-3">
     <label for="filter-type" class="form-label">Tipe Transaksi</label>
@@ -2112,8 +2122,10 @@ function renderExportFilters(type) {
     </div>
     <div class="col">
     <label for="filter-year" class="form-label">Tahun</label>
-    <input type="year" class="form-control" id="filter-year"
-    min="2000" max="${new Date().getFullYear()}" step="1">
+    <select class="form-select" id="filter-year"
+    style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
+    ${yearOptions}
+    </select>
     </div>
     </div>
     <div class="accordion mb-3" id="advancedAccordion">
