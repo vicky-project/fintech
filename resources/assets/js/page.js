@@ -1958,7 +1958,7 @@ function renderExportFilters(type) {
 
   const currentYear = new Date().getFullYear();
   let yearOptions = '<option value="">Semua Tahun</option>';
-  for (let year = currentYear; y >= currentYear - 10, y--) {
+  for (let year = currentYear; y >= currentYear - 10; y--) {
     yearOptions += `<option value="${y}">${y}</option>`;
   }
 
