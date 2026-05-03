@@ -1090,26 +1090,6 @@ async function renderSettingsPage() {
   </div>
   </div>
 
-  <!-- Panduan Keamanan Singkat -->
-  <div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-transparent border-0 pt-3 px-3">
-  <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2"></i>Panduan Keamanan</h6>
-  </div>
-  <div class="card-body px-3 pt-0">
-  <ul class="list-unstyled small mb-0">
-  <li class="mb-2">
-  <i class="bi bi-shield-lock text-secondary me-2"></i> Aktifkan PIN untuk lindungi restore data.
-  <button type="button" class="btn btn-link btn-sm p-0" data-action="show-info" data-info="pin_guide">
-  <i class="bi bi-info-circle"></i>
-  </button>
-  </li>
-  <li>
-  <i class="bi bi-chat-dots text-secondary me-2"></i> Laporkan masalah ke <strong>@${BOT_USERNAME}</strong>.
-  </li>
-  </ul>
-  </div>
-  </div>
-
   <!-- Integrasi Google -->
   <div class="card border-0 shadow-sm mb-4">
   <div class="card-header bg-transparent border-0 pt-3 px-3">
@@ -1135,6 +1115,26 @@ async function renderSettingsPage() {
   </div>
   </div>
   <small class="text-muted">Ekspor data ke spreadsheet pribadi Anda.</small>
+  </div>
+
+  <!-- Panduan Keamanan Singkat -->
+  <div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 pt-3 px-3">
+  <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2"></i>Panduan Keamanan</h6>
+  </div>
+  <div class="card-body px-3 pt-0">
+  <ul class="list-unstyled small mb-0">
+  <li class="mb-2">
+  <i class="bi bi-shield-lock text-secondary me-2"></i> Aktifkan PIN untuk lindungi restore data.
+  <button type="button" class="btn btn-link btn-sm p-0" data-action="show-info" data-info="pin_guide">
+  <i class="bi bi-info-circle"></i>
+  </button>
+  </li>
+  <li>
+  <i class="bi bi-chat-dots text-secondary me-2"></i> Laporkan masalah ke <strong>@${BOT_USERNAME}</strong>.
+  </li>
+  </ul>
+  </div>
   </div>
   </div>
 
