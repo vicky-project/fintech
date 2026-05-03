@@ -37,7 +37,7 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
   Route::get('currencies', [CurrencyController::class, 'index'])->name('currencies.index');
 
   Route::post('backup/send', [BackupController::class, 'send']);
-  Route::post('backup/restore', [BackupController::class, 'upload']);
+  Route::post('backup/restore', [BackupController::class, 'upload'])->middleware('pin.session');
 
   // ==================== TRANSACTIONS ====================
   Route::get('transactions/trashed', [TransactionController::class, 'trashed'])->name('transactions.trashed');

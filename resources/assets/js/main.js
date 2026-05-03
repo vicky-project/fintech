@@ -165,47 +165,29 @@ async function handleGlobalClick(e) {
     'restore-data': async () => {
       const form = document.getElementById('formRestore');
       const formData = new FormData(form);
-
       const fileInput = form.querySelector('input[type="file"]');
+
       if (!fileInput.files.length) {
         tgApp.showToast('Pilih file terlebih dahulu', 'danger');
         return;
       }
-      const token = tgApp.getToken();
-      if (!token) {
-        tgApp.showToast("Token tidak ditemukan. Silakan refresh aplikasi.", 'danger');
-        return;
-      }
 
-      if (!confirm('Tindakan ini akan mengganti semua data lama anda. Pastikan data lama anda sudah di backup.')) return;
+      if (!confirm('Tindakan ini akan mengganti semua data lama Anda…')) return;
 
-      const originalText = target.innerHTML;
-      target.disabled = true;
-      target.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
+      const btn = document.getElementById('btn-upload-restore');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
 
       try {
-        const response = await fetch(BASE_URL + '/api/fintech/backup/restore', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          },
-          method: 'POST',
-          body: formData
-        });
-
-        const result = await response.json();
-        if (response.ok && result.success) {
-          tgApp.showToast(result.message || 'Data berhasil dipulihkan.', 'success');
-          // Tutup modal
-          bootstrap.Modal.getInstance(document.getElementById('restoreModal'))?.hide();
-        } else {
-          tgApp.showToast(result.message || 'Gagal memulihkan data.', 'danger');
-        }
-      } catch(error) {
-        tgApp.showToast(error.message || 'Jaringan bermasalah. Coba lagi', 'danger');
+        const result = await Core.upload('/api/fintech/backup/restore', formData);
+        tgApp.showToast(result.message || 'Data berhasil dipulihkan.', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('restoreModal'))?.hide();
+      } catch (error) {
+        tgApp.showToast(error.message || 'Gagal memulihkan data.', 'danger');
       } finally {
-        target.disabled = false;
-        target.innerHTML = originalText;
+        btn.disabled = false;
+        btn.innerHTML = originalText;
         fileInput.value = '';
       }
     },

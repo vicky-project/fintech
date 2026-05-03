@@ -464,11 +464,54 @@ const Core = (() => {
     return response.blob();
   }
 
+  // Di dalam Core, dekat dengan fungsi request()
+  async function upload(url, formData) {
+    const token = tgApp.getToken();
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const doFetch = () => fetch(BASE_URL + url, {
+      method: 'POST',
+      headers,
+      body: formData
+    }).then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.message || 'Upload gagal');
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+      return data;
+    });
+
+    try {
+      return await doFetch();
+    } catch (error) {
+      // Intercept 403 PIN_REQUIRED / PIN_EXPIRED (menggunakan state yang sama)
+      if (error.status === 403 && ['PIN_REQUIRED', 'PIN_EXPIRED'].includes(error.data?.code)) {
+        if (!state.isPinModalShowing) {
+          state.isPinModalShowing = true;
+          tgApp.hideLoading();
+          const ok = await new Promise(resolve => showPinModal(resolve));
+          state.isPinModalShowing = false;
+          if (ok) return doFetch();
+          throw new Error('Verifikasi PIN diperlukan');
+        }
+        throw new Error('PIN sedang diverifikasi');
+      }
+      throw error;
+    }
+  }
+
   // ========== PUBLIC API ==========
   return {
     // State & API (readonly)
     state,
     api,
+    upload,
 
     // Helpers
     formatNumber,
