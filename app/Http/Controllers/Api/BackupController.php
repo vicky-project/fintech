@@ -140,9 +140,8 @@ class BackupController extends Controller
             !in_array($ext, ['gz', 'json'])) {
             $fail('Format file tidak didukung. Gunakan .json atau .json.gz');
           }
-        },
-        'password' => 'nullable|string|min:4|max:100'
-      ]
+        }],
+      'password' => 'nullable|string|min:4|max:100'
     ],
       [
         'backup_file.required' => 'File backup wajib diunggah.',

@@ -262,7 +262,7 @@
             </div>
             <div class="mb-3">
               <input type="password" class="form-control" id="restore-password" placeholder="Password (jika file terenkripsi)" minlength="4">
-              <span class="small mb-0 text-muted d-block">Kosongkan jika tidak dilindungi password</span>
+              <span class="small mb-0 text-muted d-block">Kosongkan jika tidak dilindungi password.</span>
             </div>
           </form>
         </div>
