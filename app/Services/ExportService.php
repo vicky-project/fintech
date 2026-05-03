@@ -27,10 +27,10 @@ class ExportService
   {
     $this->validateFilters($filters);
 
+    $user = request()->user();
     $type = $filters['type'];
     $format = $filters['format'];
-    $wallet = Models\Wallet::with('currencyDetails')->findOrFail($filters['wallet_id']);
-    $user = request()->user();
+    $wallet = Models\Wallet::with('currencyDetails')->where('user_id', $user->id)->findOrFail($filters['wallet_id']);
 
     // Google Sheets punya jalur sendiri
     if ($format === 'gsheet') {

@@ -36,7 +36,9 @@ class UserSetting extends Model
     'pin_attempts' => 'integer',
     'locked_until' => 'datetime',
     'pin_verified_at' => 'datetime',
-    'google_token_expires_at' => 'datetime'
+    'google_token_expires_at' => 'datetime',
+    'google_access_token' => 'encrypted'
+    'google_refresh_token' => 'encrypted'
   ];
 
   protected $hidden = [
