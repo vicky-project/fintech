@@ -261,11 +261,8 @@
               <small class="text-muted mt-1 d-block">File harus merupakan backup dari akun Telegram Anda.</small>
             </div>
             <div class="mb-3">
-              <input class="form-control" type="file" id="restore-file-input" accept=".json.gz,.json">
-            </div>
-            <div class="mb-3">
               <input type="password" class="form-control" id="restore-password" placeholder="Password (jika file terenkripsi)" minlength="4">
-              <span class="small text-muted mb-0">Kosongkan jika tidak dilindungi password</span>
+              <span class="small mb-0 text-muted d-block">Kosongkan jika tidak dilindungi password</span>
             </div>
           </form>
         </div>
