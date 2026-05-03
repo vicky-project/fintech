@@ -206,32 +206,28 @@ async function handleGlobalClick(e) {
 
       switch (infoType) {
         case 'pin':
-          title = 'Keamanan PIN';
+          title = 'Mengapa PIN Penting?';
           body = `
-          <p>PIN melindungi transaksi sensitif seperti restore data.</p>
-          <p class="mb-0">Tanpa PIN, siapa pun yang memiliki akses ke token login dapat memulihkan data Anda.</p>
+          <p>Restore data akan <strong>menghapus seluruh data Anda saat ini</strong> dan menggantinya dengan data dari file backup.</p>
+          <p>Tanpa PIN, siapa pun yang memegang token login Anda dapat melakukan restore. Aktifkan PIN untuk mencegah hal ini.</p>
+          <p class="mb-0">Anda akan diminta PIN setiap kali melakukan restore data.</p>
+          `;
+          break;
+        case 'pin_guide':
+          title = 'Tips Keamanan PIN';
+          body = `
+          <p>Gunakan PIN yang mudah diingat tapi sulit ditebak.</p>
+          <p>Jangan gunakan tanggal lahir atau kombinasi sederhana (1234, 0000).</p>
+          <p class="mb-0">Jika Anda lupa PIN, hubungi <strong>@${BOT_USERNAME}</strong> untuk bantuan.</p>
           `;
           break;
         case 'backup':
-          title = 'File Backup';
+          title = 'Tentang Backup & Restore';
           body = `
-          <p>File backup berisi <strong>seluruh data keuangan Anda</strong>.</p>
-          <p>Simpan di tempat aman, jangan bagikan ke siapa pun.</p>
-          <p class="mb-0">Restore akan menghapus data saat ini.</p>
-          `;
-          break;
-        case 'token':
-          title = 'Lindungi Token';
-          body = `
-          <p>Token adalah kunci akses akun Anda.</p>
-          <p class="mb-0">Jangan bagikan token atau screenshot yang memuat token.</p>
-          `;
-          break;
-        case 'backup_security':
-          title = 'Keamanan Backup';
-          body = `
-          <p>Simpan file backup di penyimpanan cloud pribadi dengan autentikasi dua faktor.</p>
-          <p class="mb-0">Hindari mengirim file backup melalui chat publik.</p>
+          <p>File backup berisi <strong>seluruh data keuangan Anda</strong> (dompet, transaksi, budget, dll).</p>
+          <p>Simpan di tempat aman dan jangan bagikan ke siapa pun.</p>
+          <p>Restore hanya bisa dilakukan ke akun Telegram yang sama.</p>
+          <p class="mb-0">Restore akan <strong>menghapus data saat ini</strong>. Pastikan Anda sudah backup terlebih dahulu.</p>
           `;
           break;
       }

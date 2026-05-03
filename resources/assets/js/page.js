@@ -1041,6 +1041,15 @@ async function renderSettingsPage() {
   <i class="bi bi-info-circle"></i>
   </button>
   </div>
+
+  <div class="alert alert-light border d-flex align-items-start mb-3" role="alert">
+  <i class="bi bi-shield-lock-fill text-primary me-2 mt-1 fs-5"></i>
+  <div>
+  <strong>Lindungi data Anda</strong><br>
+  <small>PIN mencegah restore data tanpa izin. Aktifkan untuk keamanan lebih.</small>
+  </div>
+  </div>
+
   <div class="form-check form-switch mb-3">
   <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled" value="1" ${settings.pin_enabled ? 'checked': ''} data-action="toggle-pin">
   <label class="form-check-label" for="pin-enabled">Aktifkan PIN</label>
@@ -1089,19 +1098,13 @@ async function renderSettingsPage() {
   <div class="card-body px-3 pt-0">
   <ul class="list-unstyled small mb-0">
   <li class="mb-2">
-  <i class="bi bi-key text-secondary me-2"></i> Lindungi token login Anda.
-  <button type="button" class="btn btn-link btn-sm p-0" data-action="show-info" data-info="token">
-  <i class="bi bi-info-circle"></i>
-  </button>
-  </li>
-  <li class="mb-2">
-  <i class="bi bi-file-earmark-lock text-secondary me-2"></i> Simpan file backup dengan aman.
-  <button type="button" class="btn btn-link btn-sm p-0" data-action="show-info" data-info="backup_security">
+  <i class="bi bi-shield-lock text-secondary me-2"></i> Aktifkan PIN untuk lindungi restore data.
+  <button type="button" class="btn btn-link btn-sm p-0" data-action="show-info" data-info="pin_guide">
   <i class="bi bi-info-circle"></i>
   </button>
   </li>
   <li>
-  <i class="bi bi-shield-exclamation text-secondary me-2"></i> Laporkan masalah ke <strong>@${BOT_USERNAME}</strong>.
+  <i class="bi bi-chat-dots text-secondary me-2"></i> Laporkan masalah ke <strong>@${BOT_USERNAME}</strong>.
   </li>
   </ul>
   </div>
@@ -1119,13 +1122,13 @@ async function renderSettingsPage() {
   <i class="bi bi-google me-2"></i> Google Sheets
   </div>
   <div class="d-flex align-items-center gap-2">
-  <button id="btn-connect-google" class="btn btn-outline-success btn-sm d-none" data-action="connect-google">
+  <button id="btn-connect-google" class="btn btn-outline-danger btn-sm d-none" data-action="connect-google">
   Hubungkan
   </button>
   <span id="google-connected-badge" class="badge bg-success d-none">
   <i class="bi bi-check-circle"></i> Terhubung
   </span>
-  <button id="btn-disconnect-google" class="btn btn-outline-danger btn-sm d-none" data-action="disconnect-google">
+  <button id="btn-disconnect-google" class="btn btn-outline-secondary btn-sm d-none" data-action="disconnect-google">
   Putuskan
   </button>
   </div>
