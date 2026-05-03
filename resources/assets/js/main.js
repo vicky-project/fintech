@@ -143,7 +143,8 @@ async function handleGlobalClick(e) {
         target.innerHTML = originalText;
         fileInput.value = '';
       }
-    }
+    },
+    'switch-date-filter': switchDateFilter(target.dataset.filter),
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {

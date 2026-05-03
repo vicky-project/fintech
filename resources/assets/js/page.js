@@ -1956,15 +1956,16 @@ function renderExportFilters(type) {
   const container = document.getElementById('export-filter-container');
   if (!container) return;
 
+  // 🔹 Opsi tahun (10 tahun ke belakang)
   const currentYear = new Date().getFullYear();
-  let yearOptions = '<option value="">Semua Tahun</option>';
+  let yearOptions = '<option value="">Pilih Tahun</option>';
   for (let y = currentYear; y >= currentYear - 10; y--) {
     yearOptions += `<option value="${y}">${y}</option>`;
   }
 
   let html = '';
 
-  // Wallet (required)
+  // ----- Wallet (selalu tampil) -----
   const defaultWalletId = Core.state.userSettings?.default_wallet_id || (Core.state.wallets[0]?.id ?? '');
   html += `
   <div class="mb-3">
@@ -1977,59 +1978,70 @@ function renderExportFilters(type) {
   </select>
   </div>`;
 
-  // ALL
-  if (type === 'all') {
-    html += `
-    <div class="row mb-3">
-    <div class="col">
-    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
-    </div>
-    <div class="col">
-    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-to">
-    </div>
-    </div>
-    <div class="row mb-3">
-    <div class="col">
-    <label for="filter-year" class="form-label">Tahun</label>
+  // ----- Blok navigasi filter tanggal (digunakan oleh transactions, transfers, all) -----
+  function buildDateFilterBlock(showMonth = true) {
+    const navButtons = (active) => {
+      const all = [{
+        key: 'year',
+        label: '📅 Tahun'
+      },
+        {
+          key: 'month',
+          label: '📆 Bulan'
+        },
+        {
+          key: 'date',
+          label: '📅 Rentang'
+        }].filter(t => showMonth || t.key !== 'month'); // all tidak punya bulan
+      return all.filter(t => t.key !== active)
+      .map(t => `<button type="button" class="btn btn-sm btn-outline-secondary me-1" data-action="switch-date-filter" data-filter="${t.key}">${t.label}</button>`)
+      .join('');
+    };
+
+    return `
+    <div class="mb-3">
+    <div id="filter-year-block">
+    <label class="form-label fw-semibold">Tahun</label>
     <select class="form-select" id="filter-year"
     style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
     ${yearOptions}
     </select>
     </div>
+    <div id="filter-month-block" style="display:none;">
+    <label class="form-label fw-semibold">Bulan</label>
+    <input type="month" class="form-control" id="filter-month">
+    </div>
+    <div id="filter-date-block" style="display:none;">
+    <label class="form-label fw-semibold">Rentang Tanggal</label>
+    <div class="row">
+    <div class="col">
+    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
+    </div>
+    <div class="col">
+    <input type="date" class="form-control" id="filter-date-to">
+    </div>
+    </div>
+    </div>
+    <div id="date-filter-nav" class="mt-2">
+    ${navButtons('year')}
+    </div>
     </div>`;
+  }
+
+  // ============ TIPE ALL ============
+  if (type === 'all') {
+    html += buildDateFilterBlock(false);
     container.innerHTML = html;
     updateExportFormatAvailability();
     return;
   }
 
-  // TRANSACTIONS
+  // ============ TIPE TRANSACTIONS ============
   if (type === 'transactions') {
+    html += buildDateFilterBlock(true);
     html += `
-    <div class="row mb-3">
-    <div class="col">
-    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
-    </div>
-    <div class="col">
-    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-to">
-    </div>
-    </div>
     <div class="mb-3">
-    <label for="filter-month" class="form-label">Atau Bulan (abaikan rentang tanggal)</label>
-    <input type="month" class="form-control" id="filter-month">
-    </div>
-    <div class="mb-3">
-    <label for="filter-year" class="form-label">Tahun</label>
-    <select class="form-select" id="filter-year"
-    style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
-    ${yearOptions}
-    </select>
-    </div>
-    <div class="mb-3">
-    <label for="filter-type" class="form-label">Tipe Transaksi</label>
+    <label for="filter-type" class="form-label fw-semibold">Tipe Transaksi</label>
     <select class="form-select" id="filter-type" data-action="change-transaction-type">
     <option value="">Semua</option>
     <option value="income">Pemasukan</option>
@@ -2040,7 +2052,6 @@ function renderExportFilters(type) {
     <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
     <select class="d-none" id="filter-category-hidden" multiple></select>
     </div>
-
     <!-- Advanced Options Accordion -->
     <div class="accordion mb-3" id="advancedAccordion">
     <div class="accordion-item">
@@ -2051,51 +2062,26 @@ function renderExportFilters(type) {
     </h2>
     <div id="collapseAdvanced" class="accordion-collapse collapse" aria-labelledby="headingAdvanced" data-bs-parent="#advancedAccordion">
     <div class="accordion-body">
-    <div class="mb-3">
-    <div class="form-check">
+    <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-description" checked>
-    <label for="include-description" class="form-check-label">
-    <strong>Sertakan Deskripsi</strong><br>
-    <small class="text-muted">Menampilkan kolom deskripsi pada tiap transaksi.</small>
-    </label>
-    </div>
+    <label for="include-description" class="form-check-label"><strong>Sertakan Deskripsi</strong></label>
     </div>
     <div id="export-options" style="display: none;">
-    <div class="mb-3">
-    <div class="form-check">
+    <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-chart">
-    <label for="include-chart" class="form-check-label">
-    <strong>Sertakan Chart</strong><br>
-    <small class="text-muted">Menampilkan grafik batang pemasukan vs pengeluaran.</small>
-    </label>
+    <label for="include-chart" class="form-check-label"><strong>Sertakan Chart</strong></label>
     </div>
-    </div>
-    <div class="mb-3">
-    <div class="form-check">
+    <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-monthly-summary">
-    <label for="include-monthly-summary" class="form-check-label">
-    <strong>Sertakan Ringkasan Bulanan</strong><br>
-    <small class="text-muted">Menampilkan tabel ringkasan pemasukan, pengeluaran, dan net per bulan.</small>
-    </label>
+    <label for="include-monthly-summary" class="form-check-label"><strong>Sertakan Ringkasan Bulanan</strong></label>
     </div>
-    </div>
-    <div class="mb-3">
-    <div class="form-check">
+    <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-top5">
-    <label for="include-top5" class="form-check-label">
-    <strong>Sertakan Top 5 Transaksi</strong><br>
-    <small class="text-muted">Menampilkan 5 pemasukan dan pengeluaran tertinggi.</small>
-    </label>
+    <label for="include-top5" class="form-check-label"><strong>Sertakan Top 5 Transaksi</strong></label>
     </div>
-    </div>
-    <div class="mb-3">
-    <div class="form-check">
+    <div class="form-check mb-3">
     <input class="form-check-input" type="checkbox" id="include-category-expense">
-    <label for="include-category-expense" class="form-check-label">
-    <strong>Sertakan Persentase Kategori Pengeluaran</strong><br>
-    <small class="text-muted">Menampilkan tabel distribusi pengeluaran per kategori beserta pie chart.</small>
-    </label>
-    </div>
+    <label for="include-category-expense" class="form-check-label"><strong>Sertakan Persentase Kategori Pengeluaran</strong></label>
     </div>
     </div>
     </div>
@@ -2110,28 +2096,10 @@ function renderExportFilters(type) {
     return;
   }
 
-  // TRANSFERS
+  // ============ TIPE TRANSFERS ============
   if (type === 'transfers') {
+    html += buildDateFilterBlock(true);
     html += `
-    <div class="row mb-3">
-    <div class="col">
-    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-from" data-action="change-start-date">
-    </div>
-    <div class="col">
-    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
-    <input type="date" class="form-control" id="filter-date-to">
-    </div>
-    </div>
-    <div class="row mb-3">
-    <div class="col">
-    <label for="filter-year" class="form-label">Tahun</label>
-    <select class="form-select" id="filter-year"
-    style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-color: var(--tg-theme-hint-color);">
-    ${yearOptions}
-    </select>
-    </div>
-    </div>
     <div class="accordion mb-3" id="advancedAccordion">
     <div class="accordion-item">
     <h2 class="accordion-header" id="headingAdvanced">
@@ -2149,16 +2117,17 @@ function renderExportFilters(type) {
     </div>
     </div>
     </div>`;
+
     container.innerHTML = html;
     updateExportFormatAvailability();
     return;
   }
 
-  // BUDGETS
+  // ============ TIPE BUDGETS (tetap seperti sebelumnya) ============
   if (type === 'budgets') {
     html += `
     <div class="mb-3">
-    <label for="filter-period-type" class="form-label">Tipe Periode</label>
+    <label for="filter-period-type" class="form-label fw-semibold">Tipe Periode</label>
     <select class="form-select" id="filter-period-type" data-action="change-budget-period">
     <option value="monthly" selected>Bulanan</option>
     <option value="yearly">Tahunan</option>
@@ -2166,7 +2135,7 @@ function renderExportFilters(type) {
     </div>
     <div class="mb-3" id="budget-period-detail"></div>
     <div class="mb-3">
-    <label for="filter-status" class="form-label">Status Budget</label>
+    <label for="filter-status" class="form-label fw-semibold">Status Budget</label>
     <select class="form-select" id="filter-status">
     <option value="">Semua</option>
     <option value="overspent">Terlampaui (≥100%)</option>
@@ -2175,10 +2144,11 @@ function renderExportFilters(type) {
     </select>
     </div>
     <div class="mb-3">
-    <label class="form-label">Kategori</label>
+    <label class="form-label fw-semibold">Kategori</label>
     <div id="category-badges" class="d-flex flex-wrap gap-2 mb-2"></div>
     <select class="d-none" id="filter-category-hidden" multiple></select>
     </div>`;
+
     container.innerHTML = html;
     renderBudgetPeriodInput();
     Core.state.currentFilteredCategories = Core.state.categories.filter(c => c.type === 'expense' || c.type === 'both');
@@ -2296,6 +2266,69 @@ function toggleCategoryBadge(categoryId) {
     option.selected = !option.selected;
     renderCategoryBadges(Core.state.currentFilteredCategories);
   }
+}
+
+function switchDateFilter(target) {
+  // Reset nilai yang tidak terpakai
+  if (target !== 'date') {
+    const df = document.getElementById('filter-date-from');
+    const dt = document.getElementById('filter-date-to');
+    if (df) df.value = '';
+    if (dt) dt.value = '';
+  }
+  if (target !== 'month') {
+    const fm = document.getElementById('filter-month');
+    if (fm) fm.value = '';
+  }
+  if (target !== 'year') {
+    const fy = document.getElementById('filter-year');
+    if (fy) fy.value = '';
+  }
+
+  // Tampilkan/sembunyikan blok
+  const yearBlock = document.getElementById('filter-year-block');
+  const monthBlock = document.getElementById('filter-month-block');
+  const dateBlock = document.getElementById('filter-date-block');
+
+  if (yearBlock) yearBlock.style.display = target === 'year' ? 'block': 'none';
+  if (monthBlock) monthBlock.style.display = target === 'month' ? 'block': 'none';
+  if (dateBlock) dateBlock.style.display = target === 'date' ? 'block': 'none';
+
+  // Perbarui navigasi tombol
+  const nav = document.getElementById('date-filter-nav');
+  if (nav) {
+    nav.innerHTML = renderDateFilterNavigation(target);
+  }
+}
+
+function renderDateFilterNavigation(active) {
+  // Cek apakah bulan ada di blok saat ini (dengan melihat apakah filter-month-block ada)
+  const hasMonth = !!document.getElementById('filter-month-block');
+  const all = hasMonth
+  ? [{
+    key: 'year',
+    label: '📅 Tahun'
+  },
+    {
+      key: 'month',
+      label: '📆 Bulan'
+    },
+    {
+      key: 'date',
+      label: '📅 Rentang'
+    }]: [{
+      key: 'year',
+      label: '📅 Tahun'
+    },
+    {
+      key: 'date',
+      label: '📅 Rentang'
+    }];
+
+  return all
+  .filter(t => t.key !== active)
+  .map(t => `<button type="button" class="btn btn-sm btn-outline-secondary me-1" data-action="switch-date-filter" data-filter="${t.key}">${t.label}</button>`)
+  .join('');
 }
 
 async function updateExportFormatAvailability() {
