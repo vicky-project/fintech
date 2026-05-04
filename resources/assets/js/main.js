@@ -265,7 +265,7 @@ async function handleGlobalClick(e) {
         }
     });
   },
-  'btn-delete-account-confirm': () => {
+  'btn-delete-account-confirm': async () => {
     target.disabled = true;
     target.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Menghapus...';
 
