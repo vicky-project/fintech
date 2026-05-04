@@ -29,7 +29,7 @@ async function renderListPage(config) {
 // ==================== HOME ====================
 // ==================== HOME PAGE ====================
 async function renderHomePage() {
-  // Data homeSummary sudah tersedia di state
+  await Core.loadHomeSummary();
   const summary = Core.state.homeSummary;
   const container = document.getElementById('main-content');
 
@@ -574,6 +574,7 @@ async function loadAndEditTransfer(id) {
 
 // ==================== WALLETS ====================
 function renderWalletsPage() {
+  Core.loadWallets();
   const html = `
   <div class="container py-3">
   <div class="d-flex justify-content-between mb-3">
@@ -998,6 +999,7 @@ function renderCategoryTable(data) {
 // ==================== SETTINGS, INSIGHTS, STATEMENTS, BUDGETS, NOTIFICATIONS, SEARCH, TRASH ====================
 // Settings
 async function renderSettingsPage() {
+  await Core.loadUserSettings();
   const settings = Core.state.userSettings || {
     default_currency: 'IDR',
     default_wallet_id: '',
