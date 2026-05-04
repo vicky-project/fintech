@@ -128,11 +128,15 @@ async function renderHomePage() {
   </div>
 
   <!-- Recent Transactions -->
+  <div class="card mb-3">
+  <div class="card-body">
   <h6>Transaksi Terbaru</h6>
   <div id="recent-transactions">
   ${summary.has_transactions ?
   renderRecentTransactionsFromSummary(summary.recent_transactions):
   '<p class="text-muted text-center">Belum ada transaksi</p>'}
+  </div>
+  </div>
   </div>
   </div>`;
 
