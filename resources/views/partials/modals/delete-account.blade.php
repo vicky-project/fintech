@@ -33,8 +33,8 @@
     const btnDeleteAccountConfirm = document.getElementById('btn-delete-account-confirm');
     deleteConfirmInput.value = "";
     btnDeleteAccountConfirm.disabled = true;
+    modal.querySelector("#delete-confirm-input").oninput = (e) => checkInput(e);
     modal.show();
-    document.getElementById("delete-confirm-input").oninput = (e) => checkInput(e);
   }
   window.performDeleteAccount = async function(btn) {
     btn.disabled = true;
