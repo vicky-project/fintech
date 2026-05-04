@@ -31,9 +31,8 @@ async function renderListPage(config) {
   await loadFn(1);
 }
 
-// ==================== HOME ====================
 // ==================== HOME PAGE ====================
-async function renderHomePage() {
+function renderHomePage() {
   const summary = Core.state.homeSummary;
   const container = document.getElementById('main-content');
 
@@ -147,8 +146,8 @@ async function renderHomePage() {
   // Inisialisasi chart jika data tersedia
   if (summary.weekly_expense.length) {
     requestAnimationFrame(() => loadHomeChartFromSummary(summary.weekly_expense));
-    loadMonthlyComparisonChart();
   }
+  loadMonthlyComparisonChart();
 }
 
 // ========== HELPERS ==========
