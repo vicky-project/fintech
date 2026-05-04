@@ -196,11 +196,7 @@ async function handleGlobalClick(e) {
 
       try {
         const result = await Core.upload('/api/fintech/backup/restore', formData);
-        await Promise.all([
-          Core.loadWallets(),
-          Core.loadCategories(),
-          Core.loadHomeSummary()
-        ]);
+        Core.resetState();
         Core.navigateTo('home');
 
         tgApp.showToast(result.message || 'Data berhasil dipulihkan.', 'success');

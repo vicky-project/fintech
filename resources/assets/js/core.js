@@ -154,7 +154,6 @@ const Core = (() => {
   function checkPinRequired() {
     const settings = state.userSettings;
     if (settings && settings.pin_enabled) {
-      //getEl('loading-overlay').classList.add('d-none');
       return new Promise((resolve) => {
         showPinModal((pinOk) => {
           if (!pinOk) {
@@ -163,7 +162,6 @@ const Core = (() => {
             `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan untuk melanjutkan.</p></div>`;
             resolve(false);
           } else {
-            //getEl('loading-overlay').classList.add('d-none');
             resolve(true);
           }
         });
@@ -323,14 +321,15 @@ const Core = (() => {
       state.notifications = res.data || [];
       state.unreadNotificationCount = res.unread_count;
       updateNotificationBadge();
-      renderNotificationList(); // renderNotificationList ada di pages.js, bisa dipanggil via pubsub
+      if (typeof renderNotificationList === 'function') {
+        renderNotificationList();
+      }
     } catch (e) {
       getEl('notification-list').innerHTML = '<p class="text-muted text-center py-4">Gagal memuat notifikasi.</p>';
     }
   }
 
-  async function loadTransactionsPage(page,
-    filters) {
+  async function loadTransactionsPage(page, filters) {
     let url = `/api/fintech/transactions?per_page=20&page=${page}`;
     if (filters.wallet_id) url += `&wallet_id=${filters.wallet_id}`;
     if (filters.type) url += `&type=${filters.type}`;
@@ -346,10 +345,9 @@ const Core = (() => {
     let url = `/api/fintech/transfers?per_page=20&page=${page}`;
     if (walletId) url += `&wallet_id=${walletId}`;
     const res = await api.get(url);
-    const data = res.data;
-    state.transfers = data.data;
-    state.transferPage = data.current_page;
-    state.transferLastPage = data.last_page;
+    state.transfers = res.data.data;
+    state.transferPage = res.data.current_page;
+    state.transferLastPage = res.data.last_page;
   }
 
   async function loadStatements(page = 1) {
@@ -446,7 +444,6 @@ const Core = (() => {
     if (body) {
       headers['Content-Type'] = 'application/json';
     }
-
     const options = {
       method: body ? 'POST': 'GET',
       headers,
@@ -454,9 +451,6 @@ const Core = (() => {
     if (body) options.body = JSON.stringify(body);
 
     const response = await fetch(BASE_URL + url, options);
-    const contentType = response.headers.get('Content-Type');
-    console.log('Content-Type:', contentType);
-
     if (!response.ok) {
       let errorData;
       try {
@@ -467,18 +461,16 @@ const Core = (() => {
       error.status = response.status;
       throw error;
     }
-
     return response.blob();
   }
 
-  // Di dalam Core, dekat dengan fungsi request()
+  // Upload via multipart
   async function upload(url, formData) {
     const token = tgApp.getToken();
     const headers = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-
     const doFetch = () => fetch(BASE_URL + url, {
       method: 'POST',
       headers,
@@ -497,7 +489,6 @@ const Core = (() => {
     try {
       return await doFetch();
     } catch (error) {
-      // Intercept 403 PIN_REQUIRED / PIN_EXPIRED (menggunakan state yang sama)
       if (error.status === 403 && ['PIN_REQUIRED', 'PIN_EXPIRED'].includes(error.data?.code)) {
         if (!state.isPinModalShowing) {
           state.isPinModalShowing = true;
@@ -513,22 +504,71 @@ const Core = (() => {
     }
   }
 
+  // ========== RESET STATE ==========
+  function resetState() {
+    state.wallets = [];
+    state.categories = [];
+    state.currencies = [];
+    state.homeSummary = null;
+    state.transactions = [];
+    state.transactionPage = 1;
+    state.transactionLastPage = 1;
+    state.transactionSummary = {
+      total: 0,
+      income: 0,
+      expense: 0
+    };
+    state.transfers = [];
+    state.transferPage = 1;
+    state.transferLastPage = 1;
+    state.totalBalance = 0;
+    state.currentPage = 'home';
+    state.filters = {
+      wallet_id: '',
+      type: '',
+      month: ''
+    };
+    state.chartInstances = {
+      home: null,
+      report: null,
+      category: null
+    };
+    state.userSettings = null;
+    state.reportFilter = {
+      wallet_id: '',
+      periodType: 'all_years',
+      date: null,
+      month: null,
+      year: null
+    };
+    state.statementPage = 1;
+    state.statementLastPage = 1;
+    state.statements = [];
+    state.pinVerified = false;
+    state.pinVerifiedAt = null;
+    state.isPinModalShowing = false;
+    state.budgets = [];
+    state.unreadNotificationCount = 0;
+    state.notifications = [];
+    state.searchResults = [];
+    state.searchKeyword = '';
+    state.currentFilter = 'all';
+    state.pendingAction = null;
+    state.currentFilteredCategories = [];
+    state.googlePollInterval = null;
+
+    if (state.sessionTimer) {
+      clearTimeout(state.sessionTimer);
+      state.sessionTimer = null;
+    }
+  }
+
+  // ========== SESSION EXPIRED ==========
   function handleSessionExpired() {
-    // Hapus semua token
     tgApp.clearToken();
     localStorage.removeItem('auth_token');
+    resetState();
 
-    // Hapus state (opsional)
-    if (typeof state !== 'undefined') {
-      state.userSettings = null;
-      state.wallets = [];
-      state.homeSummary = null;
-      state.pinVerified = false;
-      state.pinVerifiedAt = null;
-      if (state.sessionTimer) clearTimeout(state.sessionTimer);
-    }
-
-    // Tampilkan overlay penuh yang memblokir semua interaksi
     const overlay = document.createElement('div');
     overlay.id = 'session-expired-overlay';
     overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10001; flex-direction:column;';
@@ -541,14 +581,13 @@ const Core = (() => {
     </div>`;
     document.body.appendChild(overlay);
 
-    // Kosongkan konten utama agar tidak ada interaksi
     const main = document.getElementById('main-content');
     if (main) main.innerHTML = '';
   }
 
   // ========== PUBLIC API ==========
   return {
-    // State & API (readonly)
+    // State
     state,
     api,
     upload,
@@ -597,6 +636,9 @@ const Core = (() => {
 
     // Pagination
     renderPagination,
+
+    // State reset
+    resetState,
 
     downloadFile
   };
