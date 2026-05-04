@@ -7,49 +7,22 @@ use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\NotificationType;
+use Modules\FinTech\Traits\HasUserCache;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 
 class NotificationService
 {
+  use HasUserCache;
+
   protected int $cacheTtl = 3600;
-
-  /**
-  * Cek apakah cache driver mendukung tags.
-  */
-  private static function supportsTags(): bool
-  {
-    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
-  }
-
-  /**
-  * Simpan cache dengan tags jika didukung, jika tidak pakai cache polos.
-  * Tag dikunci: ['notifications', "user_{userId}"].
-  */
-  private function rememberWithFallback(int $userId, string $cacheKey, int $ttl, callable $callback): mixed
-  {
-    if (self::supportsTags()) {
-      return Cache::tags(['notifications', "user_{$userId}"])->remember($cacheKey, $ttl, $callback);
-    }
-    return Cache::remember($cacheKey, $ttl, $callback);
-  }
 
   /**
   * Clear semua cache notifikasi user tertentu.
   */
   public static function clearNotificationCaches(int $userId): void
   {
-    try {
-      if (self::supportsTags()) {
-        Cache::tags(['notifications', "user_{$userId}"])->flush();
-      } else {
-        Cache::forget("notifications_user_{$userId}_limit_50");
-        Cache::forget("notifications_unread_count_{$userId}");
-      }
-    } catch (\Exception $e) {
-      \Log::warning('Failed to clear notification caches: ' . $e->getMessage());
-    }
+    app(static::class)->clearUserCache($userId);
   }
 
   /**
@@ -75,8 +48,9 @@ class NotificationService
   */
   public function getForUser(int $userId, int $limit = 50): array
   {
-    $cacheKey = "notifications_user_{$userId}_limit_{$limit}";
-    return $this->rememberWithFallback($userId, $cacheKey, $this->cacheTtl, function () use ($userId, $limit) {
+    $suffix = "notifications_limit_{$limit}";
+
+    return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId, $limit) {
       return Notification::where('user_id', $userId)
       ->orderBy('is_read', 'asc')
       ->orderBy('created_at', 'desc')
@@ -120,8 +94,9 @@ class NotificationService
   */
   public function getUnreadCount(int $userId): int
   {
-    $cacheKey = "notifications_unread_count_{$userId}";
-    return $this->rememberWithFallback($userId, $cacheKey, 300, function () use ($userId) {
+    $suffix = 'notifications_unread_count';
+
+    return $this->rememberForUser($userId, $suffix, 300, function () use ($userId) {
       return Notification::where('user_id', $userId)
       ->unread()
       ->count();

@@ -100,7 +100,7 @@ class BudgetService
   */
   public static function clearBudgetCaches(int $userId): void
   {
-    (new static)->clearUserCache($userId);
+    app(static::class)->clearUserCache($userId);
   }
 
   // ─── Trait Override (opsional) ──────────────────────

@@ -22,7 +22,7 @@ class ReportService
   */
   public static function clearReportCaches(int $userId): void
   {
-    (new static)->clearUserCache($userId);
+    app(static::class)->clearUserCache($userId);
   }
 
   /**
