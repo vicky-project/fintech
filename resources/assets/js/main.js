@@ -401,6 +401,66 @@ async function initializeApp() {
 
 window.retryInitialization = () => initializeApp();
 
+function showToast(message, type = 'success') {
+  // Buat container toast jika belum ada
+  let toastContainer = document.querySelector('.toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+    toastContainer.style.zIndex = '9999';
+    document.body.appendChild(toastContainer);
+  }
+
+  // Tentukan ikon dan warnanya
+  let iconClass = 'bi-info-circle';
+  let iconColor = 'var(--tg-theme-link-color)';
+  if (type === 'success') {
+    iconClass = 'bi-check-circle-fill';
+    iconColor = '#28a745';
+  } else if (type === 'danger') {
+    iconClass = 'bi-exclamation-triangle-fill';
+    iconColor = '#dc3545';
+  } else if (type === 'warning') {
+    iconClass = 'bi-exclamation-circle-fill';
+    iconColor = '#ffc107';
+  }
+
+  // Buat elemen toast
+  const toastEl = document.createElement('div');
+  toastEl.className = 'toast';
+  toastEl.setAttribute('role', 'alert');
+  toastEl.setAttribute('aria-live', 'assertive');
+  toastEl.setAttribute('aria-atomic', 'true');
+  toastEl.innerHTML = `
+  <div class="toast-header" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);">
+  <i class="bi ${iconClass} me-2" style="color: ${iconColor};"></i>
+  <strong class="me-auto">Notifikasi</strong>
+  <small style="color: var(--tg-theme-hint-color);">baru saja</small>
+  <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(1);"></button>
+  </div>
+  <div class="toast-body" style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
+  ${message}
+  </div>
+  `;
+
+  // Tambahkan ke container di posisi pertama (paling atas)
+  toastContainer.insertBefore(toastEl, toastContainer.firstChild);
+
+  // Inisialisasi Bootstrap Toast
+  const toast = new bootstrap.Toast(toastEl, {
+    delay: 4000
+  });
+  toast.show();
+
+  // Hapus elemen setelah tersembunyi
+  toastEl.addEventListener('hidden.bs.toast', () => {
+    toastEl.remove();
+    if (toastContainer.children.length === 0) {
+      toastContainer.remove();
+    }
+  });
+}
+
 // ---------- MULAI SETELAH DOM SIAP ----------
 document.addEventListener('DOMContentLoaded', () => {
   // Setup event delegation (gantikan inline onclick secara bertahap)
@@ -412,11 +472,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Mulai session timer
   Core.startSessionTimer();
-  ['click', 'scroll'].forEach(eventType => {
-    document.addEventListener(eventType, Core.resetSessionTimer, {
-      passive: true
+  ['click',
+    'scroll'].forEach(eventType => {
+      document.addEventListener(eventType, Core.resetSessionTimer, {
+        passive: true
+      });
     });
-  });
 
   // Jalankan inisialisasi aplikasi
   initializeApp();
