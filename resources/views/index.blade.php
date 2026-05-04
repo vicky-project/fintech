@@ -325,7 +325,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-          <button type="button" class="btn btn-danger" id="btn-delete-account-confirm" disabled>
+          <button type="button" class="btn btn-danger" id="btn-delete-account-confirm" disabled data-action="btn-delete-account-confirm">
             <i class="bi bi-trash me-1"></i> Hapus Permanen
           </button>
         </div>
