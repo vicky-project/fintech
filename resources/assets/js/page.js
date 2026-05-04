@@ -127,6 +127,7 @@ async function renderHomePage() {
   </div>
   </div>
 
+  <!-- Monthly Comparison Chart -->
   <div class="card mb-3" id="monthlyComparisonCard">
   <div class="card-body">
   <h6>6 Bulan Terakhir</h6>
