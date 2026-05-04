@@ -413,16 +413,16 @@ function showToast(message, type = 'success') {
 
   // Ikon dengan warna solid (tetap terlihat di tema gelap/terang)
   let iconClass = 'bi-info-circle';
-  let iconColor = 'var(--tg-theme-link-color)';
+  let bgColor = 'var(--tg-theme-link-color)';
   if (type === 'success') {
     iconClass = 'bi-check-circle-fill';
-    iconColor = '#28a745'; // Hijau solid
+    bgColor = '#28a745'; // Hijau solid
   } else if (type === 'danger') {
     iconClass = 'bi-exclamation-triangle-fill';
-    iconColor = '#dc3545'; // Merah solid
+    bgColor = '#dc3545'; // Merah solid
   } else if (type === 'warning') {
     iconClass = 'bi-exclamation-circle-fill';
-    iconColor = '#ffc107'; // Kuning solid
+    bgColor = '#ffc107'; // Kuning solid
   }
 
   // Buat elemen toast dengan warna dari tema Telegram
@@ -431,12 +431,12 @@ function showToast(message, type = 'success') {
   toastEl.setAttribute('role', 'alert');
   toastEl.setAttribute('aria-live', 'assertive');
   toastEl.setAttribute('aria-atomic', 'true');
-  toastEl.style.backgroundColor = 'var(--tg-theme-secondary-bg-color)';
+  toastEl.style.backgroundColor = bgColor;
   toastEl.style.color = 'var(--tg-theme-text-color)';
   toastEl.style.border = '1px solid var(--tg-theme-section-separator-color)';
   toastEl.innerHTML = `
   <div class="toast-header" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color); border-bottom: 1px solid var(--tg-theme-section-separator-color);">
-  <i class="bi ${iconClass} me-2" style="color: ${iconColor};"></i>
+  <i class="bi ${iconClass} me-2" style="color: ${bgColor};"></i>
   <strong class="me-auto">Notifikasi</strong>
   <small style="color: var(--tg-theme-hint-color);">baru saja</small>
   <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(0.5);"></button>
