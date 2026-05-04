@@ -31,10 +31,10 @@
     const modal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
     const deleteConfirmInput = document.getElementById('delete-confirm-input');
     const btnDeleteAccountConfirm = document.getElementById('btn-delete-account-confirm');
+    modal.show();
     deleteConfirmInput.value = "";
     btnDeleteAccountConfirm.disabled = true;
     deleteConfirmInput.oninput = (e) => checkInput(e);
-    modal.show();
     deleteConfirmInput.focus();
   }
   window.performDeleteAccount = async function(btn) {
@@ -43,8 +43,8 @@
 
     try {
       const res = await Core.api.delete('/api/fintech/setting/account/delete');
-      showToast(res.message || 'Akun berhasil dihapus.',
-        'success');
+      tgApp.showToast(res.message || 'Akun berhasil dihapus.',
+      'success');
 
       // Bersihkan state & redirect
       tgApp.clearToken();
@@ -65,8 +65,8 @@
 
       bootstrap.Modal.getInstance(document.getElementById('deleteAccountModal'))?.hide();
     } catch (error) {
-      showToast(error.message || 'Gagal menghapus akun',
-        'danger');
+      tgApp.showToast(error.message || 'Gagal menghapus akun',
+      'danger');
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-trash me-1"></i> Hapus Permanen';
     }
