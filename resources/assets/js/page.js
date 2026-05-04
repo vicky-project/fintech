@@ -32,8 +32,9 @@ async function renderListPage(config) {
 }
 
 // ==================== HOME PAGE ====================
-function renderHomePage() {
+async function renderHomePage() {
   const summary = Core.state.homeSummary;
+  if (!summary) await Core.loadHomeSummary();
   const container = document.getElementById('main-content');
 
   // 1. Skeleton loader jika data belum tersedia (mungkin gagal/terlambat)

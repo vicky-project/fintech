@@ -89,6 +89,7 @@
   };
 
   async function saveWallet() {
+    const currentPage = Core.state.currentPage;
     const form = document.getElementById('walletForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
@@ -126,6 +127,7 @@
         await Core.api.post(url, data);
       }
 
+      Core.resetState();
       await Core.loadWallets();
       await Core.loadHomeSummary();
 
@@ -133,9 +135,9 @@
       tgApp.showToast(isEdit ? 'Dompet diperbarui' : 'Dompet dibuat');
       bootstrap.Modal.getInstance(document.getElementById('walletModal')).hide();
 
-      if (Core.state.currentPage === 'wallets') {
+      if (currentPage === 'wallets') {
         Core.navigateTo('wallets');
-      } else if (Core.state.currentPage === 'home') {
+      } else if (currentPage === 'home') {
         Core.navigateTo('home');
       }
     } catch (error) {
