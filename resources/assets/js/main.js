@@ -413,20 +413,21 @@ function showToast(message, type = 'success') {
 
   // Ikon dengan warna solid
   let iconClass = 'bi-info-circle';
-  let solidColor = 'var(--tg-theme-link-color)'; // fallback
+  let iconColor = "text-info";
+  let bgClass = 'bg-info text-white'; // fallback
   if (type === 'success') {
     iconClass = 'bi-check-circle-fill';
-    solidColor = '#28a745';
+    iconColor = 'text-success';
+    bgClass = 'bg-success text-white';
   } else if (type === 'danger') {
     iconClass = 'bi-exclamation-triangle-fill';
-    solidColor = '#dc3545';
+    iconColor = 'text-danger';
+    bgClass = 'bg-danger text-white';
   } else if (type === 'warning') {
     iconClass = 'bi-exclamation-circle-fill';
-    solidColor = '#ffc107';
+    iconColor = 'text-warning';
+    bgClass = 'bg-warning text-dark';
   }
-
-  // Warna semi‑transparan untuk body (solidColor + opacity)
-  const semiTransparent = `color-mix(in srgb, ${solidColor} 12%, transparent)`;
 
   // Buat elemen toast
   const toastEl = document.createElement('div');
@@ -439,12 +440,12 @@ function showToast(message, type = 'success') {
   toastEl.style.border = '1px solid var(--tg-theme-section-separator-color)';
   toastEl.innerHTML = `
   <div class="toast-header" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color); border-bottom: 1px solid var(--tg-theme-section-separator-color);">
-  <i class="bi ${iconClass} me-2" style="color: ${solidColor};"></i>
+  <i class="bi ${iconClass} me-2 ${iconColor}"></i>
   <strong class="me-auto">Notifikasi</strong>
   <small style="color: var(--tg-theme-hint-color);">baru saja</small>
   <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(0.5);"></button>
   </div>
-  <div class="toast-body" style="background-color: ${semiTransparent}; color: var(--tg-theme-text-color);">
+  <div class="toast-body ${bgClass}">
   ${message}
   </div>
   `;
