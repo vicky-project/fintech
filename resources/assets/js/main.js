@@ -445,7 +445,7 @@ function showToast(message, type = 'success') {
   <small style="color: var(--tg-theme-hint-color);">baru saja</small>
   <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(0.5);"></button>
   </div>
-  <div class="toast-body ${bgClass} bg-gradient bg-opacity-75">
+  <div class="toast-body ${bgClass} bg-gradient bg-opacity-50">
   ${message}
   </div>
   `;
