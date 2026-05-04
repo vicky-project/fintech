@@ -127,10 +127,10 @@ async function renderHomePage() {
   </div>
   </div>
 
-  <div class="card mb-3">
+  <div class="card mb-3" id="monthlyComparisonCard">
   <div class="card-body">
   <h6>6 Bulan Terakhir</h6>
-  ${summary.weekly_expense.length ? '<div style="height: 200px;"><canvas id="monthlyComparisonChart"></canvas></div>': '<p class="text-muted text-center">Belum ada data untuk dibandingkan</p>'}
+  <div style="height: 200px;"><canvas id="monthlyComparisonChart"></canvas></div>
   </div>
   </div>
 
@@ -226,9 +226,27 @@ async function loadMonthlyComparisonChart() {
   try {
     const res = await Core.api.get('/api/fintech/home-monthly-comparison');
     const data = res.data;
+    const chartContainer = document.getElementById('monthlyComparisonCard');
+
+    // Cek apakah data kosong atau semua pemasukan/pengeluaran 0
+    const hasData = data && data.length > 0 && data.some(d => d.income > 0 || d.expense > 0);
+
+    if (!hasData) {
+      // Tampilkan teks informatif
+      if (chartContainer) {
+        chartContainer.innerHTML = `
+        <div class="card-body text-center py-4">
+        <i class="bi bi-bar-chart-line fs-1 text-muted"></i>
+        <p class="text-muted mt-2 mb-0">Belum ada data untuk perbandingan 6 bulan terakhir.</p>
+        <small class="text-muted">Mulai catat transaksi untuk melihat tren keuangan Anda.</small>
+        </div>`;
+      }
+      return;
+    }
+
+    // Jika ada data, buat chart
     const ctx = document.getElementById('monthlyComparisonChart')?.getContext('2d');
     if (!ctx) return;
-
     new Chart(ctx, {
       type: 'bar',
       data: {
@@ -252,6 +270,14 @@ async function loadMonthlyComparisonChart() {
     });
   } catch (error) {
     console.error('Gagal memuat perbandingan bulanan:', error);
+    const chartContainer = document.getElementById('monthlyComparisonCard');
+    if (chartContainer) {
+      chartContainer.innerHTML = `
+      <div class="card-body text-center py-4">
+      <i class="bi bi-exclamation-circle fs-1 text-muted"></i>
+      <p class="text-muted mt-2 mb-0">Gagal memuat data perbandingan.</p>
+      </div>`;
+    }
   }
 }
 
