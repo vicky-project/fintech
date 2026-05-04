@@ -270,6 +270,7 @@ const Core = (() => {
 
   // ========== DATA LOADING ==========
   async function loadWallets() {
+    if (state.wallets.length) return;
     const res = await api.get('/api/fintech/wallets');
     state.wallets = res.data || [];
     state.totalBalance = state.wallets.reduce((s, w) => s + w.balance,
@@ -277,21 +278,25 @@ const Core = (() => {
   }
 
   async function loadCategories() {
+    if (state.categories.length) return;
     const res = await api.get('/api/fintech/categories');
     state.categories = res.data || [];
   }
 
   async function loadCurrencies() {
+    if (state.currencies.length) return;
     const res = await api.get('/api/fintech/currencies');
     state.currencies = res.data || [];
   }
 
   async function loadHomeSummary() {
+    if (state.homeSummary) return;
     const res = await api.get('/api/fintech/home-summary');
     state.homeSummary = res.data;
   }
 
   async function loadUserSettings() {
+    if (state.userSettings) return;
     try {
       const res = await api.get('/api/fintech/settings');
       state.userSettings = res.data;
@@ -299,7 +304,8 @@ const Core = (() => {
       console.warn('Gagal memuat pengaturan:',
         error);
       state.userSettings = {
-        default_currency: 'IDR', default_wallet_id: null
+        default_currency: 'IDR',
+        default_wallet_id: null
       };
     }
   }

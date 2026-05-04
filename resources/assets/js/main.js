@@ -172,7 +172,29 @@ async function handleGlobalClick(e) {
       };
     },
     'restore-modal': () => {
-      new bootstrap.Modal(document.getElementById('restoreModal')).show();
+      const modalEl = document.getElementById('restoreModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+      // Pasang listener langsung
+      const fileInput = modalEl.querySelector('input[type="file"]');
+      const btnDeleteAccountConfirm = modalEl.getElementById('btn-delete-account-confirm');
+      fileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        const btnUpload = document.getElementById('btn-upload-restore');
+        if (file) {
+          if (!file.name.endsWith('.json.gz') && !file.name.endsWith('.json')) {
+            alert('Format file tidak didukung. Pilih file .json.gz atau .json');
+            this.value = "";
+            btnUpload.disabled = true;
+            return;
+          }
+          btnUpload.disabled = false;
+        } else {
+          btnUpload.disabled = true;
+        }
+      });
+      btnDeleteAccountConfirm.addEventListener('click',
+        e => performDeleteAccount(e.target))
     },
     'restore-data': async () => {
       const form = document.getElementById('formRestore');
@@ -259,7 +281,6 @@ async function handleGlobalClick(e) {
       new bootstrap.Modal(document.getElementById('infoModal')).show();
     },
     'delete-account': () => deleteAccount(),
-    'btn-delete-account-confirm': () => performDeleteAccount(target),
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {
@@ -322,23 +343,6 @@ function handleGlobalChange(e) {
         toggleExportOptions();
       }
     },
-    'restore-input-change': (el) => {
-      const file = el.files[0];
-      const btnUpload = document.getElementById('btn-upload-restore');
-
-      if (file) {
-        if (!file.name.endsWith('.json.gz') && !file.name.endsWith('.json')) {
-          alert('Format file tidak didukung. Pilih file .json.gz atau .json');
-          el.value = "";
-          btnUpload.disabled = true;
-          return;
-        }
-        btnUpload.disabled = false;
-        btnUpload.innerHTML = '<i class="bi bi-upload me-1"></i> Upload & Pulihkan';
-      } else {
-        btnUpload.disabled = true;
-      }
-    }
     // Tambahkan aksi lain sesuai kebutuhan
   };
 
@@ -353,79 +357,79 @@ function setupNavigation() {
     btn.addEventListener('click', () => {
       if (btn.hasAttribute('data-bs-toggle') && btn.getAttribute('data-bs-toggle') === 'dropdown') return;
       Core.navigateTo(btn.dataset.page);
-    });
+  });
   });
 }
 
 // ---------- INISIALISASI APLIKASI ----------
 async function initializeApp() {
-  const overlay = document.getElementById('loading-overlay');
-  overlay.style.zIndex = '10000';
-  document.body.style.overflow = 'hidden';
-  try {
-    overlay.classList.remove('d-none');
-    overlay.innerHTML = `<div class="text-center"><div class="spinner-border text-primary mb-3"></div><p class="text-muted">Memuat data keuangan...</p></div>`;
+const overlay = document.getElementById('loading-overlay');
+overlay.style.zIndex = '10000';
+document.body.style.overflow = 'hidden';
+try {
+overlay.classList.remove('d-none');
+overlay.innerHTML = `<div class="text-center"><div class="spinner-border text-primary mb-3"></div><p class="text-muted">Memuat data keuangan...</p></div>`;
 
-    // 1. Load pengaturan user
-    await Core.loadUserSettings();
+// 1. Load pengaturan user
+await Core.loadUserSettings();
 
-    // 2. Cek PIN jika diperlukan
-    const pinOk = await Core.checkPinRequired();
-    if (!pinOk) {
-      overlay.innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan.</p></div>`;
-      return;
-    }
+// 2. Cek PIN jika diperlukan
+const pinOk = await Core.checkPinRequired();
+if (!pinOk) {
+overlay.innerHTML = `<div class="text-center p-4"><i class="bi bi-lock fs-1"></i><h5 class="mt-3">Aplikasi Terkunci</h5><p class="text-muted">Verifikasi PIN diperlukan.</p></div>`;
+return;
+}
 
-    // 3. Load data utama
-    await Promise.all([
-      Core.loadWallets().catch((e) => tgApp.showToast(e.message || 'Gagal memuat dompet', 'warning')),
-      Core.loadCategories().catch((e) => tgApp.showToast(e.message || 'Gagal memuat kategori', 'warning')),
-      Core.loadCurrencies().catch((e) => tgApp.showToast(e.message || 'Gagal memuat mata uang', 'warning')),
-      Core.loadHomeSummary().catch((e) => tgApp.showToast(e.message || 'Gagal memuat ringkasan', 'warning'))
-    ]);
+// 3. Load data utama
+await Promise.all([
+Core.loadWallets().catch((e) => tgApp.showToast(e.message || 'Gagal memuat dompet', 'warning')),
+Core.loadCategories().catch((e) => tgApp.showToast(e.message || 'Gagal memuat kategori', 'warning')),
+Core.loadCurrencies().catch((e) => tgApp.showToast(e.message || 'Gagal memuat mata uang', 'warning')),
+Core.loadHomeSummary().catch((e) => tgApp.showToast(e.message || 'Gagal memuat ringkasan', 'warning'))
+]);
 
-    Core.loadUnreadNotificationCount(); // fire & forget
+Core.loadUnreadNotificationCount(); // fire & forget
 
-    // 5. Navigasi ke halaman home
-    Core.navigateTo('home');
-    overlay.classList.add('d-none');
-  } catch (error) {
-    console.error('Init error:', error);
-    overlay.innerHTML = `
-    <div class="text-center p-4">
-    <i class="bi bi-exclamation-triangle text-danger display-4"></i>
-    <h5 class="mt-3">Gagal Memuat Aplikasi</h5>
-    <p class="text-muted">${error.message || 'Terjadi kesalahan tidak diketahui.'}</p>
-    <button class="btn btn-primary mt-2" onclick="retryInitialization()">
-    <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
-    </button>
-    </div>`;
-    overlay.classList.remove('d-none');
-  } finally {
-    document.body.style.overflow = '';
-  }
+// 5. Navigasi ke halaman home
+Core.navigateTo('home');
+overlay.classList.add('d-none');
+} catch (error) {
+console.error('Init error:', error);
+overlay.innerHTML = `
+<div class="text-center p-4">
+<i class="bi bi-exclamation-triangle text-danger display-4"></i>
+<h5 class="mt-3">Gagal Memuat Aplikasi</h5>
+<p class="text-muted">${error.message || 'Terjadi kesalahan tidak diketahui.'}</p>
+<button class="btn btn-primary mt-2" onclick="retryInitialization()">
+<i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
+</button>
+</div>`;
+overlay.classList.remove('d-none');
+} finally {
+document.body.style.overflow = '';
+}
 }
 
 window.retryInitialization = () => initializeApp();
 
 // ---------- MULAI SETELAH DOM SIAP ----------
 document.addEventListener('DOMContentLoaded', () => {
-  // Setup event delegation (gantikan inline onclick secara bertahap)
-  document.addEventListener('click', handleGlobalClick);
-  document.addEventListener('change', handleGlobalChange);
+// Setup event delegation (gantikan inline onclick secara bertahap)
+document.addEventListener('click', handleGlobalClick);
+document.addEventListener('change', handleGlobalChange);
 
-  // Setup navigasi sidebar
-  setupNavigation();
+// Setup navigasi sidebar
+setupNavigation();
 
-  // Mulai session timer
-  Core.startSessionTimer();
-  ['click',
-    'scroll'].forEach(eventType => {
-      document.addEventListener(eventType, Core.resetSessionTimer, {
-        passive: true
-      });
-    });
+// Mulai session timer
+Core.startSessionTimer();
+['click',
+'scroll'].forEach(eventType => {
+document.addEventListener(eventType, Core.resetSessionTimer, {
+passive: true
+});
+});
 
-  // Jalankan inisialisasi aplikasi
-  initializeApp();
+// Jalankan inisialisasi aplikasi
+initializeApp();
 });

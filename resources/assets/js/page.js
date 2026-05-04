@@ -34,7 +34,6 @@ async function renderListPage(config) {
 // ==================== HOME ====================
 // ==================== HOME PAGE ====================
 async function renderHomePage() {
-  await Core.loadHomeSummary();
   const summary = Core.state.homeSummary;
   const container = document.getElementById('main-content');
 
@@ -578,8 +577,8 @@ async function loadAndEditTransfer(id) {
 }
 
 // ==================== WALLETS ====================
-function renderWalletsPage() {
-  Core.loadWallets();
+async function renderWalletsPage() {
+  await Core.loadWallets();
   const html = `
   <div class="container py-3">
   <div class="d-flex justify-content-between mb-3">
@@ -1494,21 +1493,15 @@ async function renderBudgetsPage() {
     listContainerId: 'budget-list',
     paginationId: 'budget-pagination',
     extraHeaderButtons: `<button class="btn btn-sm btn-primary" onclick="showAddBudgetModal()"><i class="bi bi-plus"></i></button>`,
-    loadFn: refreshBudgetList
+    loadFn: async function(page) {
+      await Core.loadBudgets();
+      renderBudgetList();
+    }
   });
 }
 async function refreshBudgetList() {
   await Core.loadBudgets();
   renderBudgetList();
-}
-async function loadBudgets() {
-  try {
-    const res = await Core.api.get('/api/fintech/budgets');
-    Core.state.budgets = res.data || [];
-  } catch (error) {
-    Core.state.budgets = [];
-    tgApp.showToast('Gagal memuat budget', 'danger');
-  }
 }
 function renderBudgetList() {
   const container = document.getElementById('budget-list');
