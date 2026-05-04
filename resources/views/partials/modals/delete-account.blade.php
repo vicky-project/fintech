@@ -13,7 +13,7 @@
         <p>
           Ketik <strong>HAPUS</strong> di bawah untuk melanjutkan:
         </p>
-        <input type="text" class="form-control" id="delete-confirm-input" placeholder="Ketik HAPUS" oninput="chechInput(this);">
+        <input type="text" class="form-control" id="delete-confirm-input" placeholder="Ketik HAPUS">
         <small class="text-muted">Pastikan Anda sudah membackup data jika diperlukan.</small>
       </div>
       <div class="modal-footer">
@@ -34,6 +34,7 @@
     deleteConfirmInput.value = "";
     btnDeleteAccountConfirm.disabled = true;
     modal.show();
+    document.getElementById("delete-confirm-input").oninput = () => checkInput(this);
   }
   window.performDeleteAccount = async function(btn) {
     btn.disabled = true;
@@ -69,7 +70,7 @@
     }
   }
 
-  function chechInput(input) {
+  function checkInput(input) {
     const confirmBtn = document.getElementById('btn-delete-account-confirm');
     if (confirmBtn) {
       confirmBtn.disabled = input.target.value.trim().toUpperCase() !== 'HAPUS';
