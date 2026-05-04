@@ -117,6 +117,7 @@ class SettingController extends Controller
     $user = request()->user();
 
     if (!$user instanceof TelegramUser) {
+      \Log::warning($user);
       abort(401, 'Unauthorized');
     }
 
