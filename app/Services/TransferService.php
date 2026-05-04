@@ -131,8 +131,7 @@ class TransferService
     });
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
     return $transfer;
   }
 
@@ -177,8 +176,7 @@ class TransferService
     });
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
     return $transfer->fresh();
   }
 
@@ -198,8 +196,7 @@ class TransferService
     });
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
   }
 
   /**
@@ -219,8 +216,7 @@ class TransferService
     });
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
   }
 
   /**
@@ -235,8 +231,7 @@ class TransferService
     $transfer->forceDelete();
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
   }
 
   // ─── HELPERS ───────────────────────────────────────────
@@ -301,5 +296,12 @@ class TransferService
       'insights',
       'transfers',
     ];
+  }
+
+  protected function clearOtherCaches(int $userId): void
+  {
+    app(InsightService::class)->clearUserCache($userId);
+    app(ReportService::class)->clearUserCache($userId);
+    app(WalletService::class)->clearUserCache($userId);
   }
 }

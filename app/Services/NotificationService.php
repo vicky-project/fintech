@@ -38,7 +38,7 @@ class NotificationService
       'data' => $data,
     ]);
 
-    self::clearNotificationCaches($userId);
+    $this->clearUserCache($userId);
 
     return $notification;
   }
@@ -71,7 +71,7 @@ class NotificationService
 
     if ($notification) {
       $notification->markAsRead();
-      self::clearNotificationCaches($userId);
+      $this->clearUserCache($userId);
     }
   }
 
@@ -86,7 +86,7 @@ class NotificationService
       'is_read' => true,
       'read_at' => now(),
     ]);
-    self::clearNotificationCaches($userId);
+    $this->clearUserCache($userId);
   }
 
   /**
@@ -211,5 +211,12 @@ class NotificationService
         );
       }
     }
+  }
+
+  protected function knownUserCacheSuffixes(int $userId): array
+  {
+    return [
+      'notifications_unread_count',
+    ];
   }
 }
