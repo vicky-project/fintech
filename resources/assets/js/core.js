@@ -70,6 +70,18 @@ const Core = (() => {
           throw new Error('Verifikasi PIN diperlukan');
         }
         throw new Error('PIN sedang diverifikasi');
+      } else if (error.status === 401) {
+        // Token tidak valid atau user dihapus
+        tgApp.clearToken?.();
+        localStorage.removeItem('auth_token');
+        // Tampilkan pesan dan muat ulang aplikasi
+        document.getElementById('main-content').innerHTML = `
+        <div class="container py-5 text-center">
+        <i class="bi bi-box-arrow-in-right display-1 text-muted"></i>
+        <h4 class="mt-3">Sesi Berakhir</h4>
+        <p class="text-muted">Silakan buka kembali aplikasi dari Telegram.</p>
+        </div>`;
+        throw new Error('Sesi berakhir, silakan muat ulang.');
       }
       throw error;
     }

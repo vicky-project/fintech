@@ -117,7 +117,6 @@ class SettingController extends Controller
     $user = $request->user();
 
     if (!$user instanceof TelegramUser) {
-      \Log::warning($user);
       abort(401, 'Unauthorized');
     }
 
@@ -132,6 +131,9 @@ class SettingController extends Controller
       Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))->delete();
       Models\UserSetting::where('user_id', $user->id)->delete();
       Models\Wallet::where('user_id', $user->id)->delete();
+
+      $user->tokens()->delete();
+      $user->delete();
     });
 
     return response()->json([

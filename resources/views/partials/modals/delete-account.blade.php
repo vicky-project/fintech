@@ -47,6 +47,7 @@
       'success');
 
       // Bersihkan state & redirect
+      tgApp.clearToken();
       localStorage.removeItem('auth_token');
       Core.state.userSettings = null;
       Core.state.wallets = [];
