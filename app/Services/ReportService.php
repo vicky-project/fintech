@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
+use Modules\FinTech\Enums\CategoryType;
 use Modules\FinTech\Traits\HasUserCache;
 
 class ReportService
@@ -482,5 +483,14 @@ class ReportService
       return $wallet ? $wallet->currency : config('fintech.default_currency', 'IDR');
     }
     return config('fintech.default_currency', 'IDR');
+  }
+
+  protected function knownUserCacheSuffixes(int $userId): array
+  {
+    $known = ['report_all_years_all'];
+    foreach (CategoryType::cases() as $cat) {
+      $known[] = "report_category_table_{$cat->value}_all";
+    }
+    return $known;
   }
 }

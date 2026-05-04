@@ -351,7 +351,6 @@ class StatementService
       }
 
       DB::commit();
-      ReportService::clearReportCaches($statement->user_id);
 
       return [
         'imported' => $imported,

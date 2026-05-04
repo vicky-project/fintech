@@ -364,4 +364,11 @@ class InsightService
   {
     return Wallet::where('user_id', $userId)->value('currency') ?? config('fintech.default_currency', 'IDR');
   }
+
+  protected function knownUserCacheSuffixes(int $userId): array
+  {
+    return [
+      'insights',
+    ];
+  }
 }
