@@ -71,14 +71,14 @@ function renderHomePage() {
   <div class="col-6">
   <div class="card"><div class="card-body p-3 text-center">
   <i class="bi bi-arrow-down-circle text-success fs-4"></i>
-  <h6 class="mb-0">${Core.formatNumberShort(summary.total_income)}</h6>
+  <h6 class="mb-0">${Core.formatNumberShort(summary.current_month_income)}</h6>
   <small>Pemasukan</small>
   </div></div>
   </div>
   <div class="col-6">
   <div class="card"><div class="card-body p-3 text-center">
   <i class="bi bi-arrow-up-circle text-danger fs-4"></i>
-  <h6 class="mb-0">${Core.formatNumberShort(summary.last_month_expense)}</h6>
+  <h6 class="mb-0">${Core.formatNumberShort(summary.current_month_expense)}</h6>
   <small>Pengeluaran</small>
   ${trendHtml}
   </div></div>
@@ -102,19 +102,6 @@ function renderHomePage() {
     `).join('')}
   </div>
   </div>`: ''}
-
-  <!-- Quick Actions -->
-  <div class="d-flex gap-2 mb-3">
-  <button class="btn btn-primary" data-action="add-transaction">
-  <i class="bi bi-plus-circle"></i> Transaksi
-  </button>
-  <button class="btn btn-outline-primary" data-action="add-transfer">
-  <i class="bi bi-arrow-left-right"></i> Transfer
-  </button>
-  <button class="btn btn-outline-secondary" data-action="backup-data">
-  <i class="bi bi-cloud-upload"></i> Backup
-  </button>
-  </div>
 
   <!-- Weekly Expense Chart -->
   <div class="card mb-3">
