@@ -50,7 +50,11 @@ function renderHomePage() {
 
   const symbol = Core.getCurrencySymbol(summary.currency);
   const trend = summary.trend;
-  const trendHtml = trend ? `
+  const trendIncomeHtml = trend ? `
+  <small class="${trend.income_change > 0 ? 'text-success': 'text-danger'}">
+  ${trend.income_change > 0 ? '↑': '↓'} ${Math.abs(trend.income_change)}% dari bulan lalu
+  </small>`: '';
+  const trendExpenseHtml = trend ? `
   <small class="${trend.expense_change > 0 ? 'text-danger': 'text-success'}">
   ${trend.expense_change > 0 ? '↑': '↓'} ${Math.abs(trend.expense_change)}% dari bulan lalu
   </small>`: '';
@@ -73,6 +77,7 @@ function renderHomePage() {
   <i class="bi bi-arrow-down-circle text-success fs-4"></i>
   <h6 class="mb-0">${Core.formatNumberShort(summary.current_month_income)}</h6>
   <small>Pemasukan</small>
+  ${trendIncomeHtml}
   </div></div>
   </div>
   <div class="col-6">
@@ -80,7 +85,7 @@ function renderHomePage() {
   <i class="bi bi-arrow-up-circle text-danger fs-4"></i>
   <h6 class="mb-0">${Core.formatNumberShort(summary.current_month_expense)}</h6>
   <small>Pengeluaran</small>
-  ${trendHtml}
+  ${trendExpenseHtml}
   </div></div>
   </div>
   </div>
