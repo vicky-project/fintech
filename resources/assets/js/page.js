@@ -127,6 +127,13 @@ async function renderHomePage() {
   </div>
   </div>
 
+  <div class="card mb-3">
+  <div class="card-body">
+  <h6>6 Bulan Terakhir</h6>
+  <div style="height: 200px;"><canvas id="monthlyComparisonChart"></canvas></div>
+  </div>
+  </div>
+
   <!-- Recent Transactions -->
   <h6>Transaksi Terbaru</h6>
   <div id="recent-transactions">
@@ -139,6 +146,7 @@ async function renderHomePage() {
   // Inisialisasi chart jika data tersedia
   if (summary.weekly_expense.length) {
     requestAnimationFrame(() => loadHomeChartFromSummary(summary.weekly_expense));
+    loadMonthlyComparisonChart();
   }
 }
 
@@ -212,6 +220,39 @@ function loadHomeChartFromSummary(weeklyExpense) {
       }
     }
   });
+}
+
+async function loadMonthlyComparisonChart() {
+  try {
+    const res = await Core.api.get('/api/fintech/home-monthly-comparison');
+    const data = res.data;
+    const ctx = document.getElementById('monthlyComparisonChart')?.getContext('2d');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.month),
+        datasets: [{
+          label: 'Pemasukan', data: data.map(d => d.income), backgroundColor: '#4DB6AC'
+        },
+          {
+            label: 'Pengeluaran', data: data.map(d => d.expense), backgroundColor: '#FF6384'
+          }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Gagal memuat perbandingan bulanan:', error);
+  }
 }
 
 // ==================== TRANSACTIONS ====================

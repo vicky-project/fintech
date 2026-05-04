@@ -19,4 +19,17 @@ class HomeController extends Controller
       'data' => $service->getHomeData($user)
     ]);
   }
+
+  public function monthlyComparison(Request $request, HomeService $service): JsonResponse
+  {
+    $user = $request->user();
+    if (!$user) {
+      abort(401);
+    }
+
+    return response()->json([
+      'success' => true,
+      'data' => $service->getMonthlyComparisonData($user->id),
+    ]);
+  }
 }

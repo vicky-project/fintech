@@ -29,6 +29,7 @@ use Modules\FinTech\Http\Controllers\Api\ {
 
 Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fintech.')->group(function () {
   Route::get('home-summary', [HomeController::class, 'index']);
+  Route::get('home-monthly-comparison', [HomeController::class, 'monthlyComparison']);
 
   // ==================== CATEGORIES ====================
   Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');

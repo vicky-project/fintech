@@ -2,6 +2,7 @@
 
 namespace Modules\FinTech\Services;
 
+use Carbon\Carbon;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Budget;
@@ -49,23 +50,35 @@ class HomeService
       ->where('transaction_date', '>=', $currentMonthStart)
       ->sum('amount') / 100;
 
-      // 3. Trend bulan lalu
+      // 3. Trend bulan lalu (income & net)
       $lastMonthStart = now()->subMonth()->startOfMonth();
       $lastMonthEnd = now()->subMonth()->endOfMonth();
+
+      $lastMonthIncome = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
+      ->where('type', TransactionType::INCOME)
+      ->whereBetween('transaction_date', [$lastMonthStart, $lastMonthEnd])
+      ->sum('amount') / 100;
 
       $lastMonthExpense = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
       ->where('type', TransactionType::EXPENSE)
       ->whereBetween('transaction_date', [$lastMonthStart, $lastMonthEnd])
       ->sum('amount') / 100;
 
-      $changePercentage = $lastMonthExpense > 0
+      $incomeChange = $lastMonthIncome > 0
+      ? round((($income - $lastMonthIncome) / $lastMonthIncome) * 100, 1)
+      : ($income > 0 ? 100 : 0);
+
+      $expenseChange = $lastMonthExpense > 0
       ? round((($expense - $lastMonthExpense) / $lastMonthExpense) * 100, 1)
       : ($expense > 0 ? 100 : 0);
 
       $trend = [
-        'current_month_total' => $expense,
-        'last_month_total' => $lastMonthExpense,
-        'change_percentage' => $changePercentage,
+        'current_month_income' => $income,
+        'current_month_expense' => $expense,
+        'last_month_income' => $lastMonthIncome,
+        'last_month_expense' => $lastMonthExpense,
+        'income_change' => $incomeChange,
+        'expense_change' => $expenseChange,
       ];
 
       // 4. Weekly expense per kategori (pakai DB aggregate)
@@ -108,6 +121,44 @@ class HomeService
         'currency' => $currency,
       ];
     });
+  }
+
+  public function getMonthlyComparisonData(int $userId): array
+  {
+    $suffix = 'home_monthly_comparison';
+
+    return $this->rememberForUser($userId,
+      $suffix,
+      $this->cacheTtl,
+      function () use ($userId) {
+        $months = collect(range(5, 0))->map(fn($i) => now()->subMonths($i)->format('Y-m'));
+        $data = [];
+
+        foreach ($months as $month) {
+          [$year,
+            $monthNum] = explode('-', $month);
+          $start = now()->setDate($year, $monthNum, 1)->startOfMonth();
+          $end = now()->setDate($year, $monthNum, 1)->endOfMonth();
+
+          $income = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $userId))
+          ->where('type', TransactionType::INCOME)
+          ->whereBetween('transaction_date', [$start, $end])
+          ->sum('amount') / 100;
+
+          $expense = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $userId))
+          ->where('type', TransactionType::EXPENSE)
+          ->whereBetween('transaction_date', [$start, $end])
+          ->sum('amount') / 100;
+
+          $data[] = [
+            'month' => Carbon::createFromDate($year, $monthNum)->translatedFormat('M Y'),
+            'income' => round($income, 2),
+            'expense' => round($expense, 2),
+          ];
+        }
+
+        return $data;
+      });
   }
 
   // ─── helper ─────────────────────────────────────────
