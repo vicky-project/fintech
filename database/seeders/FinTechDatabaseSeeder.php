@@ -6,11 +6,11 @@ use Illuminate\Database\Seeder;
 
 class FinTechDatabaseSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
-    {
-        // $this->call([]);
-    }
+  /**
+  * Run the database seeds.
+  */
+  public function run(): void
+  {
+    $this->call([CategorySeeder::class]);
+  }
 }
