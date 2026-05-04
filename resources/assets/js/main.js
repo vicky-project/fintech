@@ -19,6 +19,8 @@ window.toggleQuickActions = () => {
 
 // ---------- EVENT DELEGATION (opsional, bisa menggantikan inline onclick secara bertahap) ----------
 async function handleGlobalClick(e) {
+  if (document.getElementById('session-expired-overlay')) return;
+
   const target = e.target.closest('[data-action]');
   if (!target) return;
   const action = target.dataset.action;

@@ -71,16 +71,7 @@ const Core = (() => {
         }
         throw new Error('PIN sedang diverifikasi');
       } else if (error.status === 401) {
-        // Token tidak valid atau user dihapus
-        tgApp.clearToken?.();
-        localStorage.removeItem('auth_token');
-        // Tampilkan pesan dan muat ulang aplikasi
-        document.getElementById('main-content').innerHTML = `
-        <div class="container py-5 text-center">
-        <i class="bi bi-box-arrow-in-right display-1 text-muted"></i>
-        <h4 class="mt-3">Sesi Berakhir</h4>
-        <p class="text-muted">Silakan buka kembali aplikasi dari Telegram.</p>
-        </div>`;
+        handleSessionExpired();
         throw new Error('Sesi berakhir, silakan muat ulang.');
       }
       throw error;
@@ -394,6 +385,10 @@ const Core = (() => {
   }
 
   function navigateTo(page) {
+    if (!tgApp.getToken()) {
+      handleSessionExpired();
+      return;
+    }
     state.currentPage = page;
     if (state.googlePollInterval) {
       clearInterval(state.googlePollInterval);
@@ -518,6 +513,39 @@ const Core = (() => {
     }
   }
 
+  function handleSessionExpired() {
+    // Hapus semua token
+    tgApp.clearToken();
+    localStorage.removeItem('auth_token');
+
+    // Hapus state (opsional)
+    if (typeof state !== 'undefined') {
+      state.userSettings = null;
+      state.wallets = [];
+      state.homeSummary = null;
+      state.pinVerified = false;
+      state.pinVerifiedAt = null;
+      if (state.sessionTimer) clearTimeout(state.sessionTimer);
+    }
+
+    // Tampilkan overlay penuh yang memblokir semua interaksi
+    const overlay = document.createElement('div');
+    overlay.id = 'session-expired-overlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10001; flex-direction:column;';
+    overlay.innerHTML = `
+    <div class="text-center p-4 text-white">
+    <i class="bi bi-box-arrow-in-right display-1"></i>
+    <h4 class="mt-3">Sesi Berakhir</h4>
+    <p class="text-white-50">Silakan buka kembali aplikasi dari Telegram.</p>
+    <button class="btn btn-primary mt-2" onclick="window.Telegram?.WebApp?.openTelegramLink?.('https://t.me/${BOT_USERNAME}')">Buka Ulang</button>
+    </div>`;
+    document.body.appendChild(overlay);
+
+    // Kosongkan konten utama agar tidak ada interaksi
+    const main = document.getElementById('main-content');
+    if (main) main.innerHTML = '';
+  }
+
   // ========== PUBLIC API ==========
   return {
     // State & API (readonly)
@@ -544,6 +572,7 @@ const Core = (() => {
     showPinModal,
     submitPin,
     showLockoutTimer,
+    handleSessionExpired,
 
     // Data loading
     loadWallets,
