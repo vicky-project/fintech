@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Modules\FinTech\Models;
 use Modules\FinTech\Http\Requests\UserSettingsRequest;
+use Modules\Telegram\Models\TelegramUser;
 
 class SettingController extends Controller
 {
