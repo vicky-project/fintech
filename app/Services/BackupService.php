@@ -7,9 +7,12 @@ use Modules\FinTech\Models;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use Modules\FinTech\Traits\HasUserCache;
 
 class BackupService
 {
+  use HasUserCache;
+
   /**
   * Ekspor seluruh data user menjadi string JSON terkompresi (gzip).
   */
@@ -196,27 +199,7 @@ class BackupService
     });
   }
 
-  // ─── Helper Methods ────────────────────────────────────────
-  /**
-  * Hapus cache yang terkait dengan user tertentu.
-  * Mendukung cache tags (Redis, Memcached) dan fallback ke key konvensional.
-  */
-  protected function clearUserCache(int $userId): void
-  {
-    try {
-      // Jika driver mendukung tagging (Redis, Memcached)
-      Cache::tags('user_' . $userId)->flush();
-    } catch (\BadMethodCallException $e) {
-      // Fallback: hapus key‑key cache yang kita kenali
-      $keys = [
-        "user_wallets_{$userId}",
-        "categories-{$userId}",
-        "currencies-{$userId}",
-        "user-settings-{$userId}",
-      ];
-      Cache::deleteMultiple($keys);
-    }
-  }
+  // ─── Helper Methods ───────────────────────────
 
   /**
   * Ekspor tabel dengan nilai mentah (raw) untuk semua kolom, tanpa casting.
