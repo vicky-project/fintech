@@ -19,7 +19,12 @@ async function renderListPage(config) {
   <div>${extraHeaderButtons}</div>
   </div>
   ${filterHtml || ''}
-  <div id="${listContainerId}"></div>
+  <div id="${listContainerId}">
+  <div class="text-center py-5">
+  <div class="spinner-border text-primary" role="status"></div>
+  <p class="mt-2">Memuat data ${title}...</p>
+  </div>
+  </div>
   <div id="${paginationId}" class="mt-3"></div>
   </div>`;
   document.getElementById('main-content').innerHTML = html;
