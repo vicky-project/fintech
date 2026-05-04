@@ -51,8 +51,8 @@ function renderHomePage() {
   const symbol = Core.getCurrencySymbol(summary.currency);
   const trend = summary.trend;
   const trendHtml = trend ? `
-  <small class="${trend.change_percentage > 0 ? 'text-danger': 'text-success'}">
-  ${trend.change_percentage > 0 ? '↑': '↓'} ${Math.abs(trend.change_percentage)}% dari bulan lalu
+  <small class="${trend.expense_change > 0 ? 'text-danger': 'text-success'}">
+  ${trend.expense_change > 0 ? '↑': '↓'} ${Math.abs(trend.expense_change)}% dari bulan lalu
   </small>`: '';
 
   container.innerHTML = `
@@ -78,7 +78,7 @@ function renderHomePage() {
   <div class="col-6">
   <div class="card"><div class="card-body p-3 text-center">
   <i class="bi bi-arrow-up-circle text-danger fs-4"></i>
-  <h6 class="mb-0">${Core.formatNumberShort(summary.total_expense)}</h6>
+  <h6 class="mb-0">${Core.formatNumberShort(summary.last_month_expense)}</h6>
   <small>Pengeluaran</small>
   ${trendHtml}
   </div></div>
