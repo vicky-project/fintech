@@ -131,12 +131,6 @@ class SettingController extends Controller
       Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $user->id))->delete();
       Models\UserSetting::where('user_id', $user->id)->delete();
       Models\Wallet::where('user_id', $user->id)->delete();
-
-      // 2. Hapus token Sanctum
-      $user->tokens()->delete();
-
-      // 3. Hapus user
-      $user->delete();
     });
 
     return response()->json([
