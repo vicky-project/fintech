@@ -411,21 +411,24 @@ function showToast(message, type = 'success') {
     document.body.appendChild(toastContainer);
   }
 
-  // Ikon dengan warna solid (tetap terlihat di tema gelap/terang)
+  // Ikon dengan warna solid
   let iconClass = 'bi-info-circle';
-  let bgColor = 'var(--tg-theme-link-color)';
+  let solidColor = 'var(--tg-theme-link-color)'; // fallback
   if (type === 'success') {
     iconClass = 'bi-check-circle-fill';
-    bgColor = '#28a745'; // Hijau solid
+    solidColor = '#28a745';
   } else if (type === 'danger') {
     iconClass = 'bi-exclamation-triangle-fill';
-    bgColor = '#dc3545'; // Merah solid
+    solidColor = '#dc3545';
   } else if (type === 'warning') {
     iconClass = 'bi-exclamation-circle-fill';
-    bgColor = '#ffc107'; // Kuning solid
+    solidColor = '#ffc107';
   }
 
-  // Buat elemen toast dengan warna dari tema Telegram
+  // Warna semi‑transparan untuk body (solidColor + opacity)
+  const semiTransparent = `color-mix(in srgb, ${solidColor} 12%, transparent)`;
+
+  // Buat elemen toast
   const toastEl = document.createElement('div');
   toastEl.className = 'toast';
   toastEl.setAttribute('role', 'alert');
@@ -436,12 +439,12 @@ function showToast(message, type = 'success') {
   toastEl.style.border = '1px solid var(--tg-theme-section-separator-color)';
   toastEl.innerHTML = `
   <div class="toast-header" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color); border-bottom: 1px solid var(--tg-theme-section-separator-color);">
-  <i class="bi ${iconClass} me-2" style="color: ${bgColor};"></i>
+  <i class="bi ${iconClass} me-2" style="color: ${solidColor};"></i>
   <strong class="me-auto">Notifikasi</strong>
   <small style="color: var(--tg-theme-hint-color);">baru saja</small>
   <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(0.5);"></button>
   </div>
-  <div class="toast-body" style="background-color: ${bgColor}; color: var(--tg-theme-text-color);">
+  <div class="toast-body" style="background-color: ${semiTransparent}; color: var(--tg-theme-text-color);">
   ${message}
   </div>
   `;
