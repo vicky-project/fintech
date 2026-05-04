@@ -75,7 +75,7 @@ function renderHomePage() {
   <div class="col-6">
   <div class="card"><div class="card-body p-3 text-center">
   <i class="bi bi-arrow-down-circle text-success fs-4"></i>
-  <h6 class="mb-0">${Core.formatNumberShort(summary.current_month_income)}</h6>
+  <h6 class="mb-0">${Core.formatNumberShort(summary.total_income)}</h6>
   <small>Pemasukan</small>
   ${trendIncomeHtml}
   </div></div>
@@ -83,7 +83,7 @@ function renderHomePage() {
   <div class="col-6">
   <div class="card"><div class="card-body p-3 text-center">
   <i class="bi bi-arrow-up-circle text-danger fs-4"></i>
-  <h6 class="mb-0">${Core.formatNumberShort(summary.current_month_expense)}</h6>
+  <h6 class="mb-0">${Core.formatNumberShort(summary.total_expense)}</h6>
   <small>Pengeluaran</small>
   ${trendExpenseHtml}
   </div></div>
