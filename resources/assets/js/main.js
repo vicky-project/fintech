@@ -431,7 +431,7 @@ function showToast(message, type = 'success') {
   toastEl.setAttribute('role', 'alert');
   toastEl.setAttribute('aria-live', 'assertive');
   toastEl.setAttribute('aria-atomic', 'true');
-  toastEl.style.backgroundColor = bgColor;
+  toastEl.style.backgroundColor = 'var(--tg-theme-bg-color)';
   toastEl.style.color = 'var(--tg-theme-text-color)';
   toastEl.style.border = '1px solid var(--tg-theme-section-separator-color)';
   toastEl.innerHTML = `
@@ -441,7 +441,7 @@ function showToast(message, type = 'success') {
   <small style="color: var(--tg-theme-hint-color);">baru saja</small>
   <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(0.5);"></button>
   </div>
-  <div class="toast-body" style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
+  <div class="toast-body" style="background-color: ${bgColor}; color: var(--tg-theme-text-color);">
   ${message}
   </div>
   `;
