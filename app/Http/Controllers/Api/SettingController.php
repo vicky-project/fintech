@@ -112,9 +112,9 @@ class SettingController extends Controller
     }
   }
 
-  public function destroy(): JsonResponse
+  public function destroy(Request $request): JsonResponse
   {
-    $user = request()->user();
+    $user = $request->user();
 
     if (!$user instanceof TelegramUser) {
       \Log::warning($user);
