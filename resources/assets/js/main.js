@@ -55,8 +55,8 @@ async function handleGlobalClick(e) {
     'force-delete-transfer': () => window.forceDeleteTransfer(id),
     'export-data': performExport,
     'toggle-category-badge': () => {
-      const id = target.dataset.categoryId;
-      if (id) toggleCategoryBadge(id);
+      const categoryId = target.dataset.categoryId;
+      if (categoryId) toggleCategoryBadge(categoryId);
     },
     'open-bot-chat': () => {
       const link = target.dataset.botLink;
@@ -251,8 +251,8 @@ async function handleGlobalClick(e) {
       document.getElementById('infoModalBody').innerHTML = body;
       new bootstrap.Modal(document.getElementById('infoModal')).show();
     },
-    'delete-account': deleteAccount(),
-    'btn-delete-account-confirm': performDeleteAccount(target),
+    'delete-account': () => deleteAccount(),
+    'btn-delete-account-confirm': () => performDeleteAccount(target),
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {

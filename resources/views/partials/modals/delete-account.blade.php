@@ -35,14 +35,6 @@
     btnDeleteAccountConfirm.disabled = true;
     modal.show();
   }
-
-  function chechInput(input) {
-    const confirmBtn = document.getElementById('btn-delete-account-confirm');
-    if (confirmBtn) {
-      confirmBtn.disabled = input.target.value.trim().toUpperCase() !== 'HAPUS';
-    }
-  }
-
   window.performDeleteAccount = async function(btn) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Menghapus...';
@@ -74,6 +66,13 @@
       'danger');
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-trash me-1"></i> Hapus Permanen';
+    }
+  }
+
+  function chechInput(input) {
+    const confirmBtn = document.getElementById('btn-delete-account-confirm');
+    if (confirmBtn) {
+      confirmBtn.disabled = input.target.value.trim().toUpperCase() !== 'HAPUS';
     }
   }
 </script>
