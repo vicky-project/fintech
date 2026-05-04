@@ -130,7 +130,7 @@ async function renderHomePage() {
   <div class="card mb-3">
   <div class="card-body">
   <h6>6 Bulan Terakhir</h6>
-  <div style="height: 200px;"><canvas id="monthlyComparisonChart"></canvas></div>
+  ${summary.weekly_expense.length ? '<div style="height: 200px;"><canvas id="monthlyComparisonChart"></canvas></div>': '<p class="text-muted text-center">Belum ada data untuk dibandingkan</p>'}
   </div>
   </div>
 

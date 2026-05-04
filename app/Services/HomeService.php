@@ -249,6 +249,7 @@ class HomeService
   {
     return [
       'home',
+      'home_monthly_comparison'
     ];
   }
 }
