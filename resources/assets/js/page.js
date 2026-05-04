@@ -1030,7 +1030,7 @@ async function renderSettingsPage() {
   <label class="form-label fw-semibold">Dompet Default</label>
   <select class="form-select" name="default_wallet_id" id="setting-wallet">
   <option value="">Tidak Ada</option>
-  ${Core.state.wallets.map(w => `<option value="${w.id}">${w.name} (${w.currency?.symbol || ''})</option>`).join('')}
+  ${Core.state.wallets.length > 0 ? Core.state.wallets.map(w => `<option value="${w.id}">${w.name} (${w.currency?.symbol || ''})</option>`).join(''): '<option value="" disabled>Tidak ada dompet.</option>'}
   </select>
   </div>
 

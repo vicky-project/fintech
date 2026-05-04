@@ -406,7 +406,7 @@ const Core = (() => {
       btn.classList.toggle('active', btn.dataset.page === page);
     });
 
-    if (state.wallets.length === 0 && page !== 'wallets') {
+    if (state.wallets.length === 0 && page !== 'wallets' && page !== 'settings') {
       getEl('main-content').innerHTML = renderEmptyState();
       return;
     }
