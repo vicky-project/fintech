@@ -3,43 +3,24 @@
 namespace Modules\FinTech\Services;
 
 use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Traits\HasUserCache;
 use Brick\Money\Money;
-use Brick\Money\Exception\MoneyMismatchException;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class WalletService
 {
-  protected int $cacheTtl = 3600; // 1 hour
+  use HasUserCache;
 
-  /**
-  * Cek apakah cache driver mendukung tags.
-  */
-  private static function supportsTags(): bool
-  {
-    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
-  }
-
-  /**
-  * Simpan cache dengan tags jika didukung, jika tidak pakai cache polos.
-  * Tag sudah dikunci: ['wallets', "user_{userId}"].
-  */
-  private function rememberWithFallback(int $userId, string $cacheKey, int $ttl, callable $callback): mixed
-  {
-    if (self::supportsTags()) {
-      return Cache::tags(['wallets', "user_{$userId}"])->remember($cacheKey, $ttl, $callback);
-    }
-    return Cache::remember($cacheKey, $ttl, $callback);
-  }
+  protected int $cacheTtl = 3600;
 
   /**
   * Get all active wallets for a user with formatting (cached).
   */
   public function getUserWallets($user): array
   {
-    $cacheKey = $this->getUserWalletsCacheKey($user->id);
+    $suffix = 'wallets';
 
-    return $this->rememberWithFallback($user->id, $cacheKey, $this->cacheTtl, function () use ($user) {
+    return $this->rememberForUser($user->id, $suffix, $this->cacheTtl, function () use ($user) {
       return Wallet::where('user_id', $user->id)
       ->where('is_active', true)
       ->with('currencyDetails')
@@ -47,6 +28,23 @@ class WalletService
       ->get()
       ->map(fn($wallet) => $this->formatWalletData($wallet))
       ->toArray();
+    });
+  }
+
+  /**
+  * Get detailed wallet information (cached).
+  */
+  public function getWalletDetail($user, Wallet $wallet): array
+  {
+    $this->ensureUserOwnsWallet($user, $wallet);
+
+    $suffix = "wallet_detail_{$wallet->id}";
+
+    return $this->rememberForUser($user->id, $suffix, $this->cacheTtl, function () use ($wallet) {
+      $wallet->load('currencyDetails');
+      $formatted = $this->formatWalletData($wallet);
+      $formatted['transaction_count'] = $wallet->transactions()->count();
+      return $formatted;
     });
   }
 
@@ -68,34 +66,14 @@ class WalletService
       $wallet->description = $data['description'] ?? null;
       $wallet->balance = $initialBalance;
       $wallet->save();
-
       return $wallet;
     });
 
-    $this->clearWalletCaches($wallet->id, $user->id);
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
 
     return $wallet->fresh();
-  }
-
-  /**
-  * Get detailed wallet information (cached).
-  */
-  public function getWalletDetail($user, Wallet $wallet): array
-  {
-    $this->ensureUserOwnsWallet($user, $wallet);
-
-    $cacheKey = $this->getWalletDetailCacheKey($wallet->id);
-
-    return $this->rememberWithFallback($user->id, $cacheKey, $this->cacheTtl, function () use ($wallet) {
-      $wallet->load('currencyDetails');
-
-      $formatted = $this->formatWalletData($wallet);
-      $formatted['transaction_count'] = $wallet->transactions()->count();
-
-      return $formatted;
-    });
   }
 
   /**
@@ -111,7 +89,7 @@ class WalletService
       $wallet->update($updatableFields);
     });
 
-    $this->clearWalletCaches($wallet->id, $user->id);
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
 
@@ -129,16 +107,15 @@ class WalletService
       return $wallet->delete();
     });
 
-    $this->clearWalletCaches($wallet->id, $user->id);
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
 
     return $result;
   }
 
-  /**
-  * Format wallet data for API response.
-  */
+  // ─── HELPERS ───────────────────────────────────────────
+
   protected function formatWalletData(Wallet $wallet): array
   {
     $currencyDetails = $wallet->currencyDetails;
@@ -159,9 +136,6 @@ class WalletService
     ];
   }
 
-  /**
-  * Ensure the authenticated user owns the wallet.
-  */
   protected function ensureUserOwnsWallet($user, Wallet $wallet): void
   {
     if ($wallet->user_id !== $user->id) {
@@ -169,34 +143,14 @@ class WalletService
     }
   }
 
-  /**
-  * Get cache key for user's wallets list.
-  */
-  protected function getUserWalletsCacheKey(int $userId): string
-  {
-    return "user_wallets_{$userId}";
-  }
+  // ─── Trait Override (opsional) ──────────────────────
 
-  /**
-  * Get cache key for single wallet detail.
-  */
-  protected function getWalletDetailCacheKey(int $walletId): string
+  protected function knownUserCacheSuffixes(int $userId): array
   {
-    return "wallet_detail_{$walletId}";
-  }
-
-  /**
-  * Clear all caches related to a wallet (detail + user list).
-  */
-  public function clearWalletCaches(int $walletId, int $userId): void
-  {
-    // Hapus tag cache jika didukung
-    if (self::supportsTags()) {
-      Cache::tags(['wallets', "user_{$userId}"])->flush();
-    } else {
-      // Fallback: hapus masing-masing key
-      Cache::forget($this->getUserWalletsCacheKey($userId));
-      Cache::forget($this->getWalletDetailCacheKey($walletId));
-    }
+    return [
+      'wallets',
+      'budgets',
+      'insights',
+    ];
   }
 }

@@ -4,37 +4,43 @@ namespace Modules\FinTech\Services;
 
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Wallet;
-use Modules\FinTech\Enums\TransactionType;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
+use Modules\FinTech\Traits\HasUserCache;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class InsightService
 {
+  use HasUserCache;
+
   protected BudgetService $budgetService;
+  protected int $cacheTtl = 3600; // 1 jam
 
   public function __construct(BudgetService $budgetService) {
     $this->budgetService = $budgetService;
   }
+
   /**
   * Mendapatkan analisis lengkap untuk user dengan caching.
   */
   public function getFullAnalysis(int $userId): array
   {
-    $cacheKey = "fintech_insights_user_{$userId}";
-    $ttl = 3600; // 1 jam
+    $suffix = 'insights';
 
-    if ($this->supportsTags()) {
-      return Cache::tags(['fintech_insights', "user_{$userId}"])
-      ->remember($cacheKey, $ttl, fn() => $this->computeAnalysis($userId));
-    }
-
-    return Cache::remember($cacheKey, $ttl, fn() => $this->computeAnalysis($userId));
+    return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId) {
+      return $this->computeAnalysis($userId);
+    });
   }
 
   /**
-  * Komputasi analisis (query intensif).
+  * Hapus cache insight untuk user tertentu.
   */
+  public static function clearCache(int $userId): void
+  {
+    (new static)->clearUserCache($userId);
+  }
+
+  // ─── Private helper methods (tidak berubah) ──────────────────
+
   private function computeAnalysis(int $userId): array
   {
     $endDate = Carbon::now();
@@ -70,11 +76,7 @@ class InsightService
 
     // 7. Hasilkan Rekomendasi Cerdas
     $recommendations = $this->generateSmartRecommendations(
-      $trend,
-      $topCategories,
-      $anomalies,
-      $subscriptions,
-      $spendingRatio
+      $trend, $topCategories, $anomalies, $subscriptions, $spendingRatio
     );
 
     $budgets = $this->budgetService->getBudgets($userId);
@@ -97,29 +99,6 @@ class InsightService
     ];
   }
 
-  /**
-  * Hapus cache insight untuk user tertentu.
-  */
-  public static function clearCache(int $userId): void
-  {
-    if (self::supportsTags()) {
-      Cache::tags(['fintech_insights', "user_{$userId}"])->flush();
-    } else {
-      Cache::forget("fintech_insights_user_{$userId}");
-    }
-  }
-
-  /**
-  * Cek apakah cache driver mendukung tags.
-  */
-  private static function supportsTags(): bool
-  {
-    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
-  }
-
-  /**
-  * Hitung total pengeluaran per bulan selama 6 bulan terakhir.
-  */
   private function calculateMonthlyTrend($transactions): array
   {
     $monthly = [];
@@ -151,9 +130,6 @@ class InsightService
     ];
   }
 
-  /**
-  * Ambil top kategori pengeluaran bulan ini.
-  */
   private function getTopCategories($transactions, $month, $year, $limit): array
   {
     return $transactions
@@ -176,9 +152,6 @@ class InsightService
     ])->toArray();
   }
 
-  /**
-  * Deteksi lonjakan pengeluaran per kategori (>50% dari rata-rata 3 bulan).
-  */
   private function detectAnomalies($transactions): array
   {
     $anomalies = [];
@@ -223,9 +196,6 @@ class InsightService
     return array_values($anomalies);
   }
 
-  /**
-  * Deteksi transaksi berulang (langganan) - nominal sama setiap bulan.
-  */
   private function detectSubscriptions($transactions): array
   {
     $subscriptions = [];
@@ -265,9 +235,6 @@ class InsightService
     return $subscriptions;
   }
 
-  /**
-  * Hitung rasio pengeluaran berdasarkan tags (pokok/sekunder/tersier).
-  */
   private function calculateSpendingRatio($transactions): array
   {
     $currentMonth = Carbon::now()->month;
@@ -310,9 +277,6 @@ class InsightService
     ];
   }
 
-  /**
-  * Proyeksi arus kas bulan depan berdasarkan rata-rata 3 bulan terakhir.
-  */
   private function projectNextMonthCashflow(int $userId, $transactions): array
   {
     $last3Months = $transactions->filter(fn($t) =>
@@ -340,9 +304,6 @@ class InsightService
     ];
   }
 
-  /**
-  * Hasilkan rekomendasi cerdas.
-  */
   private function generateSmartRecommendations($trend, $topCategories, $anomalies, $subscriptions, $ratio): array
   {
     $recs = [];
@@ -399,9 +360,6 @@ class InsightService
     return array_slice($recs, 0, 5);
   }
 
-  /**
-  * Mendapatkan kode mata uang user.
-  */
   private function getUserCurrency(int $userId): string
   {
     return Wallet::where('user_id', $userId)->value('currency') ?? config('fintech.default_currency', 'IDR');

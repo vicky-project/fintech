@@ -9,44 +9,20 @@ use Illuminate\Support\Facades\DB;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\TransactionType;
+use Modules\FinTech\Traits\HasUserCache;
 
 class ReportService
 {
-  protected int $cacheTtl = 3600; // 1 hour
+  use HasUserCache;
+
+  protected int $cacheTtl = 3600; // 1 jam
 
   /**
-  * Cek apakah cache driver mendukung tags.
-  */
-  private static function supportsTags(): bool
-  {
-    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
-  }
-
-  /**
-  * Simpan cache dengan tags jika didukung, jika tidak pakai cache polos.
-  * Tag sudah dikunci: ['report', "user_{userId}"].
-  */
-  private function rememberWithFallback(int $userId, string $cacheKey, int $ttl, callable $callback): mixed
-  {
-    if (self::supportsTags()) {
-      return Cache::tags(['report', "user_{$userId}"])->remember($cacheKey, $ttl, $callback);
-    }
-    return Cache::remember($cacheKey, $ttl, $callback);
-  }
-
-  /**
-  * Clear semua cache laporan untuk user tertentu.
+  * Bersihkan seluruh cache laporan untuk user tertentu.
   */
   public static function clearReportCaches(int $userId): void
   {
-    try {
-      if (self::supportsTags()) {
-        Cache::tags(['report', "user_{$userId}"])->flush();
-      }
-      // Untuk driver non-taggable, kita tidak bisa menghapus spesifik.
-    } catch (\Exception $e) {
-      \Log::warning('Failed to clear report caches: ' . $e->getMessage());
-    }
+    (new static)->clearUserCache($userId);
   }
 
   /**
@@ -58,9 +34,9 @@ class ReportService
     $week = (int) $request->input('week', now()->weekOfYear);
     $walletId = $request->input('wallet_id');
 
-    $cacheKey = $this->generateWeeklyCacheKey($userId, $year, $week, $walletId);
+    $suffix = "report_weekly_{$year}_{$week}_" . ($walletId ?? 'all');
 
-    return $this->rememberWithFallback($userId, $cacheKey, $this->cacheTtl, function () use ($userId, $year, $week, $walletId) {
+    return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId, $year, $week, $walletId) {
       $startDate = now()->setISODate($year, $week)->startOfWeek();
       $endDate = now()->setISODate($year, $week)->endOfWeek();
 
@@ -119,13 +95,10 @@ class ReportService
       now()->month);
     $walletId = $request->input('wallet_id');
 
-    $cacheKey = $this->generateMonthlyCacheKey($userId,
-      $year,
-      $month,
-      $walletId);
+    $suffix = "report_monthly_{$year}_{$month}_" . ($walletId ?? 'all');
 
-    return $this->rememberWithFallback($userId,
-      $cacheKey,
+    return $this->rememberForUser($userId,
+      $suffix,
       $this->cacheTtl,
       function () use ($userId, $year, $month, $walletId) {
         $startDate = now()->setDate($year, $month, 1)->startOfDay();
@@ -176,12 +149,10 @@ class ReportService
       now()->year);
     $walletId = $request->input('wallet_id');
 
-    $cacheKey = $this->generateYearlyCacheKey($userId,
-      $year,
-      $walletId);
+    $suffix = "report_yearly_{$year}_" . ($walletId ?? 'all');
 
-    return $this->rememberWithFallback($userId,
-      $cacheKey,
+    return $this->rememberForUser($userId,
+      $suffix,
       $this->cacheTtl,
       function () use ($userId, $year, $walletId) {
         $startDate = now()->setDate($year, 1, 1)->startOfDay();
@@ -236,11 +207,10 @@ class ReportService
   {
     $walletId = $request->input('wallet_id');
 
-    $cacheKey = $this->generateAllYearCacheKey($userId,
-      $walletId);
+    $suffix = 'report_all_years_' . ($walletId ?? 'all');
 
-    return $this->rememberWithFallback($userId,
-      $cacheKey,
+    return $this->rememberForUser($userId,
+      $suffix,
       $this->cacheTtl,
       function () use ($userId, $walletId) {
         $query = Transaction::whereHas('wallet', function ($q) use ($userId, $walletId) {
@@ -301,12 +271,10 @@ class ReportService
     $type = $request->input('type',
       'expense');
 
-    $cacheKey = $this->generateCategoryTableCache($userId,
-      $walletId,
-      $type);
+    $suffix = "report_category_table_{$type}_" . ($walletId ?? 'all');
 
-    return $this->rememberWithFallback($userId,
-      $cacheKey,
+    return $this->rememberForUser($userId,
+      $suffix,
       $this->cacheTtl,
       function () use ($userId, $walletId, $type) {
         $query = Transaction::whereHas('wallet', fn($q) => $q->where('user_id', $userId));
@@ -329,7 +297,6 @@ class ReportService
         ->get();
 
         $currency = $this->getCurrency($userId, $walletId);
-
         $years = $rawData->pluck('year')->unique()->sort()->values();
 
         $categories = [];
@@ -371,12 +338,10 @@ class ReportService
       0);
     $walletId = $request->input('wallet_id');
 
-    $cacheKey = $this->generateDoughnutCacheKey($userId,
-      $weekOffset,
-      $walletId);
+    $suffix = "report_doughnut_{$weekOffset}_" . ($walletId ?? 'all');
 
-    return $this->rememberWithFallback($userId,
-      $cacheKey,
+    return $this->rememberForUser($userId,
+      $suffix,
       $this->cacheTtl,
       function () use ($userId, $weekOffset, $walletId) {
         $startDate = now()->subWeeks($weekOffset)->startOfWeek();
@@ -432,9 +397,9 @@ class ReportService
     $month = (int) $request->input('month', now()->month);
     $type = $request->input('type', 'expense');
 
-    $cacheKey = sprintf("report_category_%d_%s_%d_%d_%s_%s", $userId, $periodType, $year, $month, $walletId ?? 'all', $type);
+    $suffix = "report_category_summary_{$periodType}_{$year}_{$month}_{$type}_" . ($walletId ?? 'all');
 
-    return $this->rememberWithFallback($userId, $cacheKey, $this->cacheTtl, function () use ($userId,
+    return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId,
       $walletId,
       $periodType,
       $year,
@@ -489,7 +454,7 @@ class ReportService
   }
 
   // ------------------------------------------------------------------------
-  // Helper methods
+  // Helper methods (tidak berubah)
   // ------------------------------------------------------------------------
 
   protected function buildBaseQuery(int $userId,
@@ -517,35 +482,5 @@ class ReportService
       return $wallet ? $wallet->currency : config('fintech.default_currency', 'IDR');
     }
     return config('fintech.default_currency', 'IDR');
-  }
-
-  protected function generateWeeklyCacheKey(int $userId, int $year, int $week, ?int $walletId): string
-  {
-    return sprintf("report_weekly_%d_%d_%d_%s", $userId, $year, $week, $walletId ?? 'all');
-  }
-
-  protected function generateMonthlyCacheKey(int $userId, int $year, int $month, ?int $walletId): string
-  {
-    return sprintf("report_monthly_%d_%d_%d_%s", $userId, $year, $month, $walletId ?? 'all');
-  }
-
-  protected function generateYearlyCacheKey(int $userId, int $year, ?int $walletId): string
-  {
-    return sprintf("report_yearly_%d_%d_%s", $userId, $year, $walletId ?? 'all');
-  }
-
-  protected function generateDoughnutCacheKey(int $userId, int $weekOffset, ?int $walletId): string
-  {
-    return sprintf("report_doughnut_%d_%d_%s", $userId, $weekOffset, $walletId ?? 'all');
-  }
-
-  protected function generateAllYearCacheKey(int $userId, ?int $walletId): string
-  {
-    return sprintf("report_all_years_%d_%s", $userId, $walletId ?? 'all');
-  }
-
-  protected function generateCategoryTableCache(int $userId, ?int $walletId, ?string $type): string
-  {
-    return sprintf("report_category_table_%d_%s_%s", $userId, $walletId ?? 'all', $type ?? 'expense');
   }
 }

@@ -3,12 +3,13 @@
 namespace Modules\FinTech\Services;
 
 use Modules\FinTech\Models\Budget;
-use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Traits\HasUserCache;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Support\Facades\Cache;
 
 class BudgetService
 {
+  use HasUserCache;
+
   protected int $cacheTtl = 3600;
 
   /**
@@ -16,9 +17,9 @@ class BudgetService
   */
   public function getBudgets(int $userId): array
   {
-    $cacheKey = "budgets_user_{$userId}";
+    $suffix = 'budgets';
 
-    return Cache::remember($cacheKey, $this->cacheTtl, function () use ($userId) {
+    return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId) {
       return Budget::where('user_id', $userId)
       ->with(['category', 'wallet'])
       ->where('is_active', true)
@@ -36,7 +37,7 @@ class BudgetService
   {
     $data['user_id'] = $user->id;
     $budget = Budget::create($data);
-    self::clearBudgetCaches($user->id);
+    static::clearBudgetCaches($user->id);
     return $budget;
   }
 
@@ -49,7 +50,7 @@ class BudgetService
       abort(403, 'Unauthorized');
     }
     $budget->update($data);
-    self::learBudgetCaches($user->id);
+    static::clearBudgetCaches($user->id);
     return $budget;
   }
 
@@ -62,7 +63,7 @@ class BudgetService
       abort(403, 'Unauthorized');
     }
     $budget->delete();
-    self::clearBudgetCaches($user->id);
+    static::clearBudgetCaches($user->id);
   }
 
   /**
@@ -99,6 +100,15 @@ class BudgetService
   */
   public static function clearBudgetCaches(int $userId): void
   {
-    Cache::forget("budgets_user_{$userId}");
+    (new static)->clearUserCache($userId);
+  }
+
+  // ─── Trait Override (opsional) ──────────────────────
+
+  protected function knownUserCacheSuffixes(int $userId): array
+  {
+    return [
+      'budgets',
+    ];
   }
 }

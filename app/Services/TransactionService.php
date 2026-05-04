@@ -6,57 +6,42 @@ use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\TransactionType;
-use Modules\FinTech\Enums\CategoryType;
+use Modules\FinTech\Traits\HasUserCache;
 use Brick\Money\Money;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 
 class TransactionService
 {
+  use HasUserCache;
+
   protected WalletService $walletService;
-  protected int $cacheTtl = 3600; // 1 hour
+  protected int $cacheTtl = 3600;
 
   public function __construct(WalletService $walletService) {
     $this->walletService = $walletService;
   }
 
-  /**
-  * Get paginated transactions with summary (cached per user & filters).
-  *
-  * @param Authenticatable $user
-  * @param array $filters
-  * @param int $perPage
-  * @return array
-  */
+  // ─── PUBLIC API ────────────────────────────────────────
+
   public function getTransactions(Authenticatable $user, array $filters, int $perPage = 20): array
   {
-    $cacheKey = $this->generateTransactionsCacheKey($user->id, $filters, $perPage);
-    $tags = $this->getTransactionTags($user->id);
+    $filterHash = md5(json_encode($filters));
+    $page = request('page', 1);
+    $suffix = "transactions_f_{$filterHash}_p{$page}_per{$perPage}";
 
-    return Cache::tags($tags)->remember($cacheKey, $this->cacheTtl, function () use ($user, $filters, $perPage) {
+    return $this->rememberForUser($user->id, $suffix, $this->cacheTtl, function () use ($user, $filters, $perPage) {
       $query = $this->buildBaseQuery($user, $filters);
-
-      // Clone for summary (without pagination)
       $summaryQuery = clone $query;
 
-      // Calculate summary
       $totalCount = $summaryQuery->count();
-      $totalIncome = (clone $summaryQuery)
-      ->where('type', TransactionType::INCOME->value)
-      ->sum(DB::raw('amount / 100'));
-      $totalExpense = (clone $summaryQuery)
-      ->where('type', TransactionType::EXPENSE->value)
-      ->sum(DB::raw('amount / 100'));
+      $totalIncome = (clone $summaryQuery)->where('type', TransactionType::INCOME->value)->sum(DB::raw('amount / 100'));
+      $totalExpense = (clone $summaryQuery)->where('type', TransactionType::EXPENSE->value)->sum(DB::raw('amount / 100'));
 
-      // Get paginated results
       $transactions = $query->orderBy('transaction_date', 'desc')
       ->orderBy('id', 'desc')
       ->paginate($perPage);
 
-      // Transform data
       $transformed = $transactions->through(fn($trx) => $this->formatTransactionData($trx));
 
       return [
@@ -76,22 +61,12 @@ class TransactionService
     });
   }
 
-  /**
-  * Get single transaction detail (cached).
-  *
-  * @param Authenticatable $user
-  * @param Transaction $transaction
-  * @return array
-  * @throws \Symfony\Component\HttpKernel\Exception\HttpException
-  */
   public function getTransactionDetail(Authenticatable $user, Transaction $transaction): array
   {
     $this->ensureUserOwnsTransaction($user, $transaction);
+    $suffix = "transaction_detail_{$transaction->id}";
 
-    $cacheKey = "transaction_detail_{$transaction->id}";
-    $tags = ['transaction_details'];
-
-    return Cache::tags($tags)->remember($cacheKey, $this->cacheTtl, function () use ($transaction) {
+    return $this->rememberForUser($user->id, $suffix, $this->cacheTtl, function () use ($transaction) {
       return [
         'id' => $transaction->id,
         'type' => $transaction->type->value,
@@ -113,19 +88,10 @@ class TransactionService
     });
   }
 
-  /**
-  * Create a new transaction.
-  *
-  * @param Authenticatable $user
-  * @param array $data
-  * @return Transaction
-  * @throws \Exception
-  */
   public function createTransaction(Authenticatable $user, array $data): Transaction
   {
     $wallet = Wallet::findOrFail($data['wallet_id']);
     $this->ensureUserOwnsWallet($user, $wallet);
-
     $amount = Money::of($data['amount'], $wallet->currency);
 
     $transaction = DB::transaction(function () use ($wallet, $data, $amount) {
@@ -138,30 +104,15 @@ class TransactionService
       } elseif ($data['type'] === TransactionType::EXPENSE->value) {
         $wallet->withdraw($amount);
       }
-
       return $transaction;
     });
 
-    $this->clearTransactionCaches($user->id,
-      $wallet->id,
-      $transaction->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
-    BudgetService::clearBudgetCaches($user->id);
-    NotificationService::clearNotificationCaches($user->id);
+    $this->clearUserCache($user->id);
+    $this->clearOtherCaches($user->id);
 
     return $transaction;
   }
 
-  /**
-  * Update an existing transaction.
-  *
-  * @param Authenticatable $user
-  * @param Transaction $transaction
-  * @param array $data
-  * @return Transaction
-  * @throws \Exception
-  */
   public function updateTransaction(Authenticatable $user,
     Transaction $transaction,
     array $data): Transaction
@@ -174,10 +125,7 @@ class TransactionService
       throw new \Exception('Dompet tidak dapat diubah.');
     }
 
-    $newAmount = isset($data['amount'])
-    ? Money::of($data['amount'], $wallet->currency)
-    : $transaction->amount;
-
+    $newAmount = isset($data['amount']) ? Money::of($data['amount'], $wallet->currency) : $transaction->amount;
     $newType = $data['type'] ?? $transaction->type->value;
     $oldAmount = $transaction->amount;
     $oldType = $transaction->type->value;
@@ -186,25 +134,19 @@ class TransactionService
     $typeChanged = $oldType !== $newType;
 
     DB::transaction(function () use ($transaction, $wallet, $data, $newAmount, $newType, $oldAmount, $oldType, $amountChanged, $typeChanged) {
-      // Hanya sesuaikan saldo jika ada perubahan amount atau type
       if ($amountChanged || $typeChanged) {
         $netEffect = Money::zero($wallet->currency);
-
-        // Balikkan efek transaksi lama
         if ($oldType === TransactionType::INCOME->value) {
           $netEffect = $netEffect->minus($oldAmount);
         } else {
           $netEffect = $netEffect->plus($oldAmount);
         }
-
-        // Terapkan efek transaksi baru
         if ($newType === TransactionType::INCOME->value) {
           $netEffect = $netEffect->plus($newAmount);
         } else {
           $netEffect = $netEffect->minus($newAmount);
         }
 
-        // Jika netEffect negatif, artinya saldo akan berkurang
         if ($netEffect->isNegative()) {
           $required = $netEffect->abs();
           if ($wallet->balance->isLessThan($required)) {
@@ -214,33 +156,18 @@ class TransactionService
         } elseif ($netEffect->isPositive()) {
           $wallet->deposit($netEffect);
         }
-        // Jika netEffect nol, tidak ada perubahan saldo
       }
-
       $transaction->fill($data);
       $transaction->amount = $newAmount;
       $transaction->save();
     });
 
-    $this->clearTransactionCaches($user->id,
-      $wallet->id,
-      $transaction->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
-    BudgetService::clearBudgetCaches($user->id);
-    NotificationService::clearNotificationCaches($user->id);
+    $this->clearUserCache($user->id);
+    $this->clearOtherCaches($user->id);
 
     return $transaction->fresh();
   }
 
-  /**
-  * Soft delete transaction (move to trash).
-  *
-  * @param Authenticatable $user
-  * @param Transaction $transaction
-  * @return void
-  * @throws \Exception
-  */
   public function deleteTransaction(Authenticatable $user,
     Transaction $transaction): void
   {
@@ -250,36 +177,24 @@ class TransactionService
 
     DB::transaction(function () use ($transaction, $wallet) {
       $amount = $transaction->amount;
-
       if ($transaction->type === TransactionType::INCOME) {
         $wallet->withdraw($amount);
       } elseif ($transaction->type === TransactionType::EXPENSE) {
         $wallet->deposit($amount);
       }
-
       $transaction->delete();
     });
 
-    $this->clearTransactionCaches($user->id,
-      $wallet->id,
-      $transaction->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
-    NotificationService::clearNotificationCaches($user->id);
+    $this->clearUserCache($user->id);
+    $this->clearOtherCaches($user->id);
   }
 
-  /**
-  * Bulk soft delete transactions for a specific month and wallet.
-  */
-  public function bulkDeleteTransactions(
-    Authenticatable $user,
+  public function bulkDeleteTransactions(Authenticatable $user,
     int $walletId,
-    string $month
-  ): int
+    string $month): int
   {
     $wallet = Wallet::where('user_id',
       $user->id)->findOrFail($walletId);
-
     [$year, $monthNum] = explode('-',
       $month);
 
@@ -291,44 +206,28 @@ class TransactionService
       $monthNum)
     ->get();
 
-    $count = $transactions->count();
-
-    if ($count === 0) {
+    if ($transactions->isEmpty()) {
       return 0;
     }
 
     DB::transaction(function () use ($transactions, $wallet) {
       foreach ($transactions as $transaction) {
         $amount = $transaction->amount;
-
         if ($transaction->type === TransactionType::INCOME) {
           $wallet->withdraw($amount);
         } elseif ($transaction->type === TransactionType::EXPENSE) {
           $wallet->deposit($amount);
         }
-
         $transaction->delete();
       }
     });
 
-    // Clear caches
-    $this->clearTransactionCaches($user->id,
-      $walletId);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
-    NotificationService::clearNotificationCaches($user->id);
+    $this->clearUserCache($user->id);
+    $this->clearOtherCaches($user->id);
 
-    return $count;
+    return $transactions->count();
   }
 
-  /**
-  * Restore a soft-deleted transaction.
-  *
-  * @param Authenticatable $user
-  * @param int $transactionId
-  * @return void
-  * @throws \Exception
-  */
   public function restoreTransaction(Authenticatable $user,
     int $transactionId): void
   {
@@ -339,65 +238,39 @@ class TransactionService
 
     DB::transaction(function () use ($transaction, $wallet) {
       $amount = $transaction->amount;
-
       if ($transaction->type === TransactionType::INCOME) {
         $wallet->deposit($amount);
       } elseif ($transaction->type === TransactionType::EXPENSE) {
         $wallet->withdraw($amount);
       }
-
       $transaction->restore();
     });
 
-    $this->clearTransactionCaches($user->id,
-      $wallet->id,
-      $transaction->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
-    NotificationService::clearNotificationCaches($user->id);
+    $this->clearUserCache($user->id);
+    $this->clearOtherCaches($user->id);
   }
 
-  /**
-  * Permanently delete a transaction.
-  *
-  * @param Authenticatable $user
-  * @param int $transactionId
-  * @return void
-  * @throws \Exception
-  */
   public function forceDeleteTransaction(Authenticatable $user,
     int $transactionId): void
   {
     $transaction = Transaction::withTrashed()->findOrFail($transactionId);
     $this->ensureUserOwnsTransaction($user,
       $transaction);
-    $wallet = $transaction->wallet;
-
     $transaction->forceDelete();
 
-    $this->clearTransactionCaches($user->id,
-      $wallet->id,
-      $transaction->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
-    NotificationService::clearNotificationCaches($user->id);
+    $this->clearUserCache($user->id);
+    $this->clearOtherCaches($user->id);
   }
 
-  /**
-  * Get trashed (soft-deleted) transactions for a user.
-  *
-  * @param Authenticatable $user
-  * @param int $perPage
-  * @return array
-  */
   public function getTrashedTransactions(Authenticatable $user,
     int $perPage = 20): array
   {
-    $cacheKey = "user_{$user->id}_trashed_transactions_page_" . request('page',
-      1) . "_per_{$perPage}";
-    $tags = $this->getTransactionTags($user->id);
+    $page = request('page',
+      1);
+    $suffix = "trashed_transactions_p{$page}_per{$perPage}";
 
-    return Cache::tags($tags)->remember($cacheKey,
+    return $this->rememberForUser($user->id,
+      $suffix,
       $this->cacheTtl,
       function () use ($user, $perPage) {
         $query = Transaction::onlyTrashed()
@@ -406,7 +279,6 @@ class TransactionService
         ->orderBy('deleted_at', 'desc');
 
         $transactions = $query->paginate($perPage);
-
         $transformed = $transactions->through(fn($trx) => [
           'id' => $trx->id,
           'type' => $trx->type->value,
@@ -440,13 +312,8 @@ class TransactionService
       });
   }
 
-  // ------------------------------------------------------------------------
-  // Helper methods
-  // ------------------------------------------------------------------------
+  // ─── HELPERS ───────────────────────────────────────────
 
-  /**
-  * Build base query with filters.
-  */
   protected function buildBaseQuery(Authenticatable $user,
     array $filters): \Illuminate\Database\Eloquent\Builder
   {
@@ -465,13 +332,9 @@ class TransactionService
       $query->whereYear('transaction_date', substr($filters['month'], 0, 4))
       ->whereMonth('transaction_date', substr($filters['month'], 5, 2));
     }
-
     return $query;
   }
 
-  /**
-  * Format a single transaction for API response.
-  */
   protected function formatTransactionData(Transaction $trx): array
   {
     return [
@@ -498,50 +361,6 @@ class TransactionService
     ];
   }
 
-  /**
-  * Generate cache key for transactions list.
-  */
-  protected function generateTransactionsCacheKey(int $userId, array $filters, int $perPage): string
-  {
-    ksort($filters);
-    $filterHash = md5(json_encode($filters));
-    $page = request('page', 1);
-    return "transactions_user_{$userId}_filter_{$filterHash}_page_{$page}_per_{$perPage}";
-  }
-
-  /**
-  * Get cache tags for a user's transactions.
-  */
-  protected function getTransactionTags(int $userId): array
-  {
-    return ['transactions_user_' . $userId];
-  }
-
-  /**
-  * Clear all caches related to transactions for a user and optionally specific wallet/transaction.
-  */
-  protected function clearTransactionCaches(int $userId, ?int $walletId = null, ?int $transactionId = null): void
-  {
-    // Clear user's transaction list cache (all pages)
-    Cache::tags($this->getTransactionTags($userId))->flush();
-
-    // Clear trashed transactions cache
-    Cache::tags($this->getTransactionTags($userId))->flush(); // same tags
-
-    // Clear single transaction detail cache
-    if ($transactionId) {
-      Cache::tags(['transaction_details'])->forget("transaction_detail_{$transactionId}");
-    }
-
-    // Clear wallet cache (balances and wallet lists)
-    if ($walletId) {
-      $this->walletService->clearWalletCaches($walletId, $userId);
-    }
-  }
-
-  /**
-  * Ensure user owns the wallet.
-  */
   protected function ensureUserOwnsWallet(Authenticatable $user, Wallet $wallet): void
   {
     if ($wallet->user_id !== $user->id) {
@@ -549,13 +368,30 @@ class TransactionService
     }
   }
 
-  /**
-  * Ensure user owns the transaction (via wallet).
-  */
   protected function ensureUserOwnsTransaction(Authenticatable $user, Transaction $transaction): void
   {
     if ($transaction->wallet->user_id !== $user->id) {
       abort(403, 'Unauthorized');
     }
+  }
+
+  protected function clearOtherCaches(int $userId): void
+  {
+    InsightService::clearCache($userId);
+    ReportService::clearReportCaches($userId);
+    BudgetService::clearBudgetCaches($userId);
+    NotificationService::clearNotificationCaches($userId);
+  }
+
+  // ─── Trait Override (opsional) ──────────────────────
+
+  protected function knownUserCacheSuffixes(int $userId): array
+  {
+    return [
+      'wallets',
+      'budgets',
+      'insights',
+      // tambahkan suffix umum lainnya jika diperlukan
+    ];
   }
 }

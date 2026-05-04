@@ -4,41 +4,20 @@ namespace Modules\FinTech\Services;
 
 use Modules\FinTech\Models\Transfer;
 use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Traits\HasUserCache;
 use Brick\Money\Money;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 class TransferService
 {
+  use HasUserCache;
+
   protected WalletService $walletService;
-  protected int $cacheTtl = 3600; // 1 hour
+  protected int $cacheTtl = 3600;
 
   public function __construct(WalletService $walletService) {
     $this->walletService = $walletService;
-  }
-
-  /**
-  * Cek apakah cache driver mendukung tags.
-  */
-  private static function supportsTags(): bool
-  {
-    return Cache::getStore() instanceof \Illuminate\Cache\TaggableStore;
-  }
-
-  /**
-  * Simpan cache dengan tags jika didukung, jika tidak pakai cache polos.
-  * Tag dikunci: untuk transfer aktif ['transfers', "user_{userId}"]
-  *               untuk trash ['transfers_trashed', "user_{userId}"]
-  */
-  private function rememberWithFallback(int $userId, string $cacheKey, int $ttl, callable $callback, string $tagType = 'transfers'): mixed
-  {
-    $tags = [$tagType,
-      "user_{$userId}"];
-    if (self::supportsTags()) {
-      return Cache::tags($tags)->remember($cacheKey, $ttl, $callback);
-    }
-    return Cache::remember($cacheKey, $ttl, $callback);
   }
 
   /**
@@ -46,12 +25,11 @@ class TransferService
   */
   public function getTransfers(Authenticatable $user, array $filters, int $perPage = 20): array
   {
-    $userId = $user->id;
-    $page = request('page', 1);
     $filterHash = md5(json_encode($filters));
-    $cacheKey = "transfers_user_{$userId}_filter_{$filterHash}_page_{$page}_per_{$perPage}";
+    $page = request('page', 1);
+    $suffix = "transfers_f_{$filterHash}_p{$page}_per{$perPage}";
 
-    return $this->rememberWithFallback($userId, $cacheKey, $this->cacheTtl, function () use ($user, $filters, $perPage) {
+    return $this->rememberForUser($user->id, $suffix, $this->cacheTtl, function () use ($user, $filters, $perPage) {
       $query = Transfer::with(['fromWallet', 'toWallet'])
       ->where(function ($q) use ($user) {
         $q->whereHas('fromWallet', fn($q) => $q->where('user_id', $user->id))
@@ -89,13 +67,12 @@ class TransferService
   public function getTrashedTransfers(Authenticatable $user,
     int $perPage = 20): array
   {
-    $userId = $user->id;
     $page = request('page',
       1);
-    $cacheKey = "transfers_trashed_user_{$userId}_page_{$page}_per_{$perPage}";
+    $suffix = "trashed_transfers_p{$page}_per{$perPage}";
 
-    return $this->rememberWithFallback($userId,
-      $cacheKey,
+    return $this->rememberForUser($user->id,
+      $suffix,
       $this->cacheTtl,
       function () use ($user, $perPage) {
         $query = Transfer::onlyTrashed()
@@ -153,7 +130,7 @@ class TransferService
       return $transfer;
     });
 
-    $this->clearTransferCaches($user->id, $fromWallet->id, $toWallet->id);
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
     return $transfer;
@@ -199,9 +176,7 @@ class TransferService
       $toWallet->deposit($newAmount);
     });
 
-    $this->clearTransferCaches($user->id,
-      $fromWallet->id,
-      $toWallet->id);
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
     return $transfer->fresh();
@@ -222,9 +197,7 @@ class TransferService
       $transfer->delete();
     });
 
-    $this->clearTransferCaches($user->id,
-      $transfer->from_wallet_id,
-      $transfer->to_wallet_id);
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
   }
@@ -245,9 +218,7 @@ class TransferService
       $transfer->restore();
     });
 
-    $this->clearTransferCaches($user->id,
-      $transfer->from_wallet_id,
-      $transfer->to_wallet_id);
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
   }
@@ -262,16 +233,13 @@ class TransferService
     $this->ensureUserOwnsTransfer($user,
       $transfer);
     $transfer->forceDelete();
-    $this->clearTransferCaches($user->id,
-      $transfer->from_wallet_id,
-      $transfer->to_wallet_id);
+
+    $this->clearUserCache($user->id);
     InsightService::clearCache($user->id);
     ReportService::clearReportCaches($user->id);
   }
 
-  // ------------------------------------------------------------------------
-  // Helper methods
-  // ------------------------------------------------------------------------
+  // ─── HELPERS ───────────────────────────────────────────
 
   protected function formatTransferData(Transfer $transfer): array
   {
@@ -323,22 +291,15 @@ class TransferService
     }
   }
 
-  /**
-  * Clear all caches related to transfers for this user and affected wallets.
-  */
-  protected function clearTransferCaches(int $userId, int $fromWalletId, int $toWalletId): void
-  {
-    if (self::supportsTags()) {
-      Cache::tags(['transfers', "user_{$userId}"])->flush();
-      Cache::tags(['transfers_trashed', "user_{$userId}"])->flush();
-    } else {
-      // Fallback hapus beberapa key yang mungkin (tidak sempurna, tapi cukup)
-      Cache::forget("transfers_user_{$userId}_filter_" . md5(json_encode([])) . "_page_1_per_20");
-      Cache::forget("transfers_trashed_user_{$userId}_page_1_per_20");
-    }
+  // ─── Trait Override (opsional) ──────────────────────
 
-    // Clear wallet caches (tetap)
-    $this->walletService->clearWalletCaches($fromWalletId, $userId);
-    $this->walletService->clearWalletCaches($toWalletId, $userId);
+  protected function knownUserCacheSuffixes(int $userId): array
+  {
+    return [
+      'wallets',
+      'budgets',
+      'insights',
+      'transfers',
+    ];
   }
 }
