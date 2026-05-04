@@ -16,7 +16,7 @@ class TransactionService
   use HasUserCache;
 
   protected WalletService $walletService;
-  protected int $cacheTtl = 3600;
+  protected int $cacheTtl = 300;
 
   public function __construct(WalletService $walletService) {
     $this->walletService = $walletService;

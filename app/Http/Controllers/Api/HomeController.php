@@ -4,15 +4,22 @@ namespace Modules\FinTech\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use Modules\FinTech\Models\Wallet;
-use Modules\FinTech\Models\Transaction;
-use Modules\FinTech\Models\Budget;
-use Modules\FinTech\Enums\TransactionType;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use Modules\FinTech\Services\HomeService;
 
 class HomeController extends Controller
 {
-  public function index(): JsonResponse
+  public function index(Request $request, HomeService $service): JsonResponse
+  {
+    $user = $request->user();
+    abort_if(!$user, 401);
+
+    return response()->json([
+      'success' => true,
+      'data' => $service->getHomeData($user)
+    ]);
+  }
+  public function indexes(): JsonResponse
   {
     $user = request()->user();
 
@@ -82,8 +89,8 @@ class HomeController extends Controller
     ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
     ->where('type', TransactionType::EXPENSE)
     ->whereBetween('transaction_date', [now()->startOfWeek(), now()->endOfWeek()])
-    ->select('category_id', DB::raw('SUM(amount) as total_raw'))
-    ->groupBy('category_id')
+    ->select('id', 'category_id', DB::raw('SUM(amount) as total_raw'))
+    ->groupBy('id', 'category_id')
     ->get()
     ->map(function ($item) {
       $category = $item->category;
