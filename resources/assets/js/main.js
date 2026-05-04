@@ -414,19 +414,19 @@ function showToast(message, type = 'success') {
   // Ikon dengan warna solid
   let iconClass = 'bi-info-circle';
   let iconColor = "text-info";
-  let bgClass = 'bg-info text-white'; // fallback
+  let bgClass = 'bg-info'; // fallback
   if (type === 'success') {
     iconClass = 'bi-check-circle-fill';
     iconColor = 'text-success';
-    bgClass = 'bg-success text-white';
+    bgClass = 'bg-success';
   } else if (type === 'danger') {
     iconClass = 'bi-exclamation-triangle-fill';
     iconColor = 'text-danger';
-    bgClass = 'bg-danger text-white';
+    bgClass = 'bg-danger';
   } else if (type === 'warning') {
     iconClass = 'bi-exclamation-circle-fill';
     iconColor = 'text-warning';
-    bgClass = 'bg-warning text-dark';
+    bgClass = 'bg-warning';
   }
 
   // Buat elemen toast
@@ -445,7 +445,7 @@ function showToast(message, type = 'success') {
   <small style="color: var(--tg-theme-hint-color);">baru saja</small>
   <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(0.5);"></button>
   </div>
-  <div class="toast-body ${bgClass} bg-gradient bg-opacity-50">
+  <div class="toast-body ${bgClass} bg-gradient bg-opacity-50" style="color: var(--tg-theme-text-color);">
   ${message}
   </div>
   `;
