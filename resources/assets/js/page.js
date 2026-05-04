@@ -1572,7 +1572,12 @@ async function renderNotificationsPage() {
   <i class="bi bi-check-all me-1"></i>Tandai Semua Dibaca
   </button>
   </div>
-  <div id="notification-list"></div>
+  <div id="notification-list">
+  <div class="text-center py-5">
+  <div class="spinner-border text-primary" role="status"></div>
+  <p class="mt-2">Memuat notifikasi...</p>
+  </div>
+  </div>
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;
