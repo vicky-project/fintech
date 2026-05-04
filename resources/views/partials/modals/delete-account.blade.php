@@ -43,8 +43,8 @@
 
     try {
       const res = await Core.api.delete('/api/fintech/setting/account/delete');
-      tgApp.showToast(res.message || 'Akun berhasil dihapus.',
-      'success');
+      showToast(res.message || 'Akun berhasil dihapus.',
+        'success');
 
       // Bersihkan state & redirect
       tgApp.clearToken();
@@ -65,8 +65,8 @@
 
       bootstrap.Modal.getInstance(document.getElementById('deleteAccountModal'))?.hide();
     } catch (error) {
-      tgApp.showToast(error.message || 'Gagal menghapus akun',
-      'danger');
+      showToast(error.message || 'Gagal menghapus akun',
+        'danger');
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-trash me-1"></i> Hapus Permanen';
     }

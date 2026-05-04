@@ -411,32 +411,35 @@ function showToast(message, type = 'success') {
     document.body.appendChild(toastContainer);
   }
 
-  // Tentukan ikon dan warnanya
+  // Ikon dengan warna solid (tetap terlihat di tema gelap/terang)
   let iconClass = 'bi-info-circle';
   let iconColor = 'var(--tg-theme-link-color)';
   if (type === 'success') {
     iconClass = 'bi-check-circle-fill';
-    iconColor = '#28a745';
+    iconColor = '#28a745'; // Hijau solid
   } else if (type === 'danger') {
     iconClass = 'bi-exclamation-triangle-fill';
-    iconColor = '#dc3545';
+    iconColor = '#dc3545'; // Merah solid
   } else if (type === 'warning') {
     iconClass = 'bi-exclamation-circle-fill';
-    iconColor = '#ffc107';
+    iconColor = '#ffc107'; // Kuning solid
   }
 
-  // Buat elemen toast
+  // Buat elemen toast dengan warna dari tema Telegram
   const toastEl = document.createElement('div');
   toastEl.className = 'toast';
   toastEl.setAttribute('role', 'alert');
   toastEl.setAttribute('aria-live', 'assertive');
   toastEl.setAttribute('aria-atomic', 'true');
+  toastEl.style.backgroundColor = 'var(--tg-theme-secondary-bg-color)';
+  toastEl.style.color = 'var(--tg-theme-text-color)';
+  toastEl.style.border = '1px solid var(--tg-theme-section-separator-color)';
   toastEl.innerHTML = `
-  <div class="toast-header" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);">
+  <div class="toast-header" style="background-color: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color); border-bottom: 1px solid var(--tg-theme-section-separator-color);">
   <i class="bi ${iconClass} me-2" style="color: ${iconColor};"></i>
   <strong class="me-auto">Notifikasi</strong>
   <small style="color: var(--tg-theme-hint-color);">baru saja</small>
-  <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(1);"></button>
+  <button type="button" class="btn-close" data-bs-dismiss="toast" style="filter: invert(0.5);"></button>
   </div>
   <div class="toast-body" style="background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);">
   ${message}
@@ -460,7 +463,6 @@ function showToast(message, type = 'success') {
     }
   });
 }
-
 // ---------- MULAI SETELAH DOM SIAP ----------
 document.addEventListener('DOMContentLoaded', () => {
   // Setup event delegation (gantikan inline onclick secara bertahap)
