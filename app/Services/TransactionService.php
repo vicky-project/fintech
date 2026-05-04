@@ -16,7 +16,7 @@ class TransactionService
   use HasUserCache;
 
   protected WalletService $walletService;
-  protected int $cacheTtl = 3600;
+  protected int $cacheTtl = 300;
 
   public function __construct(WalletService $walletService) {
     $this->walletService = $walletService;
@@ -377,10 +377,11 @@ class TransactionService
 
   protected function clearOtherCaches(int $userId): void
   {
-    InsightService::clearCache($userId);
-    ReportService::clearReportCaches($userId);
-    BudgetService::clearBudgetCaches($userId);
-    NotificationService::clearNotificationCaches($userId);
+    app(InsightService::class)->clearUserCache($userId);
+    app(ReportService::class)->clearUserCache($userId);
+    app(BudgetService::class)->clearUserCache($userId);
+    app(NotificationService::class)->clearUserCache($userId);
+    app(HomeService::class)->clearUserCache($userId);
   }
 
   // ─── Trait Override (opsional) ──────────────────────

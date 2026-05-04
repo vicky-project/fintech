@@ -19,18 +19,22 @@ async function renderListPage(config) {
   <div>${extraHeaderButtons}</div>
   </div>
   ${filterHtml || ''}
-  <div id="${listContainerId}"></div>
+  <div id="${listContainerId}">
+  <div class="text-center py-5">
+  <div class="spinner-border text-primary" role="status"></div>
+  <p class="mt-2">Memuat data ${title}...</p>
+  </div>
+  </div>
   <div id="${paginationId}" class="mt-3"></div>
   </div>`;
   document.getElementById('main-content').innerHTML = html;
   await loadFn(1);
 }
 
-// ==================== HOME ====================
 // ==================== HOME PAGE ====================
 async function renderHomePage() {
-  await Core.loadHomeSummary();
   const summary = Core.state.homeSummary;
+  if (!summary) await Core.loadHomeSummary();
   const container = document.getElementById('main-content');
 
   // 1. Skeleton loader jika data belum tersedia (mungkin gagal/terlambat)
@@ -47,9 +51,13 @@ async function renderHomePage() {
 
   const symbol = Core.getCurrencySymbol(summary.currency);
   const trend = summary.trend;
-  const trendHtml = trend ? `
-  <small class="${trend.change_percentage > 0 ? 'text-danger': 'text-success'}">
-  ${trend.change_percentage > 0 ? '↑': '↓'} ${Math.abs(trend.change_percentage)}% dari bulan lalu
+  const trendIncomeHtml = trend ? `
+  <small class="${trend.income_change > 0 ? 'text-success': 'text-danger'}">
+  ${trend.income_change > 0 ? '↑': '↓'} ${Math.abs(trend.income_change)}% dari bulan lalu
+  </small>`: '';
+  const trendExpenseHtml = trend ? `
+  <small class="${trend.expense_change > 0 ? 'text-danger': 'text-success'}">
+  ${trend.expense_change > 0 ? '↑': '↓'} ${Math.abs(trend.expense_change)}% dari bulan lalu
   </small>`: '';
 
   container.innerHTML = `
@@ -70,6 +78,7 @@ async function renderHomePage() {
   <i class="bi bi-arrow-down-circle text-success fs-4"></i>
   <h6 class="mb-0">${Core.formatNumberShort(summary.total_income)}</h6>
   <small>Pemasukan</small>
+  ${trendIncomeHtml}
   </div></div>
   </div>
   <div class="col-6">
@@ -77,7 +86,7 @@ async function renderHomePage() {
   <i class="bi bi-arrow-up-circle text-danger fs-4"></i>
   <h6 class="mb-0">${Core.formatNumberShort(summary.total_expense)}</h6>
   <small>Pengeluaran</small>
-  ${trendHtml}
+  ${trendExpenseHtml}
   </div></div>
   </div>
   </div>
@@ -100,19 +109,6 @@ async function renderHomePage() {
   </div>
   </div>`: ''}
 
-  <!-- Quick Actions -->
-  <div class="d-flex gap-2 mb-3">
-  <button class="btn btn-primary" data-action="add-transaction">
-  <i class="bi bi-plus-circle"></i> Transaksi
-  </button>
-  <button class="btn btn-outline-primary" data-action="add-transfer">
-  <i class="bi bi-arrow-left-right"></i> Transfer
-  </button>
-  <button class="btn btn-outline-secondary" data-action="backup-data">
-  <i class="bi bi-cloud-upload"></i> Backup
-  </button>
-  </div>
-
   <!-- Weekly Expense Chart -->
   <div class="card mb-3">
   <div class="card-body">
@@ -123,12 +119,24 @@ async function renderHomePage() {
   </div>
   </div>
 
+  <!-- Monthly Comparison Chart -->
+  <div class="card mb-3" id="monthlyComparisonCard">
+  <div class="card-body">
+  <h6>6 Bulan Terakhir</h6>
+  <div style="height: 200px;"><canvas id="monthlyComparisonChart"></canvas></div>
+  </div>
+  </div>
+
   <!-- Recent Transactions -->
+  <div class="card mb-3">
+  <div class="card-body">
   <h6>Transaksi Terbaru</h6>
   <div id="recent-transactions">
   ${summary.has_transactions ?
   renderRecentTransactionsFromSummary(summary.recent_transactions):
   '<p class="text-muted text-center">Belum ada transaksi</p>'}
+  </div>
+  </div>
   </div>
   </div>`;
 
@@ -136,6 +144,7 @@ async function renderHomePage() {
   if (summary.weekly_expense.length) {
     requestAnimationFrame(() => loadHomeChartFromSummary(summary.weekly_expense));
   }
+  loadMonthlyComparisonChart();
 }
 
 // ========== HELPERS ==========
@@ -208,6 +217,65 @@ function loadHomeChartFromSummary(weeklyExpense) {
       }
     }
   });
+}
+
+async function loadMonthlyComparisonChart() {
+  try {
+    const res = await Core.api.get('/api/fintech/home-monthly-comparison');
+    const data = res.data;
+    const chartContainer = document.getElementById('monthlyComparisonCard');
+
+    // Cek apakah data kosong atau semua pemasukan/pengeluaran 0
+    const hasData = data && data.length > 0 && data.some(d => d.income > 0 || d.expense > 0);
+
+    if (!hasData) {
+      // Tampilkan teks informatif
+      if (chartContainer) {
+        chartContainer.innerHTML = `
+        <div class="card-body text-center py-4">
+        <i class="bi bi-bar-chart-line fs-1 text-muted"></i>
+        <p class="text-muted mt-2 mb-0">Belum ada data untuk perbandingan 6 bulan terakhir.</p>
+        <small class="text-muted">Mulai catat transaksi untuk melihat tren keuangan Anda.</small>
+        </div>`;
+      }
+      return;
+    }
+
+    // Jika ada data, buat chart
+    const ctx = document.getElementById('monthlyComparisonChart')?.getContext('2d');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.month),
+        datasets: [{
+          label: 'Pemasukan', data: data.map(d => d.income), backgroundColor: '#4DB6AC'
+        },
+          {
+            label: 'Pengeluaran', data: data.map(d => d.expense), backgroundColor: '#FF6384'
+          }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Gagal memuat perbandingan bulanan:', error);
+    const chartContainer = document.getElementById('monthlyComparisonCard');
+    if (chartContainer) {
+      chartContainer.innerHTML = `
+      <div class="card-body text-center py-4">
+      <i class="bi bi-exclamation-circle fs-1 text-muted"></i>
+      <p class="text-muted mt-2 mb-0">Gagal memuat data perbandingan.</p>
+      </div>`;
+    }
+  }
 }
 
 // ==================== TRANSACTIONS ====================
@@ -573,8 +641,8 @@ async function loadAndEditTransfer(id) {
 }
 
 // ==================== WALLETS ====================
-function renderWalletsPage() {
-  Core.loadWallets();
+async function renderWalletsPage() {
+  await Core.loadWallets();
   const html = `
   <div class="container py-3">
   <div class="d-flex justify-content-between mb-3">
@@ -1489,21 +1557,15 @@ async function renderBudgetsPage() {
     listContainerId: 'budget-list',
     paginationId: 'budget-pagination',
     extraHeaderButtons: `<button class="btn btn-sm btn-primary" onclick="showAddBudgetModal()"><i class="bi bi-plus"></i></button>`,
-    loadFn: refreshBudgetList
+    loadFn: async function(page) {
+      await Core.loadBudgets();
+      renderBudgetList();
+    }
   });
 }
 async function refreshBudgetList() {
   await Core.loadBudgets();
   renderBudgetList();
-}
-async function loadBudgets() {
-  try {
-    const res = await Core.api.get('/api/fintech/budgets');
-    Core.state.budgets = res.data || [];
-  } catch (error) {
-    Core.state.budgets = [];
-    tgApp.showToast('Gagal memuat budget', 'danger');
-  }
 }
 function renderBudgetList() {
   const container = document.getElementById('budget-list');
@@ -1567,7 +1629,12 @@ async function renderNotificationsPage() {
   <i class="bi bi-check-all me-1"></i>Tandai Semua Dibaca
   </button>
   </div>
-  <div id="notification-list"></div>
+  <div id="notification-list">
+  <div class="text-center py-5">
+  <div class="spinner-border text-primary" role="status"></div>
+  <p class="mt-2">Memuat notifikasi...</p>
+  </div>
+  </div>
   </div>
   `;
   document.getElementById('main-content').innerHTML = html;

@@ -70,8 +70,7 @@ class WalletService
     });
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
 
     return $wallet->fresh();
   }
@@ -90,8 +89,7 @@ class WalletService
     });
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
 
     return $wallet->fresh();
   }
@@ -108,8 +106,7 @@ class WalletService
     });
 
     $this->clearUserCache($user->id);
-    InsightService::clearCache($user->id);
-    ReportService::clearReportCaches($user->id);
+    $this->clearOtherCaches($user->id);
 
     return $result;
   }
@@ -141,6 +138,13 @@ class WalletService
     if ($wallet->user_id !== $user->id) {
       abort(403, 'Unauthorized');
     }
+  }
+
+  protected function clearOtherCaches(int $userId): void
+  {
+    app(InsightService::class)->clearUserCache($user->id);
+    app(ReportService::class)->clearUserCache($user->id);
+    app(HomeService::class)->clearUserCache($user->id);
   }
 
   // ─── Trait Override (opsional) ──────────────────────

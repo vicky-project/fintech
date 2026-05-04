@@ -258,6 +258,7 @@
 
       // Refresh preview
       await loadPreviewData();
+      Core.resetState();
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal mengimpor', 'danger');

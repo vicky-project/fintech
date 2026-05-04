@@ -36,7 +36,7 @@ class InsightService
   */
   public static function clearCache(int $userId): void
   {
-    (new static)->clearUserCache($userId);
+    app(static::class)->clearUserCache($userId);
   }
 
   // ─── Private helper methods (tidak berubah) ──────────────────

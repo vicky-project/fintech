@@ -159,6 +159,7 @@
   };
 
   async function saveTransaction() {
+    const currentPage = Core.state.currentPage;
     const form = document.getElementById('transactionForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
@@ -186,15 +187,16 @@
         await Core.api.post(url, data);
       }
 
+      Core.resetState();
       await Core.loadWallets();
       await Core.loadHomeSummary();
-      if (Core.state.currentPage === 'transactions') Core.navigateTo('transactions');
 
       tgApp.hideLoading();
       tgApp.showToast(isEdit ? 'Transaksi diperbarui' : 'Transaksi berhasil', 'success');
       bootstrap.Modal.getInstance(document.getElementById('transactionModal')).hide();
 
-      if (Core.state.currentPage === 'home') Core.navigateTo('home');
+      if (currentPage === 'transactions') Core.navigateTo('transactions');
+      if (currentPage === 'home') Core.navigateTo('home');
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal menyimpan', 'danger');
