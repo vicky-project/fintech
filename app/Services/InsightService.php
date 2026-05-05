@@ -83,8 +83,6 @@ class InsightService
       $budgets, $projection
     );
 
-    $budgets = $this->budgetService->getBudgets($userId);
-
     return [
       'currency' => $currency,
       'trend' => $trend,
