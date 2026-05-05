@@ -1147,6 +1147,17 @@ async function renderSettingsPage() {
   </div>
   <small class="text-muted d-block mb-3">Dapatkan peringatan budget dan arus kas langsung di chat.</small>
 
+  <!-- Auto Sync Google Sheets -->
+  <hr>
+  <div class="form-check form-switch mb-3">
+  <input class="form-check-input" type="checkbox" id="auto-sync-google"
+  ${settings.preferences?.auto_sync_google ? 'checked': ''}>
+  <label class="form-check-label" for="auto-sync-google">
+  <i class="bi bi-arrow-repeat me-1"></i> Auto Sync ke Google Sheets
+  </label>
+  </div>
+  <small class="text-muted d-block mb-3">Transaksi baru otomatis muncul di spreadsheet Anda.</small>
+
   <button type="button" class="btn btn-primary w-100" data-action="save-settings">
   <i class="bi bi-check2-circle me-1"></i> Simpan
   </button>
@@ -1281,12 +1292,14 @@ async function saveSettings() {
   if (!data.pin || data.pin.length === 0) {
     delete data.pin;
   }
-  data.notification_telegram = document.getElementById('notification-telegram')?.checked ?? false;
+
+  // Pastikan semua toggle boolean selalu dikirim
+  data.notification_telegram = data.notification_telegram ?? false;
+  data.auto_sync_google = data.auto_sync_google ?? false;
 
   try {
     tgApp.showLoading('Menyimpan...');
     await Core.api.put('/api/fintech/settings', data);
-    Core.state.userSettings = null;
     await Core.loadUserSettings();
     tgApp.hideLoading();
     tgApp.showToast('Pengaturan disimpan');

@@ -50,6 +50,7 @@ class UserSettingsRequest extends FormRequest
           }
         }],
       'notification_telegram' => 'sometimes|boolean',
+      'auto_sync_google' => 'sometimes|boolean',
     ];
   }
 

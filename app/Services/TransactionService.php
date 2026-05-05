@@ -7,6 +7,7 @@ use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\TransactionType;
 use Modules\FinTech\Traits\HasUserCache;
+use Modules\FinTech\Jobs\SyncTransactionToSheetJob;
 use Brick\Money\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -106,6 +107,17 @@ class TransactionService
       }
       return $transaction;
     });
+
+    SyncTransactionToSheetJob::dispatch($user,
+      [
+        'Tanggal' => $transaction->transaction_date->format('d/m/Y'),
+        'Tipe' => $transaction->type->label(),
+        'Kategori' => $transaction->category->name,
+        'Dompet' => $transaction->wallet->name,
+        'Pemasukan' => $transaction->type->value === 'income' ? $transaction->getAmountFloat() : 0,
+        'Pengeluaran' => $transaction->type->value === 'expense' ? $transaction->getAmountFloat() : 0,
+        'Deskripsi' => $transaction->description ?? '-',
+      ]);
 
     $this->clearUserCache($user->id);
     $this->clearOtherCaches($user->id);
