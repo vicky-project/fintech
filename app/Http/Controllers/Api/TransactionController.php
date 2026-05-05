@@ -110,6 +110,8 @@ class TransactionController extends Controller
       ]);
     } catch(HttpException $e) {
       return response()->json(["message" => $e->getMessage()], $e->getStatusCode());
+    } catch(\Exception $e) {
+      return response()->json(['message' => $e->getMessage()], 500);
     }
   }
 
