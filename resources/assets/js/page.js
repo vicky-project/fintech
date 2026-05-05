@@ -1409,11 +1409,11 @@ function renderInsightsContent(data) {
   </div>
   <div class="card-body pt-0">
   ${data.recommendations.map(rec => `
-    <div class="d-flex alert alert-${rec.type === 'warning' ? 'warning': (rec.type === 'success' ? 'success': 'info')} py-2 px-3 mb-2">
+    <div class="d-flex align-items-center alert alert-${rec.type == 'warning' ? 'warning': (rec.type == 'success' ? 'success': 'info')} py-2 px-3 mb-2" role="alert">
     <i class="bi ${rec.icon} me-3 fs-5"></i>
     <div>
-    <strong>${rec.title}</strong><br>
-    <small>${rec.message}</small>
+    <h4 class="alert-heading">${rec.title}</h4>
+    <p><small>${rec.message}</small></p>
     </div>
     </div>
     `).join('')}
