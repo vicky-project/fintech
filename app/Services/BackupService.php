@@ -75,6 +75,12 @@ class BackupService
       Models\UserSetting::where('user_id', $user->id)
     );
 
+    // User Category Rule
+    $userCategoryRule = $this->exportTable(
+      "fintech_user_category_rules",
+      Models\UserCategoryRule::where('user_id', $user->id)
+    );
+
     $data = [
       'version' => '1.1',
       'user_telegram_id' => $user->telegram_id,
@@ -89,6 +95,7 @@ class BackupService
         'bank_statements' => $bankStatements,
         'statement_transactions' => $statementTransactions,
         'notifications' => $notifications,
+        'user_category_rules' => $userCategoryRule,
       ]
     ];
 
@@ -149,6 +156,12 @@ class BackupService
         unset($row['id']);
         $row['user_id'] = $user->id;
         $row['default_wallet_id'] = $row['default_wallet_id'] ? ($walletMap[$row['default_wallet_id']] ?? null) : null;
+      });
+
+      $this->bulkInsert('fintech_user_category_rules', $backup['data']['user_category_rules'], function(&$row) use ($user) {
+        unset($row['id']);
+        $row['user_id'] = $user->id;
+        $row['category_id'] = $catMap[$row['category_id']] ?? null;
       });
 
       $trxMap = $this->bulkInsertByUuid('fintech_transactions', $backup['data']['transactions'], function(&$row) use ($walletMap, $catMap) {
@@ -245,6 +258,7 @@ class BackupService
     Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id',
       $user->id))->delete();
     Models\UserSetting::where('user_id', $user->id)->delete();
+    Models\UserCategoryRule::where('user_id', $user->id)->delete();
     Models\Wallet::where('user_id', $user->id)->delete();
   }
 

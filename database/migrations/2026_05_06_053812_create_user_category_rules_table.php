@@ -8,7 +8,7 @@ return new class extends Migration
 {
   public function up(): void
   {
-    Schema::create('user_category_rules', function (Blueprint $table) {
+    Schema::create('fintech_user_category_rules', function (Blueprint $table) {
       $table->id();
       $table->uuid('uuid')->unique();
       $table->foreignId('user_id')->constrained('telegram_users')->cascadeOnDelete();
