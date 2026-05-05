@@ -164,22 +164,44 @@ class InsightService
       $currentMonth = Carbon::now()->month;
       $currentYear = Carbon::now()->year;
 
+      // 1. Pengeluaran bulan ini
       $thisMonth = $catTrans->filter(fn($t) =>
         $t->transaction_date->month === $currentMonth &&
         $t->transaction_date->year === $currentYear
       )->sum(fn($t) => $t->getAmountFloat());
 
-      $past3Months = $catTrans->filter(fn($t) =>
-        $t->transaction_date->lt(Carbon::now()->startOfMonth())
-      );
+      // 2. Data historis 6 bulan terakhir (per bulan)
+      $monthlyTotals = $catTrans
+      ->groupBy(fn($t) => $t->transaction_date->format('Y-m'))
+      ->map(fn($group) => $group->sum(fn($t) => $t->getAmountFloat()))
+      ->values()
+      ->toArray();
 
-      if ($past3Months->count() < 2) continue;
+      // Butuh minimal 3 bulan data untuk analisis
+      if (count($monthlyTotals) < 3) continue;
 
-      $avgPast = $past3Months->groupBy(fn($t) => $t->transaction_date->format('Y-m'))
-      ->map->sum(fn($t) => $t->getAmountFloat())
-      ->average();
+      // 3. Hitung mean dan standar deviasi
+      $mean = array_sum($monthlyTotals) / count($monthlyTotals);
 
-      if ($avgPast > 0 && $thisMonth > $avgPast * 1.5) {
+      $variance = 0;
+      foreach ($monthlyTotals as $value) {
+        $variance += pow($value - $mean, 2);
+      }
+      $variance /= count($monthlyTotals);
+      $stdDev = sqrt($variance);
+
+      // Jika standar deviasi 0 (semua nilai sama), tidak bisa hitung Z-score
+      if ($stdDev == 0) continue;
+
+      // 4. Hitung Z-score untuk bulan ini
+      $zScore = ($thisMonth - $mean) / $stdDev;
+
+      // 5. Deteksi outlier: Z-score > 2.0 (signifikan, di atas 95% confidence)
+      if ($zScore > 2.0 && $thisMonth > $mean) {
+        $percentageIncrease = $mean > 0
+        ? round(($thisMonth - $mean) / $mean * 100, 1)
+        : 100;
+
         $anomalies[] = [
           'category' => [
             'id' => $category->id,
@@ -188,14 +210,18 @@ class InsightService
             'color' => $category->color
           ],
           'this_month' => round($thisMonth, 2),
-          'average' => round($avgPast, 2),
-          'percentage_increase' => round(($thisMonth - $avgPast) / $avgPast * 100, 1),
+          'average' => round($mean, 2),
+          'percentage_increase' => $percentageIncrease,
+          'z_score' => round($zScore, 2),
           'formatted' => 'Rp ' . number_format($thisMonth, 0, ',', '.')
         ];
       }
     }
 
-    return array_values($anomalies);
+    // Urutkan berdasarkan Z-score tertinggi (paling tidak biasa)
+    usort($anomalies, fn($a, $b) => $b['z_score'] <=> $a['z_score']);
+
+    return $anomalies;
   }
 
   private function detectSubscriptions($transactions): array
