@@ -10,7 +10,7 @@ class UserCategoryRule extends Model
 {
   use HasUuid;
 
-  protected $table = 'fintech_user_settings';
+  protected $table = 'fintech_user_category_rules';
 
   protected $fillable = [
     'user_id',
