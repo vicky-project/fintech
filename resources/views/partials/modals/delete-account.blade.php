@@ -39,6 +39,7 @@
   }
   window.performDeleteAccount = async function(btn) {
     btn.disabled = true;
+    const originalHtml = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Menghapus...';
 
     try {
@@ -68,7 +69,7 @@
       tgApp.showToast(error.message || 'Gagal menghapus akun',
       'danger');
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-trash me-1"></i> Hapus Permanen';
+      btn.innerHTML = originalHtml;
     }
   }
 
@@ -76,6 +77,7 @@
     const confirmBtn = document.getElementById('btn-delete-account-confirm');
     if (confirmBtn) {
       confirmBtn.disabled = input.target.value.trim().toUpperCase() !== 'HAPUS';
+      confirmBtn.addEventListener('click', e => performDeleteAccount(e.target));
     }
   }
 </script>
