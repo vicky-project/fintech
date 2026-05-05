@@ -75,6 +75,8 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->make("config")->set("world.migrations.languages.table_name", "world_languages");
     $this->app->make("config")->set("world.migrations.timezones.table_name", "world_timezones");
 
+    $this->app->make("config")->set("queue.connections.".config('queue.default') . ".after_commit", true);
+
     $this->app->singleton(BankParserManager::class, function($app) {
       $manager = new BankParserManager();
       $manager->addParser(new MandiriPdfParser());
