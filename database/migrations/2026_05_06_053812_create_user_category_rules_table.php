@@ -26,6 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-      Schema::dropIfExists('user_category_rules');
+      Schema::dropIfExists('fintech_user_category_rules');
     }
   };
