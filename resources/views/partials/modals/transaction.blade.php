@@ -114,8 +114,8 @@
     const type = document.getElementById('type-select').value;
     const categorySelect = document.getElementById('category-select');
     const filtered = Core.state.categories.filter(c =>
-    type === 'income' ? (c.type === 'income' || c.type === 'both')
-    : (c.type === 'expense' || c.type === 'both')
+    type == 'income' ? (c.type == 'income' || c.type === 'both')
+    : (c.type == 'expense' || c.type == 'both')
     );
     categorySelect.innerHTML = '<option value="">Pilih Kategori</option>';
     filtered.forEach(c => {
