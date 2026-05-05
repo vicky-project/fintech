@@ -568,6 +568,29 @@ const Core = (() => {
       state.sessionTimer = null;
     }
   }
+  function resetStateAfterImportStatement() {
+    state.wallets = [];
+    state.homeSummary = null;
+    state.transactions = [];
+    state.transactionPage = 1;
+    state.transactionLastPage = 1;
+    state.transactionSummary = {
+      total: 0,
+      income: 0,
+      expense: 0
+    };
+    state.transfers = [];
+    state.transferPage = 1;
+    state.transferLastPage = 1;
+    state.totalBalance = 0;
+    state.chartInstances = {
+      home: null,
+      report: null,
+      category: null
+    };
+    state.budgets = [];
+    state.googlePollInterval = null;
+  }
 
   // ========== SESSION EXPIRED ==========
   function handleSessionExpired() {
