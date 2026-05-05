@@ -447,15 +447,20 @@ window.showTransactionDetailModal = function(id) {
 async function deleteTransaction(id) {
   if (!confirm('Pindahkan transaksi ke tempat sampah?')) return;
   tgApp.showLoading('Menghapus...');
-  await Core.api.delete(`/api/fintech/transactions/${id}`);
-  await Core.loadWallets();
-  await Core.loadHomeSummary();
-  tgApp.hideLoading();
-  tgApp.showToast('Transaksi dipindahkan ke tempat sampah');
-  if (Core.state.currentPage === 'transactions') {
-    await refreshTransactionList();
-  } else if (Core.state.currentPage === 'home') {
-    renderHomePage();
+  try {
+    await Core.api.delete(`/api/fintech/transactions/${id}`);
+    await Core.loadWallets();
+    await Core.loadHomeSummary();
+    tgApp.showToast('Transaksi dipindahkan ke tempat sampah');
+    if (Core.state.currentPage === 'transactions') {
+      await refreshTransactionList();
+    } else if (Core.state.currentPage === 'home') {
+      renderHomePage();
+    }
+  } catch(error) {
+    tgApp.showToast(error.message || 'Server error', 'danger');
+  } finally {
+    tgApp.hideLoading();
   }
 }
 
