@@ -1137,6 +1137,16 @@ async function renderSettingsPage() {
   <small class="text-muted">Kosongkan jika tidak ingin mengubah PIN.</small>
   </div>
 
+  <hr>
+  <div class="form-check form-switch mb-3">
+  <input class="form-check-input" type="checkbox" id="notification-telegram"
+  ${settings.preferences?.notification_telegram ? 'checked': ''}>
+  <label class="form-check-label" for="notification-telegram">
+  <i class="bi bi-bell me-1"></i> Notifikasi Telegram
+  </label>
+  </div>
+  <small class="text-muted d-block mb-3">Dapatkan peringatan budget dan arus kas langsung di chat.</small>
+
   <button type="button" class="btn btn-primary w-100" data-action="save-settings">
   <i class="bi bi-check2-circle me-1"></i> Simpan
   </button>
@@ -1271,6 +1281,7 @@ async function saveSettings() {
   if (!data.pin || data.pin.length === 0) {
     delete data.pin;
   }
+  data.notification_telegram = document.getElementById('notification-telegram')?.checked ?? false;
 
   try {
     tgApp.showLoading('Menyimpan...');

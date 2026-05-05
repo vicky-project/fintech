@@ -36,6 +36,7 @@ class UserSettingsRequest extends FormRequest
       ],
       'pin_enabled' => 'sometimes|boolean',
       'pin' => 'nullable|string|min:4|max:6|required_if:pin_enabled,true',
+      'notification_telegram' => 'sometimes|boolean',
     ];
   }
 
