@@ -1150,11 +1150,16 @@ async function renderSettingsPage() {
   <!-- Auto Sync Google Sheets -->
   <hr>
   <div class="form-check form-switch mb-3">
+  <div class="d-flex align-items-center">
   <input class="form-check-input" type="checkbox" id="auto-sync-google"
   ${settings.preferences?.auto_sync_google ? 'checked': ''}>
   <label class="form-check-label" for="auto-sync-google">
   <i class="bi bi-arrow-repeat me-1"></i> Auto Sync ke Google Sheets
   </label>
+  <button type="button" class="btn btn-link btn-sm p-0 ms-1" data-action="show-info" data-info="auto_sync">
+  <i class="bi bi-info-circle"></i>
+  </button>
+  </div>
   </div>
   <small class="text-muted d-block mb-3">Transaksi baru otomatis muncul di spreadsheet Anda.</small>
 

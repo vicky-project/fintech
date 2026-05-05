@@ -274,6 +274,29 @@ async function handleGlobalClick(e) {
           <p class="mb-0">Aktifkan PIN untuk mencegah restore data tanpa izin.</p>
           `;
           break;
+        case 'auto_sync':
+          title = 'Auto Sync ke Google Sheets';
+          body = `
+          <p>Fitur ini secara otomatis menambahkan setiap transaksi baru ke sheet <strong>"Live Feed"</strong> di spreadsheet Google Sheets Anda.</p>
+          <h6>✅ Kelebihan</h6>
+          <ul>
+          <li>Transaksi langsung muncul tanpa perlu ekspor ulang.</li>
+          <li>Bisa dibagikan ke akuntan atau pasangan untuk pantauan real-time.</li>
+          </ul>
+          <h6>⚠️ Kekurangan</h6>
+          <ul>
+          <li>Hanya satu arah: data ditambahkan, tidak bisa diedit atau dihapus otomatis.</li>
+          <li>Jika spreadsheet dihapus atau koneksi Google diputus, sync akan berhenti.</li>
+          </ul>
+          <h6>🛠️ Troubleshooting</h6>
+          <ul>
+          <li>Pastikan Anda sudah menghubungkan akun Google di halaman ini.</li>
+          <li>Jika transaksi tidak muncul, coba nonaktifkan lalu aktifkan kembali toggle ini.</li>
+          <li>Periksa apakah sheet <strong>"Live Feed"</strong> sudah ada di spreadsheet Anda.</li>
+          <li>Jika masalah berlanjut, hubungi <strong>@${BOT_USERNAME}</strong>.</li>
+          </ul>
+          `;
+          break;
       }
 
       document.getElementById('infoModalTitle').textContent = title;
