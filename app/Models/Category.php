@@ -73,4 +73,12 @@ class Category extends Model
   {
     return $this->type->isForExpense();
   }
+
+  /**
+  * Cek apakah kategori ini adalah "Biaya Admin & Pajak".
+  */
+  public function isAdministrative(): bool
+  {
+    return $this->name === 'Biaya Admin & Pajak';
+  }
 }

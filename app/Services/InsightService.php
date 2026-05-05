@@ -199,7 +199,9 @@ class InsightService
   private function detectSubscriptions($transactions): array
   {
     $subscriptions = [];
-    $grouped = $transactions->groupBy(fn($t) =>
+    $filtered = $transactions->filter(fn($t) => !$t->category->isAdministrative());
+
+    $grouped = $filtered->groupBy(fn($t) =>
       $t->category_id . '|' . $t->description . '|' . $t->getAmountFloat()
     );
 
@@ -360,6 +362,37 @@ class InsightService
     return array_slice($recs, 0, 5);
   }
 
+  /**
+  * Proyeksi arus kas untuk N hari ke depan.
+  *
+  * @return array ['balance' => float, 'avg_daily_expense' => float, 'estimated_needed' => float, 'sufficient' => bool]
+  */
+  public function getCashflowProjection(int $userId, int $days = 7): array
+  {
+    $suffix = "cashflow_projection_{$days}";
+
+    return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId, $days) {
+      $avgDailyExpense = Transaction::expense()
+      ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
+      ->where('transaction_date', '>', Carbon::now()->subDays(30))
+      ->sum('amount') / 100 / 30;
+
+      $totalBalance = Wallet::where('user_id', $userId)
+      ->where('is_active', true)
+      ->get()
+      ->sum(fn($wallet) => $wallet->getBalanceFloat());
+
+      $estimatedNeeded = $avgDailyExpense * $days;
+
+      return [
+        'balance' => $totalBalance,
+        'avg_daily_expense' => round($avgDailyExpense, 2),
+        'estimated_needed' => round($estimatedNeeded, 2),
+        'sufficient' => $totalBalance >= $estimatedNeeded,
+      ];
+    });
+  }
+
   private function getUserCurrency(int $userId): string
   {
     return Wallet::where('user_id', $userId)->value('currency') ?? config('fintech.default_currency', 'IDR');
@@ -369,6 +402,7 @@ class InsightService
   {
     return [
       'insights',
+      'cashflow_projection_7'
     ];
   }
 }
