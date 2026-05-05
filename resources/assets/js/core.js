@@ -108,7 +108,7 @@ const Core = (() => {
     return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="bg-warning p-0 rounded">$1</mark>');
   };
   const getCurrencySymbol = (code) => {
-    const c = state.currencies.find(c => c.code === code);
+    const c = state.currencies.find(c => c.code == code);
     return c?.symbol || code;
   };
   const formatTimeAgo = (dateString) => {

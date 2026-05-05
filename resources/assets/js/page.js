@@ -696,8 +696,8 @@ function renderReportsPage() {
   <div class="d-flex justify-content-between align-items-center mb-2">
   <h6>Distribusi Kategori</h6>
   <div class="btn-group btn-group-sm" role="group">
-  <button type="button" class="btn btn-outline-danger ${Core.state.categoryChartType === 'expense' ? 'active': ''}" data-cat-type="expense" data-action="switch-category-type" data-cat-type="expense">Pengeluaran</button>
-  <button type="button" class="btn btn-outline-success ${Core.state.categoryChartType === 'income' ? 'active': ''}" data-cat-type="income" data-action="switch-category-type" data-cat-type="income">Pemasukan</button>
+  <button type="button" class="btn btn-outline-danger ${Core.state.categoryChartType == 'expense' ? 'active': ''}" data-cat-type="expense" data-action="switch-category-type" data-cat-type="expense">Pengeluaran</button>
+  <button type="button" class="btn btn-outline-success ${Core.state.categoryChartType == 'income' ? 'active': ''}" data-cat-type="income" data-action="switch-category-type" data-cat-type="income">Pemasukan</button>
   </div>
   </div>
   <div style="height: 350px;">
