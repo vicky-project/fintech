@@ -76,7 +76,8 @@ class InsightService
 
     // 7. Hasilkan Rekomendasi Cerdas
     $recommendations = $this->generateSmartRecommendations(
-      $trend, $topCategories, $anomalies, $subscriptions, $spendingRatio
+      $trend, $topCategories, $anomalies, $subscriptions, $spendingRatio,
+      $budgets, $projection
     );
 
     $budgets = $this->budgetService->getBudgets($userId);
@@ -306,60 +307,116 @@ class InsightService
     ];
   }
 
-  private function generateSmartRecommendations($trend, $topCategories, $anomalies, $subscriptions, $ratio): array
-  {
+  private function generateSmartRecommendations(
+    array $trend,
+    array $topCategories,
+    array $anomalies,
+    array $subscriptions,
+    array $ratio,
+    array $budgets,
+    array $projection
+  ): array {
     $recs = [];
 
-    if ($trend['change_percentage'] > 30) {
+    // 1. Tren pengeluaran meningkat drastis (>30%)
+    if (($trend['change_percentage'] ?? 0) > 30) {
       $recs[] = [
         'type' => 'warning',
         'icon' => 'bi-exclamation-triangle',
         'title' => 'Pengeluaran Meningkat Drastis',
-        'message' => 'Pengeluaran bulan ini naik ' . $trend['change_percentage'] . '% dibanding bulan lalu.'
+        'message' => 'Pengeluaran bulan ini naik ' . $trend['change_percentage'] . '% dibanding bulan lalu. Pertimbangkan untuk meninjau kembali anggaran Anda.',
       ];
     }
 
+    // 2. Lonjakan per kategori
     foreach ($anomalies as $anom) {
       $recs[] = [
         'type' => 'warning',
         'icon' => 'bi-graph-up-arrow',
         'title' => 'Lonjakan pada ' . $anom['category']['name'],
-        'message' => 'Naik ' . $anom['percentage_increase'] . '% dari biasanya.'
+        'message' => 'Pengeluaran untuk kategori ini naik ' . $anom['percentage_increase'] . '% dari rata‑rata 3 bulan terakhir. Cek apakah ada pembelian tidak biasa.',
       ];
     }
 
+    // 3. Langganan terdeteksi
     $totalSubs = collect($subscriptions)->sum('amount');
     if ($totalSubs > 0) {
       $recs[] = [
         'type' => 'info',
         'icon' => 'bi-calendar-check',
         'title' => 'Langganan Bulanan Terdeteksi',
-        'message' => 'Total Rp ' . number_format($totalSubs, 0, ',', '.') . ' per bulan.'
+        'message' => 'Total pengeluaran langganan Anda sekitar Rp ' . number_format($totalSubs, 0, ',', '.') . ' per bulan. Pertimbangkan untuk mengevaluasi apakah semua langganan masih diperlukan.',
       ];
     }
 
-    if ($ratio['tertiary'] > 40) {
+    // 4. Rasio pengeluaran tersier >40%
+    if (($ratio['tertiary'] ?? 0) > 40) {
       $recs[] = [
         'type' => 'tip',
         'icon' => 'bi-piggy-bank',
         'title' => 'Kurangi Pengeluaran Tersier',
-        'message' => $ratio['tertiary'] . '% untuk kebutuhan tersier.'
+        'message' => $ratio['tertiary'] . '% pengeluaran Anda digunakan untuk kebutuhan tersier (hiburan, gaya hidup). Menguranginya bisa meningkatkan tabungan.',
       ];
     }
 
-    if (!empty($topCategories)) {
-      $top = $topCategories[0];
-      if (stripos($top['name'], 'makan') !== false) {
+    // 5. Top kategori makanan
+    if (!empty($topCategories[0]) && stripos($topCategories[0]['name'], 'makan') !== false) {
+      $recs[] = [
+        'type' => 'tip',
+        'icon' => 'bi-cup-hot',
+        'title' => 'Hemat Biaya Makan',
+        'message' => 'Kategori "' . $topCategories[0]['name'] . '" adalah pengeluaran terbesar Anda. Memasak di rumah atau mencari promo bisa menghemat pengeluaran.',
+      ];
+    }
+
+    // 6. Budget hampir atau sudah terlampaui
+    foreach ($budgets as $budget) {
+      if ($budget['is_overspent']) {
         $recs[] = [
-          'type' => 'tip',
-          'icon' => 'bi-cup-hot',
-          'title' => 'Hemat Biaya Makan',
-          'message' => 'Pengeluaran terbesar Anda.'
+          'type' => 'warning',
+          'icon' => 'bi-exclamation-octagon',
+          'title' => 'Budget Terlampaui: ' . $budget['category']['name'],
+          'message' => 'Budget untuk ' . $budget['category']['name'] . ' sudah terlampaui (' . $budget['percentage'] . '%). Segera kurangi pengeluaran di kategori ini.',
+        ];
+      } elseif ($budget['is_near_limit']) {
+        $recs[] = [
+          'type' => 'warning',
+          'icon' => 'bi-exclamation-triangle',
+          'title' => 'Budget Hampir Habis: ' . $budget['category']['name'],
+          'message' => 'Budget ' . $budget['category']['name'] . ' sudah mencapai ' . $budget['percentage'] . '%. Hati‑hati dengan sisa hari bulan ini.',
         ];
       }
     }
 
-    return array_slice($recs, 0, 5);
+    // 7. Proyeksi arus kas
+    if (($projection['projected_surplus'] ?? 0) < 0) {
+      $recs[] = [
+        'type' => 'warning',
+        'icon' => 'bi-graph-down',
+        'title' => 'Proyeksi Defisit Bulan Depan',
+        'message' => 'Berdasarkan rata‑rata 3 bulan terakhir, pengeluaran Anda diproyeksikan melebihi pemasukan bulan depan. Siapkan dana cadangan.',
+      ];
+    } elseif (($projection['projected_surplus'] ?? 0) > ($projection['projected_income'] ?? 0) * 0.3) {
+      // Surplus besar (>30% pemasukan)
+      $recs[] = [
+        'type' => 'success',
+        'icon' => 'bi-check-circle',
+        'title' => 'Ada Ruang untuk Menabung!',
+        'message' => 'Anda diproyeksikan surplus Rp ' . number_format($projection['projected_surplus'], 0, ',', '.') . ' bulan depan. Pertimbangkan untuk menambah tabungan atau investasi.',
+      ];
+    }
+
+    // 8. Belum ada budget
+    if (empty($budgets)) {
+      $recs[] = [
+        'type' => 'tip',
+        'icon' => 'bi-plus-circle',
+        'title' => 'Buat Budget Pertama Anda',
+        'message' => 'Anda belum memiliki budget. Buat anggaran untuk mengontrol pengeluaran dan mencapai tujuan keuangan lebih cepat.',
+      ];
+    }
+
+    return array_slice($recs, 0, 5); // batasi 5 rekomendasi teratas
   }
 
   /**
