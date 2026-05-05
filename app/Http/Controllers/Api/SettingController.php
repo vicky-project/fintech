@@ -30,14 +30,28 @@ class SettingController extends Controller
 
   public function update(UserSettingsRequest $request): JsonResponse
   {
+    $validated = $request->validatedSettings(); // data yang sudah diproses (pin dll)
+
+    // Ambil nilai toggle notifikasi Telegram dari request
+    if ($request->has('notification_telegram')) {
+      $notificationTelegram = $request->boolean('notification_telegram');
+
+      // Ambil preferences yang sudah ada (atau array kosong)
+      $settings = Models\UserSetting::where('user_id', $request->user()->id)->first();
+      $preferences = $settings ? ($settings->preferences ?? []) : [];
+      $preferences['notification_telegram'] = $notificationTelegram;
+
+      $validated['preferences'] = $preferences;
+    }
+
     $settings = Models\UserSetting::updateOrCreate(
       ['user_id' => $request->user()->id],
-      $request->validatedSettings()
+      $validated
     );
 
     return response()->json([
       'success' => true,
-      'data' => $settings->except(['pin'])
+      'data' => $settings->except(['pin']),
     ]);
   }
 

@@ -129,8 +129,10 @@ async function renderHomePage() {
 
   <!-- Recent Transactions -->
   <div class="card mb-3">
+  <div class="card-header mb-0">
+  <h5>Transaksi Terbaru</h5>
+  </div>
   <div class="card-body">
-  <h6>Transaksi Terbaru</h6>
   <div id="recent-transactions">
   ${summary.has_transactions ?
   renderRecentTransactionsFromSummary(summary.recent_transactions):
@@ -445,15 +447,20 @@ window.showTransactionDetailModal = function(id) {
 async function deleteTransaction(id) {
   if (!confirm('Pindahkan transaksi ke tempat sampah?')) return;
   tgApp.showLoading('Menghapus...');
-  await Core.api.delete(`/api/fintech/transactions/${id}`);
-  await Core.loadWallets();
-  await Core.loadHomeSummary();
-  tgApp.hideLoading();
-  tgApp.showToast('Transaksi dipindahkan ke tempat sampah');
-  if (Core.state.currentPage === 'transactions') {
-    await refreshTransactionList();
-  } else if (Core.state.currentPage === 'home') {
-    renderHomePage();
+  try {
+    await Core.api.delete(`/api/fintech/transactions/${id}`);
+    await Core.loadWallets();
+    await Core.loadHomeSummary();
+    tgApp.showToast('Transaksi dipindahkan ke tempat sampah');
+    if (Core.state.currentPage === 'transactions') {
+      await refreshTransactionList();
+    } else if (Core.state.currentPage === 'home') {
+      renderHomePage();
+    }
+  } catch(error) {
+    tgApp.showToast(error.message || 'Server error', 'danger');
+  } finally {
+    tgApp.hideLoading();
   }
 }
 
@@ -1122,13 +1129,23 @@ async function renderSettingsPage() {
 
   <div class="form-check form-switch mb-3">
   <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled" value="1" ${settings.pin_enabled ? 'checked': ''} data-action="toggle-pin">
-  <label class="form-check-label" for="pin-enabled">Aktifkan PIN</label>
+  <label class="form-check-label" for="pin-enabled">Aktifkan PIN ${settings.pin_enabled ? '<span class="badge text-bg-success ms-2"><i class="bi bi-check2-circle me-2"></i> Active</span>': ''}</label>
   </div>
   <div id="pin-field-group" style="display: ${settings.pin_enabled ? 'block': 'none'};">
   <label class="form-label">PIN (4-6 digit)</label>
   <input type="password" class="form-control" name="pin" id="pin-field" inputmode="numeric" pattern="[0-9]*" maxlength="6" minlength="4" placeholder="Masukkan PIN baru">
   <small class="text-muted">Kosongkan jika tidak ingin mengubah PIN.</small>
   </div>
+
+  <hr>
+  <div class="form-check form-switch mb-3">
+  <input class="form-check-input" type="checkbox" id="notification-telegram"
+  ${settings.preferences?.notification_telegram ? 'checked': ''}>
+  <label class="form-check-label" for="notification-telegram">
+  <i class="bi bi-bell me-1"></i> Notifikasi Telegram
+  </label>
+  </div>
+  <small class="text-muted d-block mb-3">Dapatkan peringatan budget dan arus kas langsung di chat.</small>
 
   <button type="button" class="btn btn-primary w-100" data-action="save-settings">
   <i class="bi bi-check2-circle me-1"></i> Simpan
@@ -1140,7 +1157,7 @@ async function renderSettingsPage() {
   <!-- Backup & Restore -->
   <div class="card border-0 shadow-sm mb-4">
   <div class="card-header bg-transparent border-0 pt-3 px-3">
-  <h6 class="mb-0 fw-bold"><i class="bi bi-cloud-arrow-up-down me-2"></i>Backup & Restore</h6>
+  <h6 class="mb-0 fw-bold"><i class="bi bi-recycle me-2"></i>Backup & Restore</h6>
   </div>
   <div class="card-body px-3 pt-0">
   <div class="d-flex gap-2 mb-2">
@@ -1163,7 +1180,7 @@ async function renderSettingsPage() {
   <!-- Integrasi Google -->
   <div class="card border-0 shadow-sm mb-4">
   <div class="card-header bg-transparent border-0 pt-3 px-3">
-  <h6 class="mb-0 fw-bold"><i class="bi bi-google me-2"></i>Integrasi</h6>
+  <h6 class="mb-0 fw-bold"><i class="bi bi-link-45deg me-2"></i>Integrasi</h6>
   </div>
   <div class="card-body px-3 pt-0">
   <div id="google-connect-area">
@@ -1264,6 +1281,7 @@ async function saveSettings() {
   if (!data.pin || data.pin.length === 0) {
     delete data.pin;
   }
+  data.notification_telegram = document.getElementById('notification-telegram')?.checked ?? false;
 
   try {
     tgApp.showLoading('Menyimpan...');

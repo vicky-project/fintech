@@ -5,9 +5,12 @@ namespace Modules\FinTech\Services;
 use Modules\FinTech\Models\Notification;
 use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Models\Transaction;
+use Modules\FinTech\Models\UserSetting;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Enums\NotificationType;
 use Modules\FinTech\Traits\HasUserCache;
+use Modules\Telegram\Models\TelegramUser;
+use Modules\Telegram\Services\Support\TelegramApi;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -39,8 +42,29 @@ class NotificationService
     ]);
 
     $this->clearUserCache($userId);
+    $this->sendToTelegramIfEnabled($userId, $title, $message);
 
     return $notification;
+  }
+
+  protected function sendToTelegramIfEnabled(int $userId, string $title, string $message): void
+  {
+    $settings = UserSetting::where('user_id', $userId)->first();
+    if (!$settings) return;
+
+    $prefs = $settings->preferences ?? [];
+    if (!($prefs['notification_telegram'] ?? false)) return;
+
+    $user = TelegramUser::find($userId);
+    if (!$user) return;
+
+    /** @var TelegramApi $telegramApi */
+    $telegramApi = app(TelegramApi::class);
+    $telegramApi->sendMessage(
+      chatId: $user->telegram_id,
+      text: "🔔 *{$title}*\n\n{$message}",
+      parseMode: 'Markdown'
+    );
   }
 
   /**
