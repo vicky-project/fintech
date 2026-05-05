@@ -372,30 +372,101 @@ class InsightService
     $suffix = "cashflow_projection_{$days}";
 
     return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId, $days) {
-      $avgDailyExpense = Transaction::expense()
+      $walletQuery = Wallet::where('user_id', $userId)->where('is_active', true);
+      $totalBalance = $walletQuery->sum('balance') / 100; // saldo dalam float
+
+      // 1. Pengeluaran harian dengan EMA (30 hari terakhir)
+      $dailyExpenses = Transaction::expense()
+      ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
+      ->where('transaction_date', '>', Carbon::now()->subDays(30))
+      ->orderBy('transaction_date')
+      ->get()
+      ->groupBy(fn($t) => $t->transaction_date->toDateString())
+      ->map(fn($group) => $group->sum('amount') / 100);
+
+      $ema = 0;
+      $alpha = 0.3; // faktor penghalus
+      $lastValue = 0;
+      $increasing = 0;
+      $decreasing = 0;
+      $prev = null;
+
+      foreach ($dailyExpenses as $value) {
+        if ($prev !== null) {
+          if ($value > $prev) $increasing++;
+          elseif ($value < $prev) $decreasing++;
+        }
+        $prev = $value;
+        $ema = $ema == 0 ? $value : $alpha * $value + (1 - $alpha) * $ema;
+      }
+
+      // 2. Tren pengeluaran
+      $trendFactor = 1.0;
+      if ($increasing > $decreasing) {
+        $trendFactor = 1.2; // naik 20%
+      } elseif ($decreasing > $increasing) {
+        $trendFactor = 0.9; // turun 10%
+      }
+
+      $avgExpense = $dailyExpenses->average() ?: 0;
+      $adjustedExpense = max($ema, $avgExpense) * $trendFactor;
+
+      // 3. Estimasi pemasukan (konservatif)
+      $avgIncome = Transaction::income()
       ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
       ->where('transaction_date', '>', Carbon::now()->subDays(30))
       ->sum('amount') / 100 / 30;
+      $conservativeIncome = $avgIncome * 0.7;
 
-      $totalBalance = Wallet::where('user_id', $userId)
-      ->where('is_active', true)
-      ->get()
-      ->sum(fn($wallet) => $wallet->getBalanceFloat());
+      // 4. Beban budget
+      $budgets = $this->budgetService->getBudgets($userId);
+      $budgetBurden = 0;
+      $now = Carbon::now();
+      foreach ($budgets as $budget) {
+        if ($budget['percentage'] >= 80 && $budget['period_type'] === 'monthly') {
+          $remainingDays = $now->daysInMonth - $now->day + 1;
+          $remainingSpending = max(0, $budget['amount'] - $budget['current_spending']);
+          $budgetBurden += $remainingSpending / $remainingDays;
+        }
+      }
 
-      $estimatedNeeded = $avgDailyExpense * $days;
+      // 5. Langganan (transaksi berulang)
+      $subscriptionDaily = $this->getSubscriptionDailyBurden($userId);
+
+      // 6. Proyeksi akhir
+      $dailyNet = $conservativeIncome - $adjustedExpense - $subscriptionDaily - $budgetBurden;
+      $projectedBalance = $totalBalance + ($dailyNet * $days);
 
       return [
-        'balance' => $totalBalance,
-        'avg_daily_expense' => round($avgDailyExpense, 2),
-        'estimated_needed' => round($estimatedNeeded, 2),
-        'sufficient' => $totalBalance >= $estimatedNeeded,
+        'balance' => round($totalBalance, 2),
+        'avg_daily_expense' => round($adjustedExpense, 2),
+        'avg_daily_income' => round($conservativeIncome, 2),
+        'subscription_burden' => round($subscriptionDaily, 2),
+        'budget_burden' => round($budgetBurden, 2),
+        'daily_net' => round($dailyNet, 2),
+        'projected_balance' => round($projectedBalance, 2),
+        'sufficient' => $projectedBalance >= 0,
+        'trend' => $increasing > $decreasing ? 'up' : ($decreasing > $increasing ? 'down' : 'stable'),
       ];
     });
   }
 
+  /**
+  * Beban harian dari transaksi berulang (langganan).
+  */
+  private function getSubscriptionDailyBurden(int $userId): float
+  {
+    $analysis = $this->getFullAnalysis($userId);
+    $subscriptions = collect($analysis['subscriptions'] ?? []);
+    $totalMonthly = $subscriptions->sum('amount');
+    return $totalMonthly / 30;
+  }
+
   private function getUserCurrency(int $userId): string
   {
-    return Wallet::where('user_id', $userId)->value('currency') ?? config('fintech.default_currency', 'IDR');
+    return Wallet::where('user_id',
+      $userId)->value('currency') ?? config('fintech.default_currency',
+      'IDR');
   }
 
   protected function knownUserCacheSuffixes(int $userId): array

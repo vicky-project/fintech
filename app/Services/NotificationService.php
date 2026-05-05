@@ -194,15 +194,19 @@ class NotificationService
   {
     $projection = $this->insightService->getCashflowProjection($userId, 7);
 
-    if (!$projection['sufficient'] && $projection['estimated_needed'] > 0) {
+    if (!$projection['sufficient'] && $projection['projected_balance'] < 0) {
       $this->createIfNotExists(
         $userId,
         NotificationType::CASHFLOW_WARNING,
         'Peringatan Arus Kas',
         "Saldo total Anda (Rp " . number_format($projection['balance'], 0, ',', '.') .
-        ") diperkirakan tidak cukup untuk 7 hari ke depan (perkiraan kebutuhan: Rp " .
-        number_format($projection['estimated_needed'], 0, ',', '.') . ").",
-        ['estimated_needed' => $projection['estimated_needed']]
+        ") diperkirakan tidak cukup untuk 7 hari ke depan.\n" .
+        "Proyeksi saldo akhir: Rp " . number_format($projection['projected_balance'], 0, ',', '.'),
+        [
+          'estimated_needed' => round(abs($projection['projected_balance']), 2),
+          'daily_net' => $projection['daily_net'],
+          'trend' => $projection['trend'],
+        ]
       );
     }
   }
