@@ -1355,7 +1355,6 @@ function renderInsightsContent(data) {
   const changeIcon = trend.change_percentage > 0 ? '↑': '↓';
 
   let html = `
-  <div class="container py-3">
   <!-- Summary Card -->
   <div class="card mb-3">
   <div class="card-body">
@@ -1492,7 +1491,6 @@ function renderInsightsContent(data) {
     </div>
     </div>
     `).join('')}
-  </div>
   </div>
   </div>
   `;
