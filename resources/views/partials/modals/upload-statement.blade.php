@@ -250,6 +250,7 @@
       );
 
       tgApp.hideLoading();
+      await loadPreviewData();
       let message = res.message;
       if (res.data.skipped > 0) {
         message += '\n\nDilewati:\n' + res.data.skipped_reasons.join('\n');
@@ -257,7 +258,6 @@
       tgApp.showToast(message, res.data.skipped > 0 ? 'warning' : 'success');
 
       // Refresh preview
-      await loadPreviewData();
       Core.resetStateAfterImportStatement();
     } catch (error) {
       tgApp.hideLoading();
