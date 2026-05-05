@@ -1129,7 +1129,7 @@ async function renderSettingsPage() {
 
   <div class="form-check form-switch mb-3">
   <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled" value="1" ${settings.pin_enabled ? 'checked': ''} data-action="toggle-pin">
-  <label class="form-check-label" for="pin-enabled">Aktifkan PIN ${settings.pin_enabled ? '<span class="badge text-bg-success ms-2"><i class="bi bi-check2-circle me-2"></i> Active</span>': ''}</label>
+  <label class="form-check-label" for="pin-enabled">Aktifkan PIN ${settings.pin_enabled ? '<span class="badge bg-success ms-2"><i class="bi bi-check2-circle"></i> Active</span>': ''}</label>
   </div>
   <div id="pin-field-group" style="display: ${settings.pin_enabled ? 'block': 'none'};">
   <label class="form-label">PIN (4-6 digit)</label>
