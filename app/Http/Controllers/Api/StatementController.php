@@ -9,6 +9,7 @@ use Modules\FinTech\Http\Requests\UploadStatementRequest;
 use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
 use Modules\FinTech\Services\StatementService;
+use Modules\FinTech\Services\CategorizationService;
 
 class StatementController extends Controller
 {
@@ -124,7 +125,7 @@ class StatementController extends Controller
     }
   }
 
-  public function updateCategory(Request $request, StatementTransaction $transaction): JsonResponse
+  public function updateCategory(Request $request, StatementTransaction $transaction, CategorizationService $categorization): JsonResponse
   {
     if ($transaction->statement->user_id !== $request->user()->id) {
       return response()->json(['message' => 'Unauthorized'], 403);
@@ -132,6 +133,7 @@ class StatementController extends Controller
 
     $request->validate([
       'category_id' => 'required|exists:fintech_categories,id',
+      'description' => 'required'
     ]);
 
     $data = $this->statementService->updateTransactionCategory(
@@ -139,6 +141,8 @@ class StatementController extends Controller
       $transaction->id,
       $request->category_id
     );
+
+    $categorization->learn($transaction->statement->user_id, $request->description ?? '', $request->category_id);
 
     return response()->json([
       'success' => true,

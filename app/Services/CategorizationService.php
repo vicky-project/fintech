@@ -5,6 +5,7 @@ namespace Modules\FinTech\Services;
 use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\CategoryType;
 use Modules\FinTech\Enums\StatementType;
+use Modules\FinTech\Models\UserCategoryRule;
 
 class CategorizationService
 {
@@ -90,6 +91,9 @@ class CategorizationService
 
     // 3. Pola khusus yang terdeteksi dari deskripsi (bonus skor)
     $score += $this->patternBonus($description, $category);
+
+    // 4. Personalized learning (bonus dari koreksi pengguna)
+    $score += $this->personalizedScore($lowerDesc, $category);
 
     return $score;
   }
@@ -278,5 +282,34 @@ class CategorizationService
         'keywords' => ['uncategorized', 'tidak terkategori']
       ]
     );
+  }
+
+  /**
+  * Hitung skor berdasarkan aturan yang dipelajari pengguna.
+  */
+  private function personalizedScore(string $description, Category $category): float
+  {
+    $userId = request()->user()?->id;
+    if (!$userId) return 0.0;
+
+    $matchingRules = UserCategoryRule::getMatchingRules($userId, $description);
+    $score = 0.0;
+
+    foreach ($matchingRules as $rule) {
+      if ($rule->category_id === $category->id) {
+        $relevance = $rule->occurrences * 0.5 + $rule->weight * 0.1;
+        $score += $relevance;
+      }
+    }
+
+    return $score;
+  }
+
+  /**
+  * Rekam pembelajaran dari koreksi pengguna.
+  */
+  public function learn(int $userId, string $description, int $categoryId): void
+  {
+    UserCategoryRule::learn($userId, $description, $categoryId);
   }
 }

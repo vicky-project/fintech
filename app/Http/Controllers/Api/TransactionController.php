@@ -8,14 +8,20 @@ use Modules\FinTech\Http\Requests\TransactionRequest;
 use Modules\FinTech\Http\Requests\TransferRequest;
 use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Services\TransactionService;
+use Modules\FinTech\Services\CategorizationService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class TransactionController extends Controller
 {
   protected TransactionService $transactionService;
+  protected CategorizationService $categorizationService;
 
-  public function __construct(TransactionService $transactionService) {
+  public function __construct(
+    TransactionService $transactionService,
+    CategorizationService $categorizationService
+  ) {
     $this->transactionService = $transactionService;
+    $this->categorizationService = $categorizationService;
   }
 
   public function index(): JsonResponse
@@ -63,6 +69,7 @@ class TransactionController extends Controller
   {
     try {
       $this->transactionService->updateTransaction($request->user(), $transaction, $request->validated());
+      $this->categorizationService->learn($request->user()->id, $request->description ?? '', $request->category_id);
       return response()->json(['success' => true, 'message' => 'Transaksi berhasil diperbarui']);
     } catch (\Exception $e) {
       return response()->json(['success' => false, 'message' => $e->getMessage()], 400);

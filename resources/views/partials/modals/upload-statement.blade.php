@@ -155,7 +155,7 @@
     <select class="form-select form-select-sm category-select"
     style="width: auto; min-width: 150px;"
     data-transaction-id="${trx.id}"
-    onchange="updateTransactionCategory(${trx.id}, this.value)">
+    onchange="updateTransactionCategory(${trx.id}, this.value, '${trx.description}')">
     <option value="">Pilih Kategori</option>
     ${previewCategories.map(cat => `
     <option value="${cat.id}" ${trx.category?.id === cat.id ? 'selected' : ''}>
@@ -191,18 +191,19 @@
     document.getElementById('selected-count').textContent = selected;
   }
 
-  async function updateTransactionCategory(transactionId, categoryId) {
+  async function updateTransactionCategory(transactionId, categoryId, description) {
     if (!categoryId) return;
 
     try {
       await Core.api.put(`/api/fintech/statements/transactions/${transactionId}/category`,
       {
-      category_id: categoryId
+      category_id: categoryId,
+      description
       }
       );
 
       // Update local state
-      const trx = previewTransactions.find(t => t.id === transactionId);
+      const trx = previewTransactions.find(t => t.id == transactionId);
       if (trx) {
         const cat = previewCategories.find(c => c.id == categoryId);
         trx.category = cat;
