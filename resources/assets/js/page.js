@@ -1139,7 +1139,7 @@ async function renderSettingsPage() {
 
   <hr>
   <div class="form-check form-switch mb-3">
-  <input class="form-check-input" type="checkbox" id="notification-telegram"
+  <input class="form-check-input" type="checkbox" id="notification-telegram" value="1"
   ${settings.preferences?.notification_telegram ? 'checked': ''}>
   <label class="form-check-label" for="notification-telegram">
   <i class="bi bi-bell me-1"></i> Notifikasi Telegram
