@@ -13,6 +13,8 @@ class BackupService
 {
   use HasUserCache;
 
+  private const BACKUP_VERSION = '2.1';
+
   /**
   * Ekspor seluruh data user menjadi string JSON terkompresi (gzip).
   */
@@ -82,7 +84,7 @@ class BackupService
     );
 
     $data = [
-      'version' => '1.1',
+      'version' => self::BACKUP_VERSION,
       'user_telegram_id' => $user->telegram_id,
       'created_at' => now()->toIso8601String(),
       'data' => [
@@ -141,6 +143,9 @@ class BackupService
     if (($backup['user_telegram_id'] ?? null) != $user->telegram_id) {
       throw new \Exception('File ini bukan backup milik akun Telegram Anda.');
     }
+
+    // Normalisasi struktur berdasarkan versi
+    $backup = $this->normalizeBackupData($backup);
 
     DB::transaction(function () use ($user, $backup) {
       $this->clearUserData($user);
@@ -372,5 +377,26 @@ class BackupService
       throw new \Exception('Password salah atau file backup rusak.');
     }
     return $plain;
+  }
+
+  /**
+  * Normalisasi data backup berdasarkan versi agar kompatibel dengan struktur saat ini.
+  *
+  * @param  array $backup
+  * @return array
+  */
+  private function normalizeBackupData(array $backup): array
+  {
+    $version = $backup['version'] ?? '1.0';
+
+    // Versi 2.0 menambahkan user_category_rules
+    if (version_compare($version, '2.0', '<')) {
+      $backup['data']['user_category_rules'] = [];
+    }
+
+    // Di masa depan bisa ditambahkan konversi untuk versi yang lebih baru
+    // if (version_compare($version, '2.2', '<')) { ... }
+
+    return $backup;
   }
 }
