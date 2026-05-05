@@ -1150,7 +1150,7 @@ async function renderSettingsPage() {
   <!-- Auto Sync Google Sheets -->
   <hr>
   <div class="form-check form-switch mb-3">
-  <div class="d-flex align-items-center">
+  <div class="d-flex align-items-center gap-2">
   <input class="form-check-input" type="checkbox" id="auto-sync-google"
   ${settings.preferences?.auto_sync_google ? 'checked': ''}>
   <label class="form-check-label" for="auto-sync-google">
