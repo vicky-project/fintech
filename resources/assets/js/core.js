@@ -569,7 +569,6 @@ const Core = (() => {
     }
   }
   function resetStateAfterImportStatement() {
-    state.wallets = [];
     state.homeSummary = null;
     state.transactions = [];
     state.transactionPage = 1;
