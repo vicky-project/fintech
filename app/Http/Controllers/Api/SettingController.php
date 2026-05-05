@@ -55,6 +55,11 @@ class SettingController extends Controller
 
     // Gabungkan input baru (input baru menimpa yang lama)
     $preferences = array_merge($existingPreferences, $preferencesInput);
+    \Log::debug('Preferences', [
+      'existing' => $existingPreferences,
+      'input' => $preferencesInput,
+      'preferences' => $preferences
+    ]);
 
     $validated['preferences'] = $preferences;
 
