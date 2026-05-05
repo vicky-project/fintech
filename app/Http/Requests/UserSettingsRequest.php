@@ -21,7 +21,7 @@ class UserSettingsRequest extends FormRequest
   */
   public function rules(): array
   {
-    $settings = UserSetting::where('user_id', $this->id())->first();
+    $settings = UserSetting::where('user_id', $this->user()->id)->first();
     $hasExistingPin = $settings && !empty($settings->pin);
 
     return [
