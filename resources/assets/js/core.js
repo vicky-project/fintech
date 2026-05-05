@@ -668,6 +668,7 @@ const Core = (() => {
 
     // State reset
     resetState,
+    resetStateAfterImportStatement,
 
     downloadFile
   };
