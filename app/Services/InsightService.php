@@ -74,7 +74,10 @@ class InsightService
     // 6. Prediksi Arus Kas Bulan Depan
     $projection = $this->projectNextMonthCashflow($userId, $transactions);
 
-    // 7. Hasilkan Rekomendasi Cerdas
+    // 7. Ambil data budget
+    $budgets = $this->budgetService->getBudgets($userId);
+
+    // 8. Hasilkan Rekomendasi Cerdas
     $recommendations = $this->generateSmartRecommendations(
       $trend, $topCategories, $anomalies, $subscriptions, $spendingRatio,
       $budgets, $projection
