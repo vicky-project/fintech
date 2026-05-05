@@ -16,6 +16,7 @@ return new class extends Migration
       $table->string('keyword');
       $table->float('weight')->default(10);
         $table->unsignedInteger('occurrences')->default(1);
+        $table->float('confidence')->default(0.5);
         $table->timestamp('last_used_at')->nullable();
         $table->timestamps();
 

@@ -19,12 +19,14 @@ class UserCategoryRule extends Model
     'keyword',
     'weight',
     'occurrences',
+    'confidence',
     'last_used_at',
   ];
 
   protected $casts = [
     'weight' => 'float',
     'occurrences' => 'integer',
+    'confidence' => 'float',
     'last_used_at' => 'datetime',
   ];
 
@@ -37,28 +39,68 @@ class UserCategoryRule extends Model
   }
 
   /**
-  * Belajar dari koreksi pengguna.
+  * Belajar dari koreksi / konfirmasi pengguna.
   */
-  public static function learn(int $userId, string $description, int $categoryId): void
+  public static function learn(int $userId, string $description, int $newCategoryId, ?int $oldCategoryId = null): void
   {
     $words = self::extractImportantWords($description);
+
+    // Kurangi confidence aturan lama jika kategori diubah
+    if ($oldCategoryId && $oldCategoryId !== $newCategoryId) {
+      foreach ($words as $word) {
+        $rule = self::where('user_id', $userId)
+        ->where('keyword', $word)
+        ->where('category_id', $oldCategoryId)
+        ->first();
+        if ($rule) {
+          $rule->confidence = max(0.1, $rule->confidence - 0.2);
+          $rule->save();
+        }
+      }
+    }
+
+    // Perbarui aturan baru
     foreach ($words as $word) {
       $rule = self::firstOrNew([
         'user_id' => $userId,
         'keyword' => $word,
       ]);
 
-      if ($rule->exists && $rule->category_id == $categoryId) {
-        $rule->increment('weight', 10);
-        $rule->increment('occurrences');
+      if ($rule->exists && $rule->category_id == $newCategoryId) {
+        $rule->weight += 10;
+        $rule->occurrences = ($rule->occurrences ?? 0) + 1;
+        $rule->confidence = min(1.0, $rule->confidence + 0.1);
       } else {
-        $rule->category_id = $categoryId;
+        $rule->category_id = $newCategoryId;
         $rule->weight = 10;
         $rule->occurrences = 1;
+        $rule->confidence = 0.5;
       }
       $rule->last_used_at = now();
       $rule->save();
     }
+  }
+
+  /**
+  * Skor personalisasi untuk setiap kategori berdasarkan kata-kata dalam deskripsi.
+  */
+  public static function getPersonalizedScores(int $userId, string $description): array
+  {
+    $words = self::extractImportantWords($description);
+    if (empty($words)) return [];
+
+    $rules = self::where('user_id', $userId)
+    ->whereIn('keyword', $words)
+    ->get();
+
+    $scores = [];
+    foreach ($rules as $rule) {
+      $cid = $rule->category_id;
+      $scores[$cid] = ($scores[$cid] ?? 0)
+      + ($rule->weight * $rule->confidence * log($rule->occurrences + 1));
+    }
+
+    return $scores;
   }
 
   /**
@@ -86,7 +128,9 @@ class UserCategoryRule extends Model
       'anda'
     ];
     $words = preg_split('/[\s,.-]+/', strtolower($description));
-    return array_values(array_unique(array_filter($words, fn($w) => strlen($w) > 3 && !in_array($w, $stopWords))));
+    return array_values(array_unique(
+      array_filter($words, fn($w) => strlen($w) > 3 && !in_array($w, $stopWords))
+    ));
   }
 
   /**

@@ -28,9 +28,14 @@ class CategorizationService
     $bestMatch = null;
     $highestScore = 0;
     $lowerDesc = strtolower($description);
+    $userId = request()->user()?->id;
+
+    $personalizedScores = $userId ? UserCategoryRule::getPersonalizedScores($userId, $lowerDesc) : [];
 
     foreach ($categories as $category) {
       $score = $this->calculateMatchScore($lowerDesc, $category);
+
+      $score += $personalizedScores[$category->id] ?? 0;
 
       if ($category->parent_id) {
         $parent = $category->parent;
@@ -308,8 +313,8 @@ class CategorizationService
   /**
   * Rekam pembelajaran dari koreksi pengguna.
   */
-  public function learn(int $userId, string $description, int $categoryId): void
+  public function learn(int $userId, string $description, int $categoryId, ?int $oldCategoryId): void
   {
-    UserCategoryRule::learn($userId, $description, $categoryId);
+    UserCategoryRule::learn($userId, $description, $categoryId, $oldCategoryId);
   }
 }

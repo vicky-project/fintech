@@ -133,21 +133,32 @@ class StatementController extends Controller
 
     $request->validate([
       'category_id' => 'required|exists:fintech_categories,id',
-      'description' => 'required'
+      'description' => 'required|string|max:500',
     ]);
 
+    $oldCategoryId = $transaction->category_id;
+    $newCategoryId = (int) $request->category_id;
+    $userId = $request->user()->id;
+
+    // 1. Perbarui kategori di statement transaction
     $data = $this->statementService->updateTransactionCategory(
-      $transaction->statement->user_id,
+      $userId,
       $transaction->id,
-      $request->category_id
+      $newCategoryId
     );
 
-    $categorization->learn($transaction->statement->user_id, $request->description ?? '', $request->category_id);
+    // 2. Belajar dari koreksi pengguna (confidence-based)
+    $categorization->learn(
+      $userId,
+      $request->description,
+      $newCategoryId,
+      $oldCategoryId
+    );
 
     return response()->json([
       'success' => true,
       'message' => 'Kategori diperbarui',
-      'data' => $data
+      'data' => $data,
     ]);
   }
 }

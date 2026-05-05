@@ -49,6 +49,7 @@ class TransactionController extends Controller
   {
     try {
       $transaction = $this->transactionService->createTransaction($request->user(), $request->validated());
+      $this->categorizationService->learn($request->user()->id, $request->description ?? '', $transaction->category_id, null);
       return response()->json(['success' => true, 'message' => 'Transaksi berhasil disimpan'], 201);
     } catch (\Exception $e) {
       return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
@@ -68,8 +69,16 @@ class TransactionController extends Controller
   public function update(TransactionRequest $request, Transaction $transaction): JsonResponse
   {
     try {
-      $this->transactionService->updateTransaction($request->user(), $transaction, $request->validated());
-      $this->categorizationService->learn($request->user()->id, $request->description ?? '', $request->category_id);
+      $oldCategoryId = $transaction->getOriginal('category_id');
+      $data = $request->validated();
+      $this->transactionService->updateTransaction($request->user(), $transaction, $data);
+
+      if (isset($data['category_id']) && $data['category_id'] != $oldCategoryId) {
+        $this->categorizationService->learn($request->user()->id, $data['description'] ?? $transaction->description ?? '', $data['category_id'], $oldCategoryId);
+      } else {
+        $this->categorizationService->learn($request->user()->id, $data['description'] ?? $transaction->description ?? '', $transaction->category_id, null);
+
+      }
       return response()->json(['success' => true, 'message' => 'Transaksi berhasil diperbarui']);
     } catch (\Exception $e) {
       return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
