@@ -176,8 +176,8 @@ async function handleGlobalClick(e) {
       const modal = new bootstrap.Modal(modalEl);
       modal.show();
       // Pasang listener langsung
-      const fileInput = modalEl.querySelector('input[type="file"]');
-      const btnDeleteAccountConfirm = modalEl.getElementById('btn-delete-account-confirm');
+      const fileInput = document.querySelector('input[type="file"]');
+      const btnDeleteAccountConfirm = document.getElementById('btn-delete-account-confirm');
       fileInput.addEventListener('change', function() {
         const file = this.files[0];
         const btnUpload = document.getElementById('btn-upload-restore');
