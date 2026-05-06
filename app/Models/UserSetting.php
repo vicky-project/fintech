@@ -46,7 +46,6 @@ class UserSetting extends Model
     'google_access_token',
     'google_refresh_token',
     'google_token_expires_at',
-    'google_spreadsheet_id'
   ];
 
   public function defaultWallet(): BelongsTo

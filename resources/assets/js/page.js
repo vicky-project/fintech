@@ -1161,7 +1161,20 @@ async function renderSettingsPage() {
   </button>
   </div>
   </div>
-  <small class="text-muted d-block mb-3">Transaksi baru otomatis muncul di spreadsheet Anda.</small>
+  <small class="text-muted d-block mb-0">Transaksi baru otomatis muncul di spreadsheet Anda.</small>
+  <div id="google-sheet-link" class="mb-3" style="display: ${settings.google_spreadsheet_id ? 'block': 'none'};">
+  <small class="text-muted">
+  <i class="bi bi-link-45deg me-1"></i>
+  <a href="https://docs.google.com/spreadsheets/d/${settings.google_spreadsheet_id}/edit"
+  target="_blank" class="text-decoration-none">
+  Buka Google Sheets
+  </a>
+  <button class="btn btn-link btn-sm p-0 ms-1" onclick="tgApp.copyToClipboard('https://docs.google.com/spreadsheets/d/${settings.google_spreadsheet_id}/edit')" title="Salin link">
+  <i class="bi bi-clipboard"></i>
+  </button>
+  <span class="d-block">Sheet: Live Feed</span>
+  </small>
+  </div>
 
   <button type="button" class="btn btn-primary w-100" data-action="save-settings">
   <i class="bi bi-check2-circle me-1"></i> Simpan
@@ -2765,6 +2778,17 @@ async function checkGoogleConnection() {
           autoSyncToggle.disabled = true;
           autoSyncToggle.checked = false;
         }
+      }
+    }
+
+    const sheetLinkEl = document.getElementById('google-sheet-link');
+    if (sheetLinkEl) {
+      if (res.connected && Core.state.userSettings?.google_spreadsheet_id) {
+        sheetLinkEl.style.display = 'block';
+        const link = sheetLinkEl.querySelector('a');
+        if (link) link.href = `https://docs.google.com/spreadsheets/d/${Core.state.userSettings.google_spreadsheet_id}/edit`;
+      } else {
+        sheetLinkEl.style.display = 'none';
       }
     }
     return res.connected;
