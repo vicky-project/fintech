@@ -52,8 +52,10 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->register(RouteServiceProvider::class);
 
     $this->app->singleton(GoogleAuthService::class);
-    $this->app->singleton(SpreadsheetManager::class);
     $this->app->singleton(GoogleSheetsClient::class);
+    $this->app->singleton(SpreadsheetManager::class, function($app) {
+      return new SpreadsheetManager($ap->make(GoogleSheetsClient::class));
+    });
     $this->app->singleton(GoogleClientFactory::class);
 
     $this->app->singleton(Writers\ValueWriter::class);
