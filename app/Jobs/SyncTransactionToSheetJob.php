@@ -81,22 +81,6 @@ class SyncTransactionToSheetJob implements ShouldQueue
   {
     $service = $client->getSheetsService();
 
-    // Ambil jumlah baris yang sudah ada
-    $response = $service->spreadsheets_values->get($spreadsheetId, $sheetName);
-    $values = $response->getValues() ?? [];
-
-    // Jika sheet kosong, tambahkan header
-    if (empty($values)) {
-      $headerRange = $sheetName . '!A1';
-      $headerBody = new ValueRange([
-        'values' => [['Tanggal', 'Tipe', 'Kategori', 'Dompet', 'Pemasukan', 'Pengeluaran', 'Deskripsi']]
-      ]);
-      $service->spreadsheets_values->update($spreadsheetId, $headerRange, $headerBody, [
-        'valueInputOption' => 'RAW'
-      ]);
-    }
-
-    // Tambahkan baris data di akhir
     $row = [
       $this->transactionData['Tanggal'],
       $this->transactionData['Tipe'],
@@ -107,10 +91,15 @@ class SyncTransactionToSheetJob implements ShouldQueue
       $this->transactionData['Deskripsi'],
     ];
 
-    $range = $sheetName . '!A' . (count($values) + 1);
+    $range = $sheetName . '!A1';
     $body = new ValueRange(['values' => [$row]]);
-    $service->spreadsheets_values->update($spreadsheetId, $range, $body, [
-      'valueInputOption' => 'RAW'
-    ]);
+
+    // Gunakan append agar tidak perlu read request
+    $service->spreadsheets_values->append(
+      $spreadsheetId,
+      $range,
+      $body,
+      ['valueInputOption' => 'RAW', 'insertDataOption' => 'INSERT_ROWS']
+    );
   }
 }
