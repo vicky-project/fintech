@@ -179,7 +179,6 @@ async function handleGlobalClick(e) {
       modal.show();
       // Pasang listener langsung
       const fileInput = document.querySelector('input[type="file"]');
-      const btnDeleteAccountConfirm = document.getElementById('btn-delete-account-confirm');
       fileInput.addEventListener('change', function() {
         const file = this.files[0];
         const btnUpload = document.getElementById('btn-upload-restore');
@@ -195,8 +194,6 @@ async function handleGlobalClick(e) {
           btnUpload.disabled = true;
         }
       });
-      btnDeleteAccountConfirm.addEventListener('click',
-        e => performDeleteAccount(e.target))
     },
     'restore-data': async () => {
       const form = document.getElementById('formRestore');
@@ -306,6 +303,7 @@ async function handleGlobalClick(e) {
       new bootstrap.Modal(document.getElementById('infoModal')).show();
     },
     'delete-account': () => deleteAccount(),
+    'btn-delete-account-confirm': () => performDeleteAccount(),
     'copy-google-link': () => tgApp.copyToClipboard(target.dataset.link),
     // tambahkan aksi lain sesuai kebutuhan
   };
