@@ -77,9 +77,13 @@
 
   function checkInput(input) {
     const confirmBtn = document.getElementById('btn-delete-account-confirm');
+    let confirmBtnEvent = false;
     if (confirmBtn) {
       confirmBtn.disabled = input.target.value.trim().toUpperCase() !== 'HAPUS';
-      confirmBtn.addEventListener('click', e => performDeleteAccount(e.target));
+      if (!confirmBtnEvent) {
+        confirmBtnEvent = true;
+        confirmBtn.addEventListener('click', e => performDeleteAccount(e.target));
+      }
     }
   }
 </script>
