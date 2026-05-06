@@ -69,6 +69,7 @@ class GoogleOAuthController extends Controller
     try {
       $user = $request->user() ?? \Modules\Telegram\Models\TelegramUser::find(
         $this->authService->getStateData($request->state));
+      \Log::debug('user state', ['user' => $user]);
       if ($user) {
         $this->telegramApi->sendMessage(
           chatId: $user->telegram_id,
