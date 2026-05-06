@@ -26,13 +26,6 @@ class SyncTransactionToSheetJob implements ShouldQueue
   {
     // 1. Ambil pengaturan user
     $setting = UserSetting::where('user_id', $this->user->id)->first();
-    \Log::debug('setting', [
-      'setting' => $setting,
-      'preferences' => $setting->preferences,
-      'google' => $setting->preferences['auto_sync_google'],
-      'google_access_token' => $setting->google_access_token,
-      'spreadsheet_id' => $setting->spreadsheet_id
-    ]);
     if (!$setting) return;
 
     // 2. Cek preferensi auto‑sync
@@ -48,26 +41,38 @@ class SyncTransactionToSheetJob implements ShouldQueue
     } catch (\Exception $e) {
       \Log::warning('SyncTransactionToSheet: Gagal setup Google client', [
         'error' => $e->getMessage(),
-        'user' => $this->user
+        'user' => $this->user->id,
       ]);
       return;
     }
 
     $spreadsheetId = $setting->google_spreadsheet_id;
-    if (!$spreadsheetId) return;
+
+    // 5. Jika belum ada spreadsheet, buat baru
+    if (!$spreadsheetId) {
+      try {
+        $spreadsheetId = $manager->getOrCreateSpreadsheet($this->user);
+      } catch (\Exception $e) {
+        \Log::warning('SyncTransactionToSheet: Gagal membuat spreadsheet', [
+          'error' => $e->getMessage(),
+          'user' => $this->user->id,
+        ]);
+        return;
+      }
+    }
 
     $sheetName = 'Live Feed';
 
     try {
-      // 5. Pastikan sheet "Live Feed" ada
+      // 6. Pastikan sheet "Live Feed" ada
       $manager->addSheetIfNotExists($spreadsheetId, $sheetName);
 
-      // 6. Tambahkan baris data
+      // 7. Tambahkan baris data
       $this->appendRow($client, $spreadsheetId, $sheetName);
     } catch (\Exception $e) {
       \Log::warning('SyncTransactionToSheet: Gagal menambah baris', [
         'error' => $e->getMessage(),
-        'user' => $this->user
+        'user' => $this->user->id,
       ]);
     }
   }
