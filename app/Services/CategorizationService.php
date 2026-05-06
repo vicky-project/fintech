@@ -317,4 +317,17 @@ class CategorizationService
   {
     UserCategoryRule::learn($userId, $description, $categoryId, $oldCategoryId);
   }
+
+  /**
+  * Sarankan kategori terbaik untuk deskripsi transaksi manual.
+  */
+  public function suggest(string $description, string $transactionType): ?Category
+  {
+    // Konversi transactionType ke StatementType
+    $statementType = $transactionType === 'income'
+    ? StatementType::CREDIT
+    : StatementType::DEBIT;
+
+    return $this->categorize($description, $statementType);
+  }
 }

@@ -17,6 +17,10 @@
             </select>
           </div>
           <div class="mb-3">
+            <label class="form-label">Deskripsi</label>
+            <input type="text" class="form-control" name="description" id="desc-input">
+          </div>
+          <div class="mb-3">
             <label class="form-label">Tipe <span class="text-danger">*</span></label>
             <select class="form-select" name="type" id="type-select" required>
               <option value="income">Pemasukan</option>
@@ -28,6 +32,7 @@
             <select class="form-select" name="category_id" id="category-select" required>
               <option value="">Pilih Kategori</option>
             </select>
+            <span class="small mb-0 text-info" id="category-suggestion"></span>
           </div>
           <div class="mb-3">
             <label class="form-label">Jumlah <span class="text-danger">*</span></label>
@@ -36,10 +41,6 @@
           <div class="mb-3">
             <label class="form-label">Tanggal <span class="text-danger">*</span></label>
             <input type="date" class="form-control" name="transaction_date" id="date-input" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Deskripsi</label>
-            <input type="text" class="form-control" name="description" id="desc-input">
           </div>
         </form>
       </div>
@@ -54,6 +55,59 @@
 <script>
   let editingTransactionId = null;
   let pendingTransactionData = null;
+  let suggestDebounceTimer = null;
+
+  // ====================== SUGGESTION ======================
+  function setupCategorySuggestion() {
+    const descInput = document.getElementById('desc-input');
+    const suggestionEl = document.getElementById('category-suggestion');
+    if (!descInput || !suggestionEl) return;
+
+    // Hapus listener lama (hindari duplikasi)
+    descInput.removeEventListener('input', handleDescInput);
+    descInput.addEventListener('input', handleDescInput);
+    suggestionEl.innerHTML = ''; // bersihkan saat form baru
+  }
+
+  function handleDescInput() {
+    clearTimeout(suggestDebounceTimer);
+    const query = this.value.trim();
+    const suggestionEl = document.getElementById('category-suggestion');
+    if (query.length < 3) {
+      suggestionEl.innerHTML = '';
+      return;
+    }
+    suggestDebounceTimer = setTimeout(async () => {
+    const typeSelect = document.getElementById('type-select');
+    const type = typeSelect ? typeSelect.value : 'expense';
+    try {
+    const res = await Core.api.get(
+    `/api/fintech/categories/suggest?description=${encodeURIComponent(query)}&type=${type}`
+    );
+    if (res.data) {
+    suggestionEl.innerHTML = `
+    <small class="text-muted">Disarankan:
+    <span class="badge" style="background-color:${res.data.color};color:white;">
+    <i class="${res.data.icon} me-1"></i>${res.data.name}
+    </span>
+    <button class="btn btn-link btn-sm p-0 ms-1" type="button" onclick="applySuggestedCategory(${res.data.id})">
+    Gunakan
+    </button>
+    </small>`;
+    } else {
+    suggestionEl.innerHTML = '';
+    }
+    } catch (e) {
+    // gagal, abaikan
+    }
+    }, 500);
+  }
+
+  window.applySuggestedCategory = function(categoryId) {
+    const catSelect = document.getElementById('category-select');
+    if (catSelect) catSelect.value = categoryId;
+    document.getElementById('category-suggestion').innerHTML = '';
+  };
 
   document.addEventListener('DOMContentLoaded', () => {
   const modalEl = document.getElementById('transactionModal');
@@ -65,14 +119,22 @@
   populateEditForm(pendingTransactionData);
   pendingTransactionData = null;
   }
+  setupCategorySuggestion();
   });
   modalEl.addEventListener('hidden.bs.modal', () => {
   editingTransactionId = null;
   pendingTransactionData = null;
   document.getElementById('wallet-select').disabled = false;
   resetTransactionForm();
+  clearTimeout(suggestDebounceTimer);
   });
-  document.getElementById('type-select').addEventListener('change', filterCategoriesByType);
+  document.getElementById('type-select').addEventListener('change', () => {
+  filterCategoriesByType();
+  const descInput = document.getElementById('desc-input');
+  if(descInput.value.trim().length >= 3) {
+  handleDescInput.call(descInput);
+  }
+  });
   document.getElementById('wallet-select').addEventListener('change', function() {
   document.getElementById('wallet-id-hidden').value = this.value;
   });
@@ -88,6 +150,7 @@
     document.getElementById('wallet-select').disabled = false;
     populateWalletSelect();
     filterCategoriesByType();
+    document.getElementById('category-suggestion').innerHTML = '';
   }
 
   function populateWalletSelect(selectedId = null) {
