@@ -1080,6 +1080,7 @@ async function renderSettingsPage() {
     default_wallet_id: '',
     pin_enabled: false
   };
+  console.log(settings);
 
   const html = `
   <div class="container py-3">
