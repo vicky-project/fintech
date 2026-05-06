@@ -26,7 +26,11 @@ class SyncTransactionToSheetJob implements ShouldQueue
   {
     // 1. Ambil pengaturan user
     $setting = UserSetting::where('user_id', $this->user->id)->first();
-    \Log::debug('setting', ['setting' => $setting]);
+    \Log::debug('setting', [
+      'setting' => $setting,
+      'preferences' => $setting->preferences,
+      'google' => $setting->preferences['auto_sync_google']
+    ]);
     if (!$setting) return;
 
     // 2. Cek preferensi auto‑sync
