@@ -67,7 +67,7 @@ class GoogleOAuthController extends Controller
 
     // Notifikasi Telegram (opsional)
     try {
-      $user = $request->user() ?? \Modules\Telegram\Models\TelegramUser::find(
+      $user = \Modules\Telegram\Models\TelegramUser::find(
         $this->authService->getStateData($request->state));
       \Log::debug('user state', ['user' => $user]);
       if ($user) {
