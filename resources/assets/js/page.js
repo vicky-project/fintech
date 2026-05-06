@@ -1149,7 +1149,7 @@ async function renderSettingsPage() {
 
   <!-- Auto Sync Google Sheets -->
   <hr>
-  <div class="form-check form-switch mb-3">
+  <div class="form-check form-switch">
   <div class="d-flex align-items-center gap-2">
   <input class="form-check-input" type="checkbox" id="auto-sync-google" name="auto_sync_google" value="1"
   ${settings.preferences?.auto_sync_google ? 'checked': ''}>
@@ -1162,7 +1162,7 @@ async function renderSettingsPage() {
   </div>
   </div>
   <small class="text-muted d-block mb-0">Transaksi baru otomatis muncul di spreadsheet Anda.</small>
-  <div id="google-sheet-link" class="mb-3" style="display: ${settings.google_spreadsheet_id ? 'block': 'none'};">
+  <div id="google-sheet-link" style="display: ${settings.google_spreadsheet_id ? 'block': 'none'};">
   <small class="text-muted">
   <i class="bi bi-link-45deg me-1"></i>
   <a href="https://docs.google.com/spreadsheets/d/${settings.google_spreadsheet_id}/edit"
@@ -1176,7 +1176,7 @@ async function renderSettingsPage() {
   </small>
   </div>
 
-  <button type="button" class="btn btn-primary w-100" data-action="save-settings">
+  <button type="button" class="btn btn-primary w-100 mt-3" data-action="save-settings">
   <i class="bi bi-check2-circle me-1"></i> Simpan
   </button>
   </form>
@@ -1220,7 +1220,7 @@ async function renderSettingsPage() {
   <i class="bi bi-check-circle"></i>
   </span>
   </div>
-  <div class="d-flex align-items-center gap-2">
+  <div>
   <button id="btn-connect-google" class="btn btn-outline-success btn-sm d-none" data-action="connect-google">
   Hubungkan
   </button>
