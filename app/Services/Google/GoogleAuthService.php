@@ -6,6 +6,7 @@ use Google\Client as GoogleClient;
 use Modules\FinTech\Models\UserSetting;
 use Modules\Telegram\Models\TelegramUser;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class GoogleAuthService
 {
