@@ -24,8 +24,6 @@ class SyncTransactionToSheetJob implements ShouldQueue
 
   public function handle(GoogleSheetsClient $client, SpreadsheetManager $manager): void
   {
-    if (!$this->user instanceof TelegramUser) return;
-
     // 1. Ambil pengaturan user
     $setting = UserSetting::where('user_id', $this->user->id)->first();
     if (!$setting) return;
