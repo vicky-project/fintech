@@ -466,7 +466,7 @@ class InsightService
       ->orderBy('transaction_date')
       ->get()
       ->groupBy(fn($t) => $t->transaction_date->toDateString())
-      ->map(fn($group) => $group->sum('amount') / 100);
+      ->map(fn($group) => $group->sum(fn($t) => $t->getAmountFloat()));
 
       $ema = 0;
       $alpha = 0.3; // faktor penghalus
