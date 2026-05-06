@@ -283,6 +283,8 @@ const Core = (() => {
         const minutes = Math.floor(diff / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
         lockedEl.textContent = `Akun terkunci. Silakan coba lagi dalam ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        pinInput.disabled = true;
+        if (submitBtn) submitBtn.disabled = true;
       }
     },
       1000);
