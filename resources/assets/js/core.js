@@ -185,7 +185,7 @@ const Core = (() => {
 
     // 🔽 Cek apakah masih dalam masa lockout
     if (state.lockedUntil && new Date(state.lockedUntil) > new Date()) {
-      // Tampilkan timer & disable input
+      // Tampilkan timer & disable input – jangan ada event listener yang bisa mengaktifkan kembali
       showLockoutTimer(state.lockedUntil);
     } else {
       pinInput.disabled = false;
@@ -281,8 +281,12 @@ const Core = (() => {
     const pinInput = getEl('pinInput');
     const submitBtn = document.querySelector('#pinForm button[type="submit"]');
 
+    // Disable input & tombol, ubah teks tombol
     pinInput.disabled = true;
-    if (submitBtn) submitBtn.disabled = true;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="bi bi-lock me-2"></i> Terkunci'; // ← teks baru
+    }
 
     state.lockedUntil = lockedUntil;
 
@@ -294,7 +298,10 @@ const Core = (() => {
         clearInterval(timer);
         lockedEl.classList.add('d-none');
         pinInput.disabled = false;
-        if (submitBtn) submitBtn.disabled = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Verifikasi'; // ← kembalikan teks awal
+        }
         state.lockedUntil = null;
       } else {
         const minutes = Math.floor(diff / 60000);
