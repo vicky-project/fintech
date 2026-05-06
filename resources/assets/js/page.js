@@ -1080,7 +1080,6 @@ async function renderSettingsPage() {
     default_wallet_id: '',
     pin_enabled: false
   };
-  console.log(settings);
 
   const html = `
   <div class="container py-3">
@@ -1217,14 +1216,14 @@ async function renderSettingsPage() {
   <div class="d-flex justify-content-between align-items-center">
   <div>
   <i class="bi bi-google me-2"></i> Google Sheets
+  <span id="google-connected-badge" class="badge badge-sm bg-success d-none">
+  <i class="bi bi-check-circle"></i>
+  </span>
   </div>
   <div class="d-flex align-items-center gap-2">
   <button id="btn-connect-google" class="btn btn-outline-success btn-sm d-none" data-action="connect-google">
   Hubungkan
   </button>
-  <span id="google-connected-badge" class="badge bg-success d-none">
-  <i class="bi bi-check-circle"></i> Terhubung
-  </span>
   <button id="btn-disconnect-google" class="btn btn-outline-danger btn-sm d-none" data-action="disconnect-google">
   Putuskan
   </button>
