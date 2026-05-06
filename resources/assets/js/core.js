@@ -37,6 +37,7 @@ const Core = (() => {
     sessionTimeout: 3 * 60 * 1000,
     sessionTimer: null,
     isPinModalShowing: false,
+    lockedUntil: null,
     budgets: [],
     unreadNotificationCount: 0,
     notifications: [],
@@ -181,7 +182,14 @@ const Core = (() => {
     getEl('pinError').classList.add('d-none');
     getEl('pinLockedInfo').classList.add('d-none');
     form.reset();
-    pinInput.disabled = false;
+
+    if (state.lockedUntil && new Date(state.lockedUntil) > new Date()) {
+      showLockoutTimer(state.lockedUntil);
+    } else {
+      pinInput.disabled = false;
+      submitBtn.disabled = false;
+      state.lockedUntil = null;
+    }
 
     modalEl.addEventListener('shown.bs.modal', () => {
       setTimeout(() => pinInput.focus(),
@@ -233,7 +241,10 @@ const Core = (() => {
         getEl('pinError').classList.remove('d-none');
         pinInput.value = '';
         pinInput.focus();
-        if (res.locked_until) showLockoutTimer(res.locked_until);
+        if (res.locked_until) {
+          state.lockedUntil = res.locked_until;
+          showLockoutTimer(res.locked_until);
+        }
       }
     } catch (error) {
       getEl('pinError').textContent = error.message || 'Terjadi kesalahan. Coba lagi.';
@@ -250,7 +261,14 @@ const Core = (() => {
   function showLockoutTimer(lockedUntil) {
     const lockedEl = getEl('pinLockedInfo');
     lockedEl.classList.remove('d-none');
-    getEl('pinInput').disabled = true;
+
+    const pinInput = getEl('pinInput')
+    const submitBtn = document.querySelector('#pinForm button[type="submit"]');
+
+    pinInput.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
+
+    state.lockedUntil = lockedUntil;
     const timer = setInterval(() => {
       const now = new Date();
       const lock = new Date(lockedUntil);
@@ -258,7 +276,9 @@ const Core = (() => {
       if (diff <= 0) {
         clearInterval(timer);
         lockedEl.classList.add('d-none');
-        getEl('pinInput').disabled = false;
+        pinInput.disabled = false;
+        if (submitBtn) submitBtn.disabled = false;
+        state.lockedUntil = null;
       } else {
         const minutes = Math.floor(diff / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
