@@ -67,11 +67,13 @@ class GoogleOAuthController extends Controller
 
     // Notifikasi Telegram (opsional)
     try {
-      $telegramId = $this->authService->getStateData($request->state)['telegram_id'];
-      $this->telegramApi->sendMessage(
-        chatId: $telegramId,
-        text: "✅ Akun Google Anda berhasil terhubung!\nSekarang Anda bisa mengekspor data ke Google Sheets."
-      );
+      $telegram = $this->authService->getStateData($request->state);
+      if (isset($telegram['telegram_id'])) {
+        $this->telegramApi->sendMessage(
+          chatId: $telegram['telegram_id'],
+          text: "✅ Akun Google Anda berhasil terhubung!\nSekarang Anda bisa mengekspor data ke Google Sheets."
+        );
+      }
     } catch (\Exception $e) {
       \Log::warning('Gagal kirim notif Telegram: ' . $e->getMessage());
     }
