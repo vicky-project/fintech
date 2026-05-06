@@ -17,8 +17,6 @@ class GoogleSheetsClient
 
   public function __construct(GoogleClientFactory $clientFactory) {
     $this->client = $clientFactory->create();
-    $this->sheetsService = new GoogleSheets($this->client);
-    $this->driveService = new GoogleDrive($this->client);
   }
 
   /**
@@ -57,6 +55,9 @@ class GoogleSheetsClient
         }
       }
     }
+
+    $this->sheetsService = new GoogleSheets($this->client);
+    $this->driveService = new GoogleDrive($this->client);
   }
 
   public function getSheetsService(): GoogleSheets

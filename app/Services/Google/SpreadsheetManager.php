@@ -16,9 +16,7 @@ class SpreadsheetManager
   const SHEET_TRANSFERS = 'Transfer';
   const SHEET_BUDGETS = 'Budget';
 
-  public function __construct(GoogleSheetsClient $client) {
-    $this->client = $client;
-  }
+  public function __construct(protected GoogleSheetsClient $client) {}
 
   /**
   * Dapatkan atau buat spreadsheet untuk user.
