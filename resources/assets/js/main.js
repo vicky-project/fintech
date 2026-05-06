@@ -306,6 +306,7 @@ async function handleGlobalClick(e) {
       new bootstrap.Modal(document.getElementById('infoModal')).show();
     },
     'delete-account': () => deleteAccount(),
+    'copy-google-link': () => tgApp.copyToClipboard(target.dataset.link),
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {

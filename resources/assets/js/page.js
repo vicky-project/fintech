@@ -1170,7 +1170,7 @@ async function renderSettingsPage() {
   target="_blank" class="text-decoration-none">
   Buka Google Sheets
   </a>
-  <button class="btn btn-link btn-sm p-0 ms-1" onclick="tgApp.copyToClipboard('https://docs.google.com/spreadsheets/d/${settings.google_spreadsheet_id}/edit')" title="Salin link">
+  <button class="btn btn-link btn-sm p-0 ms-1" data-link="https://docs.google.com/spreadsheets/d/${settings.google_spreadsheet_id}/edit" data-action="copy-google-link" title="Salin link">
   <i class="bi bi-clipboard"></i>
   </button>
   <span class="d-block">Sheet: Live Feed</span>
