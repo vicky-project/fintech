@@ -131,7 +131,7 @@ class SettingController extends Controller
         'message' => $message,
         'attempts' => $attempts,
         'locked_until' => $lockedUntil
-      ], 401);
+      ], 422);
     } catch(\Exception $e) {
       \Log::error("Failed to verify PIN", [
         'message' => $e->getMessage(),
