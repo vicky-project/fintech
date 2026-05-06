@@ -137,7 +137,7 @@ class GoogleAuthService
   {
     $decoded = base64_decode($state);
     $parts = explode('::', $decoded);
-    \Log::debug("State part", ['parts' => $parts]);
+    \Log::debug("State part", ['parts' => $parts[0]]);
     if (count($parts) !== 2) return null;
 
     $json = $parts[0]; // abaikan hash
