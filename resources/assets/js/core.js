@@ -186,11 +186,13 @@ const Core = (() => {
 
     // 🔽 Cek apakah masih dalam masa lockout
     if (state.lockedUntil && new Date(state.lockedUntil) > new Date()) {
-      // Tampilkan timer & disable input – jangan ada event listener yang bisa mengaktifkan kembali
+      // Tampilkan timer & disable input
       showLockoutTimer(state.lockedUntil);
+      // Jangan pasang event fokus
     } else {
       pinInput.disabled = false;
       submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Verifikasi';
       state.lockedUntil = null;
       // Fokus ke input setelah modal muncul (hanya jika tidak terkunci)
       modalEl.addEventListener('shown.bs.modal', () => {
@@ -210,11 +212,15 @@ const Core = (() => {
     };
     form.addEventListener('submit',
       handleSubmit);
+
     modalEl.addEventListener('hidden.bs.modal',
       () => {
         form.removeEventListener('submit', handleSubmit);
         pinInput.value = "";
-        if (!state.pinVerified) callback(false);
+        // Hanya panggil callback(false) jika PIN belum diverifikasi DAN tidak dalam lockout
+        if (!state.pinVerified && !state.lockedUntil) {
+          callback(false);
+        }
       });
   }
 
@@ -240,32 +246,18 @@ const Core = (() => {
         bootstrap.Modal.getInstance(getEl('pinModal')).hide();
         callback(true);
       } else {
-        getEl('pinError').textContent = res.message;
-        getEl('pinError').classList.remove('d-none');
-        pinInput.value = '';
-        pinInput.focus();
-        if (res.locked_until) {
-          state.lockedUntil = res.locked_until;
-          showLockoutTimer(res.locked_until);
-          return; // ← hentikan eksekusi, tombol tetap disabled
-        }
+        handlePinError(res.message, res.locked_until);
       }
     } catch (error) {
       const data = error.data;
       if (data) {
-        getEl('pinError').textContent = data.message || 'PIN salah.';
-        getEl('pinError').classList.remove('d-none');
-        if (data.locked_until) {
-          state.lockedUntil = data.locked_until;
-          showLockoutTimer(data.locked_until);
-          return; // ← hentikan eksekusi
-        }
+        handlePinError(data.message, data.locked_until);
       } else {
         getEl('pinError').textContent = error.message || 'Terjadi kesalahan.';
         getEl('pinError').classList.remove('d-none');
+        pinInput.value = '';
+        pinInput.focus();
       }
-      pinInput.value = '';
-      pinInput.focus();
     } finally {
       // Kembalikan tombol hanya jika TIDAK sedang terkunci
       if (!state.lockedUntil) {
@@ -275,7 +267,21 @@ const Core = (() => {
     }
   }
 
+  // Helper untuk menangani error PIN
+  function handlePinError(message, lockedUntil) {
+    getEl('pinError').textContent = message || 'PIN salah.';
+    getEl('pinError').classList.remove('d-none');
+    getEl('pinInput').value = '';
+    getEl('pinInput').focus();
+    if (lockedUntil) {
+      state.lockedUntil = lockedUntil;
+      showLockoutTimer(lockedUntil);
+      // Jangan kembalikan tombol – dibiarkan disabled oleh showLockoutTimer
+    }
+  }
+
   function showLockoutTimer(lockedUntil) {
+    // Hentikan timer sebelumnya jika ada
     if (state.lockoutTimer) clearInterval(state.lockoutTimer);
 
     const lockedEl = getEl('pinLockedInfo');
@@ -284,11 +290,10 @@ const Core = (() => {
     const pinInput = getEl('pinInput');
     const submitBtn = document.querySelector('#pinForm button[type="submit"]');
 
-    // Disable input & tombol, ubah teks tombol
     pinInput.disabled = true;
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="bi bi-lock me-2"></i> Terkunci'; // ← teks baru
+      submitBtn.innerHTML = '<i class="bi bi-lock me-2"></i> Terkunci';
     }
 
     state.lockedUntil = lockedUntil;
@@ -299,11 +304,12 @@ const Core = (() => {
       const diff = Math.max(0, lock - now);
       if (diff <= 0) {
         clearInterval(state.lockoutTimer);
+        lockoutTimer = null;
         lockedEl.classList.add('d-none');
         pinInput.disabled = false;
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = 'Verifikasi'; // ← kembalikan teks awal
+          submitBtn.innerHTML = 'Verifikasi';
         }
         state.lockedUntil = null;
       } else {
