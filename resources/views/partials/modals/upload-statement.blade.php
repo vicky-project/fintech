@@ -63,7 +63,7 @@
     <p class="mt-2">Memuat data...</p>
     </div>
     <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-transparent p-3 d-none" style="padding-bottom: 70px !important;">
-    <button class="btn btn-primary opacity-75 w-100" onclick="importSelectedTransactions()">
+    <button class="btn btn-primary opacity-75 w-100" onclick="importSelectedTransactions()" id="import-selected-transactions">
     <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
     </button>
     </div>
@@ -95,6 +95,7 @@
 
     if (previewTransactions.length === 0) {
       container.innerHTML = '<p class="text-muted text-center py-4">Semua transaksi sudah diimpor.</p>';
+      document.getElementById('import-selected-transactions').disabled = true;
       return;
     }
 
@@ -260,6 +261,7 @@
 
       // Refresh preview
       Core.resetStateAfterImportStatement();
+      await Core.loadHomeSummary();
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal mengimpor', 'danger');

@@ -38,6 +38,8 @@
     deleteConfirmInput.focus();
   }
   window.performDeleteAccount = async function(btn) {
+    if (!confirm("Apakah anda yakin ingin menghapus akun secara permanen? Semua data akan hilang dan tidak dapat dikembalikan.")) return;
+
     btn.disabled = true;
     const originalHtml = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Menghapus...';

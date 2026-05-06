@@ -1300,7 +1300,9 @@ async function saveSettings() {
 
   // Pastikan semua toggle boolean selalu dikirim
   data.notification_telegram = data.notification_telegram ?? false;
-  data.auto_sync_google = data.auto_sync_google ?? false;
+
+  const autoSyncEl = document.getElementById('auto-sync-google');
+  data.auto_sync_google = autoSyncEl && !autoSyncEl.disabled ? autoSyncEl.checked: false;
 
   try {
     tgApp.showLoading('Menyimpan...');
@@ -2745,16 +2747,24 @@ async function checkGoogleConnection() {
     const btnConnect = document.getElementById('btn-connect-google');
     const badge = document.getElementById('google-connected-badge');
     const btnDisconnect = document.getElementById('btn-disconnect-google');
+    const autoSyncToggle = document.getElementById('auto-sync-google');
 
     if (btnConnect && badge && btnDisconnect) {
       if (res.connected) {
         btnConnect.classList.add('d-none');
         badge.classList.remove('d-none');
-        btnDisconnect.classList.remove('d-none'); // ← tampilkan tombol putus
+        btnDisconnect.classList.remove('d-none');
+        if (autoSyncToggle) {
+          autoSyncToggle.disabled = false;
+        }
       } else {
         btnConnect.classList.remove('d-none');
         badge.classList.add('d-none');
-        btnDisconnect.classList.add('d-none'); // ← sembunyikan tombol putus
+        btnDisconnect.classList.add('d-none');
+        if (autoSyncToggle) {
+          autoSyncToggle.disabled = true;
+          autoSyncToggle.checked = false;
+        }
       }
     }
     return res.connected;
