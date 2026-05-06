@@ -10,8 +10,6 @@ use Modules\FinTech\Models\UserSetting;
 
 class SpreadsheetManager
 {
-  protected GoogleSheetsClient $client;
-
   const SHEET_TRANSACTIONS = 'Transaksi';
   const SHEET_TRANSFERS = 'Transfer';
   const SHEET_BUDGETS = 'Budget';
