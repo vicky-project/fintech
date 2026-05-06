@@ -111,6 +111,8 @@ async function handleGlobalClick(e) {
             btn.disabled = false;
             btn.innerHTML = originalText;
             // Pastikan badge "Terhubung" muncul (sudah di‑handle oleh checkGoogleConnection)
+            Core.state.userSettings = null;
+            await Core.loadUserSettings();
           } else if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
             tgApp.showToast('Proses menghubungkan gagal atau dibatalkan.', 'warning');
