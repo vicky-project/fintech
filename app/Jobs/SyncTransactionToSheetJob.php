@@ -29,7 +29,9 @@ class SyncTransactionToSheetJob implements ShouldQueue
     \Log::debug('setting', [
       'setting' => $setting,
       'preferences' => $setting->preferences,
-      'google' => $setting->preferences['auto_sync_google']
+      'google' => $setting->preferences['auto_sync_google'],
+      'google_access_token' => $setting->google_access_token,
+      'spreadsheet_id' => $setting->spreadsheet_id
     ]);
     if (!$setting) return;
 
