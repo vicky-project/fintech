@@ -4,6 +4,7 @@ namespace Modules\FinTech\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Modules\FinTech\Models\UserSetting;
 
 class UserSettingsRequest extends FormRequest
 {
@@ -20,6 +21,9 @@ class UserSettingsRequest extends FormRequest
   */
   public function rules(): array
   {
+    $settings = UserSetting::where('user_id', $this->user()->id)->first();
+    $hasExistingPin = $settings && !empty($settings->pin);
+
     return [
       'default_currency' => [
         'sometimes',
@@ -35,8 +39,18 @@ class UserSettingsRequest extends FormRequest
         }),
       ],
       'pin_enabled' => 'sometimes|boolean',
-      'pin' => 'nullable|string|min:4|max:6|required_if:pin_enabled,true',
+      'pin' => [
+        "nullable",
+        "string",
+        "min:4",
+        "max:6",
+        function($attribute, $value, $fail) use($hasExistingPin) {
+          if ($this->boolean('pin_enabled') && !$hasExistingPin && empty($value)) {
+            $fail("PIN wajib diisi jika diaktifkan");
+          }
+        }],
       'notification_telegram' => 'sometimes|boolean',
+      'auto_sync_google' => 'sometimes|boolean',
     ];
   }
 
@@ -61,7 +75,6 @@ class UserSettingsRequest extends FormRequest
       'default_wallet_id.exists' => "Dompet tidak ditemukan.",
       'pin.min' => 'Minimal 4 digit',
       'pin.max' => 'Maksimal 6 digit',
-      'pin.required_if' => 'PIN tidak boleh kosong jika diaktifkan',
     ];
   }
 }

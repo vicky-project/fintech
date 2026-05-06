@@ -696,8 +696,8 @@ function renderReportsPage() {
   <div class="d-flex justify-content-between align-items-center mb-2">
   <h6>Distribusi Kategori</h6>
   <div class="btn-group btn-group-sm" role="group">
-  <button type="button" class="btn btn-outline-danger ${Core.state.categoryChartType === 'expense' ? 'active': ''}" data-cat-type="expense" data-action="switch-category-type" data-cat-type="expense">Pengeluaran</button>
-  <button type="button" class="btn btn-outline-success ${Core.state.categoryChartType === 'income' ? 'active': ''}" data-cat-type="income" data-action="switch-category-type" data-cat-type="income">Pemasukan</button>
+  <button type="button" class="btn btn-outline-danger ${Core.state.categoryChartType == 'expense' ? 'active': ''}" data-cat-type="expense" data-action="switch-category-type" data-cat-type="expense">Pengeluaran</button>
+  <button type="button" class="btn btn-outline-success ${Core.state.categoryChartType == 'income' ? 'active': ''}" data-cat-type="income" data-action="switch-category-type" data-cat-type="income">Pemasukan</button>
   </div>
   </div>
   <div style="height: 350px;">
@@ -1129,7 +1129,7 @@ async function renderSettingsPage() {
 
   <div class="form-check form-switch mb-3">
   <input class="form-check-input" type="checkbox" name="pin_enabled" id="pin-enabled" value="1" ${settings.pin_enabled ? 'checked': ''} data-action="toggle-pin">
-  <label class="form-check-label" for="pin-enabled">Aktifkan PIN ${settings.pin_enabled ? '<span class="badge text-bg-success ms-2"><i class="bi bi-check2-circle me-2"></i> Active</span>': ''}</label>
+  <label class="form-check-label" for="pin-enabled">Aktifkan PIN ${settings.pin_enabled ? '<span class="badge bg-success ms-2"><i class="bi bi-check2-circle"></i>Active</span>': ''}</label>
   </div>
   <div id="pin-field-group" style="display: ${settings.pin_enabled ? 'block': 'none'};">
   <label class="form-label">PIN (4-6 digit)</label>
@@ -1139,7 +1139,7 @@ async function renderSettingsPage() {
 
   <hr>
   <div class="form-check form-switch mb-3">
-  <input class="form-check-input" type="checkbox" id="notification-telegram"
+  <input class="form-check-input" type="checkbox" id="notification-telegram" value="1" name="notification_telegram"
   ${settings.preferences?.notification_telegram ? 'checked': ''}>
   <label class="form-check-label" for="notification-telegram">
   <i class="bi bi-bell me-1"></i> Notifikasi Telegram
@@ -1147,7 +1147,36 @@ async function renderSettingsPage() {
   </div>
   <small class="text-muted d-block mb-3">Dapatkan peringatan budget dan arus kas langsung di chat.</small>
 
-  <button type="button" class="btn btn-primary w-100" data-action="save-settings">
+  <!-- Auto Sync Google Sheets -->
+  <hr>
+  <div class="form-check form-switch">
+  <div class="d-flex align-items-center gap-2">
+  <input class="form-check-input" type="checkbox" id="auto-sync-google" name="auto_sync_google" value="1"
+  ${settings.preferences?.auto_sync_google ? 'checked': ''}>
+  <label class="form-check-label" for="auto-sync-google">
+  <i class="bi bi-arrow-repeat me-1"></i> Auto Sync ke Google Sheets
+  </label>
+  <button type="button" class="btn btn-link btn-sm p-0 ms-1" data-action="show-info" data-info="auto_sync">
+  <i class="bi bi-info-circle"></i>
+  </button>
+  </div>
+  </div>
+  <small class="text-muted d-block mb-0">Transaksi baru otomatis muncul di spreadsheet Anda.</small>
+  <div id="google-sheet-link" style="display: ${settings.google_spreadsheet_id ? 'block': 'none'};">
+  <small class="text-muted">
+  <i class="bi bi-link-45deg me-1"></i>
+  <a href="https://docs.google.com/spreadsheets/d/${settings.google_spreadsheet_id}/edit"
+  target="_blank" class="text-decoration-none">
+  Buka Google Sheets
+  </a>
+  <button class="btn btn-link btn-sm p-0 ms-1" data-link="https://docs.google.com/spreadsheets/d/${settings.google_spreadsheet_id}/edit" data-action="copy-google-link" title="Salin link">
+  <i class="bi bi-clipboard"></i>
+  </button>
+  <span class="d-block">Sheet: Live Feed</span>
+  </small>
+  </div>
+
+  <button type="button" class="btn btn-primary w-100 mt-3" data-action="save-settings">
   <i class="bi bi-check2-circle me-1"></i> Simpan
   </button>
   </form>
@@ -1187,14 +1216,14 @@ async function renderSettingsPage() {
   <div class="d-flex justify-content-between align-items-center">
   <div>
   <i class="bi bi-google me-2"></i> Google Sheets
+  <span id="google-connected-badge" class="badge badge-sm bg-success d-none">
+  <i class="bi bi-check-circle"></i>
+  </span>
   </div>
-  <div class="d-flex align-items-center gap-2">
+  <div>
   <button id="btn-connect-google" class="btn btn-outline-success btn-sm d-none" data-action="connect-google">
   Hubungkan
   </button>
-  <span id="google-connected-badge" class="badge bg-success d-none">
-  <i class="bi bi-check-circle"></i> Terhubung
-  </span>
   <button id="btn-disconnect-google" class="btn btn-outline-danger btn-sm d-none" data-action="disconnect-google">
   Putuskan
   </button>
@@ -1281,11 +1310,17 @@ async function saveSettings() {
   if (!data.pin || data.pin.length === 0) {
     delete data.pin;
   }
-  data.notification_telegram = document.getElementById('notification-telegram')?.checked ?? false;
+
+  // Pastikan semua toggle boolean selalu dikirim
+  data.notification_telegram = data.notification_telegram ?? false;
+
+  const autoSyncEl = document.getElementById('auto-sync-google');
+  data.auto_sync_google = autoSyncEl && !autoSyncEl.disabled ? autoSyncEl.checked: false;
 
   try {
     tgApp.showLoading('Menyimpan...');
     await Core.api.put('/api/fintech/settings', data);
+    Core.state.userSettings = null;
     await Core.loadUserSettings();
     tgApp.hideLoading();
     tgApp.showToast('Pengaturan disimpan');
@@ -1335,7 +1370,6 @@ function renderInsightsContent(data) {
   const changeIcon = trend.change_percentage > 0 ? '↑': '↓';
 
   let html = `
-  <div class="container py-3">
   <!-- Summary Card -->
   <div class="card mb-3">
   <div class="card-body">
@@ -1389,11 +1423,11 @@ function renderInsightsContent(data) {
   </div>
   <div class="card-body pt-0">
   ${data.recommendations.map(rec => `
-    <div class="d-flex alert alert-${rec.type === 'warning' ? 'warning': (rec.type === 'success' ? 'success': 'info')} py-2 px-3 mb-2">
+    <div class="d-flex align-items-center alert alert-${rec.type == 'warning' ? 'warning': (rec.type == 'success' ? 'success': 'info')} py-2 px-3 mb-2" role="alert">
     <i class="bi ${rec.icon} me-3 fs-5"></i>
     <div>
-    <strong>${rec.title}</strong><br>
-    <small>${rec.message}</small>
+    <h4 class="alert-heading">${rec.title}</h4>
+    <p><small>${rec.message}</small></p>
     </div>
     </div>
     `).join('')}
@@ -1472,7 +1506,6 @@ function renderInsightsContent(data) {
     </div>
     </div>
     `).join('')}
-  </div>
   </div>
   </div>
   `;
@@ -2727,16 +2760,35 @@ async function checkGoogleConnection() {
     const btnConnect = document.getElementById('btn-connect-google');
     const badge = document.getElementById('google-connected-badge');
     const btnDisconnect = document.getElementById('btn-disconnect-google');
+    const autoSyncToggle = document.getElementById('auto-sync-google');
 
     if (btnConnect && badge && btnDisconnect) {
       if (res.connected) {
         btnConnect.classList.add('d-none');
         badge.classList.remove('d-none');
-        btnDisconnect.classList.remove('d-none'); // ← tampilkan tombol putus
+        btnDisconnect.classList.remove('d-none');
+        if (autoSyncToggle) {
+          autoSyncToggle.disabled = false;
+        }
       } else {
         btnConnect.classList.remove('d-none');
         badge.classList.add('d-none');
-        btnDisconnect.classList.add('d-none'); // ← sembunyikan tombol putus
+        btnDisconnect.classList.add('d-none');
+        if (autoSyncToggle) {
+          autoSyncToggle.disabled = true;
+          autoSyncToggle.checked = false;
+        }
+      }
+    }
+
+    const sheetLinkEl = document.getElementById('google-sheet-link');
+    if (sheetLinkEl) {
+      if (res.connected && Core.state.userSettings?.google_spreadsheet_id) {
+        sheetLinkEl.style.display = 'block';
+        const link = sheetLinkEl.querySelector('a');
+        if (link) link.href = `https://docs.google.com/spreadsheets/d/${Core.state.userSettings.google_spreadsheet_id}/edit`;
+      } else {
+        sheetLinkEl.style.display = 'none';
       }
     }
     return res.connected;

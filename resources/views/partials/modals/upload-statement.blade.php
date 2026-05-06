@@ -63,7 +63,7 @@
     <p class="mt-2">Memuat data...</p>
     </div>
     <div id="preview-actions" class="position-fixed bottom-0 start-0 w-75 bg-transparent p-3 d-none" style="padding-bottom: 70px !important;">
-    <button class="btn btn-primary opacity-75 w-100" onclick="importSelectedTransactions()">
+    <button class="btn btn-primary opacity-75 w-100" onclick="importSelectedTransactions()" id="import-selected-transactions">
     <i class="bi bi-check-lg me-2"></i>Import Terpilih (<span id="selected-count">0</span>)
     </button>
     </div>
@@ -95,6 +95,7 @@
 
     if (previewTransactions.length === 0) {
       container.innerHTML = '<p class="text-muted text-center py-4">Semua transaksi sudah diimpor.</p>';
+      document.getElementById('import-selected-transactions').disabled = true;
       return;
     }
 
@@ -155,7 +156,7 @@
     <select class="form-select form-select-sm category-select"
     style="width: auto; min-width: 150px;"
     data-transaction-id="${trx.id}"
-    onchange="updateTransactionCategory(${trx.id}, this.value)">
+    onchange="updateTransactionCategory(${trx.id}, this.value, '${trx.description}')">
     <option value="">Pilih Kategori</option>
     ${previewCategories.map(cat => `
     <option value="${cat.id}" ${trx.category?.id === cat.id ? 'selected' : ''}>
@@ -191,18 +192,19 @@
     document.getElementById('selected-count').textContent = selected;
   }
 
-  async function updateTransactionCategory(transactionId, categoryId) {
+  async function updateTransactionCategory(transactionId, categoryId, description) {
     if (!categoryId) return;
 
     try {
       await Core.api.put(`/api/fintech/statements/transactions/${transactionId}/category`,
       {
-      category_id: categoryId
+      category_id: categoryId,
+      description
       }
       );
 
       // Update local state
-      const trx = previewTransactions.find(t => t.id === transactionId);
+      const trx = previewTransactions.find(t => t.id == transactionId);
       if (trx) {
         const cat = previewCategories.find(c => c.id == categoryId);
         trx.category = cat;
@@ -250,6 +252,7 @@
       );
 
       tgApp.hideLoading();
+      await loadPreviewData();
       let message = res.message;
       if (res.data.skipped > 0) {
         message += '\n\nDilewati:\n' + res.data.skipped_reasons.join('\n');
@@ -257,8 +260,8 @@
       tgApp.showToast(message, res.data.skipped > 0 ? 'warning' : 'success');
 
       // Refresh preview
-      await loadPreviewData();
-      Core.resetState();
+      Core.resetStateAfterImportStatement();
+      await Core.loadHomeSummary();
     } catch (error) {
       tgApp.hideLoading();
       tgApp.showToast(error.message || 'Gagal mengimpor', 'danger');

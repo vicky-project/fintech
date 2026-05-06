@@ -33,6 +33,7 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
 
   // ==================== CATEGORIES ====================
   Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
+  Route::get('categories/suggest', [CategoryController::class, 'suggest'])->name('categories.suggest');
 
   // ==================== CURRENCIES ====================
   Route::get('currencies', [CurrencyController::class, 'index'])->name('currencies.index');

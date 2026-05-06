@@ -30,19 +30,33 @@ class SettingController extends Controller
 
   public function update(UserSettingsRequest $request): JsonResponse
   {
-    $validated = $request->validatedSettings(); // data yang sudah diproses (pin dll)
+    $validated = $request->validatedSettings();
 
-    // Ambil nilai toggle notifikasi Telegram dari request
-    if ($request->has('notification_telegram')) {
-      $notificationTelegram = $request->boolean('notification_telegram');
+    // Field utama yang disimpan langsung di tabel
+    $mainFields = [
+      'default_currency',
+      'default_wallet_id',
+      'pin_enabled',
+      'pin'
+    ];
 
-      // Ambil preferences yang sudah ada (atau array kosong)
-      $settings = Models\UserSetting::where('user_id', $request->user()->id)->first();
-      $preferences = $settings ? ($settings->preferences ?? []) : [];
-      $preferences['notification_telegram'] = $notificationTelegram;
+    $preferencesInput = [];
 
-      $validated['preferences'] = $preferences;
+    foreach ($validated as $key => $value) {
+      if (!in_array($key, $mainFields)) {
+        $preferencesInput[$key] = $value;
+        unset($validated[$key]);
+      }
     }
+
+    // Ambil preferences yang sudah ada
+    $settings = Models\UserSetting::where('user_id', $request->user()->id)->first();
+    $existingPreferences = $settings ? ($settings->preferences ?? []) : [];
+
+    // Gabungkan input baru (input baru menimpa yang lama)
+    $preferences = array_merge($existingPreferences, $preferencesInput);
+
+    $validated['preferences'] = $preferences;
 
     $settings = Models\UserSetting::updateOrCreate(
       ['user_id' => $request->user()->id],
@@ -112,7 +126,7 @@ class SettingController extends Controller
         'message' => $message,
         'attempts' => $attempts,
         'locked_until' => $lockedUntil
-      ], 401);
+      ], 422);
     } catch(\Exception $e) {
       \Log::error("Failed to verify PIN", [
         'message' => $e->getMessage(),

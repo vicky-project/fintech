@@ -18,7 +18,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-        <button type="button" class="btn btn-danger" id="btn-delete-account-confirm" disabled>
+        <button type="button" class="btn btn-danger" id="btn-delete-account-confirm" data-action="btn-delete-account-confirm" disabled>
           <i class="bi bi-trash me-1"></i> Hapus Permanen
         </button>
       </div>
@@ -29,15 +29,21 @@
 <script>
   window.deleteAccount = function() {
     const modal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
-    const deleteConfirmInput = document.getElementById('delete-confirm-input');
-    const btnDeleteAccountConfirm = document.getElementById('btn-delete-account-confirm');
+    const input = document.getElementById('delete-confirm-input');
+    const btn = document.getElementById('btn-delete-account-confirm');
+    input.value = "";
+    btn.disabled = true;
+    input.oninput = function() {
+      btn.disabled = this.value.trim().toUpperCase() !== "HAPUS";
+    }
     modal.show();
-    deleteConfirmInput.value = "";
-    btnDeleteAccountConfirm.disabled = true;
-    deleteConfirmInput.oninput = (e) => checkInput(e);
-    deleteConfirmInput.focus();
+    setTimeout(() => input.focus(), 150);
   }
-  window.performDeleteAccount = async function(btn) {
+  window.performDeleteAccount = async function() {
+    const btn = document.getElementById('btn-delete-account-confirm');
+    if (!confirm("Apakah anda yakin ingin menghapus akun secara permanen? Semua data akan hilang dan tidak dapat dikembalikan.")) return;
+
+    const originalHtml = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Menghapus...';
 
@@ -68,14 +74,7 @@
       tgApp.showToast(error.message || 'Gagal menghapus akun',
       'danger');
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-trash me-1"></i> Hapus Permanen';
-    }
-  }
-
-  function checkInput(input) {
-    const confirmBtn = document.getElementById('btn-delete-account-confirm');
-    if (confirmBtn) {
-      confirmBtn.disabled = input.target.value.trim().toUpperCase() !== 'HAPUS';
+      btn.innerHTML = originalHtml;
     }
   }
 </script>

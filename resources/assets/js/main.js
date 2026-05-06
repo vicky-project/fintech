@@ -111,6 +111,8 @@ async function handleGlobalClick(e) {
             btn.disabled = false;
             btn.innerHTML = originalText;
             // Pastikan badge "Terhubung" muncul (sudah di‑handle oleh checkGoogleConnection)
+            Core.state.userSettings = null;
+            await Core.loadUserSettings();
           } else if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
             tgApp.showToast('Proses menghubungkan gagal atau dibatalkan.', 'warning');
@@ -176,8 +178,7 @@ async function handleGlobalClick(e) {
       const modal = new bootstrap.Modal(modalEl);
       modal.show();
       // Pasang listener langsung
-      const fileInput = modalEl.querySelector('input[type="file"]');
-      const btnDeleteAccountConfirm = modalEl.getElementById('btn-delete-account-confirm');
+      const fileInput = document.querySelector('input[type="file"]');
       fileInput.addEventListener('change', function() {
         const file = this.files[0];
         const btnUpload = document.getElementById('btn-upload-restore');
@@ -193,8 +194,6 @@ async function handleGlobalClick(e) {
           btnUpload.disabled = true;
         }
       });
-      btnDeleteAccountConfirm.addEventListener('click',
-        e => performDeleteAccount(e.target))
     },
     'restore-data': async () => {
       const form = document.getElementById('formRestore');
@@ -274,6 +273,29 @@ async function handleGlobalClick(e) {
           <p class="mb-0">Aktifkan PIN untuk mencegah restore data tanpa izin.</p>
           `;
           break;
+        case 'auto_sync':
+          title = 'Auto Sync ke Google Sheets';
+          body = `
+          <p>Fitur ini secara otomatis menambahkan setiap transaksi baru ke sheet <strong>"Live Feed"</strong> di spreadsheet Google Sheets Anda.</p>
+          <h6>✅ Kelebihan</h6>
+          <ul>
+          <li>Transaksi langsung muncul tanpa perlu ekspor ulang.</li>
+          <li>Bisa dibagikan ke akuntan atau pasangan untuk pantauan real-time.</li>
+          </ul>
+          <h6>⚠️ Kekurangan</h6>
+          <ul>
+          <li>Hanya satu arah: data ditambahkan, tidak bisa diedit atau dihapus otomatis.</li>
+          <li>Jika spreadsheet dihapus atau koneksi Google diputus, sync akan berhenti.</li>
+          </ul>
+          <h6>🛠️ Troubleshooting</h6>
+          <ul>
+          <li>Pastikan Anda sudah menghubungkan akun Google di halaman ini.</li>
+          <li>Jika transaksi tidak muncul, coba nonaktifkan lalu aktifkan kembali toggle ini.</li>
+          <li>Periksa apakah sheet <strong>"Live Feed"</strong> sudah ada di spreadsheet Anda.</li>
+          <li>Jika masalah berlanjut, hubungi <strong>@${BOT_USERNAME}</strong>.</li>
+          </ul>
+          `;
+          break;
       }
 
       document.getElementById('infoModalTitle').textContent = title;
@@ -281,6 +303,8 @@ async function handleGlobalClick(e) {
       new bootstrap.Modal(document.getElementById('infoModal')).show();
     },
     'delete-account': () => deleteAccount(),
+    'btn-delete-account-confirm': () => performDeleteAccount(),
+    'copy-google-link': () => tgApp.copyToClipboard(target.dataset.link),
     // tambahkan aksi lain sesuai kebutuhan
   };
   if (actions[action]) {

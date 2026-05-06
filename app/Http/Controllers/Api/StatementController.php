@@ -9,6 +9,7 @@ use Modules\FinTech\Http\Requests\UploadStatementRequest;
 use Modules\FinTech\Models\BankStatement;
 use Modules\FinTech\Models\StatementTransaction;
 use Modules\FinTech\Services\StatementService;
+use Modules\FinTech\Services\CategorizationService;
 
 class StatementController extends Controller
 {
@@ -124,7 +125,7 @@ class StatementController extends Controller
     }
   }
 
-  public function updateCategory(Request $request, StatementTransaction $transaction): JsonResponse
+  public function updateCategory(Request $request, StatementTransaction $transaction, CategorizationService $categorization): JsonResponse
   {
     if ($transaction->statement->user_id !== $request->user()->id) {
       return response()->json(['message' => 'Unauthorized'], 403);
@@ -132,18 +133,32 @@ class StatementController extends Controller
 
     $request->validate([
       'category_id' => 'required|exists:fintech_categories,id',
+      'description' => 'required|string|max:500',
     ]);
 
+    $oldCategoryId = $transaction->category_id;
+    $newCategoryId = (int) $request->category_id;
+    $userId = $request->user()->id;
+
+    // 1. Perbarui kategori di statement transaction
     $data = $this->statementService->updateTransactionCategory(
-      $transaction->statement->user_id,
+      $userId,
       $transaction->id,
-      $request->category_id
+      $newCategoryId
+    );
+
+    // 2. Belajar dari koreksi pengguna (confidence-based)
+    $categorization->learn(
+      $userId,
+      $request->description,
+      $newCategoryId,
+      $oldCategoryId
     );
 
     return response()->json([
       'success' => true,
       'message' => 'Kategori diperbarui',
-      'data' => $data
+      'data' => $data,
     ]);
   }
 }

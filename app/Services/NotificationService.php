@@ -20,6 +20,11 @@ class NotificationService
 
   protected int $cacheTtl = 3600;
 
+  public function __construct(
+    protected BudgetService $budgetService,
+    protected InsightService $insightService
+  ) {}
+
   /**
   * Clear semua cache notifikasi user tertentu.
   */
@@ -148,92 +153,80 @@ class NotificationService
 
   /**
   * Cek budget yang >80% dan buat notifikasi.
+  * Sekarang menggunakan BudgetService sebagai sumber data.
   */
   public function checkBudgetWarnings(int $userId): void
   {
-    $budgets = Budget::where('user_id', $userId)
-    ->where('is_active', true)
-    ->with('category')
-    ->get();
+    $budgets = $this->budgetService->getBudgets($userId);
 
     foreach ($budgets as $budget) {
-      $percentage = $budget->getPercentage();
-      $type = NotificationType::BUDGET_WARNING;
+      $percentage = $budget['percentage'];
 
       if ($percentage >= 80 && $percentage < 100) {
-        $exists = Notification::where('user_id', $userId)
-        ->where('type', $type)
-        ->where('data->budget_id', $budget->id)
-        ->where('created_at', '>', Carbon::now()->subDay())
-        ->exists();
-
-        if (!$exists) {
-          $this->create(
-            $userId,
-            $type,
-            'Budget Hampir Habis',
-            "Budget {$budget->category->name} telah mencapai {$percentage}% (Rp " .
-            number_format($budget->getCurrentSpending(), 0, ',', '.') . " dari Rp " .
-            number_format($budget->getAmountFloat(), 0, ',', '.') . ").",
-            ['budget_id' => $budget->id, 'category_id' => $budget->category_id]
-          );
-        }
+        $this->createIfNotExists(
+          $userId,
+          NotificationType::BUDGET_WARNING,
+          'Budget Hampir Habis',
+          "Budget {$budget['category']['name']} telah mencapai {$percentage}% (Rp " .
+          number_format($budget['current_spending'], 0, ',', '.') . " dari Rp " .
+          number_format($budget['amount'], 0, ',', '.') . ").",
+          ['budget_id' => $budget['id'], 'category_id' => $budget['category']['id']]
+        );
       }
 
       if ($percentage >= 100) {
-        $exists = Notification::where('user_id', $userId)
-        ->where('type', $type)
-        ->where('data->budget_id', $budget->id)
-        ->where('created_at', '>', Carbon::now()->subDay())
-        ->exists();
-
-        if (!$exists) {
-          $this->create(
-            $userId,
-            $type,
-            'Budget Terlampaui',
-            "Budget {$budget->category->name} telah terlampaui ({$percentage}%). Segera kurangi pengeluaran.",
-            ['budget_id' => $budget->id, 'category_id' => $budget->category_id]
-          );
-        }
+        $this->createIfNotExists(
+          $userId,
+          NotificationType::BUDGET_WARNING,
+          'Budget Terlampaui',
+          "Budget {$budget['category']['name']} telah terlampaui ({$percentage}%). Segera kurangi pengeluaran.",
+          ['budget_id' => $budget['id'], 'category_id' => $budget['category']['id']]
+        );
       }
     }
   }
 
   /**
   * Proyeksi arus kas 7 hari ke depan.
+  * Sekarang menggunakan InsightService sebagai sumber data.
   */
   public function checkCashflowProjection(int $userId): void
   {
-    $avgDailyExpense = Transaction::expense()
-    ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
-    ->where('transaction_date', '>', Carbon::now()->subDays(30))
-    ->sum(DB::raw('amount / 100')) / 30;
+    $projection = $this->insightService->getCashflowProjection($userId, 7);
 
-    $totalBalance = Wallet::where('user_id', $userId)
-    ->where('is_active', true)
-    ->get()
-    ->sum(fn($wallet) => $wallet->getBalanceFloat());
+    if (!$projection['sufficient'] && $projection['projected_balance'] < 0) {
+      $this->createIfNotExists(
+        $userId,
+        NotificationType::CASHFLOW_WARNING,
+        'Peringatan Arus Kas',
+        "Saldo total Anda (Rp " . number_format($projection['balance'], 0, ',', '.') .
+        ") diperkirakan tidak cukup untuk 7 hari ke depan.\n" .
+        "Proyeksi saldo akhir: Rp " . number_format($projection['projected_balance'], 0, ',', '.'),
+        [
+          'estimated_needed' => round(abs($projection['projected_balance']), 2),
+          'daily_net' => $projection['daily_net'],
+          'trend' => $projection['trend'],
+        ]
+      );
+    }
+  }
 
-    $estimatedNeeded = $avgDailyExpense * 7;
-    if ($totalBalance < $estimatedNeeded && $estimatedNeeded > 0) {
-      $type = NotificationType::CASHFLOW_WARNING;
-      $exists = Notification::where('user_id', $userId)
-      ->where('type', $type)
-      ->where('created_at', '>', Carbon::now()->subDay())
-      ->exists();
+  /**
+  * Helper: buat notifikasi jika belum ada dalam 24 jam.
+  */
+  protected function createIfNotExists(int $userId, NotificationType $type, string $title, string $message, array $data = []): void
+  {
+    $query = Notification::where('user_id', $userId)
+    ->where('type', $type)
+    ->where('created_at', '>', Carbon::now()->subDay());
 
-      if (!$exists) {
-        $this->create(
-          $userId,
-          $type,
-          'Peringatan Arus Kas',
-          "Saldo total Anda (Rp " . number_format($totalBalance, 0, ',', '.') .
-          ") diperkirakan tidak cukup untuk 7 hari ke depan (perkiraan kebutuhan: Rp " .
-          number_format($estimatedNeeded, 0, ',', '.') . ").",
-          ['estimated_needed' => round($estimatedNeeded, 2)]
-        );
-      }
+    // Tambahkan filter spesifik berdasarkan tipe
+    if ($type === NotificationType::BUDGET_WARNING && isset($data['budget_id'])) {
+      $query->where('data->budget_id', $data['budget_id']);
+    }
+
+    if (!$query->exists()) {
+      $this->create($userId, $type, $title, $message, $data);
     }
   }
 

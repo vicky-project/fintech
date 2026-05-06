@@ -13,6 +13,8 @@ class BackupService
 {
   use HasUserCache;
 
+  private const BACKUP_VERSION = '2.1';
+
   /**
   * Ekspor seluruh data user menjadi string JSON terkompresi (gzip).
   */
@@ -75,8 +77,14 @@ class BackupService
       Models\UserSetting::where('user_id', $user->id)
     );
 
+    // User Category Rule
+    $userCategoryRule = $this->exportTable(
+      "fintech_user_category_rules",
+      Models\UserCategoryRule::where('user_id', $user->id)
+    );
+
     $data = [
-      'version' => '1.1',
+      'version' => self::BACKUP_VERSION,
       'user_telegram_id' => $user->telegram_id,
       'created_at' => now()->toIso8601String(),
       'data' => [
@@ -89,6 +97,7 @@ class BackupService
         'bank_statements' => $bankStatements,
         'statement_transactions' => $statementTransactions,
         'notifications' => $notifications,
+        'user_category_rules' => $userCategoryRule,
       ]
     ];
 
@@ -135,6 +144,9 @@ class BackupService
       throw new \Exception('File ini bukan backup milik akun Telegram Anda.');
     }
 
+    // Normalisasi struktur berdasarkan versi
+    $backup = $this->normalizeBackupData($backup);
+
     DB::transaction(function () use ($user, $backup) {
       $this->clearUserData($user);
       DB::statement('SET FOREIGN_KEY_CHECKS=0');
@@ -149,6 +161,12 @@ class BackupService
         unset($row['id']);
         $row['user_id'] = $user->id;
         $row['default_wallet_id'] = $row['default_wallet_id'] ? ($walletMap[$row['default_wallet_id']] ?? null) : null;
+      });
+
+      $this->bulkInsert('fintech_user_category_rules', $backup['data']['user_category_rules'], function(&$row) use ($user) {
+        unset($row['id']);
+        $row['user_id'] = $user->id;
+        $row['category_id'] = $catMap[$row['category_id']] ?? null;
       });
 
       $trxMap = $this->bulkInsertByUuid('fintech_transactions', $backup['data']['transactions'], function(&$row) use ($walletMap, $catMap) {
@@ -245,6 +263,7 @@ class BackupService
     Models\Transaction::whereHas('wallet', fn($q) => $q->where('user_id',
       $user->id))->delete();
     Models\UserSetting::where('user_id', $user->id)->delete();
+    Models\UserCategoryRule::where('user_id', $user->id)->delete();
     Models\Wallet::where('user_id', $user->id)->delete();
   }
 
@@ -358,5 +377,26 @@ class BackupService
       throw new \Exception('Password salah atau file backup rusak.');
     }
     return $plain;
+  }
+
+  /**
+  * Normalisasi data backup berdasarkan versi agar kompatibel dengan struktur saat ini.
+  *
+  * @param  array $backup
+  * @return array
+  */
+  private function normalizeBackupData(array $backup): array
+  {
+    $version = $backup['version'] ?? '1.0';
+
+    // Versi 2.0 menambahkan user_category_rules
+    if (version_compare($version, '2.0', '<')) {
+      $backup['data']['user_category_rules'] = [];
+    }
+
+    // Di masa depan bisa ditambahkan konversi untuk versi yang lebih baru
+    // if (version_compare($version, '2.2', '<')) { ... }
+
+    return $backup;
   }
 }

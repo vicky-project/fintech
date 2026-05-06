@@ -36,7 +36,9 @@ const Core = (() => {
     pinVerifiedAt: null,
     sessionTimeout: 3 * 60 * 1000,
     sessionTimer: null,
+    lockoutTimer: null,
     isPinModalShowing: false,
+    lockedUntil: null,
     budgets: [],
     unreadNotificationCount: 0,
     notifications: [],
@@ -108,7 +110,7 @@ const Core = (() => {
     return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="bg-warning p-0 rounded">$1</mark>');
   };
   const getCurrencySymbol = (code) => {
-    const c = state.currencies.find(c => c.code === code);
+    const c = state.currencies.find(c => c.code == code);
     return c?.symbol || code;
   };
   const formatTimeAgo = (dateString) => {
@@ -181,14 +183,24 @@ const Core = (() => {
     getEl('pinError').classList.add('d-none');
     getEl('pinLockedInfo').classList.add('d-none');
     form.reset();
-    pinInput.disabled = false;
 
-    modalEl.addEventListener('shown.bs.modal', () => {
-      setTimeout(() => pinInput.focus(),
-        150);
-    }, {
-      once: true
-    });
+    // 🔽 Cek apakah masih dalam masa lockout
+    if (state.lockedUntil && new Date(state.lockedUntil) > new Date()) {
+      // Tampilkan timer & disable input
+      showLockoutTimer(state.lockedUntil);
+      // Jangan pasang event fokus
+    } else {
+      pinInput.disabled = false;
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Verifikasi';
+      state.lockedUntil = null;
+      // Fokus ke input setelah modal muncul (hanya jika tidak terkunci)
+      modalEl.addEventListener('shown.bs.modal', () => {
+        setTimeout(() => pinInput.focus(), 150);
+      }, {
+        once: true
+      });
+    }
 
     pinInput.addEventListener('input', () => {
       if (pinInput.value.length === 6) submitPin(callback);
@@ -200,11 +212,15 @@ const Core = (() => {
     };
     form.addEventListener('submit',
       handleSubmit);
+
     modalEl.addEventListener('hidden.bs.modal',
       () => {
         form.removeEventListener('submit', handleSubmit);
         pinInput.value = "";
-        if (!state.pinVerified) callback(false);
+        // Hanya panggil callback(false) jika PIN belum diverifikasi DAN tidak dalam lockout
+        if (!state.pinVerified && !state.lockedUntil) {
+          callback(false);
+        }
       });
   }
 
@@ -226,39 +242,76 @@ const Core = (() => {
         state.pinVerified = true;
         resetSessionTimer();
         getEl('pinError').classList.add('d-none');
+        state.lockedUntil = null;
         bootstrap.Modal.getInstance(getEl('pinModal')).hide();
         callback(true);
       } else {
-        getEl('pinError').textContent = res.message;
+        handlePinError(res.message, res.locked_until);
+      }
+    } catch (error) {
+      const data = error.data;
+      if (data) {
+        handlePinError(data.message, data.locked_until);
+      } else {
+        getEl('pinError').textContent = error.message || 'Terjadi kesalahan.';
         getEl('pinError').classList.remove('d-none');
         pinInput.value = '';
         pinInput.focus();
-        if (res.locked_until) showLockoutTimer(res.locked_until);
       }
-    } catch (error) {
-      getEl('pinError').textContent = error.message || 'Terjadi kesalahan. Coba lagi.';
-      getEl('pinError').classList.remove('d-none');
-      pinInput.value = "";
-      pinInput.focus();
-      tgApp.showToast(error.message, 'danger');
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
+      // Kembalikan tombol hanya jika TIDAK sedang terkunci
+      if (!state.lockedUntil) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    }
+  }
+
+  // Helper untuk menangani error PIN
+  function handlePinError(message, lockedUntil) {
+    getEl('pinError').textContent = message || 'PIN salah.';
+    getEl('pinError').classList.remove('d-none');
+    getEl('pinInput').value = '';
+    getEl('pinInput').focus();
+    if (lockedUntil) {
+      state.lockedUntil = lockedUntil;
+      showLockoutTimer(lockedUntil);
+      // Jangan kembalikan tombol – dibiarkan disabled oleh showLockoutTimer
     }
   }
 
   function showLockoutTimer(lockedUntil) {
+    // Hentikan timer sebelumnya jika ada
+    if (state.lockoutTimer) clearInterval(state.lockoutTimer);
+
     const lockedEl = getEl('pinLockedInfo');
     lockedEl.classList.remove('d-none');
-    getEl('pinInput').disabled = true;
-    const timer = setInterval(() => {
+
+    const pinInput = getEl('pinInput');
+    const submitBtn = document.querySelector('#pinForm button[type="submit"]');
+
+    pinInput.disabled = true;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="bi bi-lock me-2"></i> Terkunci';
+    }
+
+    state.lockedUntil = lockedUntil;
+
+    state.lockoutTimer = setInterval(() => {
       const now = new Date();
       const lock = new Date(lockedUntil);
       const diff = Math.max(0, lock - now);
       if (diff <= 0) {
-        clearInterval(timer);
+        clearInterval(state.lockoutTimer);
+        lockoutTimer = null;
         lockedEl.classList.add('d-none');
-        getEl('pinInput').disabled = false;
+        pinInput.disabled = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Verifikasi';
+        }
+        state.lockedUntil = null;
       } else {
         const minutes = Math.floor(diff / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
@@ -568,6 +621,28 @@ const Core = (() => {
       state.sessionTimer = null;
     }
   }
+  function resetStateAfterImportStatement() {
+    state.homeSummary = null;
+    state.transactions = [];
+    state.transactionPage = 1;
+    state.transactionLastPage = 1;
+    state.transactionSummary = {
+      total: 0,
+      income: 0,
+      expense: 0
+    };
+    state.transfers = [];
+    state.transferPage = 1;
+    state.transferLastPage = 1;
+    state.totalBalance = 0;
+    state.chartInstances = {
+      home: null,
+      report: null,
+      category: null
+    };
+    state.budgets = [];
+    state.googlePollInterval = null;
+  }
 
   // ========== SESSION EXPIRED ==========
   function handleSessionExpired() {
@@ -645,6 +720,7 @@ const Core = (() => {
 
     // State reset
     resetState,
+    resetStateAfterImportStatement,
 
     downloadFile
   };

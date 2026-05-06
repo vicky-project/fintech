@@ -74,12 +74,14 @@ class InsightService
     // 6. Prediksi Arus Kas Bulan Depan
     $projection = $this->projectNextMonthCashflow($userId, $transactions);
 
-    // 7. Hasilkan Rekomendasi Cerdas
-    $recommendations = $this->generateSmartRecommendations(
-      $trend, $topCategories, $anomalies, $subscriptions, $spendingRatio
-    );
-
+    // 7. Ambil data budget
     $budgets = $this->budgetService->getBudgets($userId);
+
+    // 8. Hasilkan Rekomendasi Cerdas
+    $recommendations = $this->generateSmartRecommendations(
+      $trend, $topCategories, $anomalies, $subscriptions, $spendingRatio,
+      $budgets, $projection
+    );
 
     return [
       'currency' => $currency,
@@ -162,22 +164,44 @@ class InsightService
       $currentMonth = Carbon::now()->month;
       $currentYear = Carbon::now()->year;
 
+      // 1. Pengeluaran bulan ini
       $thisMonth = $catTrans->filter(fn($t) =>
         $t->transaction_date->month === $currentMonth &&
         $t->transaction_date->year === $currentYear
       )->sum(fn($t) => $t->getAmountFloat());
 
-      $past3Months = $catTrans->filter(fn($t) =>
-        $t->transaction_date->lt(Carbon::now()->startOfMonth())
-      );
+      // 2. Data historis 6 bulan terakhir (per bulan)
+      $monthlyTotals = $catTrans
+      ->groupBy(fn($t) => $t->transaction_date->format('Y-m'))
+      ->map(fn($group) => $group->sum(fn($t) => $t->getAmountFloat()))
+      ->values()
+      ->toArray();
 
-      if ($past3Months->count() < 2) continue;
+      // Butuh minimal 3 bulan data untuk analisis
+      if (count($monthlyTotals) < 3) continue;
 
-      $avgPast = $past3Months->groupBy(fn($t) => $t->transaction_date->format('Y-m'))
-      ->map->sum(fn($t) => $t->getAmountFloat())
-      ->average();
+      // 3. Hitung mean dan standar deviasi
+      $mean = array_sum($monthlyTotals) / count($monthlyTotals);
 
-      if ($avgPast > 0 && $thisMonth > $avgPast * 1.5) {
+      $variance = 0;
+      foreach ($monthlyTotals as $value) {
+        $variance += pow($value - $mean, 2);
+      }
+      $variance /= count($monthlyTotals);
+      $stdDev = sqrt($variance);
+
+      // Jika standar deviasi 0 (semua nilai sama), tidak bisa hitung Z-score
+      if ($stdDev == 0) continue;
+
+      // 4. Hitung Z-score untuk bulan ini
+      $zScore = ($thisMonth - $mean) / $stdDev;
+
+      // 5. Deteksi outlier: Z-score > 2.0 (signifikan, di atas 95% confidence)
+      if ($zScore > 2.0 && $thisMonth > $mean) {
+        $percentageIncrease = $mean > 0
+        ? round(($thisMonth - $mean) / $mean * 100, 1)
+        : 100;
+
         $anomalies[] = [
           'category' => [
             'id' => $category->id,
@@ -186,20 +210,26 @@ class InsightService
             'color' => $category->color
           ],
           'this_month' => round($thisMonth, 2),
-          'average' => round($avgPast, 2),
-          'percentage_increase' => round(($thisMonth - $avgPast) / $avgPast * 100, 1),
+          'average' => round($mean, 2),
+          'percentage_increase' => $percentageIncrease,
+          'z_score' => round($zScore, 2),
           'formatted' => 'Rp ' . number_format($thisMonth, 0, ',', '.')
         ];
       }
     }
 
-    return array_values($anomalies);
+    // Urutkan berdasarkan Z-score tertinggi (paling tidak biasa)
+    usort($anomalies, fn($a, $b) => $b['z_score'] <=> $a['z_score']);
+
+    return $anomalies;
   }
 
   private function detectSubscriptions($transactions): array
   {
     $subscriptions = [];
-    $grouped = $transactions->groupBy(fn($t) =>
+    $filtered = $transactions->filter(fn($t) => !$t->category->isAdministrative());
+
+    $grouped = $filtered->groupBy(fn($t) =>
       $t->category_id . '|' . $t->description . '|' . $t->getAmountFloat()
     );
 
@@ -304,71 +334,230 @@ class InsightService
     ];
   }
 
-  private function generateSmartRecommendations($trend, $topCategories, $anomalies, $subscriptions, $ratio): array
-  {
+  private function generateSmartRecommendations(
+    array $trend,
+    array $topCategories,
+    array $anomalies,
+    array $subscriptions,
+    array $ratio,
+    array $budgets,
+    array $projection
+  ): array {
     $recs = [];
 
-    if ($trend['change_percentage'] > 30) {
+    // 1. Tren pengeluaran meningkat drastis (>30%)
+    if (($trend['change_percentage'] ?? 0) > 30) {
       $recs[] = [
         'type' => 'warning',
         'icon' => 'bi-exclamation-triangle',
         'title' => 'Pengeluaran Meningkat Drastis',
-        'message' => 'Pengeluaran bulan ini naik ' . $trend['change_percentage'] . '% dibanding bulan lalu.'
+        'message' => 'Pengeluaran bulan ini naik ' . $trend['change_percentage'] . '% dibanding bulan lalu. Pertimbangkan untuk meninjau kembali anggaran Anda.',
       ];
     }
 
+    // 2. Lonjakan per kategori
     foreach ($anomalies as $anom) {
       $recs[] = [
         'type' => 'warning',
         'icon' => 'bi-graph-up-arrow',
         'title' => 'Lonjakan pada ' . $anom['category']['name'],
-        'message' => 'Naik ' . $anom['percentage_increase'] . '% dari biasanya.'
+        'message' => 'Pengeluaran untuk kategori ini naik ' . $anom['percentage_increase'] . '% dari rata‑rata 3 bulan terakhir. Cek apakah ada pembelian tidak biasa.',
       ];
     }
 
+    // 3. Langganan terdeteksi
     $totalSubs = collect($subscriptions)->sum('amount');
     if ($totalSubs > 0) {
       $recs[] = [
         'type' => 'info',
         'icon' => 'bi-calendar-check',
         'title' => 'Langganan Bulanan Terdeteksi',
-        'message' => 'Total Rp ' . number_format($totalSubs, 0, ',', '.') . ' per bulan.'
+        'message' => 'Total pengeluaran langganan Anda sekitar Rp ' . number_format($totalSubs, 0, ',', '.') . ' per bulan. Pertimbangkan untuk mengevaluasi apakah semua langganan masih diperlukan.',
       ];
     }
 
-    if ($ratio['tertiary'] > 40) {
+    // 4. Rasio pengeluaran tersier >40%
+    if (($ratio['tertiary'] ?? 0) > 40) {
       $recs[] = [
         'type' => 'tip',
         'icon' => 'bi-piggy-bank',
         'title' => 'Kurangi Pengeluaran Tersier',
-        'message' => $ratio['tertiary'] . '% untuk kebutuhan tersier.'
+        'message' => $ratio['tertiary'] . '% pengeluaran Anda digunakan untuk kebutuhan tersier (hiburan, gaya hidup). Menguranginya bisa meningkatkan tabungan.',
       ];
     }
 
-    if (!empty($topCategories)) {
-      $top = $topCategories[0];
-      if (stripos($top['name'], 'makan') !== false) {
+    // 5. Top kategori makanan
+    if (!empty($topCategories[0]) && stripos($topCategories[0]['name'], 'makan') !== false) {
+      $recs[] = [
+        'type' => 'tip',
+        'icon' => 'bi-cup-hot',
+        'title' => 'Hemat Biaya Makan',
+        'message' => 'Kategori "' . $topCategories[0]['name'] . '" adalah pengeluaran terbesar Anda. Memasak di rumah atau mencari promo bisa menghemat pengeluaran.',
+      ];
+    }
+
+    // 6. Budget hampir atau sudah terlampaui
+    foreach ($budgets as $budget) {
+      if ($budget['is_overspent']) {
         $recs[] = [
-          'type' => 'tip',
-          'icon' => 'bi-cup-hot',
-          'title' => 'Hemat Biaya Makan',
-          'message' => 'Pengeluaran terbesar Anda.'
+          'type' => 'warning',
+          'icon' => 'bi-exclamation-octagon',
+          'title' => 'Budget Terlampaui: ' . $budget['category']['name'],
+          'message' => 'Budget untuk ' . $budget['category']['name'] . ' sudah terlampaui (' . $budget['percentage'] . '%). Segera kurangi pengeluaran di kategori ini.',
+        ];
+      } elseif ($budget['is_near_limit']) {
+        $recs[] = [
+          'type' => 'warning',
+          'icon' => 'bi-exclamation-triangle',
+          'title' => 'Budget Hampir Habis: ' . $budget['category']['name'],
+          'message' => 'Budget ' . $budget['category']['name'] . ' sudah mencapai ' . $budget['percentage'] . '%. Hati‑hati dengan sisa hari bulan ini.',
         ];
       }
     }
 
-    return array_slice($recs, 0, 5);
+    // 7. Proyeksi arus kas
+    if (($projection['projected_surplus'] ?? 0) < 0) {
+      $recs[] = [
+        'type' => 'warning',
+        'icon' => 'bi-graph-down',
+        'title' => 'Proyeksi Defisit Bulan Depan',
+        'message' => 'Berdasarkan rata‑rata 3 bulan terakhir, pengeluaran Anda diproyeksikan melebihi pemasukan bulan depan. Siapkan dana cadangan.',
+      ];
+    } elseif (($projection['projected_surplus'] ?? 0) > ($projection['projected_income'] ?? 0) * 0.3) {
+      // Surplus besar (>30% pemasukan)
+      $recs[] = [
+        'type' => 'success',
+        'icon' => 'bi-check-circle',
+        'title' => 'Ada Ruang untuk Menabung!',
+        'message' => 'Anda diproyeksikan surplus Rp ' . number_format($projection['projected_surplus'], 0, ',', '.') . ' bulan depan. Pertimbangkan untuk menambah tabungan atau investasi.',
+      ];
+    }
+
+    // 8. Belum ada budget
+    if (empty($budgets)) {
+      $recs[] = [
+        'type' => 'tip',
+        'icon' => 'bi-plus-circle',
+        'title' => 'Buat Budget Pertama Anda',
+        'message' => 'Anda belum memiliki budget. Buat anggaran untuk mengontrol pengeluaran dan mencapai tujuan keuangan lebih cepat.',
+      ];
+    }
+
+    return array_slice($recs, 0, 5); // batasi 5 rekomendasi teratas
+  }
+
+  /**
+  * Proyeksi arus kas untuk N hari ke depan.
+  *
+  * @return array ['balance' => float, 'avg_daily_expense' => float, 'estimated_needed' => float, 'sufficient' => bool]
+  */
+  public function getCashflowProjection(int $userId, int $days = 7): array
+  {
+    $suffix = "cashflow_projection_{$days}";
+
+    return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId, $days) {
+      $walletQuery = Wallet::where('user_id', $userId)->where('is_active', true);
+      $totalBalance = $walletQuery->sum('balance') / 100; // saldo dalam float
+
+      // 1. Pengeluaran harian dengan EMA (30 hari terakhir)
+      $dailyExpenses = Transaction::expense()
+      ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
+      ->where('transaction_date', '>', Carbon::now()->subDays(30))
+      ->orderBy('transaction_date')
+      ->get()
+      ->groupBy(fn($t) => $t->transaction_date->toDateString())
+      ->map(fn($group) => $group->sum(fn($t) => $t->getAmountFloat()));
+
+      $ema = 0;
+      $alpha = 0.3; // faktor penghalus
+      $lastValue = 0;
+      $increasing = 0;
+      $decreasing = 0;
+      $prev = null;
+
+      foreach ($dailyExpenses as $value) {
+        if ($prev !== null) {
+          if ($value > $prev) $increasing++;
+          elseif ($value < $prev) $decreasing++;
+        }
+        $prev = $value;
+        $ema = $ema == 0 ? $value : $alpha * $value + (1 - $alpha) * $ema;
+      }
+
+      // 2. Tren pengeluaran
+      $trendFactor = 1.0;
+      if ($increasing > $decreasing) {
+        $trendFactor = 1.2; // naik 20%
+      } elseif ($decreasing > $increasing) {
+        $trendFactor = 0.9; // turun 10%
+      }
+
+      $avgExpense = $dailyExpenses->average() ?: 0;
+      $adjustedExpense = max($ema, $avgExpense) * $trendFactor;
+
+      // 3. Estimasi pemasukan (konservatif)
+      $avgIncome = Transaction::income()
+      ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
+      ->where('transaction_date', '>', Carbon::now()->subDays(30))
+      ->sum('amount') / 100 / 30;
+      $conservativeIncome = $avgIncome * 0.7;
+
+      // 4. Beban budget
+      $budgets = $this->budgetService->getBudgets($userId);
+      $budgetBurden = 0;
+      $now = Carbon::now();
+      foreach ($budgets as $budget) {
+        if ($budget['percentage'] >= 80 && $budget['period_type'] === 'monthly') {
+          $remainingDays = $now->daysInMonth - $now->day + 1;
+          $remainingSpending = max(0, $budget['amount'] - $budget['current_spending']);
+          $budgetBurden += $remainingSpending / $remainingDays;
+        }
+      }
+
+      // 5. Langganan (transaksi berulang)
+      $subscriptionDaily = $this->getSubscriptionDailyBurden($userId);
+
+      // 6. Proyeksi akhir
+      $dailyNet = $conservativeIncome - $adjustedExpense - $subscriptionDaily - $budgetBurden;
+      $projectedBalance = $totalBalance + ($dailyNet * $days);
+
+      return [
+        'balance' => round($totalBalance, 2),
+        'avg_daily_expense' => round($adjustedExpense, 2),
+        'avg_daily_income' => round($conservativeIncome, 2),
+        'subscription_burden' => round($subscriptionDaily, 2),
+        'budget_burden' => round($budgetBurden, 2),
+        'daily_net' => round($dailyNet, 2),
+        'projected_balance' => round($projectedBalance, 2),
+        'sufficient' => $projectedBalance >= 0,
+        'trend' => $increasing > $decreasing ? 'up' : ($decreasing > $increasing ? 'down' : 'stable'),
+      ];
+    });
+  }
+
+  /**
+  * Beban harian dari transaksi berulang (langganan).
+  */
+  private function getSubscriptionDailyBurden(int $userId): float
+  {
+    $analysis = $this->getFullAnalysis($userId);
+    $subscriptions = collect($analysis['subscriptions'] ?? []);
+    $totalMonthly = $subscriptions->sum('amount');
+    return $totalMonthly / 30;
   }
 
   private function getUserCurrency(int $userId): string
   {
-    return Wallet::where('user_id', $userId)->value('currency') ?? config('fintech.default_currency', 'IDR');
+    return Wallet::where('user_id',
+      $userId)->value('currency') ?? config('fintech.default_currency',
+      'IDR');
   }
 
   protected function knownUserCacheSuffixes(int $userId): array
   {
     return [
       'insights',
+      'cashflow_projection_7'
     ];
   }
 }

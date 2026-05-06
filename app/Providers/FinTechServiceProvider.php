@@ -14,7 +14,10 @@ use Modules\FinTech\Services\Parsers\MandiriExcelParser;
 use Modules\FinTech\Services\Parsers\MandiriCsvParser;
 use Modules\FinTech\Services\Parsers\BniPdfParser;
 use Modules\FinTech\Services\Parsers\BriPdfParser;
+use Modules\FinTech\Services\Google\GoogleAuthService;
+use Modules\FinTech\Services\Google\GoogleClientFactory;
 use Modules\FinTech\Services\Google\GoogleSheetsClient;
+use Modules\FinTech\Services\Google\SpreadsheetManager;
 use Modules\FinTech\Services\Google\Writers;
 
 class FinTechServiceProvider extends ServiceProvider
@@ -48,9 +51,8 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->register(EventServiceProvider::class);
     $this->app->register(RouteServiceProvider::class);
 
-    $this->app->singleton(GoogleSheetsClient::class, function($app) {
-      return new GoogleSheetsClient();
-    });
+    $this->app->singleton(GoogleSheetsClient::class);
+    $this->app->singleton(GoogleClientFactory::class);
 
     $this->app->singleton(Writers\ValueWriter::class);
     $this->app->singleton(Writers\BorderApplier::class);
@@ -74,6 +76,8 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->make("config")->set("world.migrations.currencies.table_name", "world_currencies");
     $this->app->make("config")->set("world.migrations.languages.table_name", "world_languages");
     $this->app->make("config")->set("world.migrations.timezones.table_name", "world_timezones");
+
+    $this->app->make("config")->set("queue.connections.".config('queue.default', 'database') . ".after_commit", true);
 
     $this->app->singleton(BankParserManager::class, function($app) {
       $manager = new BankParserManager();
