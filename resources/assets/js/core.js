@@ -276,7 +276,7 @@ const Core = (() => {
   }
 
   function showLockoutTimer(lockedUntil) {
-    if (state.lockoutTimer) clearInterval(lockoutTimer);
+    if (state.lockoutTimer) clearInterval(state.lockoutTimer);
 
     const lockedEl = getEl('pinLockedInfo');
     lockedEl.classList.remove('d-none');
@@ -298,7 +298,7 @@ const Core = (() => {
       const lock = new Date(lockedUntil);
       const diff = Math.max(0, lock - now);
       if (diff <= 0) {
-        clearInterval(lockoutTimer);
+        clearInterval(state.lockoutTimer);
         lockedEl.classList.add('d-none');
         pinInput.disabled = false;
         if (submitBtn) {
