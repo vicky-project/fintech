@@ -235,9 +235,11 @@ const Core = (() => {
         state.pinVerified = true;
         resetSessionTimer();
         getEl('pinError').classList.add('d-none');
+        state.lockedUntil = null;
         bootstrap.Modal.getInstance(getEl('pinModal')).hide();
         callback(true);
       } else {
+        // Fallback jika server mengembalikan success:false tanpa HTTP error
         getEl('pinError').textContent = res.message;
         getEl('pinError').classList.remove('d-none');
         pinInput.value = '';
@@ -248,15 +250,21 @@ const Core = (() => {
         }
       }
     } catch (error) {
-      getEl('pinError').textContent = error.message || 'Terjadi kesalahan. Coba lagi.';
-      getEl('pinError').classList.remove('d-none');
-      pinInput.value = "";
-      pinInput.focus();
-      tgApp.showToast(error.message, 'danger');
-      if (res.locked_until) {
-        state.lockedUntil = res.locked_until;
-        showLockoutTimer(res.locked_until);
+      // ⭐ Error dari server (PIN salah, terkunci) masuk ke sini
+      const data = error.data;
+      if (data) {
+        getEl('pinError').textContent = data.message || 'PIN salah.';
+        getEl('pinError').classList.remove('d-none');
+        if (data.locked_until) {
+          state.lockedUntil = data.locked_until;
+          showLockoutTimer(data.locked_until);
+        }
+      } else {
+        getEl('pinError').textContent = error.message || 'Terjadi kesalahan.';
+        getEl('pinError').classList.remove('d-none');
       }
+      pinInput.value = '';
+      pinInput.focus();
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;
