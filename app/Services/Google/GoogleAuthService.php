@@ -11,15 +11,15 @@ use Illuminate\Support\Str;
 class GoogleAuthService
 {
   protected GoogleClient $client;
-  protected SpreadsheetManager $spreadsheetManager;
+  protected GoogleSheetsService $googleSheetsService;
 
   public function __construct(
     GoogleClientFactory $clientFactory,
-    SpreadsheetManager $spreadsheetManager
+    GoogleSheetsService $googleSheetsService
   ) {
     $this->client = $clientFactory->create();
     $this->client->setPrompt('consent');
-    $this->spreadsheetManager = $spreadsheetManager;
+    $this->googleSheetsService = $googleSheetsService;
   }
 
   /**
@@ -56,7 +56,7 @@ class GoogleAuthService
       throw new \RuntimeException('Gagal mendapatkan token: ' . $token['error']);
     }
 
-    // Simpan token
+    // Simpan token ke database
     $setting = UserSetting::firstOrNew(['user_id' => $user->id]);
     $setting->google_access_token = $token['access_token'];
     $setting->google_refresh_token = $token['refresh_token'] ?? null;
@@ -65,14 +65,17 @@ class GoogleAuthService
     }
     $setting->save();
 
-    // Buat spreadsheet jika belum ada
-    if (!$setting->google_spreadsheet_id) {
-      $spreadsheetId = $this->spreadsheetManager->getOrCreateSpreadsheet($user);
-      $setting->google_spreadsheet_id = $spreadsheetId;
-      $setting->save();
-    }
+    // Setup GoogleSheetsService dengan user yang baru terhubung
+    $this->googleSheetsService->setupForUser($user);
 
-    Log::info("Google OAuth berhasil untuk user {$user->id}");
+    // Buat spreadsheet jika belum ada
+    $spreadsheetId = $this->googleSheetsService->getOrCreateSpreadsheet($user);
+
+    // Simpan ID spreadsheet
+    $setting->google_spreadsheet_id = $spreadsheetId;
+    $setting->save();
+
+    Log::info("Google OAuth berhasil untuk user {$user->id}, spreadsheet {$spreadsheetId}");
   }
 
   /**

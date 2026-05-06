@@ -15,13 +15,8 @@ class GoogleSheetsClient
   protected GoogleSheets $sheetsService;
   protected GoogleDrive $driveService;
 
-  public function __construct() {
-    $this->client = new GoogleClient();
-    $this->client->setClientId(config('fintech.google.oauth_client_id'));
-    $this->client->setClientSecret(config('fintech.google.oauth_client_secret'));
-    $this->client->setRedirectUri(config('fintech.google.oauth_redirect_uri'));
-    $this->client->addScope([GoogleSheets::SPREADSHEETS, GoogleDrive::DRIVE_FILE]);
-    $this->client->setAccessType('offline');
+  public function __construct(GoogleClientFactory $clientFactory) {
+    $this->client = $clientFactory->create();
   }
 
   /**
