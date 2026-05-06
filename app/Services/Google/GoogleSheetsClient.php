@@ -52,23 +52,33 @@ class GoogleSheetsClient
       }
     }
 
-    $this->sheetsService = new GoogleSheets($this->client);
-    $this->driveService = new GoogleDrive($this->client);
+    $this->setSheetService();
+    $this->setDriveService();
   }
 
   public function getSheetsService(): GoogleSheets
   {
-    return $this->sheetsService;
+    return $this->sheetsService ?? $this->setSheetService();
   }
 
   public function getDriveService(): GoogleDrive
   {
-    return $this->driveService;
+    return $this->driveService ?? $this->setDriveService();
   }
 
   public function getClient(): GoogleClient
   {
     return $this->client;
+  }
+
+  private function setSheetService(): void
+  {
+    $this->sheetsService = new GoogleSheets($this->client);
+  }
+
+  private function setDriveService(): void
+  {
+    $this->driveService = new GoogleDrive($this->client);
   }
 
   /**
