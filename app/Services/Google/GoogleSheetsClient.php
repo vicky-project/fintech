@@ -58,12 +58,18 @@ class GoogleSheetsClient
 
   public function getSheetsService(): GoogleSheets
   {
-    return $this->sheetsService ?? $this->setSheetService();
+    if (!$this->sheetsService) {
+      $this->setSheetService();
+    }
+    return $this->sheetsService;
   }
 
   public function getDriveService(): GoogleDrive
   {
-    return $this->driveService ?? $this->setDriveService();
+    if (!$this->driveService) {
+      $this->setDriveService();
+    }
+    return $this->driveService;
   }
 
   public function getClient(): GoogleClient
