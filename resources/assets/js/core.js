@@ -183,20 +183,21 @@ const Core = (() => {
     getEl('pinLockedInfo').classList.add('d-none');
     form.reset();
 
+    // 🔽 Cek apakah masih dalam masa lockout
     if (state.lockedUntil && new Date(state.lockedUntil) > new Date()) {
+      // Tampilkan timer & disable input
       showLockoutTimer(state.lockedUntil);
     } else {
       pinInput.disabled = false;
       submitBtn.disabled = false;
       state.lockedUntil = null;
+      // Fokus ke input setelah modal muncul (hanya jika tidak terkunci)
+      modalEl.addEventListener('shown.bs.modal', () => {
+        setTimeout(() => pinInput.focus(), 150);
+      }, {
+        once: true
+      });
     }
-
-    modalEl.addEventListener('shown.bs.modal', () => {
-      setTimeout(() => pinInput.focus(),
-        150);
-    }, {
-      once: true
-    });
 
     pinInput.addEventListener('input', () => {
       if (pinInput.value.length === 6) submitPin(callback);
@@ -262,13 +263,14 @@ const Core = (() => {
     const lockedEl = getEl('pinLockedInfo');
     lockedEl.classList.remove('d-none');
 
-    const pinInput = getEl('pinInput')
+    const pinInput = getEl('pinInput');
     const submitBtn = document.querySelector('#pinForm button[type="submit"]');
 
     pinInput.disabled = true;
     if (submitBtn) submitBtn.disabled = true;
 
     state.lockedUntil = lockedUntil;
+
     const timer = setInterval(() => {
       const now = new Date();
       const lock = new Date(lockedUntil);
@@ -283,8 +285,6 @@ const Core = (() => {
         const minutes = Math.floor(diff / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
         lockedEl.textContent = `Akun terkunci. Silakan coba lagi dalam ${minutes}:${seconds.toString().padStart(2, '0')}`;
-        pinInput.disabled = true;
-        if (submitBtn) submitBtn.disabled = true;
       }
     },
       1000);
