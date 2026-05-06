@@ -239,7 +239,6 @@ const Core = (() => {
         bootstrap.Modal.getInstance(getEl('pinModal')).hide();
         callback(true);
       } else {
-        // Fallback jika server mengembalikan success:false tanpa HTTP error
         getEl('pinError').textContent = res.message;
         getEl('pinError').classList.remove('d-none');
         pinInput.value = '';
@@ -247,10 +246,10 @@ const Core = (() => {
         if (res.locked_until) {
           state.lockedUntil = res.locked_until;
           showLockoutTimer(res.locked_until);
+          return; // ← hentikan eksekusi, tombol tetap disabled
         }
       }
     } catch (error) {
-      // ⭐ Error dari server (PIN salah, terkunci) masuk ke sini
       const data = error.data;
       if (data) {
         getEl('pinError').textContent = data.message || 'PIN salah.';
@@ -258,6 +257,7 @@ const Core = (() => {
         if (data.locked_until) {
           state.lockedUntil = data.locked_until;
           showLockoutTimer(data.locked_until);
+          return; // ← hentikan eksekusi
         }
       } else {
         getEl('pinError').textContent = error.message || 'Terjadi kesalahan.';
@@ -266,8 +266,11 @@ const Core = (() => {
       pinInput.value = '';
       pinInput.focus();
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
+      // Kembalikan tombol hanya jika TIDAK sedang terkunci
+      if (!state.lockedUntil) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
     }
   }
 
