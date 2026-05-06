@@ -30,9 +30,6 @@ class SyncTransactionToSheetJob implements ShouldQueue
 
     // 2. Cek preferensi auto‑sync
     $prefs = $setting->preferences ?? [];
-    \Log::debug("Preferences user", [
-      'pref' => $prefs
-    ]);
     if (empty($prefs['auto_sync_google'])) return;
 
     // 3. Cek apakah Google sudah terhubung
