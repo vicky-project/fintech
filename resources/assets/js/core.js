@@ -36,6 +36,7 @@ const Core = (() => {
     pinVerifiedAt: null,
     sessionTimeout: 3 * 60 * 1000,
     sessionTimer: null,
+    lockoutTimer: null,
     isPinModalShowing: false,
     lockedUntil: null,
     budgets: [],
@@ -275,6 +276,8 @@ const Core = (() => {
   }
 
   function showLockoutTimer(lockedUntil) {
+    if (state.lockoutTimer) clearInterval(lockoutTimer);
+
     const lockedEl = getEl('pinLockedInfo');
     lockedEl.classList.remove('d-none');
 
@@ -290,12 +293,12 @@ const Core = (() => {
 
     state.lockedUntil = lockedUntil;
 
-    const timer = setInterval(() => {
+    state.lockoutTimer = setInterval(() => {
       const now = new Date();
       const lock = new Date(lockedUntil);
       const diff = Math.max(0, lock - now);
       if (diff <= 0) {
-        clearInterval(timer);
+        clearInterval(lockoutTimer);
         lockedEl.classList.add('d-none');
         pinInput.disabled = false;
         if (submitBtn) {
