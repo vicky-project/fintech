@@ -14,6 +14,7 @@ use Modules\FinTech\Services\Parsers\MandiriExcelParser;
 use Modules\FinTech\Services\Parsers\MandiriCsvParser;
 use Modules\FinTech\Services\Parsers\BniPdfParser;
 use Modules\FinTech\Services\Parsers\BriPdfParser;
+use Modules\FinTech\Services\Google\GoogleClientFactory;
 use Modules\FinTech\Services\Google\GoogleSheetsClient;
 use Modules\FinTech\Services\Google\Writers;
 
@@ -49,8 +50,9 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->register(RouteServiceProvider::class);
 
     $this->app->singleton(GoogleSheetsClient::class, function($app) {
-      return new GoogleSheetsClient();
+      return new GoogleSheetsClient($this->app->make(GoogleClientFactory::class));
     });
+    $this->app->singleton(GoogleClientFactory::class);
 
     $this->app->singleton(Writers\ValueWriter::class);
     $this->app->singleton(Writers\BorderApplier::class);

@@ -15,13 +15,8 @@ class GoogleSheetsClient
   protected GoogleSheets $sheetsService;
   protected GoogleDrive $driveService;
 
-  public function __construct() {
-    $this->client = new GoogleClient();
-    $this->client->setClientId(config('fintech.google.oauth_client_id'));
-    $this->client->setClientSecret(config('fintech.google.oauth_client_secret'));
-    $this->client->setRedirectUri(config('fintech.google.oauth_redirect_uri'));
-    $this->client->addScope([GoogleSheets::SPREADSHEETS, GoogleDrive::DRIVE_FILE]);
-    $this->client->setAccessType('offline');
+  public function __construct(GoogleClientFactory $clientFactory) {
+    $this->client = $clientFactory->create();
   }
 
   /**
@@ -46,7 +41,16 @@ class GoogleSheetsClient
       if ($this->client->getRefreshToken()) {
         $newToken = $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
         if (!isset($newToken['error'])) {
-          $this->saveToken($setting, $newToken);
+          // Simpan token baru langsung ke database
+          $setting->google_access_token = $newToken['access_token'];
+          if (isset($newToken['refresh_token'])) {
+            $setting->google_refresh_token = $newToken['refresh_token'];
+          }
+          if (isset($newToken['expires_in'])) {
+            $setting->google_token_expires_at = now()->addSeconds($newToken['expires_in']);
+          }
+          $setting->save();
+
           $this->client->setAccessToken($newToken);
         }
       }
@@ -95,17 +99,5 @@ class GoogleSheetsClient
         }
       }
     }
-  }
-
-  protected function saveToken(UserSetting $setting, array $token): void
-  {
-    $setting->google_access_token = $token['access_token'];
-    if (isset($token['refresh_token'])) {
-      $setting->google_refresh_token = $token['refresh_token'];
-    }
-    if (isset($token['expires_in'])) {
-      $setting->google_token_expires_at = now()->addSeconds($token['expires_in']);
-    }
-    $setting->save();
   }
 }
