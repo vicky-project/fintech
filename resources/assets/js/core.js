@@ -253,6 +253,10 @@ const Core = (() => {
       pinInput.value = "";
       pinInput.focus();
       tgApp.showToast(error.message, 'danger');
+      if (res.locked_until) {
+        state.lockedUntil = res.locked_until;
+        showLockoutTimer(res.locked_until);
+      }
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;
