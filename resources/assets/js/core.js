@@ -712,6 +712,7 @@ const Core = (() => {
     loadTransfersPage,
     loadStatements,
     loadBudgets,
+    loadZakatTax,
 
     // Badge
     updateNotificationBadge,
