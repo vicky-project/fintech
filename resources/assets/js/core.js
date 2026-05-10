@@ -48,6 +48,7 @@ const Core = (() => {
     pendingAction: null,
     currentFilteredCategories: [],
     googlePollInterval: null,
+    zakats: null
   };
 
   // ========== PRIVATE HELPERS ==========
@@ -419,6 +420,11 @@ const Core = (() => {
   async function loadBudgets() {
     const res = await api.get('/api/fintech/budgets');
     state.budgets = res.data || [];
+  }
+
+  async function loadZakatTax() {
+    const res = await Core.api.get('/api/fintech/zakat-tax');
+    state.zakats = res.data || null;
   }
 
   // ========== NOTIFICATION BADGE ==========

@@ -2798,6 +2798,114 @@ async function checkGoogleConnection() {
   }
 }
 
+async function renderZakatTaxPage() {
+  const container = document.getElementById('main-content');
+  container.innerHTML = `
+  <div class="container py-3">
+  <div class="d-flex align-items-center mb-3">
+  <i class="bi bi-calculator-fill fs-3 me-2 text-success"></i>
+  <h5 class="mb-0">Zakat & Pajak Penghasilan</h5>
+  </div>
+  <div id="dashboard-content"></div>
+  </div>
+  `;
+
+
+  loadZakatTax();
+}
+
+async function loadZakatTax() {
+  tgApp.showLoading('Memuat data zakat dan pajak...')
+  try {
+    await Core.loadZakatTax();
+    if (state.zakats) {
+      renderZakatTaxDashboard(state.zakats);
+    } else {
+      tgApp.showToast('Gagal mengambil data zakat dan pajak.');
+    }
+  } catch(error) {
+    tgApp.showToast(error.message || 'Server error', 'danger');
+    const dashboardZakat = document.getElementById('dashboard-content');
+    dashboardZakat.innerHTML = `
+    <div class="alert alert-danger">${Core.escapeHtml(error.message)}</div>
+    <button class="btn btn-outline-primary mt-2" onclick="renderZakatTaxPage()">Coba Lagi</button>
+    `;
+  } finally {
+    tgApp.hideLoading();
+  }
+}
+
+function renderZakatTaxDashboard(data) {
+  const currency = Core.state.userSettings?.default_currency || 'IDR';
+  const symbol = Core.getCurrencySymbol(currency);
+
+  const wealth = data.total_wealth;
+  const yearlyIncome = data.yearly_income;
+  const goldPrice = data.gold_price_per_gram;
+  const nisab = data.nisab;
+  const zakatMal = data.zakat_mal;
+  const zakatIncome = data.zakat_income;
+  const incomeTax = data.income_tax;
+
+  const formattedWealth = Core.formatNumber(wealth);
+  const formattedIncome = Core.formatNumber(yearlyIncome);
+  const formattedGold = Core.formatNumber(goldPrice);
+  const formattedNisab = Core.formatNumber(nisab);
+
+  let zakatMalHtml = (zakatMal.eligible)
+  ? `<div class="alert alert-success"><strong>Harta Anda telah mencapai nisab.</strong><br>Zakat Mal: <strong>${symbol} ${Core.formatNumber(zakatMal.amount)}</strong> (2.5%)</div>`: `<div class="alert alert-info">Harta Anda saat ini <strong>belum mencapai nisab</strong> (Rp ${formattedNisab}). Belum wajib zakat mal.</div>`;
+
+  let zakatIncomeHtml = (zakatIncome.eligible)
+  ? `<div class="alert alert-warning"><strong>Penghasilan tahunan telah mencapai nisab.</strong><br>Zakat Penghasilan: <strong>${symbol} ${Core.formatNumber(zakatIncome.amount)}</strong> (2.5%)</div>`: `<div class="alert alert-secondary">Penghasilan tahunan belum mencapai nisab (Rp ${formattedNisab}). Belum wajib zakat penghasilan.</div>`;
+
+  let taxHtml = (incomeTax.tax > 0)
+  ? `<div class="alert alert-light border"><strong>Perkiraan PPh Orang Pribadi:</strong> ${symbol} ${Core.formatNumber(incomeTax.tax)}<br><small>PKP: ${symbol} ${Core.formatNumber(incomeTax.pkp)} (PTKP: ${symbol} ${Core.formatNumber(incomeTax.ptkp)})</small></div>`: `<div class="alert alert-secondary">Penghasilan Anda di bawah PTKP (${symbol} ${Core.formatNumber(incomeTax.ptkp)}). Belum memiliki kewajiban PPh.</div>`;
+
+  const html = `
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <h6 class="fw-bold"><i class="bi bi-wallet2 me-2"></i>Total Kekayaan Anda</h6>
+  <p class="fs-4 fw-bold text-primary">${symbol} ${formattedWealth}</p>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <h6 class="fw-bold"><i class="bi bi-arrow-up-circle-fill me-2 text-success"></i>Total Pemasukan (Tahunan)</h6>
+  <p class="fs-4 fw-bold text-success">${symbol} ${formattedIncome}</p>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <div class="row text-center">
+  <div class="col-6">
+  <div class="text-muted small">Harga Emas / gram</div>
+  <h5 class="text-primary">${symbol} ${formattedGold}</h5>
+  </div>
+  <div class="col-6">
+  <div class="text-muted small">Nisab Zakat (85 gram)</div>
+  <h5 class="text-success">${symbol} ${formattedNisab}</h5>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-gem me-2 text-warning"></i>Zakat Mal</h6></div>
+  <div class="card-body">${zakatMalHtml}</div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-briefcase-fill me-2 text-info"></i>Zakat Penghasilan</h6></div>
+  <div class="card-body">${zakatIncomeHtml}</div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (Simulasi)</h6></div>
+  <div class="card-body">${taxHtml}</div>
+  </div>
+  `;
+
+  const contentDiv = document.getElementById('dashboard-content');
+  contentDiv.innerHTML = html;
+}
+
 // ==================== DAFTAR HALAMAN ====================
 Core.setPages({
   home: renderHomePage,
@@ -2814,4 +2922,5 @@ Core.setPages({
   transactionTrash: renderTransactionTrash,
   transferTrash: renderTransferTrash,
   export: renderExportPage,
+  zakatTax: renderZakatTaxPage
 });

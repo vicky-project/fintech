@@ -18,7 +18,8 @@ use Modules\FinTech\Http\Controllers\Api\ {
   StatementController,
   TransactionController,
   TransferController,
-  WalletController
+  WalletController,
+  ZakatController
 };
 
 /*
@@ -37,6 +38,8 @@ Route::middleware(['auth:sanctum', 'pin.session'])->prefix('fintech')->name('fin
 
   // ==================== CURRENCIES ====================
   Route::get('currencies', [CurrencyController::class, 'index'])->name('currencies.index');
+
+  Route::get('zakat-tax', [ZakatController::class, 'getDashboard']);
 
   Route::post('backup/send', [BackupController::class, 'send']);
   Route::post('backup/restore', [BackupController::class, 'upload'])->middleware('pin.session');
