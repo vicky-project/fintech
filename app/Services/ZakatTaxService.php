@@ -158,7 +158,7 @@ class ZakatTaxService
           'sembol' => 'all',
         ]);
       if (!$response->successful()) {
-        Log::error('GenelPara API error: ' . $response->status());
+        Log::error('GenelPara API error: ' . $response->status() . ' body: '. $response->body());
         return null;
       }
       $data = $response->json();
