@@ -33,7 +33,7 @@ class ZakatTaxService
   /**
   * Get dashboard data for Zakat & Pajak (per user)
   */
-  public function getDashboardData(int $user): array
+  public function getDashboardData($user): array
   {
     return $this->rememberForUser($user->id, 'zakat_tax_dashboard', $this->cacheTtl, function () use ($user) {
       // Ambil total kekayaan dari semua dompet user
@@ -44,7 +44,7 @@ class ZakatTaxService
       // Kita tidak punya method langsung di TransactionService, jadi perlu query atau buat method baru.
       // Untuk efisiensi, kita query langsung (tapi perhatikan hak akses user).
       $yearlyIncome = \Modules\FinTech\Models\Transaction::income()
-      ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
+      ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
       ->whereYear('transaction_date', Carbon::now()->year)
       ->sum(\DB::raw('amount / 100'));
 
