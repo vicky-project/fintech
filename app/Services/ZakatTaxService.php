@@ -79,7 +79,7 @@ class ZakatTaxService
   */
   public function clearUserCache(int $userId): void
   {
-    parent::clearUserCache($userId);
+    $this->clearUserCache($userId);
     Cache::forget('gold_price_nisab_data');
   }
 
