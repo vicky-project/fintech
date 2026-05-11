@@ -396,6 +396,7 @@ overlay.innerHTML = `<div class="text-center"><div class="spinner-border text-pr
 
 // 1. Load pengaturan user
 await Core.loadUserSettings();
+await Core.loadMaritalStatuses();
 
 // 2. Cek PIN jika diperlukan
 const pinOk = await Core.checkPinRequired();

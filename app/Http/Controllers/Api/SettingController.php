@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Modules\FinTech\Enums\MaritalStatus;
 use Modules\FinTech\Models;
 use Modules\FinTech\Http\Requests\UserSettingsRequest;
 use Modules\Telegram\Models\TelegramUser;
@@ -26,6 +27,19 @@ class SettingController extends Controller
       'success' => true,
       'data' => $settings
     ]);
+  }
+
+
+  public function getMaritalStatuses() {
+    $statuses = [];
+    foreach (MaritalStatus::cases() as $case) {
+      $statuses[] = [
+        'value' => $case->value,
+        'label' => $case->label(),
+        'base_ptkp' => $case->basePTKP(),
+      ];
+    }
+    return response()->json(['success' => true, 'data' => $statuses]);
   }
 
   public function update(UserSettingsRequest $request): JsonResponse

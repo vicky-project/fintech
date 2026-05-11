@@ -1121,10 +1121,11 @@ async function renderSettingsPage() {
   <div class="row g-3">
   <div class="col-md-6">
   <select class="form-select" name="marital_status" id="marital-status">
-  <option value="single" ${settings.marital_status === 'single' ? 'selected': ''}>Belum Kawin (TK/0)</option>
-  <option value="married" ${settings.marital_status === 'married' ? 'selected': ''}>Kawin (K/0)</option>
-  <option value="divorced" ${settings.marital_status === 'divorced' ? 'selected': ''}>Cerai (TK/0)</option>
-  <option value="widowed" ${settings.marital_status === 'widowed' ? 'selected': ''}>Janda/Duda (TK/0)</option>
+  ${Core.state.maritalStatuses.map(status => `
+    <option value="${status.value}" ${settings.marital_status === status.value ? 'selected': ''}>
+    ${status.label}
+    </option>
+    `).join('')}
   </select>
   <div class="small text-muted mt-1">Status perkawinan untuk perhitungan PTKP (Pajak Penghasilan)</div>
   </div>

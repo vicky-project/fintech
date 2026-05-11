@@ -25,6 +25,7 @@ const Core = (() => {
       home: null, report: null, category: null
     },
     userSettings: null,
+    maritalStatuses: [],
     reportFilter: {
       wallet_id: '', periodType: 'all_years', date: null, month: null, year: null
     },
@@ -422,8 +423,43 @@ const Core = (() => {
     state.budgets = res.data || [];
   }
 
+  // Fungsi untuk memuat daftar status perkawinan
+  async function loadMaritalStatuses() {
+    if (state.maritalStatuses) return;
+
+    try {
+      const res = await api.get('/api/fintech/marital-statuses');
+      if (res.success) {
+        state.maritalStatuses = res.data;
+      }
+    } catch (err) {
+      console.error('Gagal memuat daftar status perkawinan', err);
+      // fallback hardcode jika perlu
+      state.maritalStatuses = [{
+        value: 'single',
+        label: 'Belum Kawin (TK/0)',
+        base_ptkp: 54000000
+      },
+        {
+          value: 'married',
+          label: 'Kawin (K/0)',
+          base_ptkp: 58500000
+        },
+        {
+          value: 'divorced',
+          label: 'Cerai (TK/0)',
+          base_ptkp: 54000000
+        },
+        {
+          value: 'widowed',
+          label: 'Janda/Duda (TK/0)',
+          base_ptkp: 54000000
+        }];
+    }
+  }
+
   async function loadZakatTax() {
-    const res = await Core.api.get('/api/fintech/zakat-tax');
+    const res = await api.get('/api/fintech/zakat-tax');
     state.zakats = res.data || null;
   }
 
@@ -599,6 +635,7 @@ const Core = (() => {
       category: null
     };
     state.userSettings = null;
+    state.maritalStatuses = [];
     state.reportFilter = {
       wallet_id: '',
       periodType: 'all_years',
@@ -712,6 +749,7 @@ const Core = (() => {
     loadTransfersPage,
     loadStatements,
     loadBudgets,
+    loadMaritalStatuses,
     loadZakatTax,
 
     // Badge
