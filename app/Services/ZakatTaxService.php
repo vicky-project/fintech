@@ -139,7 +139,7 @@ class ZakatTaxService
   * PPh orang pribadi – tarif progresif Pasal 17
   * Menggunakan PTKP dinamis berdasarkan status dan tanggungan.
   */
-  private function calculateIncomeTax(float $yearlyIncome, string $maritalStatus, int $dependents): array
+  private function calculateIncomeTax(float $yearlyIncome, MaritalStatus $maritalStatus, int $dependents): array
   {
     $ptkp = $this->getPTKP($maritalStatus, $dependents);
     $pkp = max(0, $yearlyIncome - $ptkp);
