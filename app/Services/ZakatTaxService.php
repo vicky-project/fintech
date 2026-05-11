@@ -18,7 +18,7 @@ class ZakatTaxService
   protected WalletService $walletService;
   protected TransactionService $transactionService;
   protected CurrencyConverter $converter;
-  protected int $cacheTtl = 3600; // 5 menit, bisa ubah jadi 3600 untuk 1 jam
+  protected int $cacheTtl = 300; // 5 menit, bisa ubah jadi 3600 untuk 1 jam
 
   public function __construct(
     WalletService $walletService,
