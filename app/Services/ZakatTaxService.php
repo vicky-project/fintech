@@ -201,7 +201,6 @@ class ZakatTaxService
   {
     return [
       'zakat_tax_dashboard',
-      'gold_price_nisab_data'
     ];
   }
 }
