@@ -37,7 +37,9 @@ class SettingController extends Controller
       'default_currency',
       'default_wallet_id',
       'pin_enabled',
-      'pin'
+      'pin',
+      'marital_status',
+      'dependents'
     ];
 
     $preferencesInput = [];

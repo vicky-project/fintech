@@ -2,6 +2,7 @@
 
 namespace Modules\FinTech\Services;
 
+use Modules\FinTech\Models\UserSetting;
 use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Services\TransactionService;
 use Modules\FinTech\Services\CurrencyConverter;
@@ -36,6 +37,11 @@ class ZakatTaxService
   public function getDashboardData($user): array
   {
     return $this->rememberForUser($user->id, 'zakat_tax_dashboard', $this->cacheTtl, function () use ($user) {
+      $userSettings = UserSetting::where('user_id', $user->id)->first();
+      if (!$userSettings) {
+        throw new \Exception("User not found.");
+      }
+
       // Ambil total kekayaan dari semua dompet user
       $wallets = $this->walletService->getUserWallets($user);
       $totalWealth = collect($wallets)->sum('balance');
@@ -46,6 +52,10 @@ class ZakatTaxService
       ->whereYear('transaction_date', Carbon::now()->year)
       ->sum(\DB::raw('amount / 100'));
 
+      // Ambil data marital_status dan dependents dari user setting
+      $maritalStatus = $userSettings->marital_status ?? 'single';
+      $dependents = $userSettings->dependents ?? 0;
+
       // Ambil harga emas & nisab dari API Apised
       $goldData = $this->getGoldPriceAndNisab();
       $pricePerGram = $goldData['price_per_gram'];
@@ -54,13 +64,17 @@ class ZakatTaxService
       // Hitung zakat mal
       $zakatMal = $this->calculateZakatMal($totalWealth, $nisab);
       $zakatIncome = $this->calculateZakatIncome($yearlyIncome, $nisab);
-      $incomeTax = $this->calculateIncomeTax($yearlyIncome);
+      $incomeTax = $this->calculateIncomeTax($yearlyIncome, $maritalStatus, $dependents);
 
       return [
         'total_wealth' => (float) $totalWealth,
         'yearly_income' => (float) $yearlyIncome,
         'gold_price_per_gram' => $pricePerGram,
         'nisab' => $nisab,
+        'marital_status' => $maritalStatus,
+        // opsional untuk frontend
+        'dependents' => $dependents,
+        // opsional untuk frontend
         'zakat_mal' => $zakatMal,
         'zakat_income' => $zakatIncome,
         'income_tax' => $incomeTax,
@@ -72,32 +86,61 @@ class ZakatTaxService
   // Private helpers
   // -------------------------------------------------------------------------
 
-  private function calculateZakatMal(float $totalWealth, float $nisab): array
+  private function calculateZakatMal(float $totalWealth,
+    float $nisab): array
   {
     $eligible = $totalWealth >= $nisab;
     $amount = $eligible ? $totalWealth * 0.025 : 0;
     return [
       'eligible' => $eligible,
-      'amount' => round($amount, 2),
+      'amount' => round($amount,
+        2),
     ];
   }
 
-  private function calculateZakatIncome(float $yearlyIncome, float $nisab): array
+  private function calculateZakatIncome(float $yearlyIncome,
+    float $nisab): array
   {
     $eligible = $yearlyIncome >= $nisab;
     $amount = $eligible ? $yearlyIncome * 0.025 : 0;
     return [
       'eligible' => $eligible,
-      'amount' => round($amount, 2),
+      'amount' => round($amount,
+        2),
     ];
   }
 
   /**
-  * PPh orang pribadi – tarif progresif Pasal 17, PTKP TK/0 = 54.000.000 (2025)
+  * Hitung PTKP berdasarkan status perkawinan dan jumlah tanggungan (anak)
+  * Aturan PTKP 2025 (berlaku untuk tahun pajak 2025):
+  * - TK/0 : Rp 54.000.000
+  * - K/0  : Rp 58.500.000 (Kawin, tanpa tanggungan)
+  * - K/1  : Rp 63.000.000 (Kawin + 1 tanggungan)
+  * - K/2  : Rp 67.500.000 (Kawin + 2 tanggungan)
+  * - K/3  : Rp 72.000.000 (Kawin + 3 tanggungan)
+  * Untuk status cerai/janda/duda, perhitungan sama dengan TK/0.
   */
-  private function calculateIncomeTax(float $yearlyIncome): array
+  private function getPTKP(string $maritalStatus,
+    int $dependents): float
   {
-    $ptkp = 54000000;
+    $base = 54000000; // TK/0
+
+    if ($maritalStatus === 'married') {
+      $base = 58500000; // K/0
+    }
+
+    // Tanggungan maksimal 3 orang (anak)
+    $additional = min($dependents, 3) * 4500000;
+    return $base + $additional;
+  }
+
+  /**
+  * PPh orang pribadi – tarif progresif Pasal 17
+  * Menggunakan PTKP dinamis berdasarkan status dan tanggungan.
+  */
+  private function calculateIncomeTax(float $yearlyIncome, string $maritalStatus, int $dependents): array
+  {
+    $ptkp = $this->getPTKP($maritalStatus, $dependents);
     $pkp = max(0, $yearlyIncome - $ptkp);
     $tax = 0;
 
@@ -125,7 +168,6 @@ class ZakatTaxService
     return Cache::remember('gold_price_nisab_data', 3600, function () {
       $pricePerGram = $this->fetchPricePerGramFromApised();
       if (!$pricePerGram) {
-        // Fallback: coba ambil dari cache lama jika ada atau dari data terakhir
         throw new \Exception('Gagal mengambil harga emas dari API Apised');
       }
       return [
@@ -154,9 +196,7 @@ class ZakatTaxService
 
     try {
       $response = Http::timeout(10)
-      ->withHeaders([
-        'x-api-key' => $apiKey,
-      ])
+      ->withHeaders(['x-api-key' => $apiKey])
       ->get($baseUrl . '/v1/latest', [
         'metals' => 'XAU',
         'base_currency' => 'USD',
@@ -170,8 +210,6 @@ class ZakatTaxService
       }
 
       $data = $response->json();
-      // Response structure:
-      // { "status":"success", "data": { "metal_prices": { "XAU": { "price": ... } }, "currency_rates": { "IDR": ... } } }
       $metalPrices = $data['data']['metal_prices']['XAU'] ?? null;
       $currencyRates = $data['data']['currency_rates'] ?? null;
 
@@ -180,7 +218,7 @@ class ZakatTaxService
         return null;
       }
 
-      $priceInBaseCurrency = (float) $metalPrices['price']; // dalam USD karena base_currency=USD
+      $priceInBaseCurrency = (float) $metalPrices['price']; // dalam USD
       $rateToIdr = (float) ($currencyRates['IDR'] ?? 0);
 
       if ($rateToIdr <= 0) {

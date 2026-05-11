@@ -5,6 +5,7 @@ namespace Modules\FinTech\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\FinTech\Models\UserSetting;
+use Modules\FinTech\Enums\MaritalStatus;
 
 class UserSettingsRequest extends FormRequest
 {
@@ -49,6 +50,9 @@ class UserSettingsRequest extends FormRequest
             $fail("PIN wajib diisi jika diaktifkan");
           }
         }],
+      'marital_status' => ['nullable',
+        Rule::enum(MaritalStatus::class)],
+      'dependents' => 'nullable|integer|min:0|max:10',
       'notification_telegram' => 'sometimes|boolean',
       'auto_sync_google' => 'sometimes|boolean',
     ];

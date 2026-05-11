@@ -1078,8 +1078,14 @@ async function renderSettingsPage() {
   const settings = Core.state.userSettings || {
     default_currency: 'IDR',
     default_wallet_id: '',
-    pin_enabled: false
+    pin_enabled: false,
+    marital_status: 'single',
+    dependents: 0
   };
+
+  // Pastikan properti marital_status dan dependents ada
+  if (!settings.marital_status) settings.marital_status = 'single';
+  if (settings.dependents === undefined) settings.dependents = 0;
 
   const html = `
   <div class="container py-3">
@@ -1107,6 +1113,26 @@ async function renderSettingsPage() {
   <option value="">Tidak Ada</option>
   ${Core.state.wallets.length > 0 ? Core.state.wallets.map(w => `<option value="${w.id}">${w.name} (${w.currency?.symbol || ''})</option>`).join(''): ''}
   </select>
+  </div>
+
+  <!-- Data Perpajakan & Zakat -->
+  <div class="mb-4">
+  <label class="form-label fw-semibold">Data Perpajakan & Zakat</label>
+  <div class="row g-3">
+  <div class="col-md-6">
+  <select class="form-select" name="marital_status" id="marital-status">
+  <option value="single" ${settings.marital_status === 'single' ? 'selected': ''}>Belum Kawin (TK/0)</option>
+  <option value="married" ${settings.marital_status === 'married' ? 'selected': ''}>Kawin (K/0)</option>
+  <option value="divorced" ${settings.marital_status === 'divorced' ? 'selected': ''}>Cerai (TK/0)</option>
+  <option value="widowed" ${settings.marital_status === 'widowed' ? 'selected': ''}>Janda/Duda (TK/0)</option>
+  </select>
+  <div class="small text-muted mt-1">Status perkawinan untuk perhitungan PTKP (Pajak Penghasilan)</div>
+  </div>
+  <div class="col-md-6">
+  <input type="number" class="form-control" name="dependents" id="dependents" min="0" max="10" value="${settings.dependents}">
+  <div class="small text-muted mt-1">Jumlah tanggungan (anak kandung/tiri yang sah, maksimal 3)</div>
+  </div>
+  </div>
   </div>
 
   <hr>
@@ -2798,6 +2824,7 @@ async function checkGoogleConnection() {
   }
 }
 
+// Zakat & Pajak
 async function renderZakatTaxPage() {
   const container = document.getElementById('main-content');
   container.innerHTML = `
