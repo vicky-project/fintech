@@ -151,9 +151,9 @@ class ZakatTaxService
   */
   private function fetchPricePerGramFromApised(): ?float
   {
-    $apiKey = config('services.apised.api_key',
+    $apiKey = config('fintech.apised.api_key',
       env('APISED_API_KEY'));
-    $baseUrl = config('services.apised.base_url',
+    $baseUrl = config('fintech.apised.base_url',
       'https://gold.g.apised.com');
 
     if (!$apiKey) {
