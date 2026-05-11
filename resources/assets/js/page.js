@@ -2818,8 +2818,8 @@ async function loadZakatTax() {
   tgApp.showLoading('Memuat data zakat dan pajak...')
   try {
     await Core.loadZakatTax();
-    if (state.zakats) {
-      renderZakatTaxDashboard(state.zakats);
+    if (Core.state.zakats) {
+      renderZakatTaxDashboard(Core.state.zakats);
     } else {
       tgApp.showToast('Gagal mengambil data zakat dan pajak.');
     }
@@ -2827,7 +2827,7 @@ async function loadZakatTax() {
     tgApp.showToast(error.message || 'Server error', 'danger');
     const dashboardZakat = document.getElementById('dashboard-content');
     dashboardZakat.innerHTML = `
-    <div class="alert alert-danger">${Core.escapeHtml(error.message)}</div>
+    <div class="alert alert-danger">${error.message}</div>
     <button class="btn btn-outline-primary mt-2" onclick="renderZakatTaxPage()">Coba Lagi</button>
     `;
   } finally {
