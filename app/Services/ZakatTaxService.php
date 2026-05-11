@@ -2,6 +2,7 @@
 
 namespace Modules\FinTech\Services;
 
+use Modules\FinTech\Enums\MaritalStatus;
 use Modules\FinTech\Models\UserSetting;
 use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Services\TransactionService;
@@ -125,7 +126,7 @@ class ZakatTaxService
   {
     $base = 54000000; // TK/0
 
-    if ($maritalStatus === 'married') {
+    if ($maritalStatus === MaritalStatus::MARRIED) {
       $base = 58500000; // K/0
     }
 
