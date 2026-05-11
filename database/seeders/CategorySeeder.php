@@ -916,22 +916,37 @@ class CategorySeeder extends Seeder
           'forex',
           'trading',
           'profit'],
-        'metadata' => ['tags' => ['pasif',
-          'modal']],
+        'metadata' => [
+          'tags' => [
+            'pasif',
+            'modal',
+            'exclude_for_income'
+          ]
+        ],
         'children' => [
           ['name' => 'Dividen',
             'icon' => 'bi-pie-chart',
             'color' => '#BA55D3',
             'keywords' => ['dividen',
               'dividend',
-              'pembagian laba']],
+              'pembagian laba'],
+            'metadata' => [
+              'tags' => ['exclude_for_income']
+            ]
+          ],
           ['name' => 'Bunga Deposito',
             'icon' => 'bi-bank',
             'color' => '#9ACD32',
             'keywords' => ['bunga',
               'deposito',
               'interest',
-              'tabungan']],
+              'tabungan'],
+            'metadata' => [
+              'tags' => [
+                'exclude_for_income'
+              ]
+            ]
+          ],
         ]
       ],
       [
@@ -956,8 +971,13 @@ class CategorySeeder extends Seeder
           'ngajar',
           'private',
           'tutor'],
-        'metadata' => ['tags' => ['freelance',
-          'tidak_tetap']],
+        'metadata' => [
+          'tags' => [
+            'freelance',
+            'tidak_tetap',
+            'exclude_for_income'
+          ]
+        ],
       ],
       [
         'name' => 'Hadiah & Transfer Masuk',
@@ -976,7 +996,12 @@ class CategorySeeder extends Seeder
           'pemberian',
           'angpao',
           'amplop'],
-        'metadata' => ['tags' => ['insidental']],
+        'metadata' => [
+          'tags' => [
+            'insidental',
+            'exclude_for_income'
+          ]
+        ],
         'children' => [
           ['name' => 'Transfer Masuk',
             'icon' => 'bi-arrow-left-circle',
@@ -996,7 +1021,13 @@ class CategorySeeder extends Seeder
               'refund tiket',
               'uang tiket refund',
               'uang kembali',
-              'kembalian']],
+              'kembalian'],
+            'metadata' => [
+              'tags' => [
+                'exclude_for_income'
+              ]
+            ]
+          ],
         ]
       ],
       [
@@ -1008,7 +1039,12 @@ class CategorySeeder extends Seeder
         'keywords' => ['lainnya',
           'other',
           'uncategorized income'],
-        'metadata' => ['tags' => ['tidak_terkategori']],
+        'metadata' => [
+          'tags' => [
+            'tidak_terkategori',
+            'exclude_for_income'
+          ]
+        ],
       ],
 
       // ========== BOTH ==========
@@ -1020,8 +1056,13 @@ class CategorySeeder extends Seeder
         // Teal
         'keywords' => ['transfer antar dompet',
           'internal transfer'],
-        'metadata' => ['tags' => ['transfer',
-          'internal']],
+        'metadata' => [
+          'tags' => [
+            'transfer',
+            'internal',
+            'exclude_for_income'
+          ]
+        ],
       ],
     ];
   }

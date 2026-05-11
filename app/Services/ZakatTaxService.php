@@ -50,6 +50,9 @@ class ZakatTaxService
       // Ambil total pendapatan tahun berjalan (hanya transaksi type 'income')
       $yearlyIncome = \Modules\FinTech\Models\Transaction::income()
       ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
+      ->whereHas('category', function($q) {
+        $q->whereJsonDoesntContain('metadata->tags', 'exclude_from_income');
+      })
       ->whereYear('transaction_date', Carbon::now()->year)
       ->sum(\DB::raw('amount / 100'));
 
