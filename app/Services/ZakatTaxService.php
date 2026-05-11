@@ -54,7 +54,7 @@ class ZakatTaxService
       ->sum(\DB::raw('amount / 100'));
 
       // Ambil data marital_status dan dependents dari user setting
-      $maritalStatus = $userSettings->marital_status ?? 'single';
+      $maritalStatus = $userSettings->marital_status ?? MaritalStatus::SINGLE;
       $dependents = $userSettings->dependents ?? 0;
 
       // Ambil harga emas & nisab dari API Apised
@@ -121,7 +121,7 @@ class ZakatTaxService
   * - K/3  : Rp 72.000.000 (Kawin + 3 tanggungan)
   * Untuk status cerai/janda/duda, perhitungan sama dengan TK/0.
   */
-  private function getPTKP(string $maritalStatus,
+  private function getPTKP(MaritalStatus $maritalStatus,
     int $dependents): float
   {
     $base = 54000000; // TK/0
