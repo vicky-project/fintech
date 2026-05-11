@@ -18,7 +18,7 @@ class ZakatTaxService
   protected WalletService $walletService;
   protected TransactionService $transactionService;
   protected CurrencyConverter $converter;
-  protected int $cacheTtl = 300; // 5 menit, bisa ubah jadi 3600 untuk 1 jam
+  protected int $cacheTtl = 3600; // 5 menit, bisa ubah jadi 3600 untuk 1 jam
 
   public function __construct(
     WalletService $walletService,
@@ -122,7 +122,7 @@ class ZakatTaxService
 
   private function getGoldPriceAndNisab(): array
   {
-    return Cache::remember('gold_price_nisab_data', $this->cacheTtl, function () {
+    return Cache::remember('gold_price_nisab_data', 3600, function () {
       $pricePerGram = $this->fetchPricePerGramFromApised();
       if (!$pricePerGram) {
         // Fallback: coba ambil dari cache lama jika ada atau dari data terakhir

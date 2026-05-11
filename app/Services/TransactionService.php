@@ -394,6 +394,7 @@ class TransactionService
     app(BudgetService::class)->clearUserCache($userId);
     app(NotificationService::class)->clearUserCache($userId);
     app(HomeService::class)->clearUserCache($userId);
+    app(ZakatTaxService::class)->clearUserCache($userId);
   }
 
   // ─── Trait Override (opsional) ──────────────────────
