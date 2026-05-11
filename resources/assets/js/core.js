@@ -425,7 +425,7 @@ const Core = (() => {
 
   // Fungsi untuk memuat daftar status perkawinan
   async function loadMaritalStatuses() {
-    if (state.maritalStatuses) return;
+    if (state.maritalStatuses.length > 0) return;
 
     try {
       const res = await api.get('/api/fintech/marital-statuses');
