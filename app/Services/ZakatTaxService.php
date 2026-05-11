@@ -68,15 +68,6 @@ class ZakatTaxService
     });
   }
 
-  /**
-  * Batalkan cache (misalnya setelah data berubah)
-  */
-  public function clearUserCache(int $userId): void
-  {
-    $this->clearUserCache($userId);
-    Cache::forget('gold_price_nisab_data');
-  }
-
   // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
@@ -210,6 +201,7 @@ class ZakatTaxService
   {
     return [
       'zakat_tax_dashboard',
+      'gold_price_nisab_data'
     ];
   }
 }
