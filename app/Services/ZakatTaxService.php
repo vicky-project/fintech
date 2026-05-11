@@ -219,7 +219,7 @@ class ZakatTaxService
         return null;
       }
 
-      $priceInBaseCurrency = (float) $metalPrices['price']; // dalam USD
+      $priceInBaseCurrency = (float) $metalPrices['price'];
       $rateToIdr = (float) ($currencyRates['IDR'] ?? 0);
 
       if ($rateToIdr <= 0) {
