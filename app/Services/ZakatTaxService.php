@@ -18,7 +18,7 @@ class ZakatTaxService
   protected WalletService $walletService;
   protected TransactionService $transactionService;
   protected CurrencyConverter $converter;
-  protected int $cacheTtl = 300; // 5 menit
+  protected int $cacheTtl = 300; // 5 menit, bisa ubah jadi 3600 untuk 1 jam
 
   public function __construct(
     WalletService $walletService,
@@ -41,25 +41,19 @@ class ZakatTaxService
       $totalWealth = collect($wallets)->sum('balance');
 
       // Ambil total pendapatan tahun berjalan (hanya transaksi type 'income')
-      // Kita tidak punya method langsung di TransactionService, jadi perlu query atau buat method baru.
-      // Untuk efisiensi, kita query langsung (tapi perhatikan hak akses user).
       $yearlyIncome = \Modules\FinTech\Models\Transaction::income()
       ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
       ->whereYear('transaction_date', Carbon::now()->year)
       ->sum(\DB::raw('amount / 100'));
 
-      // Ambil harga emas & nisab
+      // Ambil harga emas & nisab dari API Apised
       $goldData = $this->getGoldPriceAndNisab();
       $pricePerGram = $goldData['price_per_gram'];
       $nisab = $goldData['nisab'];
 
       // Hitung zakat mal
       $zakatMal = $this->calculateZakatMal($totalWealth, $nisab);
-
-      // Hitung zakat penghasilan
       $zakatIncome = $this->calculateZakatIncome($yearlyIncome, $nisab);
-
-      // Hitung Pajak Penghasilan (simulasi)
       $incomeTax = $this->calculateIncomeTax($yearlyIncome);
 
       return [
@@ -79,7 +73,7 @@ class ZakatTaxService
   */
   public function clearUserCache(int $userId): void
   {
-    $this->clearUserCache($userId);
+    parent::clearUserCache($userId);
     Cache::forget('gold_price_nisab_data');
   }
 
@@ -138,9 +132,10 @@ class ZakatTaxService
   private function getGoldPriceAndNisab(): array
   {
     return Cache::remember('gold_price_nisab_data', $this->cacheTtl, function () {
-      $pricePerGram = $this->fetchPricePerGram();
+      $pricePerGram = $this->fetchPricePerGramFromApised();
       if (!$pricePerGram) {
-        throw new \Exception('Gagal mengambil harga emas');
+        // Fallback: coba ambil dari cache lama jika ada atau dari data terakhir
+        throw new \Exception('Gagal mengambil harga emas dari API Apised');
       }
       return [
         'price_per_gram' => $pricePerGram,
@@ -149,31 +144,63 @@ class ZakatTaxService
     });
   }
 
-  private function fetchPricePerGram(): ?float
+  /**
+  * Mengambil harga emas per gram dalam IDR dari Apised API.
+  * Endpoint: /v1/latest?metals=XAU&base_currency=USD&currencies=IDR&weight_unit=gram
+  * Batas limit 100 request per bulan – diatasi dengan cache 5 menit.
+  */
+  private function fetchPricePerGramFromApised(): ?float
   {
+    $apiKey = config('services.apised.api_key',
+      env('APISED_API_KEY'));
+    $baseUrl = config('services.apised.base_url',
+      'https://gold.g.apised.com');
+
+    if (!$apiKey) {
+      Log::error('APISED_API_KEY tidak dikonfigurasi');
+      return null;
+    }
+
     try {
-      $response = Http::timeout(10)->get('https://api.genelpara.com/json/',
-        [
-          'list' => 'altin',
-          'sembol' => 'all',
-        ]);
+      $response = Http::timeout(10)
+      ->withHeaders([
+        'x-api-key' => $apiKey,
+      ])
+      ->get($baseUrl . '/v1/latest', [
+        'metals' => 'XAU',
+        'base_currency' => 'USD',
+        'currencies' => 'IDR',
+        'weight_unit' => 'gram',
+      ]);
+
       if (!$response->successful()) {
-        Log::error('GenelPara API error: ' . $response->status() . ' body: '. $response->json());
+        Log::error('Apised API error: ' . $response->status() . ' body: ' . $response->body());
         return null;
       }
+
       $data = $response->json();
-      $xauusd = $data['data']['XAUUSD']['satis'] ?? null;
-      if (!$xauusd) {
-        Log::error('Harga XAUUSD tidak ditemukan');
+      // Response structure:
+      // { "status":"success", "data": { "metal_prices": { "XAU": { "price": ... } }, "currency_rates": { "IDR": ... } } }
+      $metalPrices = $data['data']['metal_prices']['XAU'] ?? null;
+      $currencyRates = $data['data']['currency_rates'] ?? null;
+
+      if (!$metalPrices || !$currencyRates) {
+        Log::error('Apised response missing required fields');
         return null;
       }
-      // XAUUSD = harga per troy ounce (USD)
-      $pricePerOunceUSD = (float)$xauusd;
-      $pricePerGramUSD = $pricePerOunceUSD / 31.1034768;
-      // Konversi ke IDR
-      return $this->converter->convert($pricePerGramUSD, 'USD', 'IDR');
+
+      $priceInBaseCurrency = (float) $metalPrices['price']; // dalam USD karena base_currency=USD
+      $rateToIdr = (float) ($currencyRates['IDR'] ?? 0);
+
+      if ($rateToIdr <= 0) {
+        Log::error('Currency rate IDR tidak ditemukan');
+        return null;
+      }
+
+      $priceInIdr = $priceInBaseCurrency * $rateToIdr;
+      return round($priceInIdr, 2);
     } catch (\Exception $e) {
-      Log::error('Gagal fetch harga emas: ' . $e->getMessage());
+      Log::error('Gagal fetch harga emas dari Apised: ' . $e->getMessage());
       return null;
     }
   }
