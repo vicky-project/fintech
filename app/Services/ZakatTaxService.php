@@ -82,6 +82,7 @@ class ZakatTaxService
         'zakat_mal' => $zakatMal,
         'zakat_income' => $zakatIncome,
         'income_tax' => $incomeTax,
+        'historical_tax' => $this->getHistoricalTaxData($user),
         'year' => $year
       ];
     });
@@ -166,6 +167,63 @@ class ZakatTaxService
       'pkp' => round($pkp, 2),
       'tax' => round($tax, 2),
     ];
+  }
+
+  /**
+  * Hitung PPh hanya berdasarkan PKP (tanpa PTKP)
+  */
+  private function calculateTaxByPkp(float $pkp): float
+  {
+    $tax = 0;
+    if ($pkp <= 60000000) {
+      $tax = $pkp * 0.05;
+    } elseif ($pkp <= 250000000) {
+      $tax = 60000000 * 0.05 + ($pkp - 60000000) * 0.15;
+    } elseif ($pkp <= 500000000) {
+      $tax = 60000000 * 0.05 + 190000000 * 0.15 + ($pkp - 250000000) * 0.25;
+    } else {
+      $tax = 60000000 * 0.05 + 190000000 * 0.15 + 250000000 * 0.25 + ($pkp - 500000000) * 0.30;
+    }
+    return $tax;
+  }
+
+  /**
+  * Dapatkan data historis pajak per tahun (berdasarkan transaksi income)
+  */
+  public function getHistoricalTaxData($user): array
+  {
+    $excludedCategoryIds = Category::whereJsonContain('metadata->tags', "exclude_from_income")
+    ->pluck('id');
+
+    $yearlyIncomes = \Modules\FinTech\Models\Transaction::income()
+    ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
+    ->whereNotIn('category_id', $excludedCategoryIds)
+    ->selectRaw('YEAR(transaction_date) as year, SUM(amount/100) as total')
+    ->groupBy('year')
+    ->orderBy('year', 'desc')
+    ->get()
+    ->keyBy('year')
+    ->map(fn($item) => (float) $item->total);
+
+    $userSettings = UserSetting::where('user_id', $user->id)->first();
+    $maritalStatus = $userSetting->marital_status ?? MaritalStatus::SINGLE;
+    $dependents = $userSetting->dependents ?? 0;
+    $ptkp = $this->getPTKP($maritalStatus, $dependents);
+
+    $historical = [];
+    foreach ($yearlyIncomes as $year => $income) {
+      $pkp = max(0, $income - $ptkp);
+      $tax = $this->calculateTaxByPkp($pkp);
+      $historical[] = [
+        'year' => $year,
+        'income' => round($income, 2),
+        'ptkp' => $ptkp,
+        'pkp' => round($pkp, 2),
+        'tax' => round($tax, 2),
+      ];
+    }
+
+    return $historical;
   }
 
   private function getGoldPriceAndNisab(): array
