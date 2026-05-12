@@ -2896,7 +2896,7 @@ function renderZakatTaxDashboard(data) {
     </div>
     <div class="card-body p-0">
     <div class="table-responsive">
-    <table class="table table-sm table-striped mb-0">
+    <table class="table table-sm table-bordered mb-0">
     <thead>
     <tr>
     <th>Tahun</th>
