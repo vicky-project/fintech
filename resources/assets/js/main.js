@@ -365,25 +365,25 @@ async function handleGlobalClick(e) {
         case 'zakat-penghasilan':
           title = 'Zakat Penghasilan (Profesi)';
           body = `
-          <p><strong>Rumus:</strong> 2,5% × Total pemasukan tahun berjalan (kategori pendapatan)</p>
-          <p><strong>Syarat wajib:</strong> Total pemasukan tahunan ≥ nisab (85 gram emas).</p>
-          <p><strong>Penghasilan tahun ini:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.yearly_income)}<br>
-          <strong>Nisab:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.nisab)}</p>
-          <p><strong>Perhitungan:</strong> Zakat = 2,5% × total pemasukan (jika ≥ nisab).</p>
+          <p><strong class="fw-bold">Rumus:</strong> 2,5% × Total pemasukan tahun berjalan (kategori pendapatan)</p>
+          <p><strong class="fw-bold">Syarat wajib:</strong> Total pemasukan tahunan mencapai nisab (85 gram emas).</p>
+          <p><strong class="fw-bold">Penghasilan tahun ini:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.yearly_income)}<br>
+          <strong class="fw-bold">Nisab:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.nisab)}</p>
+          <p><strong class="fw-bold">Perhitungan:</strong> Zakat = 2,5% × total pemasukan (jika mencapai nisab).</p>
           <p class="small text-muted">Hanya transaksi dengan kategori pendapatan (seperti Gaji, Bonus, Investasi) yang dihitung. Kategori "Transfer Masuk" dan "Hadiah" tidak termasuk.</p>
           `;
           break;
         case 'pajak-penghasilan':
           title = 'Pajak Penghasilan (PPh)';
           body = `
-          <p><strong>Rumus:</strong> PPh = Tarif progresif × (Penghasilan Neto - PTKP)</p>
-          <p><strong>Penghasilan Bruto:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.yearly_income)}<br>
-          <strong>Biaya Jabatan (5% max 6jt):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.job_expense)}<br>
-          <strong>Penghasilan Neto:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.net_income)}<br>
-          <strong>PTKP (status, tanggungan):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.ptkp)}<br>
-          <strong>PKP (Penghasilan Kena Pajak):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.pkp)}</p>
-          <p><strong>Tarif Progresif:</strong> 5% (0-60jt), 15% (60-250jt), 25% (250-500jt), 30% (500jt-5M), 35% (>5M).</p>
-          <p><strong>Perhitungan PPh:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.tax)}</p>
+          <p><strong class="fw-bold">Rumus:</strong> PPh = Tarif progresif × (Penghasilan Neto - PTKP)</p>
+          <p><strong class="fw-bold">Penghasilan Bruto:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.yearly_income)}<br>
+          <strong class="fw-bold">Biaya Jabatan (5% max 6jt):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.job_expense)}<br>
+          <strong class="fw-bold">Penghasilan Neto:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.net_income)}<br>
+          <strong class="fw-bold">PTKP (status, tanggungan):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.ptkp)}<br>
+          <strong class="fw-bold">PKP (Penghasilan Kena Pajak):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.pkp)}</p>
+          <p><strong class="fw-bold">Tarif Progresif:</strong> 5% (0-60jt), 15% (60-250jt), 25% (250-500jt), 30% (500jt-5M), 35% (>5M).</p>
+          <p><strong class="fw-bold">Perhitungan PPh:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.tax)}</p>
           <p class="small text-muted">Perhitungan ini belum termasuk iuran pensiun, zakat, atau penghasilan istri. Untuk kewajiban resmi konsultasikan dengan akuntan.</p>
           `;
           break;
@@ -391,7 +391,7 @@ async function handleGlobalClick(e) {
           title = 'Riwayat Pajak per Tahun';
           body = `
           <p>Tabel ini menunjukkan estimasi PPh untuk setiap tahun berdasarkan data transaksi yang tercatat.</p>
-          <p><strong>Catatan:</strong> Asumsi PTKP dan tarif menggunakan aturan tahun berjalan. Untuk tahun-tahun sebelumnya, perhitungan ini bersifat edukatif karena nilai PTKP dan tarif bisa berbeda di masa lalu.</p>
+          <p><strong class="fw-bold">Catatan:</strong> Asumsi PTKP dan tarif menggunakan aturan tahun berjalan. Untuk tahun-tahun sebelumnya, perhitungan ini bersifat edukatif karena nilai PTKP dan tarif bisa berbeda di masa lalu.</p>
           <p class="small text-muted">Data hanya tersedia untuk tahun yang memiliki transaksi pemasukan kategori pendapatan.</p>
           `;
           break;

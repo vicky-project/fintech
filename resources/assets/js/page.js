@@ -2968,7 +2968,7 @@ function renderZakatTaxDashboard(data) {
   </div>
   <div class="card border-0 shadow-sm mb-3">
   <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-  <h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (Simulasi)</h6>
+  <h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (PPh)</h6>
   <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="pajak-penghasilan"><i class="bi bi-info-circle"></i></button>
   </div>
   <div class="card-body">${taxHtml}</div>
