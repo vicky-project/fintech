@@ -172,20 +172,46 @@ class ZakatTaxService
   }
 
   /**
-  * Hitung PPh hanya berdasarkan PKP (tanpa PTKP)
+  * Hitung PPh dengan tarif progresif sesuai Pasal 17 UU HPP.
+  * (Lapisan: 5% - 15% - 25% - 30% - 35%)
   */
   private function calculateTaxByPkp(float $pkp): float
   {
     $tax = 0;
-    if ($pkp <= 60000000) {
-      $tax = $pkp * 0.05;
-    } elseif ($pkp <= 250000000) {
-      $tax = 60000000 * 0.05 + ($pkp - 60000000) * 0.15;
-    } elseif ($pkp <= 500000000) {
-      $tax = 60000000 * 0.05 + 190000000 * 0.15 + ($pkp - 250000000) * 0.25;
-    } else {
-      $tax = 60000000 * 0.05 + 190000000 * 0.15 + 250000000 * 0.25 + ($pkp - 500000000) * 0.30;
+    $remaining = $pkp;
+
+    // Layer 1: sampai dengan Rp60.000.000
+    if ($remaining <= 60000000) {
+      $tax = $remaining * 0.05;
+      return $tax;
     }
+    $tax = 60000000 * 0.05;
+    $remaining -= 60000000;
+
+    // Layer 2: Rp60.000.001 sampai Rp250.000.000
+    $layer2 = min($remaining, 190000000); // 250jt - 60jt = 190jt
+    $tax += $layer2 * 0.15;
+    $remaining -= $layer2;
+
+    if ($remaining <= 0) return $tax;
+
+    // Layer 3: Rp250.000.001 sampai Rp500.000.000
+    $layer3 = min($remaining, 250000000); // 500jt - 250jt = 250jt
+    $tax += $layer3 * 0.25;
+    $remaining -= $layer3;
+
+    if ($remaining <= 0) return $tax;
+
+    // Layer 4: Rp500.000.001 sampai Rp5.000.000.000
+    $layer4 = min($remaining, 4500000000); // 5M - 500jt = 4.5M
+    $tax += $layer4 * 0.30;
+    $remaining -= $layer4;
+
+    // Layer 5: di atas Rp5.000.000.000
+    if ($remaining > 0) {
+      $tax += $remaining * 0.35;
+    }
+
     return $tax;
   }
 
