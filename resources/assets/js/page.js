@@ -2895,25 +2895,25 @@ function renderZakatTaxDashboard(data) {
     <h6 class="fw-bold"><i class="bi bi-clock-history me-2 text-secondary"></i>Riwayat Pajak per Tahun</h6>
     </div>
     <div class="card-body p-0">
-    <div class="table-responsive">
-    <table class="table table-sm table-bordered mb-0">
+    <div class="table-responsive p-2">
+    <table class="table table-sm table-light table-bordered mb-0">
     <thead>
     <tr>
     <th>Tahun</th>
-    <th>Penghasilan (Rp)</th>
+    <th style="width: 110px;">Penghasilan (Rp)</th>
     <th>PTKP (Rp)</th>
     <th>PKP (Rp)</th>
-    <th>PPh Terutang (Rp)</th>
+    <th style="width: 110px;">PPh Terutang (Rp)</th>
     </tr>
     </thead>
     <tbody>
     ${data.historical_tax.map(item => `
       <tr>
       <td>${item.year}</td>
-      <td>${Core.formatNumber(item.income)}</td>
-      <td>${Core.formatNumber(item.ptkp)}</td>
-      <td>${Core.formatNumber(item.pkp)}</td>
-      <td class="text-danger fw-bold">${Core.formatNumber(item.tax)}</td>
+      <td style="width: 110px;">${symbol}${Core.formatNumber(item.income)}</td>
+      <td>${symbol}${Core.formatNumber(item.ptkp)}</td>
+      <td>${symbol}${Core.formatNumber(item.pkp)}</td>
+      <td class="text-danger fw-bold" style="width: 110px;">${symbol}${Core.formatNumber(item.tax)}</td>
       </tr>
       `).join('')}
     </tbody>
