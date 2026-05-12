@@ -2922,68 +2922,69 @@ function renderZakatTaxDashboard(data) {
     </div>
     </div>
     `;
-
-    const html = `
-    <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
-    <h6 class="fw-bold"><i class="bi bi-wallet2 me-2"></i>Total Kekayaan Anda</h6>
-    <p class="fs-4 fw-bold text-primary">${symbol} ${formattedWealth}</p>
-    </div>
-    </div>
-    <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
-    <h6 class="fw-bold"><i class="bi bi-arrow-up-circle-fill me-2 text-success"></i>Total Pemasukan (Tahunan)</h6>
-    <p class="fs-4 fw-bold text-success">${symbol} ${formattedIncome}</p>
-    </div>
-    </div>
-    <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
-    <div class="row text-center">
-    <div class="col-6">
-    <div class="text-muted small">Harga Emas / gram</div>
-    <h5 class="text-primary">${symbol} ${formattedGold}</h5>
-    </div>
-    <div class="col-6">
-    <div class="text-muted small">Nisab Zakat (85 gram)</div>
-    <h5 class="text-success">${symbol} ${formattedNisab}</h5>
-    </div>
-    </div>
-    </div>
-    </div>
-    <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-gem me-2 text-warning"></i>Zakat Mal</h6></div>
-    <div class="card-body">${zakatMalHtml}</div>
-    </div>
-    <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-briefcase-fill me-2 text-info"></i>Zakat Penghasilan</h6></div>
-    <div class="card-body">${zakatIncomeHtml}</div>
-    </div>
-    <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (Simulasi)</h6></div>
-    <div class="card-body">${taxHtml}</div>
-    </div>
-    ${historicalHtml}
-    `;
-
-    const contentDiv = document.getElementById('dashboard-content');
-    contentDiv.innerHTML = html;
   }
 
-  // ==================== DAFTAR HALAMAN ====================
-  Core.setPages({
-    home: renderHomePage,
-    transactions: renderTransactionsPage,
-    transfers: renderTransfersPage,
-    wallets: renderWalletsPage,
-    reports: renderReportsPage,
-    settings: renderSettingsPage,
-    insights: renderInsightsPage,
-    statements: renderStatementsPage,
-    budgets: renderBudgetsPage,
-    notifications: renderNotificationsPage,
-    search: renderSearchPage,
-    transactionTrash: renderTransactionTrash,
-    transferTrash: renderTransferTrash,
-    export: renderExportPage,
-    zakatTax: renderZakatTaxPage
-  });
+  const html = `
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <h6 class="fw-bold"><i class="bi bi-wallet2 me-2"></i>Total Kekayaan Anda</h6>
+  <p class="fs-4 fw-bold text-primary">${symbol} ${formattedWealth}</p>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <h6 class="fw-bold"><i class="bi bi-arrow-up-circle-fill me-2 text-success"></i>Total Pemasukan (Tahunan)</h6>
+  <p class="fs-4 fw-bold text-success">${symbol} ${formattedIncome}</p>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <div class="row text-center">
+  <div class="col-6">
+  <div class="text-muted small">Harga Emas / gram</div>
+  <h5 class="text-primary">${symbol} ${formattedGold}</h5>
+  </div>
+  <div class="col-6">
+  <div class="text-muted small">Nisab Zakat (85 gram)</div>
+  <h5 class="text-success">${symbol} ${formattedNisab}</h5>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-gem me-2 text-warning"></i>Zakat Mal</h6></div>
+  <div class="card-body">${zakatMalHtml}</div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-briefcase-fill me-2 text-info"></i>Zakat Penghasilan</h6></div>
+  <div class="card-body">${zakatIncomeHtml}</div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (Simulasi)</h6></div>
+  <div class="card-body">${taxHtml}</div>
+  </div>
+  ${historicalHtml}
+  `;
+
+  const contentDiv = document.getElementById('dashboard-content');
+  contentDiv.innerHTML = html;
+}
+
+// ==================== DAFTAR HALAMAN ====================
+Core.setPages({
+  home: renderHomePage,
+  transactions: renderTransactionsPage,
+  transfers: renderTransfersPage,
+  wallets: renderWalletsPage,
+  reports: renderReportsPage,
+  settings: renderSettingsPage,
+  insights: renderInsightsPage,
+  statements: renderStatementsPage,
+  budgets: renderBudgetsPage,
+  notifications: renderNotificationsPage,
+  search: renderSearchPage,
+  transactionTrash: renderTransactionTrash,
+  transferTrash: renderTransferTrash,
+  export: renderExportPage,
+  zakatTax: renderZakatTaxPage
+});
