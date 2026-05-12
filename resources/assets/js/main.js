@@ -354,7 +354,7 @@ async function handleGlobalClick(e) {
           body = `
           <p><strong>Rumus:</strong> 2,5% × Total saldo seluruh dompet</p>
           <p><strong>Syarat wajib:</strong> Saldo total telah mencapai <strong>nisab</strong> (setara harga 85 gram emas).</p>
-          <p><strong>Nisab saat ini:</strong> ${Core.formatNumber(Core.state.zakats?.nisab)} ${symbol}</p>
+          <p><strong>Nisab saat ini:</strong>${symbol} ${Core.formatNumber(Core.state.zakats?.nisab)}</p>
           <p><strong>Perhitungan:</strong><br>
           Jika total saldo Anda = ${symbol} ${Core.formatNumber(Core.state.zakats?.total_wealth)}<br>
           Dan nisab = ${symbol} ${Core.formatNumber(Core.state.zakats?.nisab)}<br>
