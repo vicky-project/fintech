@@ -2830,24 +2830,41 @@ async function renderZakatTaxPage() {
   const container = document.getElementById('main-content');
   container.innerHTML = `
   <div class="container py-3">
-  <div class="d-flex align-items-center mb-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+  <div class="d-flex align-items-center">
   <i class="bi bi-calculator-fill fs-3 me-2 text-success"></i>
-  <h5 class="mb-0">Zakat & Pajak Penghasilan</h5>
+  <h5 class="mb-0">Zakat & Pajak</h5>
+  </div>
+  <div>
+  <select id="yearSelect" class="form-select form-select-sm" style="width: auto;" data-action="zakat-year-select">${generateYearOptions()}</select>
+  </div>
   </div>
   <div id="dashboard-content"></div>
   </div>
   `;
 
-
-  loadZakatTax();
+  await loadZakatTaxForPage(Core.state.currentZakatYear);
 }
 
-async function loadZakatTax() {
+function generateYearOptions() {
+  const currentYear = new Date().getFullYear();
+  let options = '';
+  for (let y = currentYear; y >= 2020; y--) {
+    options += `<option value="${y}">${y}</option>`;
+  }
+  return options;
+}
+
+async function loadZakatTaxForPage(year) {
   tgApp.showLoading('Memuat data zakat dan pajak...')
   try {
-    await Core.loadZakatTax();
+    await Core.loadZakatTax(year);
     if (Core.state.zakats) {
       renderZakatTaxDashboard(Core.state.zakats);
+      const yearSelect = document.getElementById('yearSelect');
+      if (yearSelect && yearSelect.value != year) {
+        yearSelect.value = year;
+      }
     } else {
       tgApp.showToast('Gagal mengambil data zakat dan pajak.');
     }

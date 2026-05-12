@@ -19,8 +19,10 @@ class ZakatTaxController extends Controller
     if (!$user) {
       return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
     }
+    $year = (int) $request->input('year', date('Y'));
+    $year = max(2020, min($year, date('Y')));
     try {
-      $data = $this->service->getDashboardData($user);
+      $data = $this->service->getDashboardData($user, $year);
       return response()->json(['success' => true, 'data' => $data]);
     } catch (\Exception $e) {
       return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

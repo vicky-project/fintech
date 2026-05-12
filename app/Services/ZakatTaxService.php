@@ -35,9 +35,9 @@ class ZakatTaxService
   /**
   * Get dashboard data for Zakat & Pajak (per user)
   */
-  public function getDashboardData($user): array
+  public function getDashboardData($user, int $year): array
   {
-    return $this->rememberForUser($user->id, 'zakat_tax_dashboard', $this->cacheTtl, function () use ($user) {
+    return $this->rememberForUser($user->id, "zakat_tax_dashboard_{$year}", $this->cacheTtl, function () use ($user, $year) {
       $userSettings = UserSetting::where('user_id', $user->id)->first();
       if (!$userSettings) {
         throw new \Exception("User not found.");
@@ -53,7 +53,7 @@ class ZakatTaxService
       ->whereHas('category', function($q) {
         $q->whereJsonDoesntContain('metadata->tags', 'exclude_from_income');
       })
-      ->whereYear('transaction_date', Carbon::now()->year)
+      ->whereYear('transaction_date', $year)
       ->sum(\DB::raw('amount / 100'));
 
       // Ambil data marital_status dan dependents dari user setting
@@ -82,6 +82,7 @@ class ZakatTaxService
         'zakat_mal' => $zakatMal,
         'zakat_income' => $zakatIncome,
         'income_tax' => $incomeTax,
+        'year' => $year
       ];
     });
   }

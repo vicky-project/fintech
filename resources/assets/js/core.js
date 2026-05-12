@@ -49,7 +49,8 @@ const Core = (() => {
     pendingAction: null,
     currentFilteredCategories: [],
     googlePollInterval: null,
-    zakats: null
+    zakats: null,
+    currentZakatYear: new Date().getFullYear()
   };
 
   // ========== PRIVATE HELPERS ==========
@@ -458,9 +459,13 @@ const Core = (() => {
     }
   }
 
-  async function loadZakatTax() {
+  async function loadZakatTax(year = null) {
+    if (year == null) {
+      year = state.currentZakatYear;
+    }
     const res = await api.get('/api/fintech/zakat-tax');
     state.zakats = res.data || null;
+    state.currentZakatYear = year;
   }
 
   // ========== NOTIFICATION BADGE ==========

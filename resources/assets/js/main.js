@@ -367,6 +367,10 @@ function handleGlobalChange(e) {
         toggleExportOptions();
       }
     },
+    'zakat-year-select': () => {
+      const selectedYear = parseInt(target.value);
+      loadZakatTaxForPage(selectedYear);
+    },
     // Tambahkan aksi lain sesuai kebutuhan
   };
 
