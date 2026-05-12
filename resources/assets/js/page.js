@@ -2911,10 +2911,10 @@ function renderZakatTaxDashboard(data) {
     ${data.historical_tax.map(item => `
       <tr>
       <td>${item.year}</td>
-      <td style="min-width: 170px;">${symbol}${Core.formatNumber(item.income)}</td>
-      <td style="min-width: 170px;">${symbol}${Core.formatNumber(item.ptkp)}</td>
-      <td style="min-width: 170px;">${symbol}${Core.formatNumber(item.pkp)}</td>
-      <td class="text-danger fw-bold" style="min-width: 170px;">${symbol}${Core.formatNumber(item.tax)}</td>
+      <td style="min-width: 170px;">${symbol} ${Core.formatNumber(item.income)}</td>
+      <td style="min-width: 170px;">${symbol} ${Core.formatNumber(item.ptkp)}</td>
+      <td style="min-width: 170px;">${symbol} ${Core.formatNumber(item.pkp)}</td>
+      <td class="text-danger fw-bold" style="min-width: 170px;">${symbol} ${Core.formatNumber(item.tax)}</td>
       </tr>
       `).join('')}
     </tbody>
