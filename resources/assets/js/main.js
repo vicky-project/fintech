@@ -299,21 +299,44 @@ async function handleGlobalClick(e) {
         case 'zakatTaxMethod':
           title = 'Metode Perhitungan Zakat & Pajak';
           body = `
-          <p><strong>Zakat Mal (Harta)</strong><br>
-          Dihitung dari total saldo seluruh dompet.<br>
-          Rumus: <code>2.5% × total saldo</code> (jika total saldo ≥ nisab).<br>
-          Nisab = 85 gram emas × harga emas per gram terkini.
-          </p>
-          <p><strong>Zakat Penghasilan</strong><br>
-          Dihitung dari total pemasukan tahun berjalan (kecuali transfer dan kategori non-pendapatan).<br>
-          Rumus: <code>2.5% × total pemasukan tahunan</code> (jika total pemasukan ≥ nisab).
-          </p>
-          <p><strong>Pajak Penghasilan (PPh) Orang Pribadi</strong><br>
-          Menggunakan tarif progresif Pasal 17 UU PPh setelah dikurangi PTKP.<br>
-          PTKP (2025): TK/0 = Rp54.000.000, K/0 = Rp58.500.000, tambahan tanggungan maksimal 3 orang @Rp4.500.000.<br>
-          Tarif: 5% (0-60jt), 15% (60-250jt), 25% (250-500jt), 30% (>500jt).
-          </p>
-          <p class="mb-0 small text-muted">Perhitungan ini bersifat simulasi edukasi. Untuk kewajiban resmi, konsultasikan dengan ahli zakat dan akuntan.</p>
+          <div class="mb-3 text-center">
+          <i class="bi bi-calculator-fill fs-1 text-success"></i>
+          </div>
+          <p class="lead">Kami menghitung zakat dan pajak berdasarkan data keuangan Anda. Begini caranya:</p>
+
+          <div class="mb-3">
+          <h6><i class="bi bi-gem text-warning me-2"></i> Zakat Mal (Harta)</h6>
+          <ul class="small">
+          <li>Dihitung dari total saldo <strong>semua dompet</strong> Anda.</li>
+          <li>Wajib jika total saldo ≥ <strong>nisab</strong> (85 gram emas).</li>
+          <li><strong>Rumus:</strong> <code>2.5% × total saldo</code>.</li>
+          <li>Nisab diperbarui otomatis mengikuti <strong>harga emas terkini</strong>.</li>
+          </ul>
+          </div>
+
+          <div class="mb-3">
+          <h6><i class="bi bi-briefcase-fill text-info me-2"></i> Zakat Penghasilan (Profesi)</h6>
+          <ul class="small">
+          <li>Dari total pemasukan setahun (kecuali kategorinya bukan pendapatan, seperti &quot;Transfer Masuk&quot;).</li>
+          <li>Wajib jika pemasukan setahun ≥ nisab yang sama (85 gram emas).</li>
+          <li><strong>Rumus:</strong> <code>2.5% × total pemasukan setahun</code>.</li>
+          </ul>
+          </div>
+
+          <div class="mb-3">
+          <h6><i class="bi bi-receipt text-danger me-2"></i> Pajak Penghasilan (PPh) – Simulasi</h6>
+          <ul class="small">
+          <li>Mengikuti tarif progresif Indonesia <strong>(Pasal 17 UU PPh)</strong>.</li>
+          <li>Penghasilan dikurangi PTKP (batas tidak kena pajak).</li>
+          <li>PTKP tahun ini untuk status Anda (kawin/tidak & tanggungan).</li>
+          <li><strong>Tarif:</strong> 5% (s.d. 60jt), 15% (60-250jt), 25% (250-500jt), 30% (>500jt).</li>
+          </ul>
+          </div>
+
+          <div class="alert alert-light border mt-3">
+          <i class="bi bi-info-circle me-1"></i> <strong>Catatan:</strong>
+          Perhitungan ini <strong>simulasi edukasi</strong>. Zakat mal juga mempertimbangkan utang dan haul, namun untuk kemudahan, kami hitung dengan asumsi sederhana. Konsultasikan dengan ahli untuk kewajiban resmi Anda.
+          </div>
           `;
           break;
       }
