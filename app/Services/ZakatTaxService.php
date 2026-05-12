@@ -22,7 +22,7 @@ class ZakatTaxService
   protected WalletService $walletService;
   protected TransactionService $transactionService;
   protected CurrencyConverter $converter;
-  protected int $cacheTtl = 300; // 5 menit, bisa ubah jadi 3600 untuk 1 jam
+  protected int $cacheTtl = 300; // 5 menit
 
   public function __construct(
     WalletService $walletService,
@@ -42,34 +42,36 @@ class ZakatTaxService
     return $this->rememberForUser($user->id, "zakat_tax_dashboard_{$year}", $this->cacheTtl, function () use ($user, $year) {
       $userSettings = UserSetting::where('user_id', $user->id)->first();
       if (!$userSettings) {
-        throw new \Exception("User not found.");
+        throw new \Exception("User setting not found.");
       }
 
-      // Ambil total kekayaan dari semua dompet user
+      // Total kekayaan dari semua dompet
       $wallets = $this->walletService->getUserWallets($user);
       $totalWealth = collect($wallets)->sum('balance');
 
-      // Ambil total pendapatan tahun berjalan (hanya transaksi type 'income')
+      // Pendapatan tahun berjalan (hanya kategori pendapatan)
       $yearlyIncome = Transaction::income()
       ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
-      ->whereHas('category', function($q) {
+      ->whereHas('category', function ($q) {
         $q->whereJsonDoesntContain('metadata->tags', 'exclude_from_income');
       })
       ->whereYear('transaction_date', $year)
       ->sum(\DB::raw('amount / 100'));
 
-      // Ambil data marital_status dan dependents dari user setting
+      // Data user
       $maritalStatus = $userSettings->marital_status ?? MaritalStatus::SINGLE;
       $dependents = $userSettings->dependents ?? 0;
 
-      // Ambil harga emas & nisab dari API Apised
+      // Harga emas & nisab
       $goldData = $this->getGoldPriceAndNisab();
       $pricePerGram = $goldData['price_per_gram'];
       $nisab = $goldData['nisab'];
 
-      // Hitung zakat mal
+      // Zakat
       $zakatMal = $this->calculateZakatMal($totalWealth, $nisab);
       $zakatIncome = $this->calculateZakatIncome($yearlyIncome, $nisab);
+
+      // Pajak dengan biaya jabatan
       $incomeTax = $this->calculateIncomeTax($yearlyIncome, $maritalStatus, $dependents);
 
       return [
@@ -77,21 +79,19 @@ class ZakatTaxService
         'yearly_income' => (float) $yearlyIncome,
         'gold_price_per_gram' => $pricePerGram,
         'nisab' => $nisab,
-        'marital_status' => $maritalStatus,
-        // opsional untuk frontend
+        'marital_status' => $maritalStatus->value,
         'dependents' => $dependents,
-        // opsional untuk frontend
         'zakat_mal' => $zakatMal,
         'zakat_income' => $zakatIncome,
         'income_tax' => $incomeTax,
         'historical_tax' => $this->getHistoricalTaxData($user),
-        'year' => $year
+        'year' => $year,
       ];
     });
   }
 
   // -------------------------------------------------------------------------
-  // Private helpers
+  // Zakat helpers
   // -------------------------------------------------------------------------
 
   private function calculateZakatMal(float $totalWealth,
@@ -118,110 +118,94 @@ class ZakatTaxService
     ];
   }
 
+  // -------------------------------------------------------------------------
+  // PTKP & PPh
+  // -------------------------------------------------------------------------
+
   /**
-  * Hitung PTKP berdasarkan status perkawinan dan jumlah tanggungan (anak)
-  * Aturan PTKP 2025 (berlaku untuk tahun pajak 2025):
-  * - TK/0 : Rp 54.000.000
-  * - K/0  : Rp 58.500.000 (Kawin, tanpa tanggungan)
-  * - K/1  : Rp 63.000.000 (Kawin + 1 tanggungan)
-  * - K/2  : Rp 67.500.000 (Kawin + 2 tanggungan)
-  * - K/3  : Rp 72.000.000 (Kawin + 3 tanggungan)
-  * Untuk status cerai/janda/duda, perhitungan sama dengan TK/0.
+  * Hitung PTKP berdasarkan status dan tanggungan.
   */
   private function getPTKP(MaritalStatus $maritalStatus,
     int $dependents): float
   {
     $base = 54000000; // TK/0
-
     if ($maritalStatus === MaritalStatus::MARRIED) {
       $base = 58500000; // K/0
     }
-
-    // Tanggungan maksimal 3 orang (anak)
     $additional = min($dependents, 3) * 4500000;
     return $base + $additional;
   }
 
   /**
-  * PPh orang pribadi – tarif progresif Pasal 17
-  * Menggunakan PTKP dinamis berdasarkan status dan tanggungan.
+  * Hitung Pajak Penghasilan dengan biaya jabatan.
   */
   private function calculateIncomeTax(float $yearlyIncome, MaritalStatus $maritalStatus, int $dependents): array
   {
-    $ptkp = $this->getPTKP($maritalStatus, $dependents);
-    $pkp = max(0, $yearlyIncome - $ptkp);
-    $tax = 0;
+    // Biaya jabatan: 5% dari bruto, maks Rp6.000.000 per tahun
+    $jobExpense = min($yearlyIncome * 0.05, 6000000);
+    $netIncome = max(0, $yearlyIncome - $jobExpense);
 
-    if ($pkp > 0) {
-      if ($pkp <= 60000000) {
-        $tax = $pkp * 0.05;
-      } elseif ($pkp <= 250000000) {
-        $tax = 60000000 * 0.05 + ($pkp - 60000000) * 0.15;
-      } elseif ($pkp <= 500000000) {
-        $tax = 60000000 * 0.05 + 190000000 * 0.15 + ($pkp - 250000000) * 0.25;
-      } else {
-        $tax = 60000000 * 0.05 + 190000000 * 0.15 + 250000000 * 0.25 + ($pkp - 500000000) * 0.30;
-      }
-    }
+    $ptkp = $this->getPTKP($maritalStatus, $dependents);
+    $pkp = max(0, $netIncome - $ptkp);
+    $tax = $this->calculateTaxByPkp($pkp);
 
     return [
       'ptkp' => (float) $ptkp,
       'pkp' => round($pkp, 2),
       'tax' => round($tax, 2),
+      'job_expense' => $jobExpense,
+      'net_income' => $netIncome,
     ];
   }
 
   /**
-  * Hitung PPh dengan tarif progresif sesuai Pasal 17 UU HPP.
-  * (Lapisan: 5% - 15% - 25% - 30% - 35%)
+  * Hitung PPh dengan tarif progresif 5 lapis (hingga 35%)
   */
   private function calculateTaxByPkp(float $pkp): float
   {
-    $tax = 0;
     $remaining = $pkp;
+    $tax = 0;
 
-    // Layer 1: sampai dengan Rp60.000.000
+    // Lapis 1: 0-60 jt -> 5%
     if ($remaining <= 60000000) {
-      $tax = $remaining * 0.05;
-      return $tax;
+      return $remaining * 0.05;
     }
     $tax = 60000000 * 0.05;
     $remaining -= 60000000;
 
-    // Layer 2: Rp60.000.001 sampai Rp250.000.000
-    $layer2 = min($remaining, 190000000); // 250jt - 60jt = 190jt
+    // Lapis 2: 60-250 jt -> 15%
+    $layer2 = min($remaining, 190000000);
     $tax += $layer2 * 0.15;
     $remaining -= $layer2;
-
     if ($remaining <= 0) return $tax;
 
-    // Layer 3: Rp250.000.001 sampai Rp500.000.000
-    $layer3 = min($remaining, 250000000); // 500jt - 250jt = 250jt
+    // Lapis 3: 250-500 jt -> 25%
+    $layer3 = min($remaining, 250000000);
     $tax += $layer3 * 0.25;
     $remaining -= $layer3;
-
     if ($remaining <= 0) return $tax;
 
-    // Layer 4: Rp500.000.001 sampai Rp5.000.000.000
-    $layer4 = min($remaining, 4500000000); // 5M - 500jt = 4.5M
+    // Lapis 4: 500 jt - 5 M -> 30%
+    $layer4 = min($remaining, 4500000000);
     $tax += $layer4 * 0.30;
     $remaining -= $layer4;
+    if ($remaining <= 0) return $tax;
 
-    // Layer 5: di atas Rp5.000.000.000
-    if ($remaining > 0) {
-      $tax += $remaining * 0.35;
-    }
-
+    // Lapis 5: >5 M -> 35%
+    $tax += $remaining * 0.35;
     return $tax;
   }
 
+  // -------------------------------------------------------------------------
+  // Historis Pajak
+  // -------------------------------------------------------------------------
+
   /**
-  * Dapatkan data historis pajak per tahun (berdasarkan transaksi income)
+  * Data historis pajak per tahun (dengan biaya jabatan)
   */
   public function getHistoricalTaxData($user): array
   {
-    $excludedCategoryIds = Category::whereJsonContains('metadata->tags', "exclude_from_income")
-    ->pluck('id');
+    $excludedCategoryIds = Category::whereJsonContains('metadata->tags', 'exclude_from_income')->pluck('id');
 
     $yearlyIncomes = Transaction::income()
     ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
@@ -234,17 +218,21 @@ class ZakatTaxService
     ->map(fn($item) => (float) $item->total);
 
     $userSettings = UserSetting::where('user_id', $user->id)->first();
-    $maritalStatus = $userSetting->marital_status ?? MaritalStatus::SINGLE;
-    $dependents = $userSetting->dependents ?? 0;
-    $ptkp = $this->getPTKP($maritalStatus, $dependents);
+    $maritalStatus = $userSettings->marital_status ?? MaritalStatus::SINGLE;
+    $dependents = $userSettings->dependents ?? 0;
 
     $historical = [];
     foreach ($yearlyIncomes as $year => $income) {
-      $pkp = max(0, $income - $ptkp);
+      $jobExpense = min($income * 0.05, 6000000);
+      $netIncome = max(0, $income - $jobExpense);
+      $ptkp = $this->getPTKP($maritalStatus, $dependents);
+      $pkp = max(0, $netIncome - $ptkp);
       $tax = $this->calculateTaxByPkp($pkp);
       $historical[] = [
         'year' => $year,
         'income' => round($income, 2),
+        'job_expense' => $jobExpense,
+        'net_income' => round($netIncome, 2),
         'ptkp' => $ptkp,
         'pkp' => round($pkp, 2),
         'tax' => round($tax, 2),
@@ -253,6 +241,10 @@ class ZakatTaxService
 
     return $historical;
   }
+
+  // -------------------------------------------------------------------------
+  // Harga Emas & Nisab
+  // -------------------------------------------------------------------------
 
   private function getGoldPriceAndNisab(): array
   {
@@ -268,11 +260,6 @@ class ZakatTaxService
     });
   }
 
-  /**
-  * Mengambil harga emas per gram dalam IDR dari Apised API.
-  * Endpoint: /v1/latest?metals=XAU&base_currency=USD&currencies=IDR&weight_unit=gram
-  * Batas limit 100 request per bulan – diatasi dengan cache 5 menit.
-  */
   private function fetchPricePerGramFromApised(): ?float
   {
     $apiKey = config('fintech.apised.api_key',
@@ -317,19 +304,15 @@ class ZakatTaxService
         return null;
       }
 
-      $priceInIdr = $priceInBaseCurrency * $rateToIdr;
-      return round($priceInIdr, 2);
+      return round($priceInBaseCurrency * $rateToIdr, 2);
     } catch (\Exception $e) {
-      Log::error('Gagal fetch harga emas dari Apised: ' . $e->getMessage());
+      Log::error('Gagal fetch harga emas: ' . $e->getMessage());
       return null;
     }
   }
 
-  // Override agar suffix yang diketahui bisa di-clear jika perlu
   protected function knownUserCacheSuffixes(int $userId): array
   {
-    return [
-      'zakat_tax_dashboard',
-    ];
+    return ['zakat_tax_dashboard'];
   }
 }

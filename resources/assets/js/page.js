@@ -2897,7 +2897,7 @@ function renderZakatTaxDashboard(data) {
     <div class="card-body p-0">
     <div class="table-responsive">
     <table class="table table-sm table-striped mb-0">
-    <thead class="table-light">
+    <thead>
     <tr>
     <th>Tahun</th>
     <th>Penghasilan (Rp)</th>
@@ -2913,7 +2913,7 @@ function renderZakatTaxDashboard(data) {
       <td>${Core.formatNumber(item.income)}</td>
       <td>${Core.formatNumber(item.ptkp)}</td>
       <td>${Core.formatNumber(item.pkp)}</td>
-      <td>${Core.formatNumber(item.tax)}</td>
+      <td class="text-danger fw-bold">${Core.formatNumber(item.tax)}</td>
       </tr>
       `).join('')}
     </tbody>
