@@ -1033,8 +1033,8 @@ function renderCategoryTable(data) {
   <thead class="table-light sticky-top">
   <tr>
   <th style="min-width: 150px;">Kategori</th>
-  ${years.map(y => `<th class="text-end" style="min-width: 100px;">${y}</th>`).join('')}
-  <th class="text-end" style="min-width: 110px; white-space: nowrap;">Total</th>
+  ${years.map(y => `<th class="text-end" style="min-width: 170px;">${y}</th>`).join('')}
+  <th class="text-end" style="min-width: 170px; white-space: nowrap;">Total</th>
   </tr>
   </thead>
   <tbody>
@@ -1051,9 +1051,9 @@ function renderCategoryTable(data) {
     ${years.map(y => {
       const val = cat.data[y] || 0;
       rowTotal += val;
-      return `<td class="text-end" style="min-width: 100px;">${val ? Core.formatNumber(val): '-'}</td>`;
+      return `<td class="text-end" style="min-width: 170px;">${symbol}${val ? Core.formatNumber(val): 0}</td>`;
     }).join('')}
-    <td class="text-end fw-semibold" style="min-width: 110px; white-space: nowrap;">${symbol} ${Core.formatNumber(rowTotal)}</td>
+    <td class="text-end fw-semibold" style="min-width: 170px; white-space: nowrap;">${symbol} ${Core.formatNumber(rowTotal)}</td>
     </tr>
     `;
   });
@@ -1062,8 +1062,8 @@ function renderCategoryTable(data) {
   html += `
   <tr class="table-primary fw-bold">
   <td style="min-width: 150px;">Total</td>
-  ${years.map(y => `<td class="text-end" style="min-width: 100px;">${symbol} ${Core.formatNumber(totals[y] || 0)}</td>`).join('')}
-  <td class="text-end" style="min-width: 110px; white-space: nowrap;">${symbol} ${Core.formatNumber(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
+  ${years.map(y => `<td class="text-end" style="min-width: 170px;">${symbol} ${Core.formatNumber(totals[y] || 0)}</td>`).join('')}
+  <td class="text-end" style="min-width: 170px; white-space: nowrap;">${symbol} ${Core.formatNumber(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
   </tr>
   </tbody>
   </table>
