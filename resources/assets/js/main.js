@@ -296,6 +296,26 @@ async function handleGlobalClick(e) {
           </ul>
           `;
           break;
+        case 'zakatTaxMethod':
+          title = 'Metode Perhitungan Zakat & Pajak';
+          body = `
+          <p><strong>Zakat Mal (Harta)</strong><br>
+          Dihitung dari total saldo seluruh dompet.<br>
+          Rumus: <code>2.5% × total saldo</code> (jika total saldo ≥ nisab).<br>
+          Nisab = 85 gram emas × harga emas per gram terkini.
+          </p>
+          <p><strong>Zakat Penghasilan</strong><br>
+          Dihitung dari total pemasukan tahun berjalan (kecuali transfer dan kategori non-pendapatan).<br>
+          Rumus: <code>2.5% × total pemasukan tahunan</code> (jika total pemasukan ≥ nisab).
+          </p>
+          <p><strong>Pajak Penghasilan (PPh) Orang Pribadi</strong><br>
+          Menggunakan tarif progresif Pasal 17 UU PPh setelah dikurangi PTKP.<br>
+          PTKP (2025): TK/0 = Rp54.000.000, K/0 = Rp58.500.000, tambahan tanggungan maksimal 3 orang @Rp4.500.000.<br>
+          Tarif: 5% (0-60jt), 15% (60-250jt), 25% (250-500jt), 30% (>500jt).
+          </p>
+          <p class="mb-0 small text-muted">Perhitungan ini bersifat simulasi edukasi. Untuk kewajiban resmi, konsultasikan dengan ahli zakat dan akuntan.</p>
+          `;
+          break;
       }
 
       document.getElementById('infoModalTitle').textContent = title;
