@@ -2955,7 +2955,7 @@ function renderZakatTaxDashboard(data) {
   <div class="card border-0 shadow-sm mb-3">
   <div class="card-header text-bg-white border-0 d-flex justify-content-between align-items-center">
   <h6 class="fw-bold"><i class="bi bi-gem me-2 text-warning"></i>Zakat Mal</h6>
-  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="zakat-mall"><i class="bi bi-info-circle"></i></button>
+  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="zakat-mal"><i class="bi bi-info-circle"></i></button>
   </div>
   <div class="card-body">${zakatMalHtml}</div>
   </div>
