@@ -302,40 +302,49 @@ async function handleGlobalClick(e) {
           <div class="mb-3 text-center">
           <i class="bi bi-calculator-fill fs-1 text-success"></i>
           </div>
-          <p class="lead">Kami menghitung zakat dan pajak berdasarkan data keuangan Anda. Begini caranya:</p>
+          <p class="mb-3">Kami menghitung zakat dan pajak berdasarkan data keuangan Anda. Begini cara kerjanya:</p>
 
           <div class="mb-3">
           <h6><i class="bi bi-gem text-warning me-2"></i> Zakat Mal (Harta)</h6>
           <ul class="small">
-          <li>Dihitung dari total saldo <strong>semua dompet</strong> Anda.</li>
-          <li>Wajib jika total saldo ≥ <strong>nisab</strong> (85 gram emas).</li>
-          <li><strong>Rumus:</strong> <code>2.5% × total saldo</code>.</li>
-          <li>Nisab diperbarui otomatis mengikuti <strong>harga emas terkini</strong>.</li>
+          <li>Dihitung dari total saldo semua dompet Anda.</li>
+          <li>Wajib jika total harta Anda <strong>mencapai nisab</strong> (setara 85 gram emas).</li>
+          <li><strong>Rumus:</strong> 2,5% × total harta.</li>
+          <li>Nisab akan mengikuti harga emas terbaru.</li>
           </ul>
           </div>
 
           <div class="mb-3">
-          <h6><i class="bi bi-briefcase-fill text-info me-2"></i> Zakat Penghasilan (Profesi)</h6>
+          <h6><i class="bi bi-briefcase-fill text-info me-2"></i> Zakat Penghasilan</h6>
           <ul class="small">
-          <li>Dari total pemasukan setahun (kecuali kategorinya bukan pendapatan, seperti &quot;Transfer Masuk&quot;).</li>
-          <li>Wajib jika pemasukan setahun ≥ nisab yang sama (85 gram emas).</li>
-          <li><strong>Rumus:</strong> <code>2.5% × total pemasukan setahun</code>.</li>
+          <li>Dihitung dari total pemasukan Anda dalam satu tahun (kecuali kategorinya bukan pendapatan, seperti transfer masuk).</li>
+          <li>Pilih kategori <strong>“Gaji”, “Bonus”, “Pendapatan Sampingan”, “Investasi”</strong> dengan benar agar hitungan akurat.</li>
+          <li>Wajib jika total pemasukan tahunan <strong>mencapai nisab</strong> (sama seperti zakat mal).</li>
+          <li><strong>Rumus:</strong> 2,5% × total pemasukan tahunan.</li>
           </ul>
           </div>
 
           <div class="mb-3">
-          <h6><i class="bi bi-receipt text-danger me-2"></i> Pajak Penghasilan (PPh) – Simulasi</h6>
+          <h6><i class="bi bi-receipt text-danger me-2"></i> Pajak Penghasilan (Simulasi)</h6>
           <ul class="small">
-          <li>Mengikuti tarif progresif Indonesia <strong>(Pasal 17 UU PPh)</strong>.</li>
-          <li>Penghasilan dikurangi PTKP (batas tidak kena pajak).</li>
-          <li>PTKP tahun ini untuk status Anda (kawin/tidak & tanggungan).</li>
-          <li><strong>Tarif:</strong> 5% (s.d. 60jt), 15% (60-250jt), 25% (250-500jt), 30% (>500jt).</li>
+          <li>Perhitungan mengikuti aturan Indonesia (PPh Pasal 17).</li>
+          <li>Penghasilan Anda akan dikurangi <strong>Penghasilan Tidak Kena Pajak (PTKP)</strong> sesuai status perkawinan dan jumlah tanggungan.</li>
+          <li>Lalu dikenai tarif bunga: 5% untuk penghasilan sampai 60 juta, 15% untuk 60-250 juta, 25% untuk 250-500 juta, dan 30% untuk di atas 500 juta.</li>
           </ul>
           </div>
 
-          <div class="alert alert-light border mt-3">
-          <i class="bi bi-info-circle me-1"></i> <strong>Catatan:</strong>
-          Perhitungan ini <strong>simulasi edukasi</strong>. Zakat mal juga mempertimbangkan utang dan haul, namun untuk kemudahan, kami hitung dengan asumsi sederhana. Konsultasikan dengan ahli untuk kewajiban resmi Anda.
+          <p class="small text-muted mt-2 mb-1">
+          <i class="bi bi-info-circle-fill me-1"></i> Pastikan Anda menyimpan transaksi pemasukan ke kategori pendapatan yang tepat. Jika ragu, gunakan kategori <strong>“Pendapatan Utama”</strong> atau <strong>“Pendapatan Sampingan”</strong>.
+          </p>
+          <p class="small text-muted">
+          <i class="bi bi-link-45deg me-1"></i> Referensi:
+          <a href="https://baznas.go.id/" target="_blank" rel="noopener noreferrer">BAZNAS</a> |
+          <a href="https://www.pajak.go.id/" target="_blank" rel="noopener noreferrer">Direktorat Jenderal Pajak</a>
+          </p>
+
+          <div class="alert alert-light border mt-2 py-2">
+          <i class="bi bi-info-circle me-1 small"></i>
+          <span class="small">Perhitungan ini adalah simulasi edukasi. Untuk kewajiban resmi, konsultasikan dengan ahli zakat atau akuntan.</span>
           </div>
           `;
           break;
