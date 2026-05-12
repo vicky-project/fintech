@@ -3,6 +3,8 @@
 namespace Modules\FinTech\Services;
 
 use Modules\FinTech\Enums\MaritalStatus;
+use Modules\FinTech\Models\Category;
+use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\UserSetting;
 use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Services\TransactionService;
@@ -48,7 +50,7 @@ class ZakatTaxService
       $totalWealth = collect($wallets)->sum('balance');
 
       // Ambil total pendapatan tahun berjalan (hanya transaksi type 'income')
-      $yearlyIncome = \Modules\FinTech\Models\Transaction::income()
+      $yearlyIncome = Transaction::income()
       ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
       ->whereHas('category', function($q) {
         $q->whereJsonDoesntContain('metadata->tags', 'exclude_from_income');
@@ -195,7 +197,7 @@ class ZakatTaxService
     $excludedCategoryIds = Category::whereJsonContain('metadata->tags', "exclude_from_income")
     ->pluck('id');
 
-    $yearlyIncomes = \Modules\FinTech\Models\Transaction::income()
+    $yearlyIncomes = Transaction::income()
     ->whereHas('wallet', fn($q) => $q->where('user_id', $user->id))
     ->whereNotIn('category_id', $excludedCategoryIds)
     ->selectRaw('YEAR(transaction_date) as year, SUM(amount/100) as total')
