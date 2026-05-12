@@ -2900,20 +2900,20 @@ function renderZakatTaxDashboard(data) {
     <thead class="table-light">
     <tr>
     <th>Tahun</th>
-    <th style="min-width: 150px;">Penghasilan (Rp)</th>
+    <th style="min-width: 170px;">Penghasilan (Rp)</th>
     <th>PTKP (Rp)</th>
     <th>PKP (Rp)</th>
-    <th style="min-width: 150px;">PPh Terutang (Rp)</th>
+    <th style="min-width: 170px;">PPh Terutang (Rp)</th>
     </tr>
     </thead>
     <tbody>
     ${data.historical_tax.map(item => `
       <tr>
       <td>${item.year}</td>
-      <td style="min-width: 150px;">${symbol}${Core.formatNumber(item.income)}</td>
+      <td style="min-width: 170px;">${symbol}${Core.formatNumber(item.income)}</td>
       <td>${symbol}${Core.formatNumber(item.ptkp)}</td>
       <td>${symbol}${Core.formatNumber(item.pkp)}</td>
-      <td class="text-danger fw-bold" style="min-width: 150px;">${symbol}${Core.formatNumber(item.tax)}</td>
+      <td class="text-danger fw-bold" style="min-width: 170px;">${symbol}${Core.formatNumber(item.tax)}</td>
       </tr>
       `).join('')}
     </tbody>
