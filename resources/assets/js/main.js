@@ -245,6 +245,7 @@ async function handleGlobalClick(e) {
       const infoType = target.dataset.info;
       let title = '',
       body = '';
+      const symbol = Core.getCurrencySymbol(Core.state.userSettings?.default_currency || 'IDR');
 
       switch (infoType) {
         case 'pin':
@@ -346,6 +347,52 @@ async function handleGlobalClick(e) {
           <i class="bi bi-info-circle me-1 small"></i>
           <span class="small">Perhitungan ini adalah simulasi edukasi. Untuk kewajiban resmi, konsultasikan dengan ahli zakat atau akuntan.</span>
           </div>
+          `;
+          break;
+        case 'zakat-mal':
+          title = 'Zakat Mal (Harta)';
+          body = `
+          <p><strong>Rumus:</strong> 2,5% × Total saldo seluruh dompet</p>
+          <p><strong>Syarat wajib:</strong> Saldo total telah mencapai <strong>nisab</strong> (setara harga 85 gram emas).</p>
+          <p><strong>Nisab saat ini:</strong> ${Core.formatNumber(Core.state.zakats?.nisab)} ${symbol}</p>
+          <p><strong>Perhitungan:</strong><br>
+          Jika total saldo Anda = ${symbol} ${Core.formatNumber(Core.state.zakats?.total_wealth)}<br>
+          Dan nisab = ${symbol} ${Core.formatNumber(Core.state.zakats?.nisab)}<br>
+          Maka zakat mal = ${Core.state.zakats?.total_wealth >= Core.state.zakats?.nisab ? '2,5% × total saldo': '0 (belum mencapai nisab)'}</p>
+          <p class="small text-muted">Zakat mal dikeluarkan setiap tahun (haul) setelah harta dimiliki setahun penuh. Aplikasi hanya memberikan estimasi berdasarkan saldo saat ini.</p>
+          `;
+          break;
+        case 'zakat-penghasilan':
+          title = 'Zakat Penghasilan (Profesi)';
+          body = `
+          <p><strong>Rumus:</strong> 2,5% × Total pemasukan tahun berjalan (kategori pendapatan)</p>
+          <p><strong>Syarat wajib:</strong> Total pemasukan tahunan ≥ nisab (85 gram emas).</p>
+          <p><strong>Penghasilan tahun ini:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.yearly_income)}<br>
+          <strong>Nisab:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.nisab)}</p>
+          <p><strong>Perhitungan:</strong> Zakat = 2,5% × total pemasukan (jika ≥ nisab).</p>
+          <p class="small text-muted">Hanya transaksi dengan kategori pendapatan (seperti Gaji, Bonus, Investasi) yang dihitung. Kategori "Transfer Masuk" dan "Hadiah" tidak termasuk.</p>
+          `;
+          break;
+        case 'pajak-penghasilan':
+          title = 'Pajak Penghasilan (PPh)';
+          body = `
+          <p><strong>Rumus:</strong> PPh = Tarif progresif × (Penghasilan Neto - PTKP)</p>
+          <p><strong>Penghasilan Bruto:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.yearly_income)}<br>
+          <strong>Biaya Jabatan (5% max 6jt):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.job_expense)}<br>
+          <strong>Penghasilan Neto:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.net_income)}<br>
+          <strong>PTKP (status, tanggungan):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.ptkp)}<br>
+          <strong>PKP (Penghasilan Kena Pajak):</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.pkp)}</p>
+          <p><strong>Tarif Progresif:</strong> 5% (0-60jt), 15% (60-250jt), 25% (250-500jt), 30% (500jt-5M), 35% (>5M).</p>
+          <p><strong>Perhitungan PPh:</strong> ${symbol} ${Core.formatNumber(Core.state.zakats?.income_tax.tax)}</p>
+          <p class="small text-muted">Perhitungan ini belum termasuk iuran pensiun, zakat, atau penghasilan istri. Untuk kewajiban resmi konsultasikan dengan akuntan.</p>
+          `;
+          break;
+        case 'riwayat-pajak':
+          title = 'Riwayat Pajak per Tahun';
+          body = `
+          <p>Tabel ini menunjukkan estimasi PPh untuk setiap tahun berdasarkan data transaksi yang tercatat.</p>
+          <p><strong>Catatan:</strong> Asumsi PTKP dan tarif menggunakan aturan tahun berjalan. Untuk tahun-tahun sebelumnya, perhitungan ini bersifat edukatif karena nilai PTKP dan tarif bisa berbeda di masa lalu.</p>
+          <p class="small text-muted">Data hanya tersedia untuk tahun yang memiliki transaksi pemasukan kategori pendapatan.</p>
           `;
           break;
       }

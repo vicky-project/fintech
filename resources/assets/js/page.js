@@ -2891,8 +2891,9 @@ function renderZakatTaxDashboard(data) {
   if (data.historical_tax && data.historical_tax.length > 0) {
     historicalHtml = `
     <div class="card border-0 shadow-sm mt-4">
-    <div class="card-header bg-white border-0">
+    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
     <h6 class="fw-bold"><i class="bi bi-clock-history me-2 text-secondary"></i>Riwayat Pajak per Tahun</h6>
+    <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="riwayat-pajak"><i class="bi bi-info-circle"></i></button>
     </div>
     <div class="card-body p-0">
     <div class="table-responsive p-2">
@@ -2952,15 +2953,24 @@ function renderZakatTaxDashboard(data) {
   </div>
   </div>
   <div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-gem me-2 text-warning"></i>Zakat Mal</h6></div>
+  <div class="card-header text-bg-white border-0 d-flex justify-content-between align-items-center">
+  <h6 class="fw-bold"><i class="bi bi-gem me-2 text-warning"></i>Zakat Mal</h6>
+  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="zakat-mall"><i class="bi bi-info-circle"></i></button>
+  </div>
   <div class="card-body">${zakatMalHtml}</div>
   </div>
   <div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-briefcase-fill me-2 text-info"></i>Zakat Penghasilan</h6></div>
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+  <h6 class="fw-bold"><i class="bi bi-briefcase-fill me-2 text-info"></i>Zakat Penghasilan</h6>
+  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="zakat-penghasilan"><i class="bi bi-info-circle"></i></button>
+  </div>
   <div class="card-body">${zakatIncomeHtml}</div>
   </div>
   <div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-white border-0"><h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (Simulasi)</h6></div>
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+  <h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (Simulasi)</h6>
+  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="pajak-penghasilan"><i class="bi bi-info-circle"></i></button>
+  </div>
   <div class="card-body">${taxHtml}</div>
   </div>
   ${historicalHtml}
