@@ -1032,9 +1032,9 @@ function renderCategoryTable(data) {
   <table class="table table-sm table-hover">
   <thead class="table-light sticky-top">
   <tr>
-  <th style="min-width: 150px;">Kategori</th>
+  <th style="min-width: 200px;">Kategori</th>
   ${years.map(y => `<th class="text-end" style="min-width: 200px;">${y}</th>`).join('')}
-  <th class="text-end" style="min-width: 170px; white-space: nowrap;">Total</th>
+  <th class="text-end" style="min-width: 200px; white-space: nowrap;">Total</th>
   </tr>
   </thead>
   <tbody>
@@ -1044,7 +1044,7 @@ function renderCategoryTable(data) {
     let rowTotal = 0;
     html += `
     <tr>
-    <td style="min-width: 150px;">
+    <td style="min-width: 200px;">
     <i class="${cat.icon} me-1" style="color:${cat.color}"></i>
     <small>${cat.name}</small>
     </td>
