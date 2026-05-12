@@ -1051,7 +1051,7 @@ function renderCategoryTable(data) {
     ${years.map(y => {
       const val = cat.data[y] || 0;
       rowTotal += val;
-      return `<td class="text-end" style="100px;">${val ? Core.formatNumberShort(val): '-'}</td>`;
+      return `<td class="text-end" style="min-width: 100px;">${val ? Core.formatNumberShort(val): '-'}</td>`;
     }).join('')}
     <td class="text-end fw-semibold" style="min-width: 110px; white-space: nowrap;">${symbol} ${Core.formatNumberShort(rowTotal)}</td>
     </tr>
@@ -2900,20 +2900,20 @@ function renderZakatTaxDashboard(data) {
     <thead class="table-light">
     <tr>
     <th>Tahun</th>
-    <th style="width: 110px;">Penghasilan (Rp)</th>
+    <th style="min-width: 150px;">Penghasilan (Rp)</th>
     <th>PTKP (Rp)</th>
     <th>PKP (Rp)</th>
-    <th style="width: 110px;">PPh Terutang (Rp)</th>
+    <th style="min-width: 150px;">PPh Terutang (Rp)</th>
     </tr>
     </thead>
     <tbody>
     ${data.historical_tax.map(item => `
       <tr>
       <td>${item.year}</td>
-      <td style="width: 110px;">${symbol}${Core.formatNumber(item.income)}</td>
+      <td style="min-width: 150px;">${symbol}${Core.formatNumber(item.income)}</td>
       <td>${symbol}${Core.formatNumber(item.ptkp)}</td>
       <td>${symbol}${Core.formatNumber(item.pkp)}</td>
-      <td class="text-danger fw-bold" style="width: 110px;">${symbol}${Core.formatNumber(item.tax)}</td>
+      <td class="text-danger fw-bold" style="min-width: 150px;">${symbol}${Core.formatNumber(item.tax)}</td>
       </tr>
       `).join('')}
     </tbody>
