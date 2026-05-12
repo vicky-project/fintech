@@ -2901,10 +2901,10 @@ function renderZakatTaxDashboard(data) {
     <thead class="table-light">
     <tr>
     <th>Tahun</th>
-    <th style="min-width: 170px;">Penghasilan (Rp)</th>
-    <th style="min-width: 170px;">PTKP (Rp)</th>
-    <th style="min-width: 170px;">PKP (Rp)</th>
-    <th style="min-width: 170px;">PPh Terutang (Rp)</th>
+    <th style="min-width: 170px;">Penghasilan (${symbol})</th>
+    <th style="min-width: 170px;">PTKP (${symbol})</th>
+    <th style="min-width: 170px;">PKP (${symbol})</th>
+    <th style="min-width: 170px;">PPh Terutang (${symbol})</th>
     </tr>
     </thead>
     <tbody>
