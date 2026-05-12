@@ -194,7 +194,7 @@ class ZakatTaxService
   */
   public function getHistoricalTaxData($user): array
   {
-    $excludedCategoryIds = Category::whereJsonContain('metadata->tags', "exclude_from_income")
+    $excludedCategoryIds = Category::whereJsonContains('metadata->tags', "exclude_from_income")
     ->pluck('id');
 
     $yearlyIncomes = Transaction::income()
