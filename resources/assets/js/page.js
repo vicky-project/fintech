@@ -1051,7 +1051,7 @@ function renderCategoryTable(data) {
     ${years.map(y => {
       const val = cat.data[y] || 0;
       rowTotal += val;
-      return `<td class="text-end" style="min-width: 200px;">${symbol}${val ? Core.formatNumber(val): 0}</td>`;
+      return `<td class="text-end" style="min-width: 200px;">${symbol}${val ? Core.formatNumber(val): '-'}</td>`;
     }).join('')}
     <td class="text-end fw-semibold" style="min-width: 200px; white-space: nowrap;">${symbol} ${Core.formatNumber(rowTotal)}</td>
     </tr>
