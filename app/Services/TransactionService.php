@@ -6,6 +6,7 @@ use Modules\FinTech\Models\Transaction;
 use Modules\FinTech\Models\Wallet;
 use Modules\FinTech\Models\Category;
 use Modules\FinTech\Enums\TransactionType;
+use Modules\FinTech\Services\CurrencyConverter;
 use Modules\FinTech\Traits\HasUserCache;
 use Modules\FinTech\Jobs\SyncTransactionToSheetJob;
 use Brick\Money\Money;
@@ -17,10 +18,15 @@ class TransactionService
   use HasUserCache;
 
   protected WalletService $walletService;
+  protected CurrencyConverter $converter;
   protected int $cacheTtl = 300;
 
-  public function __construct(WalletService $walletService) {
+  public function __construct(
+    WalletService $walletService,
+    CurrencyConverter $converter
+  ) {
     $this->walletService = $walletService;
+    $this->converter = $converter;
   }
 
   // ─── PUBLIC API ────────────────────────────────────────
@@ -145,7 +151,7 @@ class TransactionService
     $amountChanged = !$oldAmount->isEqualTo($newAmount);
     $typeChanged = $oldType !== $newType;
 
-    DB::transaction(function () use ($transaction, $wallet, $data, $newAmount, $newType, $oldAmount, $oldType, $amountChanged, $typeChanged) {
+    DB::transaction(function () use ($transaction, $wallet, $data, $newAmount, $newType, $oldAmount, $oldType, $amountChanged, $typeChanged, $user) {
       if ($amountChanged || $typeChanged) {
         $netEffect = Money::zero($wallet->currency);
         if ($oldType === TransactionType::INCOME->value) {
@@ -394,7 +400,9 @@ class TransactionService
     app(BudgetService::class)->clearUserCache($userId);
     app(NotificationService::class)->clearUserCache($userId);
     app(HomeService::class)->clearUserCache($userId);
+    app(ZakatTaxService::class)->clearUserCache($userId);
   }
+
 
   // ─── Trait Override (opsional) ──────────────────────
 

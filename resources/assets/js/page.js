@@ -1032,9 +1032,9 @@ function renderCategoryTable(data) {
   <table class="table table-sm table-hover">
   <thead class="table-light sticky-top">
   <tr>
-  <th style="min-width: 150px;">Kategori</th>
-  ${years.map(y => `<th class="text-end" style="min-width: 100px;">${y}</th>`).join('')}
-  <th class="text-end" style="min-width: 110px; white-space: nowrap;">Total</th>
+  <th style="min-width: 200px;">Kategori</th>
+  ${years.map(y => `<th class="text-end" style="min-width: 200px;">${y}</th>`).join('')}
+  <th class="text-end" style="min-width: 200px; white-space: nowrap;">Total</th>
   </tr>
   </thead>
   <tbody>
@@ -1044,16 +1044,16 @@ function renderCategoryTable(data) {
     let rowTotal = 0;
     html += `
     <tr>
-    <td style="min-width: 150px;">
+    <td style="min-width: 200px;">
     <i class="${cat.icon} me-1" style="color:${cat.color}"></i>
     <small>${cat.name}</small>
     </td>
     ${years.map(y => {
       const val = cat.data[y] || 0;
       rowTotal += val;
-      return `<td class="text-end" style="100px;">${val ? Core.formatNumberShort(val): '-'}</td>`;
+      return `<td class="text-end" style="min-width: 200px;">${symbol} ${val ? Core.formatNumber(val): '0'}</td>`;
     }).join('')}
-    <td class="text-end fw-semibold" style="min-width: 110px; white-space: nowrap;">${symbol} ${Core.formatNumberShort(rowTotal)}</td>
+    <td class="text-end fw-semibold" style="min-width: 200px; white-space: nowrap;">${symbol} ${Core.formatNumber(rowTotal)}</td>
     </tr>
     `;
   });
@@ -1062,8 +1062,8 @@ function renderCategoryTable(data) {
   html += `
   <tr class="table-primary fw-bold">
   <td style="min-width: 150px;">Total</td>
-  ${years.map(y => `<td class="text-end" style="min-width: 100px;">${symbol} ${Core.formatNumberShort(totals[y] || 0)}</td>`).join('')}
-  <td class="text-end" style="min-width: 110px; white-space: nowrap;">${symbol} ${Core.formatNumberShort(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
+  ${years.map(y => `<td class="text-end" style="min-width: 200px;">${symbol} ${Core.formatNumber(totals[y] || 0)}</td>`).join('')}
+  <td class="text-end" style="min-width: 200px; white-space: nowrap;">${symbol} ${Core.formatNumber(Object.values(totals).reduce((a, b) => a + b, 0))}</td>
   </tr>
   </tbody>
   </table>
@@ -1078,8 +1078,14 @@ async function renderSettingsPage() {
   const settings = Core.state.userSettings || {
     default_currency: 'IDR',
     default_wallet_id: '',
-    pin_enabled: false
+    pin_enabled: false,
+    marital_status: 'single',
+    dependents: 0
   };
+
+  // Pastikan properti marital_status dan dependents ada
+  if (!settings.marital_status) settings.marital_status = 'single';
+  if (settings.dependents === undefined) settings.dependents = 0;
 
   const html = `
   <div class="container py-3">
@@ -1107,6 +1113,27 @@ async function renderSettingsPage() {
   <option value="">Tidak Ada</option>
   ${Core.state.wallets.length > 0 ? Core.state.wallets.map(w => `<option value="${w.id}">${w.name} (${w.currency?.symbol || ''})</option>`).join(''): ''}
   </select>
+  </div>
+
+  <!-- Data Perpajakan & Zakat -->
+  <div class="mb-4">
+  <label class="form-label fw-semibold">Data Perpajakan & Zakat</label>
+  <div class="row g-3">
+  <div class="col-md-6">
+  <select class="form-select" name="marital_status" id="marital-status">
+  ${Core.state.maritalStatuses.map(status => `
+    <option value="${status.value}" ${settings.marital_status === status.value ? 'selected': ''}>
+    ${status.label}
+    </option>
+    `).join('')}
+  </select>
+  <div class="small text-muted mt-1">Status perkawinan untuk perhitungan PTKP (Pajak Penghasilan)</div>
+  </div>
+  <div class="col-md-6">
+  <input type="number" class="form-control" name="dependents" id="dependents" min="0" max="10" value="${settings.dependents}">
+  <div class="small text-muted mt-1">Jumlah tanggungan (anak kandung/tiri yang sah, maksimal 3)</div>
+  </div>
+  </div>
   </div>
 
   <hr>
@@ -1266,19 +1293,6 @@ async function renderSettingsPage() {
   <button class="btn btn-outline-danger w-100" data-action="delete-account">
   <i class="bi bi-trash me-1"></i> Hapus Akun Saya
   </button>
-  </div>
-  </div>
-
-  <!-- Modal Informasi -->
-  <div class="modal fade" id="infoModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-  <div class="modal-content">
-  <div class="modal-header">
-  <h6 class="modal-title" id="infoModalTitle"></h6>
-  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-  </div>
-  <div class="modal-body" id="infoModalBody"></div>
-  </div>
   </div>
   </div>
   </div>`;
@@ -2798,6 +2812,174 @@ async function checkGoogleConnection() {
   }
 }
 
+// Zakat & Pajak
+async function renderZakatTaxPage() {
+  const container = document.getElementById('main-content');
+  container.innerHTML = `
+  <div class="container py-3">
+  <div class="d-flex align-items-center mb-3">
+  <i class="bi bi-calculator-fill fs-3 me-2 text-success"></i>
+  <h5 class="mb-0">Zakat & Pajak Penghasilan</h5>
+  <button class="btn btn-link ms-auto p-0" data-action="show-info" data-info="zakatTaxMethod">
+  <i class="bi bi-info-circle fs-5 text-muted"></i>
+  </button>
+  </div>
+  <div id="dashboard-content"></div>
+  </div>
+  `;
+  loadZakatTaxForPage();
+}
+
+function generateYearOptions() {
+  const currentYear = new Date().getFullYear();
+  let options = '';
+  for (let y = currentYear; y >= 2020; y--) {
+    options += `<option value="${y}">${y}</option>`;
+  }
+  return options;
+}
+
+async function loadZakatTaxForPage(year = null) {
+  tgApp.showLoading('Memuat data zakat dan pajak...')
+  try {
+    await Core.loadZakatTax(year);
+    if (Core.state.zakats) {
+      renderZakatTaxDashboard(Core.state.zakats);
+    } else {
+      tgApp.showToast('Gagal mengambil data zakat dan pajak.');
+    }
+  } catch(error) {
+    tgApp.showToast(error.message || 'Server error', 'danger');
+    const dashboardZakat = document.getElementById('dashboard-content');
+    dashboardZakat.innerHTML = `
+    <div class="alert alert-danger">${error.message}</div>
+    <button class="btn btn-outline-primary mt-2" onclick="renderZakatTaxPage()">Coba Lagi</button>
+    `;
+  } finally {
+    tgApp.hideLoading();
+  }
+}
+
+function renderZakatTaxDashboard(data) {
+  const currency = Core.state.userSettings?.default_currency || 'IDR';
+  const symbol = Core.getCurrencySymbol(currency);
+
+  const wealth = data.total_wealth;
+  const yearlyIncome = data.yearly_income;
+  const goldPrice = data.gold_price_per_gram;
+  const nisab = data.nisab;
+  const zakatMal = data.zakat_mal;
+  const zakatIncome = data.zakat_income;
+  const incomeTax = data.income_tax;
+
+  const formattedWealth = Core.formatNumber(wealth);
+  const formattedIncome = Core.formatNumber(yearlyIncome);
+  const formattedGold = Core.formatNumber(goldPrice);
+  const formattedNisab = Core.formatNumber(nisab);
+
+  let zakatMalHtml = (zakatMal.eligible)
+  ? `<div class="alert alert-success"><strong>Harta Anda telah mencapai nisab.</strong><br>Zakat Mal: <strong>${symbol} ${Core.formatNumber(zakatMal.amount)}</strong> (2.5%)</div>`: `<div class="alert alert-info">Harta Anda saat ini <strong>belum mencapai nisab</strong> (Rp ${formattedNisab}). Belum wajib zakat mal.</div>`;
+
+  let zakatIncomeHtml = (zakatIncome.eligible)
+  ? `<div class="alert alert-warning"><strong>Penghasilan tahunan telah mencapai nisab.</strong><br>Zakat Penghasilan: <strong>${symbol} ${Core.formatNumber(zakatIncome.amount)}</strong> (2.5%)</div>`: `<div class="alert alert-secondary">Penghasilan tahunan belum mencapai nisab (Rp ${formattedNisab}). Belum wajib zakat penghasilan.</div>`;
+
+  let taxHtml = (incomeTax.tax > 0)
+  ? `<div class="alert alert-light border"><strong>Perkiraan PPh Orang Pribadi:</strong> ${symbol} ${Core.formatNumber(incomeTax.tax)}<br><small>PKP: ${symbol} ${Core.formatNumber(incomeTax.pkp)} (PTKP: ${symbol} ${Core.formatNumber(incomeTax.ptkp)})</small></div>`: `<div class="alert alert-secondary">Penghasilan Anda di bawah PTKP (${symbol} ${Core.formatNumber(incomeTax.ptkp)}). Belum memiliki kewajiban PPh.</div>`;
+
+  // ========== Tabel Riwayat Pajak ==========
+  let historicalHtml = '';
+  if (data.historical_tax && data.historical_tax.length > 0) {
+    historicalHtml = `
+    <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold"><i class="bi bi-clock-history me-2 text-secondary"></i>Riwayat Pajak per Tahun</h6>
+    <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="riwayat-pajak"><i class="bi bi-info-circle"></i></button>
+    </div>
+    <div class="card-body p-0">
+    <div class="table-responsive p-2">
+    <table class="table table-sm table-hover table-bordered mb-0">
+    <thead class="table-light">
+    <tr>
+    <th class="text-center">Tahun</th>
+    <th style="min-width: 170px;" class="text-center">Penghasilan (${symbol})</th>
+    <th style="min-width: 170px;" class="text-center">PTKP (${symbol})</th>
+    <th style="min-width: 170px;" class="text-center">PKP (${symbol})</th>
+    <th style="min-width: 170px;" class="text-center">PPh Terutang (${symbol})</th>
+    </tr>
+    </thead>
+    <tbody>
+    ${data.historical_tax.map(item => `
+      <tr>
+      <td>${item.year}</td>
+      <td class="text-end" style="min-width: 170px;">${symbol} ${Core.formatNumber(item.income)}</td>
+      <td class="text-end" style="min-width: 170px;">${symbol} ${Core.formatNumber(item.ptkp)}</td>
+      <td class="text-end" style="min-width: 170px;">${symbol} ${Core.formatNumber(item.pkp)}</td>
+      <td class="text-end" class="text-danger fw-bold" style="min-width: 170px;">${symbol} ${Core.formatNumber(item.tax)}</td>
+      </tr>
+      `).join('')}
+    </tbody>
+    </table>
+    </div>
+    </div>
+    </div>
+    `;
+  }
+
+  const html = `
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <h6 class="fw-bold"><i class="bi bi-wallet2 me-2"></i>Total Kekayaan Anda</h6>
+  <p class="fs-4 fw-bold text-primary">${symbol} ${formattedWealth}</p>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <h6 class="fw-bold"><i class="bi bi-arrow-up-circle-fill me-2 text-success"></i>Total Pemasukan (Tahunan)</h6>
+  <p class="fs-4 fw-bold text-success">${symbol} ${formattedIncome}</p>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+  <div class="row text-center">
+  <div class="col-6">
+  <div class="text-muted small">Harga Emas / gram</div>
+  <h5 class="text-primary">${symbol} ${formattedGold}</h5>
+  </div>
+  <div class="col-6">
+  <div class="text-muted small">Nisab Zakat (85 gram)</div>
+  <h5 class="text-success">${symbol} ${formattedNisab}</h5>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header text-bg-white border-0 d-flex justify-content-between align-items-center">
+  <h6 class="fw-bold"><i class="bi bi-gem me-2 text-warning"></i>Zakat Mal</h6>
+  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="zakat-mal"><i class="bi bi-info-circle"></i></button>
+  </div>
+  <div class="card-body">${zakatMalHtml}</div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+  <h6 class="fw-bold"><i class="bi bi-briefcase-fill me-2 text-info"></i>Zakat Penghasilan</h6>
+  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="zakat-penghasilan"><i class="bi bi-info-circle"></i></button>
+  </div>
+  <div class="card-body">${zakatIncomeHtml}</div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+  <h6 class="fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Pajak Penghasilan (PPh)</h6>
+  <button class="btn btn-sm btn-link p-0 text-muted" data-action="show-info" data-info="pajak-penghasilan"><i class="bi bi-info-circle"></i></button>
+  </div>
+  <div class="card-body">${taxHtml}</div>
+  </div>
+  ${historicalHtml}
+  `;
+
+  const contentDiv = document.getElementById('dashboard-content');
+  contentDiv.innerHTML = html;
+}
+
 // ==================== DAFTAR HALAMAN ====================
 Core.setPages({
   home: renderHomePage,
@@ -2814,4 +2996,5 @@ Core.setPages({
   transactionTrash: renderTransactionTrash,
   transferTrash: renderTransferTrash,
   export: renderExportPage,
+  zakatTax: renderZakatTaxPage
 });

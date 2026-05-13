@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Modules\FinTech\Enums\MaritalStatus;
 use Modules\FinTech\Models;
 use Modules\FinTech\Http\Requests\UserSettingsRequest;
 use Modules\Telegram\Models\TelegramUser;
@@ -28,6 +29,19 @@ class SettingController extends Controller
     ]);
   }
 
+
+  public function getMaritalStatuses() {
+    $statuses = [];
+    foreach (MaritalStatus::cases() as $case) {
+      $statuses[] = [
+        'value' => $case->value,
+        'label' => $case->label(),
+        'base_ptkp' => $case->basePTKP(),
+      ];
+    }
+    return response()->json(['success' => true, 'data' => $statuses]);
+  }
+
   public function update(UserSettingsRequest $request): JsonResponse
   {
     $validated = $request->validatedSettings();
@@ -37,7 +51,9 @@ class SettingController extends Controller
       'default_currency',
       'default_wallet_id',
       'pin_enabled',
-      'pin'
+      'pin',
+      'marital_status',
+      'dependents'
     ];
 
     $preferencesInput = [];

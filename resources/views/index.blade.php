@@ -61,6 +61,7 @@
           <li><button class="dropdown-item nav-btn" data-page="transfers"><i class="bi bi-arrow-left-right me-2"></i>Transfer</button></li>
           <li><button class="dropdown-item nav-btn" data-page="statements"><i class="bi bi-file-text me-2"></i>Statement</button></li>
           <li><button class="dropdown-item nav-btn" data-page="insights"><i class="bi bi-bar-chart me-2"></i>Insight</button></li>
+          <li><button class="dropdown-item nav-btn" data-page="zakatTax"><i class="bi bi-calculator-fill me-2"></i>Zakat & Pajak</button></li>
           <li><button class="dropdown-item nav-btn" data-page="budgets"><i class="bi bi-pie-chart me-2"></i>Budget</button></li>
           <li><button class="dropdown-item nav-btn" data-page="export"><i class="bi bi-cloud-download-fill me-2"></i>Export</button></li>
         </ul>
@@ -301,6 +302,19 @@
             <button type="submit" class="btn btn-primary w-100">Verifikasi</button>
           </form>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Informasi -->
+  <div class="modal fade" id="infoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title" id="infoModalTitle"></h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="infoModalBody"></div>
       </div>
     </div>
   </div>

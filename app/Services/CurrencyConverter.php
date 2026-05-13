@@ -4,8 +4,11 @@ namespace Modules\FinTech\Services;
 
 use Nnjeim\World\Models\Currency as WorldCurrency;
 use Modules\FinTech\Models\ExchangeRate;
+use Modules\FinTech\Models\Wallet;
+use Brick\Money\Money;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 class CurrencyConverter
 {
@@ -26,6 +29,19 @@ class CurrencyConverter
 
     $rate = $this->getExchangeRate($fromCurrency, $toCurrency);
     return round($amount * $rate, 2);
+  }
+
+  /**
+  * Hitung amount dalam mata uang default user
+  */
+  public function getAmountInDefaultCurrency(Authenticatable $user, Wallet $wallet, Money $amount): float
+  {
+    $userSetting = UserSetting::where('user_id', $user->id)->first();
+    $defaultCurrency = $userSetting->default_currency ?? 'IDR';
+    if ($wallet->currency === $defaultCurrency) {
+      return $amount->getAmount()->toFloat();
+    }
+    return $this->converter->convert($amount->getAmount()->toFloat(), $wallet->currency, $defaultCurrency);
   }
 
   /**

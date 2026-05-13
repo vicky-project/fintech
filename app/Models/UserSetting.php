@@ -5,6 +5,7 @@ namespace Modules\FinTech\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Hash;
+use Modules\FinTech\Enums\MaritalStatus;
 use Modules\FinTech\Traits\HasUuid;
 
 class UserSetting extends Model
@@ -27,7 +28,9 @@ class UserSetting extends Model
     'google_access_token',
     'google_refresh_token',
     'google_token_expires_at',
-    'google_spreadsheet_id'
+    'google_spreadsheet_id',
+    'marital_status',
+    'dependents'
   ];
 
   protected $casts = [
@@ -39,6 +42,8 @@ class UserSetting extends Model
     'google_token_expires_at' => 'datetime',
     'google_access_token' => 'encrypted',
     'google_refresh_token' => 'encrypted',
+    'marital_status' => MaritalStatus::class,
+    'dependents' => 'integer'
   ];
 
   protected $hidden = [
