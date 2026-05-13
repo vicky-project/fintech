@@ -10,7 +10,7 @@ use Modules\FinTech\Enums\StatementType;
 use Modules\FinTech\Enums\CategoryType;
 use Modules\FinTech\Traits\HasUserCache;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class InsightService
 {
@@ -18,7 +18,7 @@ class InsightService
 
   protected BudgetService $budgetService;
   protected CategorizationService $categorizationService;
-  protected int $cacheTtl = 3600; // 1 jam untuk analisis utama
+  protected int $cacheTtl = 3600; // 1 jam
 
   public function __construct(BudgetService $budgetService, CategorizationService $categorizationService) {
     $this->budgetService = $budgetService;
@@ -43,7 +43,6 @@ class InsightService
   public static function clearCache(int $userId): void
   {
     app(static::class)->clearUserCache($userId);
-    // Hapus juga cache subscription
     app(static::class)->forgetUserCacheItem($userId, 'subscriptions');
   }
 
@@ -65,7 +64,9 @@ class InsightService
     });
   }
 
-  // ─── Private helper methods ─────────────────────────────────────────
+  // -------------------------------------------------------------------------
+  // Private helpers
+  // -------------------------------------------------------------------------
 
   private function computeAnalysis(int $userId): array
   {
@@ -84,7 +85,7 @@ class InsightService
     $currentYear = Carbon::now()->year;
     $topCategories = $this->getTopCategories($transactions, $currentMonth, $currentYear, 5);
     $anomalies = $this->detectAnomalies($transactions);
-    $subscriptions = $this->getCachedSubscriptions($userId); // pakai cache
+    $subscriptions = $this->getCachedSubscriptions($userId);
     $spendingRatio = $this->calculateSpendingRatio($transactions);
     $projection = $this->projectNextMonthCashflow($userId, $transactions);
     $budgets = $this->budgetService->getBudgets($userId);
@@ -225,11 +226,11 @@ class InsightService
   }
 
   /**
-  * Deteksi langganan bulanan dengan bantuan CategorizationService.
+  * Deteksi langganan dengan prioritas kategori yang sudah ada.
   */
   private function detectSubscriptions($transactions): array
   {
-    // Kategori yang secara default dianggap langganan
+    // Kategori default yang dianggap langganan
     $subscriptionCategoryNames = [
       'Langganan',
       'Subscription',
@@ -242,11 +243,15 @@ class InsightService
     ];
     $subscriptionCategoryIds = Category::whereIn('name', $subscriptionCategoryNames)->pluck('id')->toArray();
 
-    $potential = $transactions->filter(function ($t) use ($subscriptionCategoryIds) {
+    // Regex untuk keyword langganan (batas kata)
+    $subscriptionRegex = '/\b(langganan|subscription|premium|member|membership|netflix|spotify|youtube|disney|hbo|vidio|mola|catchplay|canva|adobe|zoom|dropbox|icloud|google one|microsoft 365|office 365|gym|fitness|aplikasi|software|web hosting|domain|vps|server)\b/i';
+
+    $potential = $transactions->filter(function ($t) use ($subscriptionCategoryIds, $subscriptionRegex) {
       $desc = $t->description ?? '';
       $statementType = StatementType::DEBIT;
 
-      $suggestedCategory = $this->categorizationService->categorize($desc, $statementType);
+      // Prioritaskan kategori yang sudah ada pada transaksi
+      $suggestedCategory = $t->category_id ? $t->category : $this->categorizationService->categorize($desc, $statementType);
       if (!$suggestedCategory) {
         return false;
       }
@@ -256,49 +261,16 @@ class InsightService
       stripos($suggestedCategory->name, 'subscription') !== false;
 
       if (!$isSubscription) {
-        $subscriptionKeywords = [
-          'langganan',
-          'subscription',
-          'premium',
-          'member',
-          'membership',
-          'netflix',
-          'spotify',
-          'youtube',
-          'disney',
-          'hbo',
-          'vidio',
-          'mola',
-          'catchplay',
-          'canva',
-          'adobe',
-          'zoom',
-          'dropbox',
-          'icloud',
-          'google one',
-          'microsoft 365',
-          'office 365',
-          'gym',
-          'fitness',
-          'aplikasi',
-          'software',
-          'web hosting',
-          'domain',
-          'vps',
-          'server'
-        ];
-        $lowerDesc = strtolower($desc);
-        foreach ($subscriptionKeywords as $kw) {
-          if (str_contains($lowerDesc, $kw)) {
-            $isSubscription = true;
-            break;
-          }
+        // Gunakan regex untuk mencocokkan kata utuh
+        if (preg_match($subscriptionRegex, $desc)) {
+          $isSubscription = true;
         }
       }
 
       return $isSubscription;
     });
 
+    // Kelompokkan berdasarkan kategori + deskripsi + nominal
     $grouped = $potential->groupBy(function ($t) {
       return $t->category_id . '|' . ($t->description ?? '') . '|' . $t->getAmountFloat();
     });
@@ -446,7 +418,7 @@ class InsightService
         'type' => 'warning',
         'icon' => 'bi-graph-up-arrow',
         'title' => 'Lonjakan pada ' . $anom['category']['name'],
-        'message' => 'Pengeluaran untuk kategori ini naik ' . $anom['percentage_increase'] . '% dari rata‑rata 3 bulan. Cek apakah ada pembelian tidak biasa.',
+        'message' => 'Pengeluaran kategori ini naik ' . $anom['percentage_increase'] . '% dari rata-rata 3 bulan. Cek transaksi tidak biasa.',
       ];
     }
 
@@ -491,7 +463,7 @@ class InsightService
           'type' => 'warning',
           'icon' => 'bi-exclamation-triangle',
           'title' => 'Budget Hampir Habis: ' . $budget['category']['name'],
-          'message' => 'Budget ' . $budget['category']['name'] . ' mencapai ' . $budget['percentage'] . '%. Hati‑hati.',
+          'message' => 'Budget ' . $budget['category']['name'] . ' mencapai ' . $budget['percentage'] . '%. Hati-hati.',
         ];
       }
     }
@@ -501,14 +473,14 @@ class InsightService
         'type' => 'warning',
         'icon' => 'bi-graph-down',
         'title' => 'Proyeksi Defisit Bulan Depan',
-        'message' => 'Berdasarkan 3 bulan terakhir, pengeluaran diproyeksikan melebihi pemasukan. Siapkan dana cadangan.',
+        'message' => 'Pengeluaran diproyeksikan melebihi pemasukan. Siapkan dana cadangan.',
       ];
     } elseif (($projection['projected_surplus'] ?? 0) > ($projection['projected_income'] ?? 0) * 0.3) {
       $recs[] = [
         'type' => 'success',
         'icon' => 'bi-check-circle',
         'title' => 'Ada Ruang untuk Menabung!',
-        'message' => 'Surplus diproyeksikan Rp ' . number_format($projection['projected_surplus'], 0, ',', '.') . ' bulan depan. Tingkatkan tabungan atau investasi.',
+        'message' => 'Surplus diproyeksikan Rp ' . number_format($projection['projected_surplus'], 0, ',', '.') . ' bulan depan. Tingkatkan tabungan.',
       ];
     }
 
@@ -517,7 +489,7 @@ class InsightService
         'type' => 'tip',
         'icon' => 'bi-plus-circle',
         'title' => 'Buat Budget Pertama Anda',
-        'message' => 'Belum ada budget. Buat anggaran untuk mengontrol keuangan lebih baik.',
+        'message' => 'Belum ada budget. Buat anggaran untuk mengontrol keuangan.',
       ];
     }
 
@@ -532,8 +504,8 @@ class InsightService
     $suffix = "cashflow_projection_{$days}";
 
     return $this->rememberForUser($userId, $suffix, $this->cacheTtl, function () use ($userId, $days) {
-      $walletQuery = Wallet::where('user_id', $userId)->where('is_active', true);
-      $totalBalance = $walletQuery->sum('balance') / 100;
+      // Perbaikan point #6: gunakan raw sum untuk menghindari pembagian manual yang tidak konsisten
+      $totalBalance = Wallet::where('user_id', $userId)->where('is_active', true)->sum('balance') / 100;
 
       $dailyExpenses = Transaction::expense()
       ->whereHas('wallet', fn($q) => $q->where('user_id', $userId))
