@@ -2900,11 +2900,11 @@ function renderZakatTaxDashboard(data) {
     <table class="table table-sm table-hover mb-0">
     <thead class="table-light">
     <tr>
-    <th>Tahun</th>
-    <th style="min-width: 170px;">Penghasilan (${symbol})</th>
-    <th style="min-width: 170px;">PTKP (${symbol})</th>
-    <th style="min-width: 170px;">PKP (${symbol})</th>
-    <th style="min-width: 170px;">PPh Terutang (${symbol})</th>
+    <th class="text-center">Tahun</th>
+    <th style="min-width: 170px;" class="text-center">Penghasilan (${symbol})</th>
+    <th style="min-width: 170px;" class="text-center">PTKP (${symbol})</th>
+    <th style="min-width: 170px;" class="text-center">PKP (${symbol})</th>
+    <th style="min-width: 170px;" class="text-center">PPh Terutang (${symbol})</th>
     </tr>
     </thead>
     <tbody>
