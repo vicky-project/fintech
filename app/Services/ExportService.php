@@ -510,8 +510,8 @@ class ExportService
       $filename = Str::uuid()->toString() . '.' . $extension;
       $tempPath = "temp/exports/{$filename}";
       $writerType = $extension === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX;
-      Excel::store($export, $tempPath, 'local', $writerType);
-      return Storage::disk('local')->path($tempPath);
+      Excel::store($export, $tempPath, 'public', $writerType);
+      return Storage::disk('public')->path($tempPath);
     }
 
     // ----------------------------------------------------------------
