@@ -106,10 +106,11 @@ class StatementService
 
     $tempPath = $file->storeAs(
       'temp/statements/' . $userId,
-      uniqid() . '_' . $safeName
+      uniqid() . '_' . $safeName,
+      'public'
     );
 
-    $fullPath = Storage::path($tempPath);
+    $fullPath = Storage::disk('public')->path($tempPath);
     $processedPath = $fullPath;
 
     try {
