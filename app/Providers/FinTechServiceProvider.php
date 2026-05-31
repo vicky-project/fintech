@@ -70,6 +70,7 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(Writers\SummaryWriter::class);
     $this->app->singleton(Writers\TitleWriter::class);
 
+    $this->app->make("config")->set("world.migrations.countries.optional_fields", config('world.migrations.countries.optional_fields'));
     $this->app->make("config")->set("world.migrations.countries.table_name", "world_countries");
     $this->app->make("config")->set("world.migrations.states.table_name", "world_states");
     $this->app->make("config")->set("world.migrations.cities.table_name", "world_cities");
