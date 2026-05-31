@@ -42,7 +42,6 @@ class FinTechServiceProvider extends ServiceProvider
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
 
-    $this->mergeConfigFrom(__DIR__ . '/../../config/world.php', 'world');
   }
 
   /**
@@ -71,6 +70,8 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(Writers\StyleBuilder::class);
     $this->app->singleton(Writers\SummaryWriter::class);
     $this->app->singleton(Writers\TitleWriter::class);
+
+    $this->mergeConfigFrom(__DIR__ . '/../../config/world.php', 'world');
 
     $this->app->make("config")->set("queue.connections.".config('queue.default', 'database') . ".after_commit", true);
 
