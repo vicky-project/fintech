@@ -41,6 +41,8 @@ class FinTechServiceProvider extends ServiceProvider
     $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
+
+    $this->app->make("config")->set("world.migrations", $this->app->config[$this->nameLower . '.world']);
   }
 
   /**
@@ -69,12 +71,6 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(Writers\StyleBuilder::class);
     $this->app->singleton(Writers\SummaryWriter::class);
     $this->app->singleton(Writers\TitleWriter::class);
-
-    $optionalFieldsCountries = config('world.migrations.countries.optional_fields');
-    $optionalFieldsStates = config('world.migrations.states.optional_fields');
-    $optionalFieldsCities = config('world.migrations.cities.optional_fields');
-
-    $this->app->make("config")->set("world.migrations", $this->app->config[$this->nameLower . '.world']);
 
     $this->app->make("config")->set("queue.connections.".config('queue.default', 'database') . ".after_commit", true);
 
