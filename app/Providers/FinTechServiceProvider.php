@@ -42,7 +42,7 @@ class FinTechServiceProvider extends ServiceProvider
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
 
-    $this->mergeConfigFrom(__DIR__ . '../../config/world.php', 'world');
+    $this->mergeConfigFrom(__DIR__ . '../config/world.php', 'world');
   }
 
   /**
