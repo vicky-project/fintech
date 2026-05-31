@@ -70,10 +70,16 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(Writers\SummaryWriter::class);
     $this->app->singleton(Writers\TitleWriter::class);
 
-    $this->app->make("config")->set("world.migrations.countries.optional_fields", config('world.migrations.countries.optional_fields'));
-    $this->app->make("config")->set("world.migrations.countries.table_name", "world_countries");
-    $this->app->make("config")->set("world.migrations.states.table_name", "world_states");
-    $this->app->make("config")->set("world.migrations.cities.table_name", "world_cities");
+    $optionalFieldsCountries = config('world.migrations.countries.optional_fields');
+    $optionalFieldsStates = config('world.migrations.states.optional_fields');
+    $optionalFieldsCities = config('world.migrations.cities.optional_fields');
+
+    $this->app->make("config")->set("world.migrations.countries", ['table_name' => 'world_countries', 'optional_fields' => $optionalFieldsCountries]);
+
+    $this->app->make("config")->set("world.migrations.states", ['table_name' => 'world_states', 'optional_fields' => $optionalFieldsStates]);
+
+    $this->app->make("config")->set("world.migrations.cities", ['table_name' => 'world_cities', 'optional_fields' => $optionalFieldsCities]);
+
     $this->app->make("config")->set("world.migrations.currencies.table_name", "world_currencies");
     $this->app->make("config")->set("world.migrations.languages.table_name", "world_languages");
     $this->app->make("config")->set("world.migrations.timezones.table_name", "world_timezones");
