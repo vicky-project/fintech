@@ -74,15 +74,7 @@ class FinTechServiceProvider extends ServiceProvider
     $optionalFieldsStates = config('world.migrations.states.optional_fields');
     $optionalFieldsCities = config('world.migrations.cities.optional_fields');
 
-    $this->app->make("config")->set("world.migrations.countries", ['table_name' => 'world_countries', 'optional_fields' => $optionalFieldsCountries]);
-
-    $this->app->make("config")->set("world.migrations.states", ['table_name' => 'world_states', 'optional_fields' => $optionalFieldsStates]);
-
-    $this->app->make("config")->set("world.migrations.cities", ['table_name' => 'world_cities', 'optional_fields' => $optionalFieldsCities]);
-
-    $this->app->make("config")->set("world.migrations.currencies.table_name", "world_currencies");
-    $this->app->make("config")->set("world.migrations.languages.table_name", "world_languages");
-    $this->app->make("config")->set("world.migrations.timezones.table_name", "world_timezones");
+    $this->app->make("config")->set("world.migrations", config($this->nameLower . '.world'));
 
     $this->app->make("config")->set("queue.connections.".config('queue.default', 'database') . ".after_commit", true);
 
