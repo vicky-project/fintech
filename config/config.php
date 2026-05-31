@@ -15,24 +15,4 @@ return [
     'api_key' => env('APISED_API_KEY'),
     'base_url' => env('APISED_BASE_URL', 'https://gold.g.apised.com'),
   ],
-  'world' => [
-    'countries' => [
-      'table_name' => 'world_countries',
-    ],
-    'states' => [
-      'table_name' => 'world_states',
-    ],
-    'cities' => [
-      'table_name' => 'world_cities',
-    ],
-    'timezones' => [
-      'table_name' => 'world_timezones',
-    ],
-    'currencies' => [
-      'table_name' => 'world_currencies',
-    ],
-    'languages' => [
-      'table_name' => 'world_languages',
-    ],
-  ]
 ];

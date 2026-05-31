@@ -42,20 +42,7 @@ class FinTechServiceProvider extends ServiceProvider
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
 
-    $source = config($this->nameLower . '.world', []);
-    $target = config('world.migrations', []);
-
-    foreach ($source as $entity => $settings) {
-      if (isset($settings['table_name'])) {
-        // Pastikan key entity ada di target (opsional: fallback array kosong)
-        if (!isset($target[$entity])) {
-          $target[$entity] = [];
-        }
-        $target[$entity]['table_name'] = $settings['table_name'];
-      }
-    }
-
-    config()->set('world.migrations', $target);
+    $this->mergeConfigFrom(module_path($this->name . 'config/world.php'), 'world');
   }
 
   /**
