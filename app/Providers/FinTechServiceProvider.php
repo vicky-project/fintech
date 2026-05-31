@@ -71,7 +71,25 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(Writers\SummaryWriter::class);
     $this->app->singleton(Writers\TitleWriter::class);
 
-    $this->mergeConfigFrom(__DIR__ . '/../../config/world.php', 'world');
+    $this->mergeConfigFrom(vendor_path('nnjeim/world/config/world.php'), 'world');
+
+    $overrides = config($this->nameLower . '.world.migrations', []);
+
+    if (!empty($overrides)) {
+      $worldMigrations = config('world.migrations', []);
+      foreach ($overrides as $entity => $settings) {
+        if (isset($settings['table_name'])) {
+          // Pastikan entitas ada (inisialisasi jika perlu)
+          if (!isset($worldMigrations[$entity])) {
+            $worldMigrations[$entity] = [];
+          }
+          // Hanya set key table_name, sisa array tidak disentuh
+          $worldMigrations[$entity]['table_name'] = $settings['table_name'];
+        }
+      }
+
+      config()->set('world.migrations', $worldMigrations);
+    }
 
     $this->app->make("config")->set("queue.connections.".config('queue.default', 'database') . ".after_commit", true);
 
