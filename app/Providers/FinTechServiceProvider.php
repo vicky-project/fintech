@@ -42,7 +42,12 @@ class FinTechServiceProvider extends ServiceProvider
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
 
-    $this->app->make("config")->set("world.migrations", $this->app->config[$this->nameLower . '.world']);
+    $this->app->make("config")->set("world.migrations.countries.table_name", config($this->nameLower . '.world.countries.table_name'));
+    $this->app->make("config")->set("world.migrations.states.table_name", config($this->nameLower . '.world.states.table_name'));
+    $this->app->make("config")->set("world.migrations.cities.table_name", config($this->nameLower . '.world.cities.table_name'));
+    $this->app->make("config")->set("world.migrations.timezones.table_name", config($this->nameLower . '.world.timezones.table_name'));
+    $this->app->make("config")->set("world.migrations.currencies.table_name", config($this->nameLower . '.world.currencies.table_name'));
+    $this->app->make("config")->set("world.migrations.languages.table_name", config($this->nameLower . '.world.languages.table_name'));
   }
 
   /**
