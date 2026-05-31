@@ -36,7 +36,6 @@ class FinTechServiceProvider extends ServiceProvider
     $this->registerCommands();
     $this->registerCommandSchedules();
     $this->registerTranslations();
-    $this->registerConfig();
     $this->registerViews();
     $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
 
@@ -49,6 +48,7 @@ class FinTechServiceProvider extends ServiceProvider
   */
   public function register(): void
   {
+    $this->registerConfig();
     $this->app->register(EventServiceProvider::class);
     $this->app->register(RouteServiceProvider::class);
 
