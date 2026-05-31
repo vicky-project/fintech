@@ -36,11 +36,11 @@ class FinTechServiceProvider extends ServiceProvider
     $this->registerCommands();
     $this->registerCommandSchedules();
     $this->registerTranslations();
-    $this->registerConfig();
     $this->registerViews();
     $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
+
   }
 
   /**
@@ -48,6 +48,7 @@ class FinTechServiceProvider extends ServiceProvider
   */
   public function register(): void
   {
+    $this->registerConfig();
     $this->app->register(EventServiceProvider::class);
     $this->app->register(RouteServiceProvider::class);
 
@@ -70,12 +71,25 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(Writers\SummaryWriter::class);
     $this->app->singleton(Writers\TitleWriter::class);
 
-    $this->app->make("config")->set("world.migrations.countries.table_name", "world_countries");
-    $this->app->make("config")->set("world.migrations.states.table_name", "world_states");
-    $this->app->make("config")->set("world.migrations.cities.table_name", "world_cities");
-    $this->app->make("config")->set("world.migrations.currencies.table_name", "world_currencies");
-    $this->app->make("config")->set("world.migrations.languages.table_name", "world_languages");
-    $this->app->make("config")->set("world.migrations.timezones.table_name", "world_timezones");
+    $this->mergeConfigFrom(base_path('vendor/nnjeim/world/config/world.php'), 'world');
+
+    $overrides = config($this->nameLower . '.world.migrations', []);
+
+    if (!empty($overrides)) {
+      $worldMigrations = config('world.migrations', []);
+      foreach ($overrides as $entity => $settings) {
+        if (isset($settings['table_name'])) {
+          // Pastikan entitas ada (inisialisasi jika perlu)
+          if (!isset($worldMigrations[$entity])) {
+            $worldMigrations[$entity] = [];
+          }
+          // Hanya set key table_name, sisa array tidak disentuh
+          $worldMigrations[$entity]['table_name'] = $settings['table_name'];
+        }
+      }
+
+      config()->set('world.migrations', $worldMigrations);
+    }
 
     $this->app->make("config")->set("queue.connections.".config('queue.default', 'database') . ".after_commit", true);
 
