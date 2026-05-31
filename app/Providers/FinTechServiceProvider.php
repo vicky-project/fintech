@@ -71,7 +71,7 @@ class FinTechServiceProvider extends ServiceProvider
     $this->app->singleton(Writers\SummaryWriter::class);
     $this->app->singleton(Writers\TitleWriter::class);
 
-    $this->mergeConfigFrom(vendor_path('nnjeim/world/config/world.php'), 'world');
+    $this->mergeConfigFrom(base_path('vendor/nnjeim/world/config/world.php'), 'world');
 
     $overrides = config($this->nameLower . '.world.migrations', []);
 
