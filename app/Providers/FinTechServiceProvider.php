@@ -42,12 +42,20 @@ class FinTechServiceProvider extends ServiceProvider
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
 
-    config()->set("world.migrations.countries.table_name", config($this->nameLower . '.world.countries.table_name'));
-    config()->set("world.migrations.states.table_name", config($this->nameLower . '.world.states.table_name'));
-    config()->set("world.migrations.cities.table_name", config($this->nameLower . '.world.cities.table_name'));
-    config()->set("world.migrations.timezones.table_name", config($this->nameLower . '.world.timezones.table_name'));
-    config()->set("world.migrations.currencies.table_name", config($this->nameLower . '.world.currencies.table_name'));
-    config()->set("world.migrations.languages.table_name", config($this->nameLower . '.world.languages.table_name'));
+    $source = config($this->nameLower . '.world', []);
+    $target = config('world.migrations', []);
+
+    foreach ($source as $entity => $settings) {
+      if (isset($settings['table_name'])) {
+        // Pastikan key entity ada di target (opsional: fallback array kosong)
+        if (!isset($target[$entity])) {
+          $target[$entity] = [];
+        }
+        $target[$entity]['table_name'] = $settings['table_name'];
+      }
+    }
+
+    config()->set('world.migrations', $target);
   }
 
   /**
