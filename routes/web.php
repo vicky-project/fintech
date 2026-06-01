@@ -51,7 +51,19 @@ Route::middleware($middlewares)->prefix('fintech')->name('fintech.')->group(func
   // ==================== ZAKAT & TAX ====================
   Route::get('zakat', [Web\ZakatController::class, 'index'])->name('zakat.index');
 
+  // ==================== EXPORT ====================
+  Route::get('export', [Web\ExportController::class, 'index'])->name('export.index');
+  Route::post('export', [Web\ExportController::class, 'export'])->name('export.process');
+
   // ==================== SETTINGS ====================
   Route::get('settings', [Web\SettingController::class, 'index'])->name('settings');
   Route::put('settings', [Web\SettingController::class, 'update'])->name('settings.update');
+
+  // ==================== NOTIFICATIONS ====================
+  Route::get('notifications', [Web\NotificationController::class, 'index'])->name('notifications.index');
+  Route::post('notifications/{id}/read', [Web\NotificationController::class, 'markRead'])->name('notifications.read');
+  Route::post('notifications/read-all', [Web\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+
+  // ==================== SEARCH ====================
+  Route::get('search', [Web\SearchController::class, 'index'])->name('search');
 });
