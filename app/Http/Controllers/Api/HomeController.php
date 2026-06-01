@@ -1,38 +1,35 @@
 <?php
 
-namespace Modules\FinTech\Http\Controllers\Web;
+namespace Modules\FinTech\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Http\Request;
 use Modules\FinTech\Services\HomeService;
-use Modules\FinTech\Models\Notification;
-use Modules\FinTech\Traits\ResolvesTelegramUser;
-use Nnjeim\World\Models\Currency;
 
 class HomeController extends Controller
 {
-  use ResolvesTelegramUser;
+  public function index(Request $request, HomeService $service): JsonResponse
+  {
+    $user = $request->user();
+    abort_if(!$user, 401);
 
-  protected HomeService $homeService;
-
-  public function __construct(HomeService $homeService) {
-    $this->homeService = $homeService;
+    return response()->json([
+      'success' => true,
+      'data' => $service->getHomeData($user)
+    ]);
   }
 
-  public function index(Request $request) {
-    $telegramUser = $this->getTelegramUser($request->telegram_id);
+  public function monthlyComparison(Request $request, HomeService $service): JsonResponse
+  {
+    $user = $request->user();
+    if (!$user) {
+      abort(401);
+    }
 
-    $data = $this->homeService->getHomeData($telegramUser);
-    $monthlyComparison = $this->homeService->getMonthlyComparisonData($telegramUser->id);
-
-    $currency = Currency::where('code', $data['currency'] ?? 'IDR')->first();
-    $unreadNotifications = Notification::where('user_id', $telegramUser->id)->unread()->count();
-
-    return view('fintech.home', [
-      'data' => $data,
-      'monthlyComparison' => $monthlyComparison,
-      'unreadNotifications' => $unreadNotifications,
-      'currencyDetails' => $currency,
+    return response()->json([
+      'success' => true,
+      'data' => $service->getMonthlyComparisonData($user->id),
     ]);
   }
 }
