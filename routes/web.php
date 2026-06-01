@@ -41,6 +41,10 @@ Route::middleware($middlewares)->prefix('fintech')->name('fintech.')->group(func
   // ==================== REPORTS ====================
   Route::get('reports', [Web\ReportController::class, 'index'])->name('reports.index');
 
+  // ==================== STATEMENTS ====================
+  Route::resource('statements', Web\StatementController::class)->except(['edit', 'update']);
+  Route::post('statements/{statement}/import', [Web\StatementController::class, 'import'])->name('statements.import');
+
   // ==================== SETTINGS ====================
   Route::get('settings', [Web\SettingController::class, 'index'])->name('settings');
   Route::put('settings', [Web\SettingController::class, 'update'])->name('settings.update');
