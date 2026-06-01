@@ -69,6 +69,6 @@
 @endif
 
 @if(isset($pagination))
-@include('partials.pagination', ['pagination' => $pagination])
+@include('fintech::partials.pagination', ['pagination' => $pagination])
 @endif
 @endsection
