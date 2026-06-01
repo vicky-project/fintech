@@ -45,6 +45,12 @@ Route::middleware($middlewares)->prefix('fintech')->name('fintech.')->group(func
   Route::resource('statements', Web\StatementController::class)->except(['edit', 'update']);
   Route::post('statements/{statement}/import', [Web\StatementController::class, 'import'])->name('statements.import');
 
+  // ==================== INSIGHTS ====================
+  Route::get('insights', [Web\InsightController::class, 'index'])->name('insights.index');
+
+  // ==================== ZAKAT & TAX ====================
+  Route::get('zakat', [Web\ZakatController::class, 'index'])->name('zakat.index');
+
   // ==================== SETTINGS ====================
   Route::get('settings', [Web\SettingController::class, 'index'])->name('settings');
   Route::put('settings', [Web\SettingController::class, 'update'])->name('settings.update');
