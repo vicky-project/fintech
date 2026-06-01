@@ -5,6 +5,7 @@ namespace Modules\FinTech\Http\Controllers\Web;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\ReportService;
+use Modules\FinTech\Traits\ResolvesTelegramUser;
 
 class ReportController extends Controller
 {

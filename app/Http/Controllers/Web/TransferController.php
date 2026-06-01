@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\TransferService;
 use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Models\Transfer;
+use Modules\FinTech\Traits\ResolvesTelegramUser;
 
 class TransferController extends Controller
 {

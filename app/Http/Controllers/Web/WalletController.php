@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Models\Wallet;
+use Modules\FinTech\Traits\ResolvesTelegramUser;
 
 class WalletController extends Controller
 {

@@ -5,6 +5,7 @@ namespace Modules\FinTech\Http\Controllers\Web;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\NotificationService;
+use Modules\FinTech\Traits\ResolvesTelegramUser;
 
 class NotificationController extends Controller
 {

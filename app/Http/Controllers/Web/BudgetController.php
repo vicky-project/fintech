@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\BudgetService;
 use Modules\FinTech\Models\Budget;
+use Modules\FinTech\Traits\ResolvesTelegramUser;
 
 class BudgetController extends Controller
 {
