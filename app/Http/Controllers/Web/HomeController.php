@@ -5,14 +5,11 @@ namespace Modules\FinTech\Http\Controllers\Web;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\HomeService;
-use Modules\FinTech\Models\Notification;
-use Modules\FinTech\Traits\ResolvesTelegramUser;
+use Modules\FinTech\Models\Wallet;
 use Nnjeim\World\Models\Currency;
 
 class HomeController extends Controller
 {
-  use ResolvesTelegramUser;
-
   protected HomeService $homeService;
 
   public function __construct(HomeService $homeService) {
@@ -20,19 +17,20 @@ class HomeController extends Controller
   }
 
   public function index(Request $request) {
-    $telegramUser = $this->getTelegramUser($request->telegram_id);
+    $telegramId = $request->telegram_id;
+    $userId = auth()->id();
 
-    $data = $this->homeService->getHomeData($telegramUser);
-    $monthlyComparison = $this->homeService->getMonthlyComparisonData($telegramUser->id);
+    $data = $this->homeService->getHomeData(auth()->user());
+    $monthlyComparison = $this->homeService->getMonthlyComparisonData($userId);
 
     $currency = Currency::where('code', $data['currency'] ?? 'IDR')->first();
-    $unreadNotifications = Notification::where('user_id', $telegramUser->id)->unread()->count();
+
+    $unreadNotifications = \Modules\FinTech\Models\Notification::where('user_id', $userId)->unread()->count();
 
     return view('fintech.home', [
       'data' => $data,
       'monthlyComparison' => $monthlyComparison,
       'unreadNotifications' => $unreadNotifications,
-      'currencyDetails' => $currency,
     ]);
   }
 }
