@@ -39,7 +39,7 @@ class TransactionController extends Controller
     $defaultCurrency = UserSetting::where('user_id', $telegramUser->id)->value('default_currency') ?? 'IDR';
     $currency = Currency::where('code', $defaultCurrency)->first();
 
-    return view('fintech.transactions.index', [
+    return view('fintech::web.transactions.index', [
       'result' => $result,
       'wallets' => $wallets,
       'filters' => $filters,
@@ -52,7 +52,7 @@ class TransactionController extends Controller
     $wallets = $this->walletService->getUserWallets($telegramUser);
     $categories = Category::active()->orderBy('name')->get();
 
-    return view('fintech.transactions.form', compact('wallets', 'categories'));
+    return view('fintech::web.transactions.form', compact('wallets', 'categories'));
   }
 
   public function store(Request $request) {
@@ -75,7 +75,7 @@ class TransactionController extends Controller
 
   public function show($id) {
     $transaction = Transaction::with(['wallet', 'category'])->findOrFail($id);
-    return view('fintech.transactions.show', compact('transaction'));
+    return view('fintech::web.transactions.show', compact('transaction'));
   }
 
   public function edit(Request $request, $id) {
@@ -84,7 +84,7 @@ class TransactionController extends Controller
     $wallets = $this->walletService->getUserWallets($telegramUser);
     $categories = Category::active()->orderBy('name')->get();
 
-    return view('fintech.transactions.form', compact('wallets', 'categories', 'transaction'));
+    return view('fintech::web.transactions.form', compact('wallets', 'categories', 'transaction'));
   }
 
   public function update(Request $request, $id) {
