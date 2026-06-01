@@ -21,7 +21,7 @@ class BudgetController extends Controller
     $telegramUser = $this->getTelegramUser($request->telegram_id);
     $budgets = $this->budgetService->getBudgets($telegramUser->id);
 
-    return view('fintech.budgets.index', compact('budgets'));
+    return view('fintech::web.budgets.index', compact('budgets'));
   }
 
   public function create(Request $request) {
@@ -29,7 +29,7 @@ class BudgetController extends Controller
     $wallets = app(WalletService::class)->getUserWallets($telegramUser);
     $categories = \Modules\FinTech\Models\Category::active()->expense()->orderBy('name')->get();
 
-    return view('fintech.budgets.form', compact('wallets', 'categories'));
+    return view('fintech::web.budgets.form', compact('wallets', 'categories'));
   }
 
   public function store(Request $request) {
@@ -54,7 +54,7 @@ class BudgetController extends Controller
     $wallets = app(WalletService::class)->getUserWallets($telegramUser);
     $categories = \Modules\FinTech\Models\Category::active()->expense()->orderBy('name')->get();
 
-    return view('fintech.budgets.form', compact('budget', 'wallets', 'categories'));
+    return view('fintech::web.budgets.form', compact('budget', 'wallets', 'categories'));
   }
 
   public function update(Request $request, $id) {

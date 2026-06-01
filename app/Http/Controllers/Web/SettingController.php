@@ -16,7 +16,7 @@ class SettingController extends Controller
     $maritalStatuses = \Modules\FinTech\Enums\MaritalStatus::options();
     $wallets = app(WalletService::class)->getUserWallets($telegramUser);
 
-    return view('fintech.settings.index', compact('settings', 'maritalStatuses', 'wallets'));
+    return view('fintech::web.settings.index', compact('settings', 'maritalStatuses', 'wallets'));
   }
 
   public function update(Request $request) {

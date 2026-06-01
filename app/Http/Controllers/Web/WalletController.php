@@ -21,11 +21,11 @@ class WalletController extends Controller
     $telegramUser = $this->getTelegramUser($request->telegram_id);
     $wallets = $this->walletService->getUserWallets($telegramUser);
 
-    return view('fintech.wallets.index', compact('wallets'));
+    return view('fintech::web.wallets.index', compact('wallets'));
   }
 
   public function create() {
-    return view('fintech.wallets.form', ['wallet' => null]);
+    return view('fintech::web.wallets.form', ['wallet' => null]);
   }
 
   public function store(Request $request) {
@@ -49,12 +49,12 @@ class WalletController extends Controller
     $wallet = Wallet::findOrFail($id);
     $detail = $this->walletService->getWalletDetail($telegramUser, $wallet);
 
-    return view('fintech.wallets.show', compact('wallet', 'detail'));
+    return view('fintech::web.wallets.show', compact('wallet', 'detail'));
   }
 
   public function edit($id) {
     $wallet = Wallet::findOrFail($id);
-    return view('fintech.wallets.form', compact('wallet'));
+    return view('fintech::web.wallets.form', compact('wallet'));
   }
 
   public function update(Request $request, $id) {

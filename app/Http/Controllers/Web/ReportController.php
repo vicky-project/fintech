@@ -37,7 +37,7 @@ class ReportController extends Controller
 
       $wallets = app(WalletService::class)->getUserWallets($telegramUser);
 
-      return view('fintech.reports.index', compact(
+      return view('fintech::web.reports.index', compact(
         'chartData',
         'categorySummary',
         'categoryTable',

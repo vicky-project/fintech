@@ -27,7 +27,7 @@ class HomeController extends Controller
 
     $unreadNotifications = \Modules\FinTech\Models\Notification::where('user_id', $userId)->unread()->count();
 
-    return view('fintech.home', [
+    return view('fintech::web.home', [
       'data' => $data,
       'monthlyComparison' => $monthlyComparison,
       'unreadNotifications' => $unreadNotifications,

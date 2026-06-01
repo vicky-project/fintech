@@ -30,7 +30,7 @@ class TransferController extends Controller
     $result = $this->transferService->getTransfers($telegramUser, $filters, 20);
     $wallets = $this->walletService->getUserWallets($telegramUser);
 
-    return view('fintech.transfers.index', [
+    return view('fintech::web.transfers.index', [
       'transfers' => $result['data'],
       'pagination' => $result['pagination'],
       'wallets' => $wallets,
@@ -42,7 +42,7 @@ class TransferController extends Controller
     $telegramUser = $this->getTelegramUser($request->telegram_id);
     $wallets = $this->walletService->getUserWallets($telegramUser);
 
-    return view('fintech.transfers.form', compact('wallets'));
+    return view('fintech::web.transfers.form', compact('wallets'));
   }
 
   public function store(Request $request) {
@@ -67,7 +67,7 @@ class TransferController extends Controller
     $telegramUser = $this->getTelegramUser($request->telegram_id);
     $wallets = $this->walletService->getUserWallets($telegramUser);
 
-    return view('fintech.transfers.form', compact('transfer', 'wallets'));
+    return view('fintech::web.transfers.form', compact('transfer', 'wallets'));
   }
 
   public function update(Request $request, $id) {
