@@ -11,6 +11,7 @@ $pagination = $result['pagination'] ?? ['current_page' => 1, 'last_page' => 1, '
 $wallets = $wallets ?? [];
 $filters = $filters ?? ['wallet_id' => '', 'type' => '', 'month' => ''];
 $symbol = $symbol ?? 'Rp';
+dd($transactions, $pagination, $summary);
 @endphp
 
 {{-- Statistik Ringkasan --}}
