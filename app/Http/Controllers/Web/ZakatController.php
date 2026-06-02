@@ -5,7 +5,7 @@ namespace Modules\FinTech\Http\Controllers\Web;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\ZakatTaxService;
-use Modules\FinTech\Services\ResolvesTelegramUser;
+use Modules\FinTech\Traits\ResolvesTelegramUser;
 use Illuminate\Support\Facades\Log;
 
 class ZakatController extends Controller
