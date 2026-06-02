@@ -31,28 +31,6 @@
 {{-- Daftar Transfer --}}
 @php
 $transferList = $transfers ?? [];
-
-// Jika masih objek (misal karena cache lama), coba konversi
-if (is_object($transferList)) {
-// Hanya cek class name tanpa memanggil method (hindari method_exists pada incomplete object)
-$className = get_class($transferList);
-if ($className === 'Illuminate\Pagination\LengthAwarePaginator' || $className === 'Illuminate\Support\Collection') {
-// Coba paksa toArray, jika gagal tangkap exception
-try {
-$transferList = $transferList->toArray();
-} catch (\Throwable $e) {
-$transferList = [];
-}
-} else {
-// Objek tidak dikenal, jadikan array kosong
-$transferList = [];
-}
-}
-
-// Pastikan akhirnya array
-if (!is_array($transferList)) {
-$transferList = [];
-}
 @endphp
 
 @if(count($transferList) > 0)
