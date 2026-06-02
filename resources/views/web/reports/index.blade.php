@@ -5,9 +5,18 @@
 
 @section('content')
 @php
-$symbol = $chartData['currency'] ?? 'IDR';
+$symbol = is_string($chartData['currency'] ?? null) ? $chartData['currency'] : 'IDR';
 $totalIncome = array_sum($chartData['income'] ?? []);
 $totalExpense = array_sum($chartData['expense'] ?? []);
+
+// Pastikan years adalah array skalar
+$years = $categoryTable['years'] ?? [];
+if ($years instanceof \Illuminate\Support\Collection) {
+$years = $years->toArray();
+}
+$years = array_map('strval', $years); // ubah semua jadi string
+
+$categories = $categoryTable['categories'] ?? [];
 @endphp
 
 {{-- Filter --}}
@@ -16,7 +25,9 @@ $totalExpense = array_sum($chartData['expense'] ?? []);
     <select name="wallet_id" class="form-select form-select-sm">
       <option value="">Semua Dompet</option>
       @foreach($wallets as $w)
-      <option value="{{ $w['id'] }}" {{ ($walletId ?? '') == $w['id'] ? 'selected' : '' }}>{{ $w['name'] }}</option>
+      <option value="{{ $w['id'] }}" {{ ($walletId ?? '') == $w['id'] ? 'selected' : '' }}>
+        {{ is_string($w['name'] ?? '') ? $w['name'] : '' }}
+      </option>
       @endforeach
     </select>
   </div>
@@ -54,14 +65,16 @@ $totalExpense = array_sum($chartData['expense'] ?? []);
   <div class="col-md-6">
     <div class="card card-stat text-center">
       <div class="card-body">
-        <small class="text-success">Total Pemasukan</small><h4>{{ $symbol }} {{ number_format($totalIncome, 0, ',', '.') }}</h4>
+        <small class="text-success">Total Pemasukan</small>
+        <h4>{{ $symbol }} {{ number_format($totalIncome, 0, ',', '.') }}</h4>
       </div>
     </div>
   </div>
   <div class="col-md-6">
     <div class="card card-stat text-center">
       <div class="card-body">
-        <small class="text-danger">Total Pengeluaran</small><h4>{{ $symbol }} {{ number_format($totalExpense, 0, ',', '.') }}</h4>
+        <small class="text-danger">Total Pengeluaran</small>
+        <h4>{{ $symbol }} {{ number_format($totalExpense, 0, ',', '.') }}</h4>
       </div>
     </div>
   </div>
@@ -76,16 +89,35 @@ $totalExpense = array_sum($chartData['expense'] ?? []);
     <div class="table-responsive">
       <table class="table table-sm mb-0">
         <thead class="table-light">
-          <tr><th>Kategori</th>@foreach($categoryTable['years'] as $y)<th class="text-end">{{ $y }}</th>@endforeach<th class="text-end">Total</th></tr>
+          <tr>
+            <th>Kategori</th>
+            @foreach($years as $y)
+            <th class="text-end">{{ $y }}</th>
+            @endforeach
+            <th class="text-end">Total</th>
+          </tr>
         </thead>
         <tbody>
-          @foreach($categoryTable['categories'] as $cat)
+          @foreach($categories as $cat)
           <tr>
-            <td><i class="{{ $cat['icon'] }}" style="color:{{ $cat['color'] }}"></i> {{ $cat['name'] }}</td>
-            @foreach($categoryTable['years'] as $y)
-            <td class="text-end">{{ $symbol }} {{ number_format($cat['data'][$y] ?? 0, 0, ',', '.') }}</td>
+            <td>
+              {{-- Pastikan icon adalah string --}}
+              @if(is_string($cat['icon'] ?? null))
+              <i class="{{ $cat['icon'] }}" style="color:{{ $cat['color'] ?? '#000' }}"></i>
+              @endif
+              {{ is_string($cat['name'] ?? '') ? $cat['name'] : '' }}
+            </td>
+            @foreach($years as $y)
+            <td class="text-end">
+              {{ $symbol }} {{ number_format(floatval($cat['data'][$y] ?? 0), 0, ',', '.') }}
+            </td>
             @endforeach
-            <td class="text-end fw-semibold">{{ $symbol }} {{ number_format(array_sum($cat['data']), 0, ',', '.') }}</td>
+            <td class="text-end fw-semibold">
+              @php
+              $rowTotal = array_sum(array_map('floatval', $cat['data'] ?? []));
+              @endphp
+              {{ $symbol }} {{ number_format($rowTotal, 0, ',', '.') }}
+            </td>
           </tr>
           @endforeach
         </tbody>
@@ -103,13 +135,24 @@ $totalExpense = array_sum($chartData['expense'] ?? []);
   new Chart(ctx, {
   type: 'bar',
   data: {
-  labels: @json($chartData['labels']),
+  labels: @json($chartData['labels'] ?? []),
   datasets: [
-  { label: 'Pemasukan', data: @json($chartData['income']), backgroundColor: '#4DB6AC' },
-  { label: 'Pengeluaran', data: @json($chartData['expense']), backgroundColor: '#FF6384' }
+  {
+  label: 'Pemasukan',
+  data: @json($chartData['income'] ?? []),
+  backgroundColor: '#4DB6AC'
+  },
+  {
+  label: 'Pengeluaran',
+  data: @json($chartData['expense'] ?? []),
+  backgroundColor: '#FF6384'
+  }
   ]
   },
-  options: { responsive: true, maintainAspectRatio: false }
+  options: {
+  responsive: true,
+  maintainAspectRatio: false
+  }
   });
   }
   });
