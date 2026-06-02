@@ -184,8 +184,11 @@
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
     {{-- SIDEBAR --}}
+    @php
+    $backRoute = config('fintech.back_home_route', 'fintech.home');
+    @endphp
     <aside class="sidebar" id="sidebar">
-    <a href="{{ route('fintech.home') }}" class="brand">
+    <a href="{{ route($backRoute) }}" class="brand">
     <i class="bi bi-cash-stack me-2"></i>FinTech
     </a>
 
