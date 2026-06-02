@@ -316,7 +316,7 @@ class TransactionService
             'id' => $trx->wallet->id,
             'name' => $trx->wallet->name,
           ],
-        ]);
+        ])->toArray();
 
         return [
           'data' => $transformed,
