@@ -5,6 +5,7 @@ namespace Modules\FinTech\Http\Controllers\Web;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\StatementService;
+use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Traits\ResolvesTelegramUser;
 
 class StatementController extends Controller
