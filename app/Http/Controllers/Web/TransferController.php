@@ -31,7 +31,7 @@ class TransferController extends Controller
     $result = $this->transferService->getTransfers($telegramUser, $filters, 20);
     $wallets = $this->walletService->getUserWallets($telegramUser);
 
-    $transfers = $result['data'] ?? [];
+    $transfers = $result['data']['data'] ?? [];
 
     return view('fintech::web.transfers.index', [
       'transfers' => $transfers,
