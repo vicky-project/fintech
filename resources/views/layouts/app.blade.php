@@ -5,11 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>@yield('title', 'FinTech') — Keuangan Digital</title>
 
-  {{-- Bootstrap 5 CSS --}}
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  {{-- Bootstrap Icons --}}
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-  {{-- Chart.js --}}
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
@@ -57,7 +54,6 @@
       --sidebar-width: 260px;
     }
 
-    /* ========== BODY & BACKGROUND ========== */
     body {
       background: linear-gradient(135deg, #f8fafc 0%, #EEF2FF 50%, #f1f5f9 100%);
       background-attachment: fixed;
@@ -67,56 +63,17 @@
       }
 
       /* ========== BOOTSTRAP OVERRIDES ========== */
-      .btn-primary {
-      background-color: var(--fin-primary);
-      border-color: var(--fin-primary);
-      }
-      .btn-primary:hover,
-      .btn-primary:focus {
-      background-color: var(--fin-primary-light);
-      border-color: var(--fin-primary-light);
-      }
-      .btn-primary:active {
-      background-color: var(--fin-primary-dark) !important;
-      border-color: var(--fin-primary-dark) !important;
-      }
-      .btn-outline-primary {
-      color: var(--fin-primary);
-      border-color: var(--fin-primary);
-      }
-      .btn-outline-primary:hover {
-      background-color: var(--fin-primary);
-      border-color: var(--fin-primary);
-      color: #fff;
-      }
-
-      .btn-success {
-      background-color: var(--fin-success);
-      border-color: var(--fin-success);
-      }
-      .btn-outline-success {
-      color: var(--fin-success);
-      border-color: var(--fin-success);
-      }
-
-      .btn-danger {
-      background-color: var(--fin-danger);
-      border-color: var(--fin-danger);
-      }
-      .btn-outline-danger {
-      color: var(--fin-danger);
-      border-color: var(--fin-danger);
-      }
-
-      .btn-warning {
-      background-color: var(--fin-warning);
-      border-color: var(--fin-warning);
-      color: #fff;
-      }
-      .btn-outline-warning {
-      color: var(--fin-warning);
-      border-color: var(--fin-warning);
-      }
+      .btn-primary { background-color: var(--fin-primary); border-color: var(--fin-primary); }
+      .btn-primary:hover, .btn-primary:focus { background-color: var(--fin-primary-light); border-color: var(--fin-primary-light); }
+      .btn-primary:active { background-color: var(--fin-primary-dark) !important; border-color: var(--fin-primary-dark) !important; }
+      .btn-outline-primary { color: var(--fin-primary); border-color: var(--fin-primary); }
+      .btn-outline-primary:hover { background-color: var(--fin-primary); border-color: var(--fin-primary); color: #fff; }
+      .btn-success { background-color: var(--fin-success); border-color: var(--fin-success); }
+      .btn-outline-success { color: var(--fin-success); border-color: var(--fin-success); }
+      .btn-danger { background-color: var(--fin-danger); border-color: var(--fin-danger); }
+      .btn-outline-danger { color: var(--fin-danger); border-color: var(--fin-danger); }
+      .btn-warning { background-color: var(--fin-warning); border-color: var(--fin-warning); color: #fff; }
+      .btn-outline-warning { color: var(--fin-warning); border-color: var(--fin-warning); }
 
       .text-success { color: var(--fin-success) !important; }
       .text-danger  { color: var(--fin-danger) !important; }
@@ -124,32 +81,10 @@
       .text-info    { color: var(--fin-info) !important; }
       .text-primary { color: var(--fin-primary) !important; }
 
-      .bg-success { background-color: var(--fin-success) !important; }
-      .bg-danger  { background-color: var(--fin-danger) !important; }
-      .bg-warning { background-color: var(--fin-warning) !important; }
-      .bg-info    { background-color: var(--fin-info) !important; }
-      .bg-primary { background-color: var(--fin-primary) !important; }
-
-      .alert-success {
-      background-color: var(--fin-success-bg);
-      border-color: var(--fin-success-light);
-      color: var(--fin-success);
-      }
-      .alert-danger {
-      background-color: var(--fin-danger-bg);
-      border-color: var(--fin-danger-light);
-      color: var(--fin-danger);
-      }
-      .alert-warning {
-      background-color: var(--fin-warning-bg);
-      border-color: var(--fin-warning-light);
-      color: var(--fin-warning);
-      }
-      .alert-info {
-      background-color: var(--fin-info-bg);
-      border-color: var(--fin-info-light);
-      color: var(--fin-info);
-      }
+      .alert-success { background-color: var(--fin-success-bg); border-color: var(--fin-success-light); color: var(--fin-success); }
+      .alert-danger  { background-color: var(--fin-danger-bg); border-color: var(--fin-danger-light); color: var(--fin-danger); }
+      .alert-warning { background-color: var(--fin-warning-bg); border-color: var(--fin-warning-light); color: var(--fin-warning); }
+      .alert-info    { background-color: var(--fin-info-bg); border-color: var(--fin-info-light); color: var(--fin-info); }
 
       .badge.bg-success { background-color: var(--fin-success-bg) !important; color: var(--fin-success) !important; }
       .badge.bg-danger  { background-color: var(--fin-danger-bg) !important; color: var(--fin-danger) !important; }
@@ -160,138 +95,73 @@
       .progress-bar.bg-danger  { background-color: var(--fin-danger) !important; }
       .progress-bar.bg-warning { background-color: var(--fin-warning) !important; }
 
-      .page-link {
-      color: var(--fin-primary);
-      }
-      .page-item.active .page-link {
-      background-color: var(--fin-primary);
-      border-color: var(--fin-primary);
-      }
+      .page-link { color: var(--fin-primary); }
+      .page-item.active .page-link { background-color: var(--fin-primary); border-color: var(--fin-primary); }
 
-      .form-select:focus,
-      .form-control:focus {
+      .form-select:focus, .form-control:focus {
       border-color: var(--fin-primary-light);
       box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
       }
-      .form-check-input:checked {
-      background-color: var(--fin-primary);
-      border-color: var(--fin-primary);
-      }
+      .form-check-input:checked { background-color: var(--fin-primary); border-color: var(--fin-primary); }
 
       /* ========== SIDEBAR ========== */
       .sidebar {
       position: fixed;
-      top: 0;
-      bottom: 0;
-      left: 0;
+      top: 0; bottom: 0; left: 0;
       width: var(--sidebar-width);
       background: linear-gradient(180deg, #1e293b 0%, var(--sidebar-bg) 100%);
       color: var(--sidebar-text);
-      z-index: 1040;
-      overflow-y: auto;
+      z-index: 1040; overflow-y: auto;
       transition: transform 0.3s ease;
       box-shadow: 2px 0 12px rgba(0,0,0,0.15);
       }
-
       .sidebar .brand {
-      display: block;
-      padding: 1.5rem 1.25rem;
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: #fff;
-      text-decoration: none;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      margin-bottom: 0.5rem;
+      display: block; padding: 1.5rem 1.25rem; font-size: 1.35rem; font-weight: 700;
+      color: #fff; text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 0.5rem;
       }
-      .sidebar .brand i {
-      color: var(--fin-primary-light);
-      }
-
+      .sidebar .brand i { color: var(--fin-primary-light); }
       .sidebar .nav-link {
-      color: #94a3b8;
-      border-radius: 0.5rem;
-      margin: 0.15rem 0.75rem;
-      padding: 0.7rem 1rem;
-      transition: all 0.2s;
-      font-size: 0.925rem;
+      color: #94a3b8; border-radius: 0.5rem; margin: 0.15rem 0.75rem;
+      padding: 0.7rem 1rem; transition: all 0.2s; font-size: 0.925rem;
       }
-      .sidebar .nav-link:hover,
-      .sidebar .nav-link.active {
-      color: #fff;
-      background: var(--sidebar-active-bg);
+      .sidebar .nav-link:hover, .sidebar .nav-link.active {
+      color: #fff; background: var(--sidebar-active-bg);
       }
-      .sidebar .nav-link i {
-      width: 22px;
-      text-align: center;
-      margin-right: 0.75rem;
-      font-size: 1.1rem;
-      }
+      .sidebar .nav-link i { width: 22px; text-align: center; margin-right: 0.75rem; font-size: 1.1rem; }
       .sidebar .nav-section {
-      color: #64748b;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      padding: 1rem 1.25rem 0.35rem;
-      font-weight: 600;
+      color: #64748b; font-size: 0.7rem; text-transform: uppercase;
+      letter-spacing: 0.1em; padding: 1rem 1.25rem 0.35rem; font-weight: 600;
       }
 
       /* ========== MAIN CONTENT ========== */
-      .main-wrapper {
-      margin-left: var(--sidebar-width);
-      min-height: 100vh;
-      transition: margin-left 0.3s ease;
-      }
+      .main-wrapper { margin-left: var(--sidebar-width); min-height: 100vh; transition: margin-left 0.3s ease; }
 
       /* ========== TOPBAR ========== */
       .topbar {
-      background: var(--topbar-bg);
-      border-bottom: 1px solid var(--topbar-border);
-      padding: 0.75rem 1.5rem;
-      position: sticky;
-      top: 0;
-      z-index: 1030;
+      background: var(--topbar-bg); border-bottom: 1px solid var(--topbar-border);
+      padding: 0.75rem 1.5rem; position: sticky; top: 0; z-index: 1030;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
       }
-      .topbar .btn-sidebar-toggle {
-      display: none;
-      }
+      .topbar .btn-sidebar-toggle { display: none; }
 
       /* ========== CONTENT AREA ========== */
-      .content-area {
-      padding: 1.75rem;
-      }
+      .content-area { padding: 1.75rem; }
 
       /* ========== CARDS ========== */
       .card-stat {
-      background: var(--card-bg);
-      border: 1px solid #e2e8f0;
-      border-radius: 1rem;
-      box-shadow: var(--card-shadow);
-      transition: transform 0.2s, box-shadow 0.2s;
+      background: var(--card-bg); border: 1px solid #e2e8f0; border-radius: 1rem;
+      box-shadow: var(--card-shadow); transition: transform 0.2s, box-shadow 0.2s;
       }
-      .card-stat:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      }
-
-      /* Kartu spesial dengan aksen kiri */
-      .card-accent-left {
-      border-left: 4px solid var(--fin-primary);
-      }
+      .card-stat:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+      .card-accent-left { border-left: 4px solid var(--fin-primary); }
 
       /* ========== TABLE ========== */
       .table-fintech th {
-      font-weight: 600;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #64748b;
-      border-bottom-width: 2px;
+      font-weight: 600; font-size: 0.8rem; text-transform: uppercase;
+      letter-spacing: 0.05em; color: #64748b; border-bottom-width: 2px;
       }
-      .table-fintech td {
-      vertical-align: middle;
-      padding: 0.75rem 1rem;
-      }
+      .table-fintech td { vertical-align: middle; padding: 0.75rem 1rem; }
 
       /* ========== BADGE SOFT ========== */
       .badge-soft-success { background: var(--fin-success-bg); color: var(--fin-success); }
@@ -301,62 +171,34 @@
 
       /* ========== MOBILE ========== */
       .sidebar-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(2px);
-      z-index: 1035;
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 1035;
       }
-      .sidebar-backdrop.show {
-      display: block;
-      }
-
+      .sidebar-backdrop.show { display: block; }
       @media (max-width: 991.98px) {
-      .sidebar {
-      transform: translateX(-100%);
-      }
-      .sidebar.mobile-show {
-      transform: translateX(0);
-      }
-      .main-wrapper {
-      margin-left: 0;
-      }
-      .topbar .btn-sidebar-toggle {
-      display: inline-block;
-      }
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.mobile-show { transform: translateX(0); }
+      .main-wrapper { margin-left: 0; }
+      .topbar .btn-sidebar-toggle { display: inline-block; }
       }
 
-      /* ========== MISC ========== */
       .text-truncate-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
       }
-      .cursor-pointer {
-      cursor: pointer;
-      }
+      .cursor-pointer { cursor: pointer; }
       </style>
       @stack('styles')
       </head>
       <body>
 
-      {{-- Mobile Backdrop --}}
       <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
-      {{-- SIDEBAR --}}
-      @php
-      $backRoute = config('fintech.back_home_route', 'fintech.home');
-      @endphp
       <aside class="sidebar" id="sidebar">
-      <a href="{{ route($backRoute) }}" class="brand">
+      <a href="{{ route(config('fintech.back_home_route', 'fintech.home')) }}" class="brand">
       <i class="bi bi-cash-stack me-2"></i>FinTech
       </a>
-
       <nav class="nav flex-column">
       <div class="nav-section">Menu Utama</div>
-
       @php
       $menuItems = [
       ['route' => 'fintech.home',                'icon' => 'bi-speedometer2',        'label' => 'Dashboard'],
@@ -374,7 +216,6 @@
       ];
       $menuOther = [
       ['route' => 'fintech.notifications.index', 'icon' => 'bi-bell',                 'label' => 'Notifikasi'],
-      ['route' => 'fintech.search',              'icon' => 'bi-search',                'label' => 'Pencarian'],
       ['route' => 'fintech.settings',            'icon' => 'bi-sliders',               'label' => 'Pengaturan'],
       ];
       @endphp
@@ -413,7 +254,6 @@
       </div>
       </aside>
 
-      {{-- MAIN WRAPPER --}}
       <div class="main-wrapper">
       {{-- TOPBAR --}}
       <header class="topbar">
@@ -424,7 +264,11 @@
       </button>
       <h5 class="mb-0 fw-semibold">@yield('page_title', 'Dashboard')</h5>
       </div>
-      <div class="d-flex align-items-center gap-3">
+      <div class="d-flex align-items-center gap-2">
+      {{-- Ikon Pencarian Global --}}
+      <a href="{{ route('fintech.search') }}" class="btn btn-light" title="Pencarian">
+      <i class="bi bi-search"></i>
+      </a>
       {{-- Notifications --}}
       <a href="{{ route('fintech.notifications.index') }}" class="btn btn-light position-relative">
       <i class="bi bi-bell"></i>
@@ -434,7 +278,7 @@
       </span>
       @endif
       </a>
-      {{-- User --}}
+      {{-- User Dropdown --}}
       <div class="dropdown">
       <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
       <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem;">
@@ -457,7 +301,6 @@
       </div>
       </header>
 
-      {{-- FLASH MESSAGES --}}
       <div class="content-area">
       @if(session('success'))
       <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
@@ -485,9 +328,7 @@
       </div>
       </div>
 
-      {{-- Bootstrap JS --}}
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
       <script>
       function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
@@ -495,13 +336,9 @@
       sidebar.classList.toggle('mobile-show');
       backdrop.classList.toggle('show');
       }
-
-      // Tutup sidebar saat klik link (mobile)
       document.querySelectorAll('.sidebar .nav-link').forEach(link => {
       link.addEventListener('click', () => {
-      if (window.innerWidth < 992) {
-      toggleSidebar();
-      }
+      if (window.innerWidth < 992) toggleSidebar();
       });
       });
       </script>
