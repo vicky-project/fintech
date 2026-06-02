@@ -5,6 +5,7 @@ namespace Modules\FinTech\Http\Controllers\Web;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\FinTech\Services\BudgetService;
+use Modules\FinTech\Services\WalletService;
 use Modules\FinTech\Models\Budget;
 use Modules\FinTech\Traits\ResolvesTelegramUser;
 

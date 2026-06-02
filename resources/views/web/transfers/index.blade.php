@@ -17,7 +17,9 @@
     <select name="wallet_id" class="form-select form-select-sm">
       <option value="">Semua Dompet</option>
       @foreach($wallets as $w)
-      <option value="{{ $w['id'] }}" {{ ($filters['wallet_id'] ?? '') == $w['id'] ? 'selected' : '' }}>{{ $w['name'] }}</option>
+      <option value="{{ $w['id'] }}" {{ ($filters['wallet_id'] ?? '') == $w['id'] ? 'selected' : '' }}>
+        {{ $w['name'] }}
+      </option>
       @endforeach
     </select>
   </div>
@@ -26,16 +28,29 @@
   </div>
 </form>
 
-@if(count($transfers) > 0)
+{{-- Daftar Transfer --}}
+@php
+// Pastikan $transfers adalah array yang valid
+$transferList = is_array($transfers ?? null) ? $transfers : [];
+// Jika $transfers adalah objek Collection atau Paginator, konversi ke array
+if ($transferList instanceof \Illuminate\Support\Collection) {
+$transferList = $transferList->all();
+} elseif (method_exists($transferList, 'items')) {
+$transferList = $transferList->items();
+}
+$transferList = is_array($transferList) ? $transferList : [];
+@endphp
+
+@if(count($transferList) > 0)
 <div class="row g-3">
-  @foreach($transfers as $t)
+  @foreach($transferList as $t)
   <div class="col-md-6">
     <div class="card card-stat">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
             <i class="bi bi-arrow-right me-2 text-primary"></i>
-            {{ $t['from_wallet']['name'] }} → {{ $t['to_wallet']['name'] }}
+            {{ $t['from_wallet']['name'] ?? '?' }} → {{ $t['to_wallet']['name'] ?? '?' }}
           </div>
           <div class="dropdown">
             <button class="btn btn-sm btn-light" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
@@ -50,9 +65,9 @@
             </ul>
           </div>
         </div>
-        <h5 class="mt-2 text-primary">{{ $t['formatted_amount'] }}</h5>
-        <small class="text-muted">{{ \Carbon\Carbon::parse($t['transfer_date'])->format('d M Y') }}</small>
-        @if($t['description'])
+        <h5 class="mt-2 text-primary">{{ $t['formatted_amount'] ?? '0' }}</h5>
+        <small class="text-muted">{{ \Carbon\Carbon::parse($t['transfer_date'] ?? now())->format('d M Y') }}</small>
+        @if(!empty($t['description']))
         <p class="mt-1 small text-muted">
           {{ $t['description'] }}
         </p>
