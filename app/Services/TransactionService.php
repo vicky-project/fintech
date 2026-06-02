@@ -49,7 +49,7 @@ class TransactionService
       ->orderBy('id', 'desc')
       ->paginate($perPage);
 
-      $transformed = $transactions->through(fn($trx) => $this->formatTransactionData($trx));
+      $transformed = $transactions->through(fn($trx) => $this->formatTransactionData($trx))->toArray();
 
       return [
         'data' => $transformed,
