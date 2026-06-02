@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('fintech::layouts.app')
 
 @section('title', isset($budget) ? 'Edit Budget — FinTech' : 'Tambah Budget — FinTech')
 @section('page_title', isset($budget) ? 'Edit Budget' : 'Tambah Budget')
