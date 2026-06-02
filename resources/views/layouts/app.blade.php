@@ -245,7 +245,7 @@
       </nav>
 
       <div class="mt-auto px-3 pb-3 pt-4">
-      <a href="{{ route(config('fintech.back_home_route', 'fintech.home')) }}" class="btn btn-outline-light btn-sm w-100"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a>
+      <a href="{{ route(config('fintech.back_home_route', 'fintech.home')) }}" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a>
       </div>
       </aside>
 
