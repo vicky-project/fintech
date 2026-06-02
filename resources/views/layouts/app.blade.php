@@ -194,7 +194,7 @@
       <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
       <aside class="sidebar" id="sidebar">
-      <a href="{{ config('app.url') }}" class="brand">
+      <a href="{{ route('fintech.home') }}" class="brand">
       <i class="bi bi-cash-stack me-2"></i>FinTech
       </a>
       <nav class="nav flex-column">
