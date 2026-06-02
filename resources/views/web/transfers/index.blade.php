@@ -31,6 +31,7 @@
 {{-- Daftar Transfer --}}
 @php
 $transferList = $transfers ?? [];
+dd($transferList);
 @endphp
 
 @if(count($transferList) > 0)
