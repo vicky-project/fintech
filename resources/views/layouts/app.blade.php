@@ -264,13 +264,13 @@
       </button>
       <h5 class="mb-0 fw-semibold">@yield('page_title', 'Dashboard')</h5>
       </div>
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-1">
       {{-- Ikon Pencarian Global --}}
-      <a href="{{ route('fintech.search') }}" class="btn btn-light" title="Pencarian">
+      <a href="{{ route('fintech.search') }}" class="btn btn-light btn-sm" title="Pencarian">
       <i class="bi bi-search"></i>
       </a>
       {{-- Notifications --}}
-      <a href="{{ route('fintech.notifications.index') }}" class="btn btn-light position-relative">
+      <a href="{{ route('fintech.notifications.index') }}" class="btn btn-light btn-sm position-relative">
       <i class="bi bi-bell"></i>
       @if(($unreadNotifications ?? 0) > 0)
       <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
@@ -280,7 +280,7 @@
       </a>
       {{-- User Dropdown --}}
       <div class="dropdown">
-      <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
+      <button class="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
       <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem;">
       {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
       </div>
