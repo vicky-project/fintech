@@ -30,14 +30,20 @@
 
 {{-- Daftar Transfer --}}
 @php
-// Pastikan $transfers adalah array yang valid
-$transferList = is_array($transfers ?? null) ? $transfers : [];
-// Jika $transfers adalah objek Collection atau Paginator, konversi ke array
+$transferList = $transfers ?? [];
+
+if (is_object($transferList)) {
 if ($transferList instanceof \Illuminate\Support\Collection) {
 $transferList = $transferList->all();
 } elseif (method_exists($transferList, 'items')) {
 $transferList = $transferList->items();
+} elseif (method_exists($transferList, 'toArray')) {
+$transferList = $transferList->toArray();
+} else {
+$transferList = (array) $transferList;
 }
+}
+
 $transferList = is_array($transferList) ? $transferList : [];
 @endphp
 
