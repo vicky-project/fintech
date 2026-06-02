@@ -9,12 +9,21 @@ $symbol = is_string($chartData['currency'] ?? null) ? $chartData['currency'] : '
 $totalIncome = array_sum($chartData['income'] ?? []);
 $totalExpense = array_sum($chartData['expense'] ?? []);
 
-// Pastikan years adalah array skalar
-$years = $categoryTable['years'] ?? [];
-if ($years instanceof \Illuminate\Support\Collection) {
-$years = $years->toArray();
+// Ambil years, pastikan array biasa (bukan Collection atau objek lain)
+$yearsRaw = $categoryTable['years'] ?? [];
+
+if ($yearsRaw instanceof \Illuminate\Support\Collection) {
+$years = $yearsRaw->toArray();
+} elseif (is_array($yearsRaw)) {
+$years = $yearsRaw;
+} else {
+$years = [];
 }
-$years = array_map('strval', $years); // ubah semua jadi string
+
+// Konversi semua elemen jadi string agar aman dicetak
+$years = array_map(function($y) {
+return is_scalar($y) ? (string) $y : '';
+}, $years);
 
 $categories = $categoryTable['categories'] ?? [];
 @endphp
