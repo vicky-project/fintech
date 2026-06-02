@@ -15,44 +15,36 @@
   <style>
     /* ========== FINCH COLOR PALETTE ========== */
 :root {
-      /* Brand / Primary */
       --fin-primary: #4F46E5;
       --fin-primary-light: #6366F1;
       --fin-primary-dark: #3730A3;
       --fin-primary-bg: #EEF2FF;
 
-      /* Success (Pemasukan, Saldo, Budget Aman) */
       --fin-success: #059669;
       --fin-success-light: #34D399;
       --fin-success-bg: #D1FAE5;
 
-      /* Danger (Pengeluaran, Peringatan, Budget Terlampaui) */
       --fin-danger: #DC2626;
       --fin-danger-light: #F87171;
       --fin-danger-bg: #FEE2E2;
 
-      /* Warning (Budget Hampir Habis, Notifikasi) */
       --fin-warning: #D97706;
       --fin-warning-light: #FBBF24;
       --fin-warning-bg: #FEF3C7;
 
-      /* Info / Neutral */
       --fin-info: #0284C7;
       --fin-info-light: #38BDF8;
       --fin-info-bg: #DBEAFE;
 
-      /* Sidebar & Topbar */
       --sidebar-bg: #0F172A;
       --sidebar-text: #CBD5E1;
       --sidebar-active-bg: rgba(79, 70, 229, 0.25);
       --topbar-bg: #FFFFFF;
       --topbar-border: #E2E8F0;
 
-      /* Cards & Surface */
       --card-bg: #FFFFFF;
       --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 
-      /* Chart Palette (Kategori) */
       --chart-1: #4F46E5;
       --chart-2: #059669;
       --chart-3: #DC2626;
@@ -65,163 +57,129 @@
       --sidebar-width: 260px;
     }
 
+    /* ========== BODY & BACKGROUND ========== */
     body {
-      background-color: #f1f5f9;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f8fafc 0%, #EEF2FF 50%, #f1f5f9 100%);
+      background-attachment: fixed;
+      color: #1e293b;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       overflow-x: hidden;
-    }
+      }
 
-    /* ========== BOOTSTRAP OVERRIDES ========== */
-    .btn-primary {
+      /* ========== BOOTSTRAP OVERRIDES ========== */
+      .btn-primary {
       background-color: var(--fin-primary);
       border-color: var(--fin-primary);
-    }
-    .btn-primary:hover,
-    .btn-primary:focus {
+      }
+      .btn-primary:hover,
+      .btn-primary:focus {
       background-color: var(--fin-primary-light);
       border-color: var(--fin-primary-light);
-    }
-    .btn-primary:active {
+      }
+      .btn-primary:active {
       background-color: var(--fin-primary-dark) !important;
       border-color: var(--fin-primary-dark) !important;
-    }
-    .btn-outline-primary {
+      }
+      .btn-outline-primary {
       color: var(--fin-primary);
       border-color: var(--fin-primary);
-    }
-    .btn-outline-primary:hover {
+      }
+      .btn-outline-primary:hover {
       background-color: var(--fin-primary);
       border-color: var(--fin-primary);
       color: #fff;
-    }
+      }
 
-    .btn-success {
+      .btn-success {
       background-color: var(--fin-success);
       border-color: var(--fin-success);
-    }
-    .btn-outline-success {
+      }
+      .btn-outline-success {
       color: var(--fin-success);
       border-color: var(--fin-success);
-    }
+      }
 
-    .btn-danger {
+      .btn-danger {
       background-color: var(--fin-danger);
       border-color: var(--fin-danger);
-    }
-    .btn-outline-danger {
+      }
+      .btn-outline-danger {
       color: var(--fin-danger);
       border-color: var(--fin-danger);
-    }
+      }
 
-    .btn-warning {
+      .btn-warning {
       background-color: var(--fin-warning);
       border-color: var(--fin-warning);
-    }
-    .btn-outline-warning {
+      color: #fff;
+      }
+      .btn-outline-warning {
       color: var(--fin-warning);
       border-color: var(--fin-warning);
-    }
+      }
 
-    .text-success {
-      color: var(--fin-success) !important;
-    }
-    .text-danger {
-      color: var(--fin-danger) !important;
-    }
-    .text-warning {
-      color: var(--fin-warning) !important;
-    }
-    .text-info {
-      color: var(--fin-info) !important;
-    }
-    .text-primary {
-      color: var(--fin-primary) !important;
-    }
+      .text-success { color: var(--fin-success) !important; }
+      .text-danger  { color: var(--fin-danger) !important; }
+      .text-warning { color: var(--fin-warning) !important; }
+      .text-info    { color: var(--fin-info) !important; }
+      .text-primary { color: var(--fin-primary) !important; }
 
-    .bg-success {
-      background-color: var(--fin-success) !important;
-    }
-    .bg-danger {
-      background-color: var(--fin-danger) !important;
-    }
-    .bg-warning {
-      background-color: var(--fin-warning) !important;
-    }
-    .bg-info {
-      background-color: var(--fin-info) !important;
-    }
-    .bg-primary {
-      background-color: var(--fin-primary) !important;
-    }
+      .bg-success { background-color: var(--fin-success) !important; }
+      .bg-danger  { background-color: var(--fin-danger) !important; }
+      .bg-warning { background-color: var(--fin-warning) !important; }
+      .bg-info    { background-color: var(--fin-info) !important; }
+      .bg-primary { background-color: var(--fin-primary) !important; }
 
-    .alert-success {
+      .alert-success {
       background-color: var(--fin-success-bg);
       border-color: var(--fin-success-light);
       color: var(--fin-success);
-    }
-    .alert-danger {
+      }
+      .alert-danger {
       background-color: var(--fin-danger-bg);
       border-color: var(--fin-danger-light);
       color: var(--fin-danger);
-    }
-    .alert-warning {
+      }
+      .alert-warning {
       background-color: var(--fin-warning-bg);
       border-color: var(--fin-warning-light);
       color: var(--fin-warning);
-    }
-    .alert-info {
+      }
+      .alert-info {
       background-color: var(--fin-info-bg);
       border-color: var(--fin-info-light);
       color: var(--fin-info);
-    }
+      }
 
-    .badge.bg-success {
-      background-color: var(--fin-success-bg) !important;
-      color: var(--fin-success) !important;
-    }
-    .badge.bg-danger {
-      background-color: var(--fin-danger-bg) !important;
-      color: var(--fin-danger) !important;
-    }
-    .badge.bg-warning {
-      background-color: var(--fin-warning-bg) !important;
-      color: var(--fin-warning) !important;
-    }
-    .badge.bg-info {
-      background-color: var(--fin-info-bg) !important;
-      color: var(--fin-info) !important;
-    }
+      .badge.bg-success { background-color: var(--fin-success-bg) !important; color: var(--fin-success) !important; }
+      .badge.bg-danger  { background-color: var(--fin-danger-bg) !important; color: var(--fin-danger) !important; }
+      .badge.bg-warning { background-color: var(--fin-warning-bg) !important; color: var(--fin-warning) !important; }
+      .badge.bg-info    { background-color: var(--fin-info-bg) !important; color: var(--fin-info) !important; }
 
-    .progress-bar.bg-success {
-      background-color: var(--fin-success) !important;
-    }
-    .progress-bar.bg-danger {
-      background-color: var(--fin-danger) !important;
-    }
-    .progress-bar.bg-warning {
-      background-color: var(--fin-warning) !important;
-    }
+      .progress-bar.bg-success { background-color: var(--fin-success) !important; }
+      .progress-bar.bg-danger  { background-color: var(--fin-danger) !important; }
+      .progress-bar.bg-warning { background-color: var(--fin-warning) !important; }
 
-    .page-link {
+      .page-link {
       color: var(--fin-primary);
-    }
-    .page-item.active .page-link {
+      }
+      .page-item.active .page-link {
       background-color: var(--fin-primary);
       border-color: var(--fin-primary);
-    }
+      }
 
-    .form-select:focus,
-    .form-control:focus {
+      .form-select:focus,
+      .form-control:focus {
       border-color: var(--fin-primary-light);
       box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
-    }
-    .form-check-input:checked {
+      }
+      .form-check-input:checked {
       background-color: var(--fin-primary);
       border-color: var(--fin-primary);
-    }
+      }
 
-    /* ========== SIDEBAR ========== */
-    .sidebar {
+      /* ========== SIDEBAR ========== */
+      .sidebar {
       position: fixed;
       top: 0;
       bottom: 0;
@@ -306,7 +264,7 @@
       /* ========== CARDS ========== */
       .card-stat {
       background: var(--card-bg);
-      border: none;
+      border: 1px solid #e2e8f0;
       border-radius: 1rem;
       box-shadow: var(--card-shadow);
       transition: transform 0.2s, box-shadow 0.2s;
@@ -314,6 +272,11 @@
       .card-stat:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+
+      /* Kartu spesial dengan aksen kiri */
+      .card-accent-left {
+      border-left: 4px solid var(--fin-primary);
       }
 
       /* ========== TABLE ========== */
@@ -337,6 +300,18 @@
       .badge-soft-info    { background: var(--fin-info-bg); color: var(--fin-info); }
 
       /* ========== MOBILE ========== */
+      .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(2px);
+      z-index: 1035;
+      }
+      .sidebar-backdrop.show {
+      display: block;
+      }
+
       @media (max-width: 991.98px) {
       .sidebar {
       transform: translateX(-100%);
@@ -349,16 +324,6 @@
       }
       .topbar .btn-sidebar-toggle {
       display: inline-block;
-      }
-      .sidebar-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1035;
-      }
-      .sidebar-backdrop.show {
-      display: block;
       }
       }
 
