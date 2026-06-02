@@ -32,19 +32,27 @@
 @php
 $transferList = $transfers ?? [];
 
+// Jika masih objek (misal karena cache lama), coba konversi
 if (is_object($transferList)) {
-if ($transferList instanceof \Illuminate\Support\Collection) {
-$transferList = $transferList->all();
-} elseif (method_exists($transferList, 'items')) {
-$transferList = $transferList->items();
-} elseif (method_exists($transferList, 'toArray')) {
+// Hanya cek class name tanpa memanggil method (hindari method_exists pada incomplete object)
+$className = get_class($transferList);
+if ($className === 'Illuminate\Pagination\LengthAwarePaginator' || $className === 'Illuminate\Support\Collection') {
+// Coba paksa toArray, jika gagal tangkap exception
+try {
 $transferList = $transferList->toArray();
+} catch (\Throwable $e) {
+$transferList = [];
+}
 } else {
-$transferList = (array) $transferList;
+// Objek tidak dikenal, jadikan array kosong
+$transferList = [];
 }
 }
 
-$transferList = is_array($transferList) ? $transferList : [];
+// Pastikan akhirnya array
+if (!is_array($transferList)) {
+$transferList = [];
+}
 @endphp
 
 @if(count($transferList) > 0)

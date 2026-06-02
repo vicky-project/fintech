@@ -31,9 +31,18 @@ class TransferController extends Controller
     $result = $this->transferService->getTransfers($telegramUser, $filters, 20);
     $wallets = $this->walletService->getUserWallets($telegramUser);
 
+    $transfers = $result['data'] ?? [];
+    if ($transfers instanceof \Illuminate\Pagination\LengthAwarePaginator || $transfers instanceof \Illuminate\Support\Collection) {
+      $transfers = $transfers->toArray();
+    } elseif (is_object($transfers)) {
+      // Fallback untuk objek lain (mungkin incomplete)
+      $transfers = [];
+    }
+    $transfers = is_array($transfers) ? $transfers : [];
+
     return view('fintech::web.transfers.index', [
-      'transfers' => $result['data'],
-      'pagination' => $result['pagination'],
+      'transfers' => $transfers,
+      'pagination' => $result['pagination'] ?? null,
       'wallets' => $wallets,
       'filters' => $filters,
     ]);
