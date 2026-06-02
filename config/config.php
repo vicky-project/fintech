@@ -36,5 +36,10 @@ return [
         'table_name' => 'world_languages',
       ],
     ]
+  ],
+  'back_home_route' => 'apps.index',
+  'hooks' => [
+    'enabled' => env('FINTECH_HOOK_ENABLED', false),
+    'service' => \Modules\CoreUI\Services\UIService::class,
   ]
 ];

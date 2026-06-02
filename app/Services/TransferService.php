@@ -47,7 +47,7 @@ class TransferService
       }
 
       $transfers = $query->paginate($perPage);
-      $transformed = $transfers->through(fn($t) => $this->formatTransferData($t));
+      $transformed = $transfers->through(fn($t) => $this->formatTransferData($t))->toArray();
 
       return [
         'data' => $transformed,
@@ -84,7 +84,7 @@ class TransferService
         ->orderBy('deleted_at', 'desc');
 
         $transfers = $query->paginate($perPage);
-        $transformed = $transfers->through(fn($t) => $this->formatTrashedTransferData($t));
+        $transformed = $transfers->through(fn($t) => $this->formatTrashedTransferData($t))->toArray();
 
         return [
           'data' => $transformed,

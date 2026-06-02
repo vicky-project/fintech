@@ -41,6 +41,12 @@ class FinTechServiceProvider extends ServiceProvider
 
     $this->app['router']->aliasMiddleware('pin.session', \Modules\FinTech\Http\Middleware\VerifyPinSession::class);
 
+    if (
+      config($this->nameLower . ".hooks.enabled", false) &&
+      class_exists($class = config($this->nameLower . ".hooks.service"))
+    ) {
+      $this->registerHooks($class);
+    }
   }
 
   /**
@@ -102,6 +108,12 @@ class FinTechServiceProvider extends ServiceProvider
       // $manager->addParser(new BriPdfParser()); // Belum ada contoh file
       return $manager;
     });
+  }
+
+  protected function registerHooks($hookService): void
+  {
+    $hookService::registerHook('dashboard-apps',
+      $this->nameLower .'::hooks.apps');
   }
 
   /**

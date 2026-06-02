@@ -49,7 +49,7 @@ class TransactionService
       ->orderBy('id', 'desc')
       ->paginate($perPage);
 
-      $transformed = $transactions->through(fn($trx) => $this->formatTransactionData($trx));
+      $transformed = $transactions->through(fn($trx) => $this->formatTransactionData($trx))->toArray();
 
       return [
         'data' => $transformed,
@@ -316,7 +316,7 @@ class TransactionService
             'id' => $trx->wallet->id,
             'name' => $trx->wallet->name,
           ],
-        ]);
+        ])->toArray();
 
         return [
           'data' => $transformed,
