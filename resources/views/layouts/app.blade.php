@@ -285,7 +285,7 @@
       <li><a class="dropdown-item" href="{{ route('fintech.settings') }}"><i class="bi bi-gear me-2"></i>Pengaturan</a></li>
       <li><hr class="dropdown-divider"></li>
       <li>
-      <a class="dropdown-item" href="{{ route(config('fintech.back_home_route', 'fintech.home')) }}"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a>
+      <a class="dropdown-item text-danger" href="{{ route(config('fintech.back_home_route', 'fintech.home')) }}"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a>
       </li>
       </ul>
       </div>
