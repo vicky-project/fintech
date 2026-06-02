@@ -38,6 +38,7 @@ class TransactionController extends Controller
 
     $defaultCurrency = UserSetting::where('user_id', $telegramUser->id)->value('default_currency') ?? 'IDR';
     $currency = Currency::where('code', $defaultCurrency)->first();
+    dd($result, $wallets);
 
     return view('fintech::web.transactions.index', [
       'result' => $result,
