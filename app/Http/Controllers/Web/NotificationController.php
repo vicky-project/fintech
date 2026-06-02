@@ -21,7 +21,7 @@ class NotificationController extends Controller
     $telegramUser = $this->getTelegramUser($request->telegram_id);
     $notifications = $this->notificationService->getForUser($telegramUser->id);
 
-    return view('fintech:web.notifications.index', compact('notifications'));
+    return view('fintech::web.notifications.index', compact('notifications'));
   }
 
   public function markRead(Request $request, $id) {

@@ -63,6 +63,6 @@
 </div>
 @endif
 
-{{-- Anomalies, Subscriptions, Projection, dll. dapat ditambahkan serupa --}}
+{{-- Anomalies, Subscriptions, Projection, dll. dapat ditambahkan serupa... --}}
 @endif
 @endsection
