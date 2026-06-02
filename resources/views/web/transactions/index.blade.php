@@ -5,13 +5,12 @@
 
 @section('content')
 @php
-$transactions = $result['data'] ?? [];
+$transactions = $result['data']['data'] ?? [];
 $summary = $result['summary'] ?? ['total' => 0, 'income' => 0, 'expense' => 0];
 $pagination = $result['pagination'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => 0];
 $wallets = $wallets ?? [];
 $filters = $filters ?? ['wallet_id' => '', 'type' => '', 'month' => ''];
 $symbol = $symbol ?? 'Rp';
-dd($transactions, $pagination, $summary);
 @endphp
 
 {{-- Statistik Ringkasan --}}
