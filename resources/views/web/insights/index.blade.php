@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('fintech::layouts.app')
 
 @section('title', 'Insight — FinTech')
 @section('page_title', 'Analisis Keuangan')
