@@ -17,7 +17,7 @@
     "php": "^8.2",
     "joshbrw/laravel-module-installer": "^1.0",
     "nnjeim/world": "^1.1",
-    "elegantly/laravel-money": "^2.4",
+    "elegantly/laravel-money": "^4.2",
     "smalot/pdfparser": "^2.12",
     "maatwebsite/excel": "^4.0",
     "dompdf/dompdf": "^3.1",
